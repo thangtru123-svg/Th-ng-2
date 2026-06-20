@@ -3,886 +3,769 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Báo Cáo Vận Hành - Bắc Giang</title>
+<title>Báo Cáo Vận Hành — GHN Bắc Giang</title>
 <style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: 'Segoe UI', Arial, sans-serif; background: #f0f2f5; color: #1a1a2e; font-size: 13px; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Segoe UI', Arial, sans-serif; background: #f5f5f5; color: #222; font-size: 13px; }
 
-  .header {
-    background: linear-gradient(135deg, #1a237e 0%, #283593 50%, #3949ab 100%);
-    color: white; padding: 18px 24px;
-    display: flex; justify-content: space-between; align-items: center;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-  }
-  .header h1 { font-size: 20px; font-weight: 700; letter-spacing: 0.5px; }
-  .header .meta { font-size: 12px; opacity: 0.85; text-align: right; }
-  .header .meta span { display: block; }
+/* ── HEADER ── */
+.header {
+  background: #fff;
+  border-bottom: 3px solid #F15D29;
+  padding: 10px 20px;
+  display: flex; align-items: center; justify-content: space-between;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+}
+.header-left { display: flex; align-items: center; gap: 14px; }
+.header-left img { height: 38px; }
+.header-divider { width: 1px; height: 36px; background: #ddd; }
+.header-title h1 { font-size: 15px; font-weight: 700; color: #F15D29; }
+.header-title p { font-size: 11px; color: #888; margin-top: 2px; }
+.header-right { text-align: right; font-size: 11px; color: #666; }
+.header-right strong { color: #F15D29; }
 
-  .tabs { display: flex; background: #1e2d78; padding: 0 16px; }
-  .tab-btn {
-    padding: 10px 20px; cursor: pointer; color: rgba(255,255,255,0.65);
-    border: none; background: none; font-size: 13px; font-weight: 500;
-    border-bottom: 3px solid transparent; transition: all 0.2s;
-  }
-  .tab-btn:hover { color: white; background: rgba(255,255,255,0.08); }
-  .tab-btn.active { color: white; border-bottom-color: #64b5f6; background: rgba(255,255,255,0.1); }
+/* ── LAYOUT ── */
+.body-wrap { display: flex; min-height: calc(100vh - 65px); }
+.main-content { flex: 1; overflow: hidden; min-width: 0; }
 
-  .content { padding: 16px; }
-  .tab-pane { display: none; }
-  .tab-pane.active { display: block; }
+/* ── MAIN TABS (vertical left sidebar) ── */
+.main-tabs {
+  background: #F15D29;
+  display: flex; flex-direction: column;
+  width: 170px; flex-shrink: 0;
+  padding: 12px 0; gap: 2px;
+  position: sticky; top: 0; height: 100vh;
+  box-shadow: 2px 0 8px rgba(0,0,0,0.12);
+  order: -1;
+}
+.main-tab {
+  padding: 13px 16px; cursor: pointer;
+  color: rgba(255,255,255,0.8);
+  border: none; background: none;
+  font-size: 12px; font-weight: 600;
+  border-right: 3px solid transparent;
+  border-left: 3px solid transparent;
+  transition: all 0.2s;
+  text-align: left; line-height: 1.4;
+}
+.main-tab:hover { color: #fff; background: rgba(0,0,0,0.12); }
+.main-tab.active { color: #fff; border-left-color: #fff; background: rgba(0,0,0,0.2); }
 
-  .section { background: white; border-radius: 8px; margin-bottom: 16px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.1); }
-  .section-header {
-    background: #e8eaf6; padding: 10px 16px;
-    font-weight: 700; font-size: 13px; color: #283593;
-    border-left: 4px solid #3949ab;
-    display: flex; justify-content: space-between; align-items: center;
-  }
-  .section-header .badge {
-    background: #3949ab; color: white; padding: 2px 8px;
-    border-radius: 10px; font-size: 11px; font-weight: 600;
-  }
+/* ── DAY FILTER ── */
+.day-filter-bar {
+  background: #fff; border-bottom: 1px solid #eee;
+  padding: 8px 16px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+}
+.day-filter-bar label { font-size: 12px; font-weight: 600; color: #666; margin-right: 4px; }
+.day-btn {
+  padding: 5px 14px; border-radius: 20px; border: 1.5px solid #ddd;
+  background: #fff; cursor: pointer; font-size: 12px; font-weight: 500; color: #555;
+  transition: all 0.15s;
+}
+.day-btn:hover { border-color: #F15D29; color: #F15D29; }
+.day-btn.active { background: #F15D29; border-color: #F15D29; color: #fff; font-weight: 700; }
 
-  table { width: 100%; border-collapse: collapse; }
-  th {
-    background: #3949ab; color: white; padding: 7px 10px;
-    text-align: center; font-size: 11px; font-weight: 600;
-    white-space: nowrap; position: sticky; top: 0;
-  }
-  th.left { text-align: left; }
-  td { padding: 6px 10px; border-bottom: 1px solid #e8eaf6; font-size: 12px; }
-  td.bc-name { font-weight: 500; color: #1a237e; min-width: 220px; }
-  td.num { text-align: center; }
-  td.total-row { font-weight: 700; background: #e8eaf6; color: #1a237e; }
+/* ── SUB TABS ── */
+.sub-tabs { background: #fff; border-bottom: 2px solid #f0f0f0; padding: 0 16px; display: flex; gap: 0; overflow-x: auto; }
+.sub-tab {
+  padding: 9px 18px; cursor: pointer; color: #888; border: none; background: none;
+  font-size: 12px; font-weight: 500; border-bottom: 2px solid transparent;
+  transition: all 0.15s; white-space: nowrap; margin-bottom: -2px;
+}
+.sub-tab:hover { color: #F15D29; }
+.sub-tab.active { color: #F15D29; border-bottom-color: #F15D29; font-weight: 700; }
 
-  tr:hover td { background: #f5f7ff; }
+/* ── CONTENT ── */
+.tab-pane { display: none; }
+.tab-pane.active { display: block; }
+.sub-pane { display: none; }
+.sub-pane.active { display: block; }
+.content { padding: 14px 16px; }
 
-  /* Color coding for percentages */
-  .pct { text-align: center; font-weight: 600; border-radius: 3px; padding: 2px 4px; }
-  .pct-high { background: #e8f5e9; color: #2e7d32; }
-  .pct-mid  { background: #fff8e1; color: #f57f17; }
-  .pct-low  { background: #ffebee; color: #c62828; }
+/* ── CARD ── */
+.card { background: #fff; border-radius: 8px; margin-bottom: 14px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
+.card-header {
+  background: #FFF3ED; padding: 9px 14px;
+  font-weight: 700; font-size: 12px; color: #C43E00;
+  border-left: 4px solid #F15D29;
+  display: flex; justify-content: space-between; align-items: center;
+}
+.badge { background: #F15D29; color: #fff; padding: 2px 9px; border-radius: 10px; font-size: 11px; font-weight: 600; }
 
-  /* Aging colors */
-  .age-a { background: #fff9c4; color: #f57f17; }
-  .age-b { background: #ffe0b2; color: #e65100; }
-  .age-c { background: #ffccbc; color: #bf360c; }
-  .age-d { background: #ffcdd2; color: #b71c1c; }
-  .age-e { background: #ef9a9a; color: #7f0000; font-weight: 700; }
+/* ── KPI CARDS ── */
+.kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; padding: 14px; }
+.kpi { background: #fff; border: 1px solid #f0f0f0; border-radius: 8px; padding: 12px 14px; border-top: 3px solid #F15D29; text-align: center; }
+.kpi-val { font-size: 22px; font-weight: 800; }
+.kpi-label { font-size: 10px; color: #999; margin-top: 3px; }
+.kpi-good { color: #2e7d32; }
+.kpi-warn { color: #e65100; }
+.kpi-bad  { color: #c62828; }
 
-  /* Tồn LC colors */
-  .ton-0  { background: #e8f5e9; color: #1b5e20; }
-  .ton-6  { background: #f1f8e9; color: #33691e; }
-  .ton-12 { background: #fff9c4; color: #f57f17; }
-  .ton-24 { background: #ffe0b2; color: #e65100; }
-  .ton-36 { background: #ffccbc; color: #bf360c; }
-  .ton-48 { background: #ffcdd2; color: #c62828; }
-  .ton-over{ background: #ef9a9a; color: #7f0000; font-weight:700; }
+/* ── TABLES ── */
+.table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; }
+th {
+  background: #F15D29; color: #fff; padding: 7px 10px;
+  text-align: center; font-size: 11px; font-weight: 600; white-space: nowrap;
+}
+th.left { text-align: left; }
+td { padding: 6px 10px; border-bottom: 1px solid #f0f0f0; font-size: 12px; white-space: nowrap; }
+td.bc { font-weight: 500; color: #333; min-width: 180px; }
+td.num { text-align: center; }
+td.total { background: #FFF3ED; font-weight: 700; }
+tr:hover td { background: #fffaf7; }
 
-  /* Bar chart */
-  .bar-wrap { padding: 16px; }
-  .bar-row { display: flex; align-items: center; margin-bottom: 10px; gap: 8px; }
-  .bar-label { width: 200px; font-size: 11px; font-weight: 500; color: #283593; flex-shrink: 0; line-height: 1.3; }
-  .bar-track { flex: 1; background: #e8eaf6; border-radius: 4px; height: 24px; position: relative; overflow: hidden; }
-  .bar-fill { height: 100%; border-radius: 4px; display: flex; align-items: center; padding-left: 6px; font-size: 11px; font-weight: 700; color: white; transition: width 0.5s ease; }
-  .bar-count { font-size: 12px; font-weight: 700; color: #1a237e; min-width: 28px; text-align: right; }
+/* ── PCT COLORS ── */
+.hi  { background: #e8f5e9; color: #1b5e20; font-weight: 600; border-radius: 3px; text-align:center; }
+.md  { background: #fff8e1; color: #e65100; font-weight: 600; border-radius: 3px; text-align:center; }
+.lo  { background: #ffebee; color: #b71c1c; font-weight: 600; border-radius: 3px; text-align:center; }
 
-  .bar-a { background: #f9a825; }
-  .bar-b { background: #ef6c00; }
-  .bar-c { background: #d84315; }
-  .bar-d { background: #c62828; }
-  .bar-e { background: #7f0000; }
+/* ── HIGHLIGHT COLUMN ── */
+.col-hl { background: #FFF3ED !important; border-left: 2px solid #F15D29; border-right: 2px solid #F15D29; }
+th.col-hl { background: #C43E00 !important; }
 
-  .aging-detail { padding: 0 16px 16px; }
-  .aging-bc-card { border: 1px solid #e8eaf6; border-radius: 6px; margin-bottom: 10px; overflow: hidden; }
-  .aging-bc-header { background: #e8eaf6; padding: 8px 12px; font-weight: 700; color: #1a237e; font-size: 12px; display: flex; justify-content: space-between; }
-  .aging-chips { padding: 8px 12px; display: flex; gap: 6px; flex-wrap: wrap; }
-  .chip { padding: 4px 10px; border-radius: 12px; font-size: 11px; font-weight: 600; }
+/* ── AGING ── */
+.age-a { background: #fff9c4; color: #f57f17; text-align:center; }
+.age-b { background: #ffe0b2; color: #e65100; text-align:center; }
+.age-c { background: #ffccbc; color: #bf360c; text-align:center; }
+.age-d { background: #ffcdd2; color: #b71c1c; text-align:center; }
+.age-e { background: #ef9a9a; color: #7f0000; text-align:center; font-weight:700; }
 
-  .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; padding: 16px; }
-  .kpi-card { background: #f5f7ff; border-radius: 8px; padding: 12px; text-align: center; border-left: 3px solid #3949ab; }
-  .kpi-val { font-size: 22px; font-weight: 800; color: #1a237e; }
-  .kpi-label { font-size: 10px; color: #666; margin-top: 4px; }
+/* ── BAR CHART ── */
+.bar-section { padding: 14px; }
+.bar-row { display: flex; align-items: center; gap: 8px; margin-bottom: 9px; }
+.bar-label { width: 190px; font-size: 11px; font-weight: 500; flex-shrink: 0; line-height: 1.3; color: #444; }
+.bar-track { flex: 1; height: 26px; background: #f0f0f0; border-radius: 4px; overflow: hidden; display: flex; }
+.bar-seg { height: 100%; display: flex; align-items: center; padding-left: 5px; font-size: 11px; font-weight: 700; color: #fff; }
+.bar-count { min-width: 28px; text-align: right; font-weight: 700; color: #333; }
+.ba { background: #f9a825; } .bb { background: #ef6c00; } .bc2 { background: #d84315; }
+.bd { background: #c62828; } .be { background: #7f0000; }
 
-  .table-scroll { overflow-x: auto; }
-  .week-range { font-size: 11px; color: #666; margin-top: 2px; }
+/* ── TON LC COLORS ── */
+.t0  { background: #e8f5e9; color: #1b5e20; text-align:center; }
+.t1  { background: #f1f8e9; color: #33691e; text-align:center; }
+.t2c { background: #fff9c4; color: #f57f17; text-align:center; }
+.t3  { background: #ffe0b2; color: #e65100; text-align:center; }
+.t4  { background: #ffccbc; color: #bf360c; text-align:center; }
+.t5  { background: #ffcdd2; color: #c62828; text-align:center; font-weight:700; }
 
-  .legend { display: flex; gap: 12px; flex-wrap: wrap; padding: 8px 16px; background: #fafafa; border-top: 1px solid #e8eaf6; }
-  .legend-item { display: flex; align-items: center; gap: 4px; font-size: 11px; }
-  .legend-dot { width: 12px; height: 12px; border-radius: 2px; }
+/* ── DAY DETAIL CARD ── */
+.day-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; padding: 14px; }
+.ds-card { background: #fff; border: 1px solid #f0f0f0; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
+.ds-header { background: #F15D29; color: #fff; padding: 7px 12px; font-weight: 700; font-size: 12px; }
+.ds-row { display: flex; justify-content: space-between; padding: 6px 12px; border-bottom: 1px solid #f8f8f8; font-size: 12px; }
+.ds-row:last-child { border-bottom: none; }
+.ds-metric { color: #666; }
+.ds-val { font-weight: 700; }
+
+/* ── LEGEND ── */
+.legend { display: flex; gap: 14px; flex-wrap: wrap; padding: 8px 14px; background: #fafafa; border-top: 1px solid #f0f0f0; font-size: 11px; color: #666; }
+.leg { display: flex; align-items: center; gap: 4px; }
+.leg-dot { width: 12px; height: 12px; border-radius: 2px; }
+
+/* ── ALERT ── */
+.alert { background: #fff3cd; border: 1px solid #ffc107; border-radius: 6px; padding: 9px 14px; margin: 0 14px 14px; font-size: 12px; color: #856404; }
 </style>
 </head>
 <body>
 
+<!-- HEADER -->
 <div class="header">
-  <div>
-    <h1>📦 Báo Cáo Vận Hành Tuần — Bắc Giang (XBG)</h1>
-    <div class="week-range" style="color:rgba(255,255,255,0.75); margin-top:4px;">Tuần 23 | 01/06/2026 – 07/06/2026 | Cập nhật: 20/06/2026</div>
+  <div class="header-left">
+    <img src="https://cdn.hstatic.net/themes/200000472237/1001423864/14/logo.png?v=2874" alt="GHN Logo" onerror="this.style.display='none'">
+    <div class="header-divider"></div>
+    <div class="header-title">
+      <h1>BÁO CÁO VẬN HÀNH TUẦN — BẮC GIANG (XBG)</h1>
+      <p>Tuần 23 &nbsp;|&nbsp; 01/06/2026 – 07/06/2026 &nbsp;|&nbsp; Công ty Cổ phần Dịch vụ Giao Hàng Nhanh</p>
+    </div>
   </div>
-  <div class="meta">
-    <span>👤 AM: Phạm Đức Thắng</span>
-    <span>📍 Tỉnh Bắc Giang</span>
+  <div class="header-right">
+    <div>👤 AM: <strong>Phạm Đức Thắng</strong></div>
+    <div>Cập nhật: 20/06/2026 &nbsp;|&nbsp; Hotline: <strong>1900 636677</strong></div>
   </div>
 </div>
 
-<div class="tabs">
-  <button class="tab-btn active" onclick="showTab('tab1')">📊 Vận Hành Tuần</button>
-  <button class="tab-btn" onclick="showTab('tab2')">📬 Tồn LC Giao + Trả</button>
-  <button class="tab-btn" onclick="showTab('tab3')">⏱️ Đơn Aging &gt; 5 Ngày</button>
-</div>
+<!-- BODY WRAP -->
+<div class="body-wrap">
+<div class="main-content">
 
-<!-- ============================================================ -->
-<!-- TAB 1: BÁO CÁO VẬN HÀNH TUẦN -->
-<!-- ============================================================ -->
-<div id="tab1" class="content tab-pane active">
+<!-- ═══════════════════════════════════════════
+     TAB 1: VẬN HÀNH TUẦN
+═══════════════════════════════════════════ -->
+<div id="m1" class="tab-pane active">
 
-  <!-- KPI Summary -->
-  <div class="section">
-    <div class="section-header">
-      🎯 Tổng Quan Tuần 23 (01–07/06/2026)
-    </div>
-    <div class="summary-grid">
-      <div class="kpi-card">
-        <div class="kpi-val" style="color:#2e7d32">96.54%</div>
-        <div class="kpi-label">Ontime Giao TTS (T2)</div>
+  <!-- Day Filter -->
+  <div class="day-filter-bar">
+    <label>🗓️ Xem theo ngày:</label>
+    <button class="day-btn active" onclick="filterDay('all',this)">Cả tuần</button>
+    <button class="day-btn" onclick="filterDay('0',this)">T2 01/06</button>
+    <button class="day-btn" onclick="filterDay('1',this)">T3 02/06</button>
+    <button class="day-btn" onclick="filterDay('2',this)">T4 03/06</button>
+    <button class="day-btn" onclick="filterDay('3',this)">T5 04/06</button>
+    <button class="day-btn" onclick="filterDay('4',this)">T6 05/06</button>
+    <button class="day-btn" onclick="filterDay('5',this)">T7 06/06</button>
+    <button class="day-btn" onclick="filterDay('6',this)">CN 07/06</button>
+  </div>
+
+  <!-- Sub Tabs -->
+  <div class="sub-tabs">
+    <button class="sub-tab active" onclick="showSub('s1',this)">🎯 Tổng Quan</button>
+    <button class="sub-tab" onclick="showSub('s2',this)">GTC Total</button>
+    <button class="sub-tab" onclick="showSub('s3',this)">GTC TTS</button>
+    <button class="sub-tab" onclick="showSub('s4',this)">Ontime Giao</button>
+    <button class="sub-tab" onclick="showSub('s5',this)">Ontime Lấy</button>
+  </div>
+
+  <!-- S1: Tổng Quan -->
+  <div id="s1" class="sub-pane active">
+    <div class="content">
+      <!-- All-week KPIs -->
+      <div id="kpi-all" class="card">
+        <div class="card-header">🎯 KPI Cả Tuần 23 (01–07/06/2026)</div>
+        <div class="kpi-grid">
+          <div class="kpi"><div class="kpi-val kpi-good">96.54%</div><div class="kpi-label">Ontime Giao TTS (T2)</div></div>
+          <div class="kpi"><div class="kpi-val kpi-warn">59.54%</div><div class="kpi-label">GTC Total TB Tuần (T2)</div></div>
+          <div class="kpi"><div class="kpi-val kpi-warn">63.15%</div><div class="kpi-label">GTC TTS TB Tuần (T2)</div></div>
+          <div class="kpi"><div class="kpi-val kpi-bad">47.97%</div><div class="kpi-label">GTC Total CN (thấp nhất)</div></div>
+          <div class="kpi"><div class="kpi-val kpi-warn">77.58%</div><div class="kpi-label">Ontime Lấy TTS (Tổng)</div></div>
+          <div class="kpi"><div class="kpi-val" style="color:#F15D29">16.476</div><div class="kpi-label">Tổng LTC cả tuần</div></div>
+        </div>
       </div>
-      <div class="kpi-card">
-        <div class="kpi-val" style="color:#e65100">59.54%</div>
-        <div class="kpi-label">GTC Total (T2)</div>
-      </div>
-      <div class="kpi-card">
-        <div class="kpi-val" style="color:#e65100">63.15%</div>
-        <div class="kpi-label">GTC TTS (T2)</div>
-      </div>
-      <div class="kpi-card">
-        <div class="kpi-val" style="color:#c62828">47.97%</div>
-        <div class="kpi-label">GTC Total (CN — thấp nhất)</div>
-      </div>
-      <div class="kpi-card">
-        <div class="kpi-val" style="color:#c62828">77.58%</div>
-        <div class="kpi-label">Ontime Lấy TTS (Tổng)</div>
-      </div>
-      <div class="kpi-card">
-        <div class="kpi-val">16.476</div>
-        <div class="kpi-label">Tổng LTC (Tuần)</div>
+
+      <!-- Per-day summary cards -->
+      <div id="day-detail" style="display:none">
+        <div class="card">
+          <div class="card-header" id="day-detail-title">Chi tiết theo ngày</div>
+          <div class="day-summary" id="day-cards"></div>
+        </div>
       </div>
     </div>
   </div>
 
-  <!-- Tỉ lệ GTC TOTAL -->
-  <div class="section">
-    <div class="section-header">
-      Tỉ Lệ GTC TOTAL (%)
-      <span class="badge">7 Bưu Cục</span>
-    </div>
-    <div class="table-scroll">
-    <table>
-      <thead>
-        <tr>
-          <th class="left" style="min-width:200px">Bưu Cục</th>
-          <th>T2 01/06</th><th>T3 02/06</th><th>T4 03/06</th>
-          <th>T5 04/06</th><th>T6 05/06</th><th>T7 06/06</th><th>CN 07/06</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td class="bc-name">BC 215 Đề Nắm - Yên Thế</td>
-          <td class="pct pct-mid">55.39%</td><td class="pct pct-mid">56.58%</td><td class="pct pct-mid">57.40%</td>
-          <td class="pct pct-mid">60.22%</td><td class="pct pct-mid">58.37%</td><td class="pct pct-mid">59.77%</td><td class="pct pct-mid">57.19%</td>
-        </tr>
-        <tr>
-          <td class="bc-name">BC TDP Đồng Lều - Yên Thế</td>
-          <td class="pct pct-high">71.14%</td><td class="pct pct-high">70.22%</td><td class="pct pct-high">68.98%</td>
-          <td class="pct pct-high">72.93%</td><td class="pct pct-high">73.47%</td><td class="pct pct-high">70.95%</td><td class="pct pct-mid">60.33%</td>
-        </tr>
-        <tr>
-          <td class="bc-name">BC TT Cao Thượng - Tân Yên</td>
-          <td class="pct pct-mid">59.16%</td><td class="pct pct-mid">56.39%</td><td class="pct pct-mid">57.13%</td>
-          <td class="pct pct-mid">59.83%</td><td class="pct pct-mid">64.98%</td><td class="pct pct-mid">55.35%</td><td class="pct pct-low">46.30%</td>
-        </tr>
-        <tr>
-          <td class="bc-name">BC TT Đồi Ngô - Lục Nam</td>
-          <td class="pct pct-mid">56.78%</td><td class="pct pct-low">48.53%</td><td class="pct pct-mid">51.31%</td>
-          <td class="pct pct-low">44.90%</td><td class="pct pct-mid">56.43%</td><td class="pct pct-low">47.26%</td><td class="pct pct-low">44.16%</td>
-        </tr>
-        <tr>
-          <td class="bc-name">BC TT Kép - Lạng Giang</td>
-          <td class="pct pct-high">72.66%</td><td class="pct pct-high">68.03%</td><td class="pct pct-high">66.83%</td>
-          <td class="pct pct-high">70.80%</td><td class="pct pct-high">70.11%</td><td class="pct pct-high">68.07%</td><td class="pct pct-mid">65.11%</td>
-        </tr>
-        <tr>
-          <td class="bc-name">BC TT Vôi - Lạng Giang</td>
-          <td class="pct pct-mid">52.59%</td><td class="pct pct-low">43.25%</td><td class="pct pct-mid">50.48%</td>
-          <td class="pct pct-mid">53.34%</td><td class="pct pct-low">45.89%</td><td class="pct pct-mid">50.57%</td><td class="pct pct-low">40.69%</td>
-        </tr>
-        <tr>
-          <td class="bc-name">BC TL 293 Xóm Rén - Trường Sơn</td>
-          <td class="pct pct-mid">55.91%</td><td class="pct pct-mid">51.87%</td><td class="pct pct-mid">52.20%</td>
-          <td class="pct pct-low">40.70%</td><td class="pct pct-low">45.27%</td><td class="pct pct-low">46.38%</td><td class="pct pct-low">36.02%</td>
-        </tr>
-        <tr>
-          <td class="bc-name total-row">Grand Total</td>
-          <td class="num total-row">59.54%</td><td class="num total-row">54.59%</td><td class="num total-row">56.06%</td>
-          <td class="num total-row">55.16%</td><td class="num total-row">57.73%</td><td class="num total-row">54.45%</td><td class="num total-row">47.97%</td>
-        </tr>
-      </tbody>
-    </table>
-    </div>
-    <div class="legend">
-      <div class="legend-item"><div class="legend-dot" style="background:#e8f5e9"></div> ≥ 65% (Tốt)</div>
-      <div class="legend-item"><div class="legend-dot" style="background:#fff8e1"></div> 50–65% (Trung bình)</div>
-      <div class="legend-item"><div class="legend-dot" style="background:#ffebee"></div> &lt; 50% (Cần chú ý)</div>
+  <!-- S2: GTC TOTAL -->
+  <div id="s2" class="sub-pane">
+    <div class="content">
+      <div class="card">
+        <div class="card-header">Tỉ Lệ GTC TOTAL (%) <span class="badge">7 Bưu Cục</span></div>
+        <div class="table-wrap">
+        <table id="tbl-gtc-total">
+          <thead>
+            <tr>
+              <th class="left">Bưu Cục</th>
+              <th data-col="0">T2 01/06</th><th data-col="1">T3 02/06</th><th data-col="2">T4 03/06</th>
+              <th data-col="3">T5 04/06</th><th data-col="4">T6 05/06</th><th data-col="5">T7 06/06</th><th data-col="6">CN 07/06</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td class="bc">BC 215 Đề Nắm - Yên Thế</td>
+              <td data-col="0" data-v="55.39">55.39%</td><td data-col="1" data-v="56.58">56.58%</td><td data-col="2" data-v="57.40">57.40%</td>
+              <td data-col="3" data-v="60.22">60.22%</td><td data-col="4" data-v="58.37">58.37%</td><td data-col="5" data-v="59.77">59.77%</td><td data-col="6" data-v="57.19">57.19%</td></tr>
+            <tr><td class="bc">BC TDP Đồng Lều - Yên Thế</td>
+              <td data-col="0" data-v="71.14">71.14%</td><td data-col="1" data-v="70.22">70.22%</td><td data-col="2" data-v="68.98">68.98%</td>
+              <td data-col="3" data-v="72.93">72.93%</td><td data-col="4" data-v="73.47">73.47%</td><td data-col="5" data-v="70.95">70.95%</td><td data-col="6" data-v="60.33">60.33%</td></tr>
+            <tr><td class="bc">BC TT Cao Thượng - Tân Yên</td>
+              <td data-col="0" data-v="59.16">59.16%</td><td data-col="1" data-v="56.39">56.39%</td><td data-col="2" data-v="57.13">57.13%</td>
+              <td data-col="3" data-v="59.83">59.83%</td><td data-col="4" data-v="64.98">64.98%</td><td data-col="5" data-v="55.35">55.35%</td><td data-col="6" data-v="46.30">46.30%</td></tr>
+            <tr><td class="bc">BC TT Đồi Ngô - Lục Nam</td>
+              <td data-col="0" data-v="56.78">56.78%</td><td data-col="1" data-v="48.53">48.53%</td><td data-col="2" data-v="51.31">51.31%</td>
+              <td data-col="3" data-v="44.90">44.90%</td><td data-col="4" data-v="56.43">56.43%</td><td data-col="5" data-v="47.26">47.26%</td><td data-col="6" data-v="44.16">44.16%</td></tr>
+            <tr><td class="bc">BC TT Kép - Lạng Giang</td>
+              <td data-col="0" data-v="72.66">72.66%</td><td data-col="1" data-v="68.03">68.03%</td><td data-col="2" data-v="66.83">66.83%</td>
+              <td data-col="3" data-v="70.80">70.80%</td><td data-col="4" data-v="70.11">70.11%</td><td data-col="5" data-v="68.07">68.07%</td><td data-col="6" data-v="65.11">65.11%</td></tr>
+            <tr><td class="bc">BC TT Vôi - Lạng Giang</td>
+              <td data-col="0" data-v="52.59">52.59%</td><td data-col="1" data-v="43.25">43.25%</td><td data-col="2" data-v="50.48">50.48%</td>
+              <td data-col="3" data-v="53.34">53.34%</td><td data-col="4" data-v="45.89">45.89%</td><td data-col="5" data-v="50.57">50.57%</td><td data-col="6" data-v="40.69">40.69%</td></tr>
+            <tr><td class="bc">BC TL 293 Xóm Rén - Trường Sơn</td>
+              <td data-col="0" data-v="55.91">55.91%</td><td data-col="1" data-v="51.87">51.87%</td><td data-col="2" data-v="52.20">52.20%</td>
+              <td data-col="3" data-v="40.70">40.70%</td><td data-col="4" data-v="45.27">45.27%</td><td data-col="5" data-v="46.38">46.38%</td><td data-col="6" data-v="36.02">36.02%</td></tr>
+            <tr><td class="bc total">Grand Total</td>
+              <td data-col="0" class="num total">59.54%</td><td data-col="1" class="num total">54.59%</td><td data-col="2" class="num total">56.06%</td>
+              <td data-col="3" class="num total">55.16%</td><td data-col="4" class="num total">57.73%</td><td data-col="5" class="num total">54.45%</td><td data-col="6" class="num total">47.97%</td></tr>
+          </tbody>
+        </table>
+        </div>
+        <div class="legend">
+          <div class="leg"><div class="leg-dot" style="background:#e8f5e9"></div>≥ 65% Tốt</div>
+          <div class="leg"><div class="leg-dot" style="background:#fff8e1"></div>50–65% Trung bình</div>
+          <div class="leg"><div class="leg-dot" style="background:#ffebee"></div>&lt;50% Cần chú ý</div>
+        </div>
+      </div>
     </div>
   </div>
 
-  <!-- Tỉ lệ GTC TTS -->
-  <div class="section">
-    <div class="section-header">
-      Tỉ Lệ GTC TTS (%)
-      <span class="badge">TTS Only</span>
-    </div>
-    <div class="table-scroll">
-    <table>
-      <thead>
-        <tr>
-          <th class="left" style="min-width:200px">Bưu Cục</th>
-          <th>T2 01/06</th><th>T3 02/06</th><th>T4 03/06</th>
-          <th>T5 04/06</th><th>T6 05/06</th><th>T7 06/06</th><th>CN 07/06</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td class="bc-name">BC 215 Đề Nắm - Yên Thế</td>
-          <td class="pct pct-mid">61.81%</td><td class="pct pct-mid">62.50%</td><td class="pct pct-mid">61.97%</td>
-          <td class="pct pct-mid">65.16%</td><td class="pct pct-mid">61.88%</td><td class="pct pct-mid">65.06%</td><td class="pct pct-mid">56.55%</td>
-        </tr>
-        <tr>
-          <td class="bc-name">BC TDP Đồng Lều - Yên Thế</td>
-          <td class="pct pct-high">80.00%</td><td class="pct pct-high">73.26%</td><td class="pct pct-high">67.86%</td>
-          <td class="pct pct-mid">65.91%</td><td class="pct pct-high">72.90%</td><td class="pct pct-mid">64.96%</td><td class="pct pct-mid">60.76%</td>
-        </tr>
-        <tr>
-          <td class="bc-name">BC TT Cao Thượng - Tân Yên</td>
-          <td class="pct pct-mid">59.18%</td><td class="pct pct-mid">56.60%</td><td class="pct pct-mid">59.74%</td>
-          <td class="pct pct-mid">63.82%</td><td class="pct pct-mid">62.70%</td><td class="pct pct-mid">60.79%</td><td class="pct pct-low">48.07%</td>
-        </tr>
-        <tr>
-          <td class="bc-name">BC TT Đồi Ngô - Lục Nam</td>
-          <td class="pct pct-mid">58.84%</td><td class="pct pct-mid">51.52%</td><td class="pct pct-mid">53.61%</td>
-          <td class="pct pct-low">49.19%</td><td class="pct pct-mid">57.89%</td><td class="pct pct-mid">50.49%</td><td class="pct pct-mid">50.07%</td>
-        </tr>
-        <tr>
-          <td class="bc-name">BC TT Kép - Lạng Giang</td>
-          <td class="pct pct-high">76.24%</td><td class="pct pct-high">73.17%</td><td class="pct pct-high">73.54%</td>
-          <td class="pct pct-high">77.58%</td><td class="pct pct-high">75.00%</td><td class="pct pct-high">70.43%</td><td class="pct pct-high">67.59%</td>
-        </tr>
-        <tr>
-          <td class="bc-name">BC TT Vôi - Lạng Giang</td>
-          <td class="pct pct-mid">58.91%</td><td class="pct pct-low">47.18%</td><td class="pct pct-mid">59.94%</td>
-          <td class="pct pct-mid">58.52%</td><td class="pct pct-low">49.12%</td><td class="pct pct-mid">58.36%</td><td class="pct pct-low">42.78%</td>
-        </tr>
-        <tr>
-          <td class="bc-name">BC TL 293 Xóm Rén - Trường Sơn</td>
-          <td class="pct pct-mid">58.00%</td><td class="pct pct-mid">55.10%</td><td class="pct pct-mid">57.23%</td>
-          <td class="pct pct-low">38.04%</td><td class="pct pct-low">45.98%</td><td class="pct pct-mid">50.49%</td><td class="pct pct-low">42.19%</td>
-        </tr>
-        <tr>
-          <td class="bc-name total-row">Grand Total</td>
-          <td class="num total-row">63.15%</td><td class="num total-row">57.35%</td><td class="num total-row">60.16%</td>
-          <td class="num total-row">58.42%</td><td class="num total-row">59.43%</td><td class="num total-row">58.58%</td><td class="num total-row">51.76%</td>
-        </tr>
-      </tbody>
-    </table>
+  <!-- S3: GTC TTS -->
+  <div id="s3" class="sub-pane">
+    <div class="content">
+      <div class="card">
+        <div class="card-header">Tỉ Lệ GTC TTS (%) <span class="badge">TTS Only</span></div>
+        <div class="table-wrap">
+        <table id="tbl-gtc-tts">
+          <thead>
+            <tr>
+              <th class="left">Bưu Cục</th>
+              <th data-col="0">T2 01/06</th><th data-col="1">T3 02/06</th><th data-col="2">T4 03/06</th>
+              <th data-col="3">T5 04/06</th><th data-col="4">T6 05/06</th><th data-col="5">T7 06/06</th><th data-col="6">CN 07/06</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td class="bc">BC 215 Đề Nắm - Yên Thế</td>
+              <td data-col="0" data-v="61.81">61.81%</td><td data-col="1" data-v="62.50">62.50%</td><td data-col="2" data-v="61.97">61.97%</td>
+              <td data-col="3" data-v="65.16">65.16%</td><td data-col="4" data-v="61.88">61.88%</td><td data-col="5" data-v="65.06">65.06%</td><td data-col="6" data-v="56.55">56.55%</td></tr>
+            <tr><td class="bc">BC TDP Đồng Lều - Yên Thế</td>
+              <td data-col="0" data-v="80.00">80.00%</td><td data-col="1" data-v="73.26">73.26%</td><td data-col="2" data-v="67.86">67.86%</td>
+              <td data-col="3" data-v="65.91">65.91%</td><td data-col="4" data-v="72.90">72.90%</td><td data-col="5" data-v="64.96">64.96%</td><td data-col="6" data-v="60.76">60.76%</td></tr>
+            <tr><td class="bc">BC TT Cao Thượng - Tân Yên</td>
+              <td data-col="0" data-v="59.18">59.18%</td><td data-col="1" data-v="56.60">56.60%</td><td data-col="2" data-v="59.74">59.74%</td>
+              <td data-col="3" data-v="63.82">63.82%</td><td data-col="4" data-v="62.70">62.70%</td><td data-col="5" data-v="60.79">60.79%</td><td data-col="6" data-v="48.07">48.07%</td></tr>
+            <tr><td class="bc">BC TT Đồi Ngô - Lục Nam</td>
+              <td data-col="0" data-v="58.84">58.84%</td><td data-col="1" data-v="51.52">51.52%</td><td data-col="2" data-v="53.61">53.61%</td>
+              <td data-col="3" data-v="49.19">49.19%</td><td data-col="4" data-v="57.89">57.89%</td><td data-col="5" data-v="50.49">50.49%</td><td data-col="6" data-v="50.07">50.07%</td></tr>
+            <tr><td class="bc">BC TT Kép - Lạng Giang</td>
+              <td data-col="0" data-v="76.24">76.24%</td><td data-col="1" data-v="73.17">73.17%</td><td data-col="2" data-v="73.54">73.54%</td>
+              <td data-col="3" data-v="77.58">77.58%</td><td data-col="4" data-v="75.00">75.00%</td><td data-col="5" data-v="70.43">70.43%</td><td data-col="6" data-v="67.59">67.59%</td></tr>
+            <tr><td class="bc">BC TT Vôi - Lạng Giang</td>
+              <td data-col="0" data-v="58.91">58.91%</td><td data-col="1" data-v="47.18">47.18%</td><td data-col="2" data-v="59.94">59.94%</td>
+              <td data-col="3" data-v="58.52">58.52%</td><td data-col="4" data-v="49.12">49.12%</td><td data-col="5" data-v="58.36">58.36%</td><td data-col="6" data-v="42.78">42.78%</td></tr>
+            <tr><td class="bc">BC TL 293 Xóm Rén - Trường Sơn</td>
+              <td data-col="0" data-v="58.00">58.00%</td><td data-col="1" data-v="55.10">55.10%</td><td data-col="2" data-v="57.23">57.23%</td>
+              <td data-col="3" data-v="38.04">38.04%</td><td data-col="4" data-v="45.98">45.98%</td><td data-col="5" data-v="50.49">50.49%</td><td data-col="6" data-v="42.19">42.19%</td></tr>
+            <tr><td class="bc total">Grand Total</td>
+              <td data-col="0" class="num total">63.15%</td><td data-col="1" class="num total">57.35%</td><td data-col="2" class="num total">60.16%</td>
+              <td data-col="3" class="num total">58.42%</td><td data-col="4" class="num total">59.43%</td><td data-col="5" class="num total">58.58%</td><td data-col="6" class="num total">51.76%</td></tr>
+          </tbody>
+        </table>
+        </div>
+      </div>
     </div>
   </div>
 
-  <!-- Ontime giao TTS -->
-  <div class="section">
-    <div class="section-header">
-      Ontime Giao TTS (%)
-    </div>
-    <div class="table-scroll">
-    <table>
-      <thead>
-        <tr>
-          <th class="left" style="min-width:200px">Bưu Cục</th>
-          <th>T2 01/06</th><th>T3 02/06</th><th>T4 03/06</th>
-          <th>T5 04/06</th><th>T6 05/06</th><th>T7 06/06</th><th>CN 07/06</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td class="bc-name">BC 215 Đề Nắm - Yên Thế</td>
-          <td class="pct pct-high">93.50%</td><td class="pct pct-mid">85.42%</td><td class="pct pct-high">93.18%</td>
-          <td class="pct pct-high">92.08%</td><td class="pct pct-high">97.98%</td><td class="pct pct-high">93.52%</td><td class="pct pct-high">96.84%</td>
-        </tr>
-        <tr>
-          <td class="bc-name">BC TDP Đồng Lều - Yên Thế</td>
-          <td class="pct pct-high">100.00%</td><td class="pct pct-high">96.83%</td><td class="pct pct-high">98.25%</td>
-          <td class="pct pct-high">98.28%</td><td class="pct pct-high">97.44%</td><td class="pct pct-high">100.00%</td><td class="pct pct-high">98.96%</td>
-        </tr>
-        <tr>
-          <td class="bc-name">BC TT Cao Thượng - Tân Yên</td>
-          <td class="pct pct-high">95.69%</td><td class="pct pct-high">97.50%</td><td class="pct pct-high">91.30%</td>
-          <td class="pct pct-high">96.82%</td><td class="pct pct-high">92.81%</td><td class="pct pct-high">94.20%</td><td class="pct pct-high">93.43%</td>
-        </tr>
-        <tr>
-          <td class="bc-name">BC TT Đồi Ngô - Lục Nam</td>
-          <td class="pct pct-high">97.80%</td><td class="pct pct-high">95.45%</td><td class="pct pct-high">97.00%</td>
-          <td class="pct pct-high">98.53%</td><td class="pct pct-high">93.71%</td><td class="pct pct-high">95.37%</td><td class="pct pct-high">95.83%</td>
-        </tr>
-        <tr>
-          <td class="bc-name">BC TT Kép - Lạng Giang</td>
-          <td class="pct pct-high">97.71%</td><td class="pct pct-high">99.44%</td><td class="pct pct-high">96.34%</td>
-          <td class="pct pct-high">96.33%</td><td class="pct pct-high">96.98%</td><td class="pct pct-high">98.10%</td><td class="pct pct-high">97.13%</td>
-        </tr>
-        <tr>
-          <td class="bc-name">BC TT Vôi - Lạng Giang</td>
-          <td class="pct pct-high">96.59%</td><td class="pct pct-high">95.07%</td><td class="pct pct-mid">90.59%</td>
-          <td class="pct pct-high">98.59%</td><td class="pct pct-high">94.64%</td><td class="pct pct-high">95.00%</td><td class="pct pct-high">97.60%</td>
-        </tr>
-        <tr>
-          <td class="bc-name">BC TL 293 Xóm Rén - Trường Sơn</td>
-          <td class="pct pct-high">91.95%</td><td class="pct pct-mid">87.65%</td><td class="pct pct-high">93.41%</td>
-          <td class="pct pct-high">100.00%</td><td class="pct pct-high">92.23%</td><td class="pct pct-mid">89.32%</td><td class="pct pct-high">91.00%</td>
-        </tr>
-        <tr>
-          <td class="bc-name total-row">Grand Total</td>
-          <td class="num total-row">96.54%</td><td class="num total-row">94.77%</td><td class="num total-row">94.24%</td>
-          <td class="num total-row">97.32%</td><td class="num total-row">94.86%</td><td class="num total-row">95.25%</td><td class="num total-row">96.00%</td>
-        </tr>
-      </tbody>
-    </table>
-    </div>
-    <div class="legend">
-      <div class="legend-item"><div class="legend-dot" style="background:#e8f5e9"></div> ≥ 90% (Tốt)</div>
-      <div class="legend-item"><div class="legend-dot" style="background:#fff8e1"></div> 80–90% (Trung bình)</div>
-      <div class="legend-item"><div class="legend-dot" style="background:#ffebee"></div> &lt; 80% (Cần chú ý)</div>
+  <!-- S4: ONTIME GIAO -->
+  <div id="s4" class="sub-pane">
+    <div class="content">
+      <div class="card">
+        <div class="card-header">Ontime Giao TTS (%)</div>
+        <div class="table-wrap">
+        <table id="tbl-otg">
+          <thead>
+            <tr>
+              <th class="left">Bưu Cục</th>
+              <th data-col="0">T2 01/06</th><th data-col="1">T3 02/06</th><th data-col="2">T4 03/06</th>
+              <th data-col="3">T5 04/06</th><th data-col="4">T6 05/06</th><th data-col="5">T7 06/06</th><th data-col="6">CN 07/06</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td class="bc">BC 215 Đề Nắm - Yên Thế</td>
+              <td data-col="0" data-v="93.50">93.50%</td><td data-col="1" data-v="85.42">85.42%</td><td data-col="2" data-v="93.18">93.18%</td>
+              <td data-col="3" data-v="92.08">92.08%</td><td data-col="4" data-v="97.98">97.98%</td><td data-col="5" data-v="93.52">93.52%</td><td data-col="6" data-v="96.84">96.84%</td></tr>
+            <tr><td class="bc">BC TDP Đồng Lều - Yên Thế</td>
+              <td data-col="0" data-v="100">100%</td><td data-col="1" data-v="96.83">96.83%</td><td data-col="2" data-v="98.25">98.25%</td>
+              <td data-col="3" data-v="98.28">98.28%</td><td data-col="4" data-v="97.44">97.44%</td><td data-col="5" data-v="100">100%</td><td data-col="6" data-v="98.96">98.96%</td></tr>
+            <tr><td class="bc">BC TT Cao Thượng - Tân Yên</td>
+              <td data-col="0" data-v="95.69">95.69%</td><td data-col="1" data-v="97.50">97.50%</td><td data-col="2" data-v="91.30">91.30%</td>
+              <td data-col="3" data-v="96.82">96.82%</td><td data-col="4" data-v="92.81">92.81%</td><td data-col="5" data-v="94.20">94.20%</td><td data-col="6" data-v="93.43">93.43%</td></tr>
+            <tr><td class="bc">BC TT Đồi Ngô - Lục Nam</td>
+              <td data-col="0" data-v="97.80">97.80%</td><td data-col="1" data-v="95.45">95.45%</td><td data-col="2" data-v="97.00">97.00%</td>
+              <td data-col="3" data-v="98.53">98.53%</td><td data-col="4" data-v="93.71">93.71%</td><td data-col="5" data-v="95.37">95.37%</td><td data-col="6" data-v="95.83">95.83%</td></tr>
+            <tr><td class="bc">BC TT Kép - Lạng Giang</td>
+              <td data-col="0" data-v="97.71">97.71%</td><td data-col="1" data-v="99.44">99.44%</td><td data-col="2" data-v="96.34">96.34%</td>
+              <td data-col="3" data-v="96.33">96.33%</td><td data-col="4" data-v="96.98">96.98%</td><td data-col="5" data-v="98.10">98.10%</td><td data-col="6" data-v="97.13">97.13%</td></tr>
+            <tr><td class="bc">BC TT Vôi - Lạng Giang</td>
+              <td data-col="0" data-v="96.59">96.59%</td><td data-col="1" data-v="95.07">95.07%</td><td data-col="2" data-v="90.59">90.59%</td>
+              <td data-col="3" data-v="98.59">98.59%</td><td data-col="4" data-v="94.64">94.64%</td><td data-col="5" data-v="95.00">95.00%</td><td data-col="6" data-v="97.60">97.60%</td></tr>
+            <tr><td class="bc">BC TL 293 Xóm Rén - Trường Sơn</td>
+              <td data-col="0" data-v="91.95">91.95%</td><td data-col="1" data-v="87.65">87.65%</td><td data-col="2" data-v="93.41">93.41%</td>
+              <td data-col="3" data-v="100">100%</td><td data-col="4" data-v="92.23">92.23%</td><td data-col="5" data-v="89.32">89.32%</td><td data-col="6" data-v="91.00">91.00%</td></tr>
+            <tr><td class="bc total">Grand Total</td>
+              <td data-col="0" class="num total">96.54%</td><td data-col="1" class="num total">94.77%</td><td data-col="2" class="num total">94.24%</td>
+              <td data-col="3" class="num total">97.32%</td><td data-col="4" class="num total">94.86%</td><td data-col="5" class="num total">95.25%</td><td data-col="6" class="num total">96.00%</td></tr>
+          </tbody>
+        </table>
+        </div>
+        <div class="legend">
+          <div class="leg"><div class="leg-dot" style="background:#e8f5e9"></div>≥ 90% Tốt</div>
+          <div class="leg"><div class="leg-dot" style="background:#fff8e1"></div>80–90% Trung bình</div>
+          <div class="leg"><div class="leg-dot" style="background:#ffebee"></div>&lt;80% Cần chú ý</div>
+        </div>
+      </div>
     </div>
   </div>
 
-  <!-- Ontime lấy TTS -->
-  <div class="section">
-    <div class="section-header">
-      Ontime Lấy TTS — LTC & Tỉ lệ Ontime
-      <span class="badge">Tuần 23</span>
-    </div>
-    <div class="table-scroll">
-    <table>
-      <thead>
-        <tr>
-          <th class="left" rowspan="2" style="min-width:180px">Bưu Cục</th>
-          <th colspan="2">T2 01/06</th>
-          <th colspan="2">T3 02/06</th>
-          <th colspan="2">T4 03/06</th>
-          <th colspan="2">T5 04/06</th>
-          <th colspan="2">T6 05/06</th>
-          <th colspan="2">T7 06/06</th>
-          <th colspan="2">CN 07/06</th>
-          <th colspan="2">TỔNG</th>
-        </tr>
-        <tr>
-          <th>LTC</th><th>OT%</th>
-          <th>LTC</th><th>OT%</th>
-          <th>LTC</th><th>OT%</th>
-          <th>LTC</th><th>OT%</th>
-          <th>LTC</th><th>OT%</th>
-          <th>LTC</th><th>OT%</th>
-          <th>LTC</th><th>OT%</th>
-          <th>LTC</th><th>OT%</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td class="bc-name">BC 215 Đề Nắm</td>
-          <td class="num">11</td><td class="pct pct-high">100%</td>
-          <td class="num">15</td><td class="pct pct-low">46.67%</td>
-          <td class="num">7</td><td class="pct pct-mid">71.43%</td>
-          <td class="num">17</td><td class="pct pct-mid">76.47%</td>
-          <td class="num">15</td><td class="pct pct-mid">80.00%</td>
-          <td class="num">21</td><td class="pct pct-mid">76.19%</td>
-          <td class="num">15</td><td class="pct pct-mid">80.00%</td>
-          <td class="num">45</td><td class="pct pct-mid">51.11%</td>
-        </tr>
-        <tr>
-          <td class="bc-name">BC TDP Đồng Lều</td>
-          <td class="num">145</td><td class="pct pct-high">99.31%</td>
-          <td class="num">188</td><td class="pct pct-high">98.40%</td>
-          <td class="num">172</td><td class="pct pct-high">99.42%</td>
-          <td class="num">156</td><td class="pct pct-high">100%</td>
-          <td class="num">180</td><td class="pct pct-high">99.44%</td>
-          <td class="num">213</td><td class="pct pct-high">99.53%</td>
-          <td class="num">277</td><td class="pct pct-high">99.28%</td>
-          <td class="num">1.066</td><td class="pct pct-high">99.25%</td>
-        </tr>
-        <tr>
-          <td class="bc-name">BC TT Cao Thượng</td>
-          <td class="num">977</td><td class="pct pct-high">99.80%</td>
-          <td class="num">364</td><td class="pct pct-mid">68.41%</td>
-          <td class="num">270</td><td class="pct pct-high">98.89%</td>
-          <td class="num">602</td><td class="pct pct-high">99.50%</td>
-          <td class="num">805</td><td class="pct pct-high">99.38%</td>
-          <td class="num">375</td><td class="pct pct-high">100%</td>
-          <td class="num">263</td><td class="pct pct-high">100%</td>
-          <td class="num">8.660</td><td class="pct pct-high">98.33%</td>
-        </tr>
-        <tr>
-          <td class="bc-name">BC TT Đồi Ngô</td>
-          <td class="num">202</td><td class="pct pct-mid">75.74%</td>
-          <td class="num">245</td><td class="pct pct-mid">78.37%</td>
-          <td class="num">223</td><td class="pct pct-mid">87.89%</td>
-          <td class="num">226</td><td class="pct pct-mid">81.86%</td>
-          <td class="num">202</td><td class="pct pct-mid">75.25%</td>
-          <td class="num">253</td><td class="pct pct-mid">88.14%</td>
-          <td class="num">201</td><td class="pct pct-high">93.53%</td>
-          <td class="num">1.533</td><td class="pct pct-mid">79.32%</td>
-        </tr>
-        <tr>
-          <td class="bc-name">BC TT Kép</td>
-          <td class="num">119</td><td class="pct pct-high">96.64%</td>
-          <td class="num">107</td><td class="pct pct-high">100%</td>
-          <td class="num">277</td><td class="pct pct-high">97.83%</td>
-          <td class="num">377</td><td class="pct pct-mid">70.56%</td>
-          <td class="num">426</td><td class="pct pct-mid">68.08%</td>
-          <td class="num">490</td><td class="pct pct-mid">76.53%</td>
-          <td class="num">420</td><td class="pct pct-low">47.86%</td>
-          <td class="num">1.081</td><td class="pct pct-high">94.45%</td>
-        </tr>
-        <tr>
-          <td class="bc-name">BC TT Vôi</td>
-          <td class="num">1.181</td><td class="pct pct-low">49.70%</td>
-          <td class="num">1.131</td><td class="pct pct-mid">53.14%</td>
-          <td class="num">988</td><td class="pct pct-mid">85.73%</td>
-          <td class="num">716</td><td class="pct pct-mid">89.25%</td>
-          <td class="num">1.158</td><td class="pct pct-mid">68.48%</td>
-          <td class="num">1.538</td><td class="pct pct-mid">68.14%</td>
-          <td class="num">905</td><td class="pct pct-low">46.96%</td>
-          <td class="num">1.993</td><td class="pct pct-mid">53.44%</td>
-        </tr>
-        <tr>
-          <td class="bc-name">BC TL 293 Xóm Rén</td>
-          <td class="num">—</td><td class="num">—</td>
-          <td class="num">—</td><td class="num">—</td>
-          <td class="num">—</td><td class="num">—</td>
-          <td class="num">—</td><td class="num">—</td>
-          <td class="num">2</td><td class="pct pct-high">100%</td>
-          <td class="num">—</td><td class="num">—</td>
-          <td class="num">—</td><td class="num">—</td>
-          <td class="num">3</td><td class="pct pct-mid">66.67%</td>
-        </tr>
-        <tr>
-          <td class="bc-name total-row">Grand Total</td>
-          <td class="num total-row">2.635</td><td class="num total-row">75.33%</td>
-          <td class="num total-row">2.051</td><td class="num total-row">65.38%</td>
-          <td class="num total-row">1.937</td><td class="num total-row">90.71%</td>
-          <td class="num total-row">2.094</td><td class="num total-row">88.73%</td>
-          <td class="num total-row">2.788</td><td class="num total-row">79.91%</td>
-          <td class="num total-row">2.890</td><td class="num total-row">77.82%</td>
-          <td class="num total-row">2.081</td><td class="num total-row">65.55%</td>
-          <td class="num total-row">16.476</td><td class="num total-row">77.58%</td>
-        </tr>
-      </tbody>
-    </table>
+  <!-- S5: ONTIME LẤY -->
+  <div id="s5" class="sub-pane">
+    <div class="content">
+      <div class="card">
+        <div class="card-header">Ontime Lấy TTS — LTC & Tỉ lệ Ontime <span class="badge">Tuần 23</span></div>
+        <div class="table-wrap">
+        <table id="tbl-otl">
+          <thead>
+            <tr>
+              <th class="left" rowspan="2">Bưu Cục</th>
+              <th colspan="2" data-col="0">T2 01/06</th><th colspan="2" data-col="1">T3 02/06</th>
+              <th colspan="2" data-col="2">T4 03/06</th><th colspan="2" data-col="3">T5 04/06</th>
+              <th colspan="2" data-col="4">T6 05/06</th><th colspan="2" data-col="5">T7 06/06</th>
+              <th colspan="2" data-col="6">CN 07/06</th><th colspan="2">TỔNG</th>
+            </tr>
+            <tr>
+              <th data-col="0">LTC</th><th data-col="0">OT%</th>
+              <th data-col="1">LTC</th><th data-col="1">OT%</th>
+              <th data-col="2">LTC</th><th data-col="2">OT%</th>
+              <th data-col="3">LTC</th><th data-col="3">OT%</th>
+              <th data-col="4">LTC</th><th data-col="4">OT%</th>
+              <th data-col="5">LTC</th><th data-col="5">OT%</th>
+              <th data-col="6">LTC</th><th data-col="6">OT%</th>
+              <th>LTC</th><th>OT%</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td class="bc">BC 215 Đề Nắm</td>
+              <td data-col="0" class="num">11</td><td data-col="0" data-v="100">100%</td>
+              <td data-col="1" class="num">15</td><td data-col="1" data-v="46.67">46.67%</td>
+              <td data-col="2" class="num">7</td><td data-col="2" data-v="71.43">71.43%</td>
+              <td data-col="3" class="num">17</td><td data-col="3" data-v="76.47">76.47%</td>
+              <td data-col="4" class="num">15</td><td data-col="4" data-v="80.00">80.00%</td>
+              <td data-col="5" class="num">21</td><td data-col="5" data-v="76.19">76.19%</td>
+              <td data-col="6" class="num">15</td><td data-col="6" data-v="80.00">80.00%</td>
+              <td class="num">45</td><td class="num">51.11%</td></tr>
+            <tr><td class="bc">BC TDP Đồng Lều</td>
+              <td data-col="0" class="num">145</td><td data-col="0" data-v="99.31">99.31%</td>
+              <td data-col="1" class="num">188</td><td data-col="1" data-v="98.40">98.40%</td>
+              <td data-col="2" class="num">172</td><td data-col="2" data-v="99.42">99.42%</td>
+              <td data-col="3" class="num">156</td><td data-col="3" data-v="100">100%</td>
+              <td data-col="4" class="num">180</td><td data-col="4" data-v="99.44">99.44%</td>
+              <td data-col="5" class="num">213</td><td data-col="5" data-v="99.53">99.53%</td>
+              <td data-col="6" class="num">277</td><td data-col="6" data-v="99.28">99.28%</td>
+              <td class="num">1.066</td><td class="num">99.25%</td></tr>
+            <tr><td class="bc">BC TT Cao Thượng</td>
+              <td data-col="0" class="num">977</td><td data-col="0" data-v="99.80">99.80%</td>
+              <td data-col="1" class="num">364</td><td data-col="1" data-v="68.41">68.41%</td>
+              <td data-col="2" class="num">270</td><td data-col="2" data-v="98.89">98.89%</td>
+              <td data-col="3" class="num">602</td><td data-col="3" data-v="99.50">99.50%</td>
+              <td data-col="4" class="num">805</td><td data-col="4" data-v="99.38">99.38%</td>
+              <td data-col="5" class="num">375</td><td data-col="5" data-v="100">100%</td>
+              <td data-col="6" class="num">263</td><td data-col="6" data-v="100">100%</td>
+              <td class="num">8.660</td><td class="num">98.33%</td></tr>
+            <tr><td class="bc">BC TT Đồi Ngô</td>
+              <td data-col="0" class="num">202</td><td data-col="0" data-v="75.74">75.74%</td>
+              <td data-col="1" class="num">245</td><td data-col="1" data-v="78.37">78.37%</td>
+              <td data-col="2" class="num">223</td><td data-col="2" data-v="87.89">87.89%</td>
+              <td data-col="3" class="num">226</td><td data-col="3" data-v="81.86">81.86%</td>
+              <td data-col="4" class="num">202</td><td data-col="4" data-v="75.25">75.25%</td>
+              <td data-col="5" class="num">253</td><td data-col="5" data-v="88.14">88.14%</td>
+              <td data-col="6" class="num">201</td><td data-col="6" data-v="93.53">93.53%</td>
+              <td class="num">1.533</td><td class="num">79.32%</td></tr>
+            <tr><td class="bc">BC TT Kép</td>
+              <td data-col="0" class="num">119</td><td data-col="0" data-v="96.64">96.64%</td>
+              <td data-col="1" class="num">107</td><td data-col="1" data-v="100">100%</td>
+              <td data-col="2" class="num">277</td><td data-col="2" data-v="97.83">97.83%</td>
+              <td data-col="3" class="num">377</td><td data-col="3" data-v="70.56">70.56%</td>
+              <td data-col="4" class="num">426</td><td data-col="4" data-v="68.08">68.08%</td>
+              <td data-col="5" class="num">490</td><td data-col="5" data-v="76.53">76.53%</td>
+              <td data-col="6" class="num">420</td><td data-col="6" data-v="47.86">47.86%</td>
+              <td class="num">1.081</td><td class="num">94.45%</td></tr>
+            <tr><td class="bc">BC TT Vôi</td>
+              <td data-col="0" class="num">1.181</td><td data-col="0" data-v="49.70">49.70%</td>
+              <td data-col="1" class="num">1.131</td><td data-col="1" data-v="53.14">53.14%</td>
+              <td data-col="2" class="num">988</td><td data-col="2" data-v="85.73">85.73%</td>
+              <td data-col="3" class="num">716</td><td data-col="3" data-v="89.25">89.25%</td>
+              <td data-col="4" class="num">1.158</td><td data-col="4" data-v="68.48">68.48%</td>
+              <td data-col="5" class="num">1.538</td><td data-col="5" data-v="68.14">68.14%</td>
+              <td data-col="6" class="num">905</td><td data-col="6" data-v="46.96">46.96%</td>
+              <td class="num">1.993</td><td class="num">53.44%</td></tr>
+            <tr><td class="bc">BC TL 293 Xóm Rén</td>
+              <td data-col="0" class="num">—</td><td data-col="0" class="num">—</td>
+              <td data-col="1" class="num">—</td><td data-col="1" class="num">—</td>
+              <td data-col="2" class="num">—</td><td data-col="2" class="num">—</td>
+              <td data-col="3" class="num">—</td><td data-col="3" class="num">—</td>
+              <td data-col="4" class="num">2</td><td data-col="4" data-v="100">100%</td>
+              <td data-col="5" class="num">—</td><td data-col="5" class="num">—</td>
+              <td data-col="6" class="num">—</td><td data-col="6" class="num">—</td>
+              <td class="num">3</td><td class="num">66.67%</td></tr>
+            <tr><td class="bc total">Grand Total</td>
+              <td data-col="0" class="num total">2.635</td><td data-col="0" class="num total">75.33%</td>
+              <td data-col="1" class="num total">2.051</td><td data-col="1" class="num total">65.38%</td>
+              <td data-col="2" class="num total">1.937</td><td data-col="2" class="num total">90.71%</td>
+              <td data-col="3" class="num total">2.094</td><td data-col="3" class="num total">88.73%</td>
+              <td data-col="4" class="num total">2.788</td><td data-col="4" class="num total">79.91%</td>
+              <td data-col="5" class="num total">2.890</td><td data-col="5" class="num total">77.82%</td>
+              <td data-col="6" class="num total">2.081</td><td data-col="6" class="num total">65.55%</td>
+              <td class="num total">16.476</td><td class="num total">77.58%</td></tr>
+          </tbody>
+        </table>
+        </div>
+      </div>
     </div>
   </div>
 </div>
 
-<!-- ============================================================ -->
-<!-- TAB 2: TỒN LC GIAO + TRẢ -->
-<!-- ============================================================ -->
-<div id="tab2" class="content tab-pane">
-
-  <!-- LC Giao -->
-  <div class="section">
-    <div class="section-header">
-      📤 LC Giao — Tồn Theo Tuổi Thời Gian
-      <span class="badge">Tổng: 2.018 đơn</span>
-    </div>
-    <div class="table-scroll">
-    <table>
-      <thead>
-        <tr>
-          <th class="left" style="min-width:200px">Bưu Cục</th>
-          <th>Tổng tồn</th>
-          <th style="background:#1b5e20">0–6h</th>
-          <th style="background:#388e3c">6–12h</th>
-          <th style="background:#f9a825">12–24h</th>
-          <th style="background:#ef6c00">24–36h</th>
-          <th style="background:#d84315">36–48h</th>
-          <th style="background:#c62828">48–72h</th>
-          <th style="background:#7f0000">72–96h</th>
-          <th style="background:#4a148c">96–120h</th>
-          <th style="background:#880e4f">120–192h</th>
-          <th style="background:#263238">&gt;192h</th>
-          <th style="background:#c62828">Tổng &gt;36h</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td class="bc-name">TT Kép - Lạng Giang</td>
-          <td class="num"><strong>581</strong></td>
-          <td class="num ton-0">520</td><td class="num ton-6">45</td><td class="num ton-12">11</td>
-          <td class="num ton-24">2</td><td class="num ton-36">3</td><td class="num">—</td>
-          <td class="num">—</td><td class="num">—</td><td class="num">—</td><td class="num">—</td>
-          <td class="num ton-over">3</td>
-        </tr>
-        <tr>
-          <td class="bc-name">TDP Đồng Lều - Yên Thế</td>
-          <td class="num"><strong>528</strong></td>
-          <td class="num ton-0">485</td><td class="num ton-6">42</td><td class="num ton-12">1</td>
-          <td class="num">—</td><td class="num">—</td><td class="num">—</td>
-          <td class="num">—</td><td class="num">—</td><td class="num">—</td><td class="num">—</td>
-          <td class="num">—</td>
-        </tr>
-        <tr>
-          <td class="bc-name">TT Vôi - Lạng Giang</td>
-          <td class="num"><strong>475</strong></td>
-          <td class="num ton-0">348</td><td class="num ton-6">11</td><td class="num ton-12">97</td>
-          <td class="num ton-24">19</td><td class="num">—</td><td class="num">—</td>
-          <td class="num">—</td><td class="num">—</td><td class="num">—</td><td class="num">—</td>
-          <td class="num">—</td>
-        </tr>
-        <tr>
-          <td class="bc-name">TT Đồi Ngô - Lục Nam</td>
-          <td class="num"><strong>220</strong></td>
-          <td class="num ton-0">172</td><td class="num ton-6">9</td><td class="num ton-12">32</td>
-          <td class="num ton-24">3</td><td class="num ton-36">2</td><td class="num">—</td>
-          <td class="num">—</td><td class="num">—</td><td class="num ton-over">1</td><td class="num ton-over">1</td>
-          <td class="num ton-over">4</td>
-        </tr>
-        <tr>
-          <td class="bc-name">TT Cao Thượng - Tân Yên</td>
-          <td class="num"><strong>169</strong></td>
-          <td class="num ton-0">70</td><td class="num ton-6">92</td><td class="num ton-12">6</td>
-          <td class="num">—</td><td class="num">—</td><td class="num ton-48">1</td>
-          <td class="num">—</td><td class="num">—</td><td class="num">—</td><td class="num">—</td>
-          <td class="num ton-over">1</td>
-        </tr>
-        <tr>
-          <td class="bc-name">TL 293 Xóm Rén - Trường Sơn</td>
-          <td class="num"><strong>31</strong></td>
-          <td class="num ton-0">14</td><td class="num ton-6">5</td><td class="num ton-12">12</td>
-          <td class="num">—</td><td class="num">—</td><td class="num">—</td>
-          <td class="num">—</td><td class="num">—</td><td class="num">—</td><td class="num">—</td>
-          <td class="num">—</td>
-        </tr>
-        <tr>
-          <td class="bc-name">BC 215 Đề Nắm - Yên Thế</td>
-          <td class="num"><strong>14</strong></td>
-          <td class="num ton-0">13</td><td class="num ton-6">1</td><td class="num">—</td>
-          <td class="num">—</td><td class="num">—</td><td class="num">—</td>
-          <td class="num">—</td><td class="num">—</td><td class="num">—</td><td class="num">—</td>
-          <td class="num">—</td>
-        </tr>
-        <tr>
-          <td class="bc-name total-row">Total</td>
-          <td class="num total-row"><strong>2.018</strong></td>
-          <td class="num total-row">1.622</td><td class="num total-row">205</td><td class="num total-row">159</td>
-          <td class="num total-row">24</td><td class="num total-row">5</td><td class="num total-row">1</td>
-          <td class="num total-row">—</td><td class="num total-row">—</td><td class="num total-row">1</td><td class="num total-row">1</td>
-          <td class="num total-row" style="color:#c62828">8</td>
-        </tr>
-      </tbody>
-    </table>
+<!-- ═══════════════════════════════════════════
+     TAB 2: TỒN LC
+═══════════════════════════════════════════ -->
+<div id="m2" class="tab-pane">
+  <div class="sub-tabs">
+    <button class="sub-tab active" onclick="showSub('lc1',this)">📤 LC Giao</button>
+    <button class="sub-tab" onclick="showSub('lc2',this)">📥 LC Trả</button>
+  </div>
+  <div id="lc1" class="sub-pane active">
+    <div class="content">
+      <div class="card">
+        <div class="card-header">LC Giao — Tồn Theo Tuổi Thời Gian <span class="badge">Tổng: 2.018 đơn</span></div>
+        <div class="table-wrap">
+        <table>
+          <thead><tr>
+            <th class="left">Bưu Cục</th><th>Tổng</th>
+            <th style="background:#1b5e20">0–6h</th><th style="background:#388e3c">6–12h</th>
+            <th style="background:#f9a825;color:#333">12–24h</th><th style="background:#ef6c00">24–36h</th>
+            <th style="background:#d84315">36–48h</th><th style="background:#c62828">48–72h</th>
+            <th style="background:#7f0000">72h+</th><th style="background:#c62828">&gt;36h</th>
+          </tr></thead>
+          <tbody>
+            <tr><td class="bc">TT Kép - Lạng Giang</td><td class="num"><b>581</b></td><td class="t0">520</td><td class="t1">45</td><td class="t2c">11</td><td class="t3">2</td><td class="t4">3</td><td class="num">—</td><td class="num">—</td><td class="t5">3</td></tr>
+            <tr><td class="bc">TDP Đồng Lều - Yên Thế</td><td class="num"><b>528</b></td><td class="t0">485</td><td class="t1">42</td><td class="t2c">1</td><td class="num">—</td><td class="num">—</td><td class="num">—</td><td class="num">—</td><td class="num">—</td></tr>
+            <tr><td class="bc">TT Vôi - Lạng Giang</td><td class="num"><b>475</b></td><td class="t0">348</td><td class="t1">11</td><td class="t2c">97</td><td class="t3">19</td><td class="num">—</td><td class="num">—</td><td class="num">—</td><td class="num">—</td></tr>
+            <tr><td class="bc">TT Đồi Ngô - Lục Nam</td><td class="num"><b>220</b></td><td class="t0">172</td><td class="t1">9</td><td class="t2c">32</td><td class="t3">3</td><td class="t4">2</td><td class="num">—</td><td class="t5">2</td><td class="t5">4</td></tr>
+            <tr><td class="bc">TT Cao Thượng - Tân Yên</td><td class="num"><b>169</b></td><td class="t0">70</td><td class="t1">92</td><td class="t2c">6</td><td class="num">—</td><td class="num">—</td><td class="t5">1</td><td class="num">—</td><td class="t5">1</td></tr>
+            <tr><td class="bc">TL 293 Xóm Rén - Trường Sơn</td><td class="num"><b>31</b></td><td class="t0">14</td><td class="t1">5</td><td class="t2c">12</td><td class="num">—</td><td class="num">—</td><td class="num">—</td><td class="num">—</td><td class="num">—</td></tr>
+            <tr><td class="bc">BC 215 Đề Nắm - Yên Thế</td><td class="num"><b>14</b></td><td class="t0">13</td><td class="t1">1</td><td class="num">—</td><td class="num">—</td><td class="num">—</td><td class="num">—</td><td class="num">—</td><td class="num">—</td></tr>
+            <tr><td class="bc total">Total</td><td class="num total"><b>2.018</b></td><td class="num total">1.622</td><td class="num total">205</td><td class="num total">159</td><td class="num total">24</td><td class="num total">5</td><td class="num total">1</td><td class="num total">2</td><td class="num total" style="color:#c62828"><b>8</b></td></tr>
+          </tbody>
+        </table>
+        </div>
+      </div>
     </div>
   </div>
-
-  <!-- LC Trả -->
-  <div class="section">
-    <div class="section-header">
-      📥 LC Trả — Tồn Theo Tuổi Thời Gian
-      <span class="badge">Tổng: 631 đơn</span>
-    </div>
-    <div class="table-scroll">
-    <table>
-      <thead>
-        <tr>
-          <th class="left" style="min-width:200px">Bưu Cục</th>
-          <th>Tổng tồn</th>
-          <th style="background:#1b5e20">0–6h</th>
-          <th style="background:#388e3c">6–12h</th>
-          <th style="background:#f9a825">12–24h</th>
-          <th style="background:#ef6c00">24–36h</th>
-          <th style="background:#d84315">36–48h</th>
-          <th style="background:#c62828">48–72h</th>
-          <th style="background:#7f0000">72–96h</th>
-          <th style="background:#4a148c">96–120h</th>
-          <th style="background:#880e4f">120–192h</th>
-          <th style="background:#263238">&gt;192h</th>
-          <th style="background:#c62828">Tổng &gt;36h</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td class="bc-name">TT Đồi Ngô - Lục Nam</td>
-          <td class="num"><strong>224</strong></td>
-          <td class="num ton-0">11</td><td class="num ton-6">14</td><td class="num ton-12">176</td>
-          <td class="num ton-24">16</td><td class="num ton-36">6</td><td class="num">—</td>
-          <td class="num">—</td><td class="num">—</td><td class="num ton-over">1</td><td class="num">—</td>
-          <td class="num ton-over">7</td>
-        </tr>
-        <tr>
-          <td class="bc-name">TT Vôi - Lạng Giang</td>
-          <td class="num"><strong>222</strong></td>
-          <td class="num ton-0">41</td><td class="num ton-6">25</td><td class="num ton-12">104</td>
-          <td class="num ton-24">8</td><td class="num ton-36">33</td><td class="num ton-48">11</td>
-          <td class="num">—</td><td class="num">—</td><td class="num">—</td><td class="num">—</td>
-          <td class="num ton-over"><strong>44</strong></td>
-        </tr>
-        <tr>
-          <td class="bc-name">TT Cao Thượng - Tân Yên</td>
-          <td class="num"><strong>65</strong></td>
-          <td class="num ton-0">7</td><td class="num ton-6">1</td><td class="num ton-12">57</td>
-          <td class="num">—</td><td class="num">—</td><td class="num">—</td>
-          <td class="num">—</td><td class="num">—</td><td class="num">—</td><td class="num">—</td>
-          <td class="num">—</td>
-        </tr>
-        <tr>
-          <td class="bc-name">TL 293 Xóm Rén - Trường Sơn</td>
-          <td class="num"><strong>41</strong></td>
-          <td class="num ton-0">2</td><td class="num ton-6">2</td><td class="num ton-12">37</td>
-          <td class="num">—</td><td class="num">—</td><td class="num">—</td>
-          <td class="num">—</td><td class="num">—</td><td class="num">—</td><td class="num">—</td>
-          <td class="num">—</td>
-        </tr>
-        <tr>
-          <td class="bc-name">TDP Đồng Lều - Yên Thế</td>
-          <td class="num"><strong>38</strong></td>
-          <td class="num ton-0">1</td><td class="num ton-6">1</td><td class="num ton-12">36</td>
-          <td class="num">—</td><td class="num">—</td><td class="num">—</td>
-          <td class="num">—</td><td class="num">—</td><td class="num">—</td><td class="num">—</td>
-          <td class="num">—</td>
-        </tr>
-        <tr>
-          <td class="bc-name">BC 215 Đề Nắm - Yên Thế</td>
-          <td class="num"><strong>27</strong></td>
-          <td class="num ton-0">5</td><td class="num">—</td><td class="num ton-12">22</td>
-          <td class="num">—</td><td class="num">—</td><td class="num">—</td>
-          <td class="num">—</td><td class="num">—</td><td class="num">—</td><td class="num">—</td>
-          <td class="num">—</td>
-        </tr>
-        <tr>
-          <td class="bc-name">TT Kép - Lạng Giang</td>
-          <td class="num"><strong>14</strong></td>
-          <td class="num ton-0">4</td><td class="num ton-6">1</td><td class="num ton-12">8</td>
-          <td class="num">—</td><td class="num">—</td><td class="num ton-48">1</td>
-          <td class="num">—</td><td class="num">—</td><td class="num">—</td><td class="num">—</td>
-          <td class="num ton-over">1</td>
-        </tr>
-        <tr>
-          <td class="bc-name total-row">Total</td>
-          <td class="num total-row"><strong>631</strong></td>
-          <td class="num total-row">67</td><td class="num total-row">43</td><td class="num total-row">440</td>
-          <td class="num total-row">24</td><td class="num total-row">39</td><td class="num total-row">12</td>
-          <td class="num total-row">—</td><td class="num total-row">—</td><td class="num total-row">1</td><td class="num total-row">—</td>
-          <td class="num total-row" style="color:#c62828"><strong>52</strong></td>
-        </tr>
-      </tbody>
-    </table>
-    </div>
-    <div class="legend">
-      <div class="legend-item"><div class="legend-dot" style="background:#e8f5e9"></div> 0–6h (Tươi)</div>
-      <div class="legend-item"><div class="legend-dot" style="background:#fff9c4"></div> 12–24h</div>
-      <div class="legend-item"><div class="legend-dot" style="background:#ffe0b2"></div> 24–36h</div>
-      <div class="legend-item"><div class="legend-dot" style="background:#ffccbc"></div> 36–48h</div>
-      <div class="legend-item"><div class="legend-dot" style="background:#ef9a9a"></div> &gt;48h (Cảnh báo)</div>
+  <div id="lc2" class="sub-pane">
+    <div class="content">
+      <div class="card">
+        <div class="card-header">LC Trả — Tồn Theo Tuổi Thời Gian <span class="badge">Tổng: 631 đơn</span></div>
+        <div class="table-wrap">
+        <table>
+          <thead><tr>
+            <th class="left">Bưu Cục</th><th>Tổng</th>
+            <th style="background:#1b5e20">0–6h</th><th style="background:#388e3c">6–12h</th>
+            <th style="background:#f9a825;color:#333">12–24h</th><th style="background:#ef6c00">24–36h</th>
+            <th style="background:#d84315">36–48h</th><th style="background:#c62828">48–72h</th>
+            <th style="background:#7f0000">72h+</th><th style="background:#c62828">&gt;36h</th>
+          </tr></thead>
+          <tbody>
+            <tr><td class="bc">TT Đồi Ngô - Lục Nam</td><td class="num"><b>224</b></td><td class="t0">11</td><td class="t1">14</td><td class="t2c">176</td><td class="t3">16</td><td class="t4">6</td><td class="num">—</td><td class="t5">1</td><td class="t5">7</td></tr>
+            <tr><td class="bc">TT Vôi - Lạng Giang</td><td class="num"><b>222</b></td><td class="t0">41</td><td class="t1">25</td><td class="t2c">104</td><td class="t3">8</td><td class="t4">33</td><td class="t5">11</td><td class="num">—</td><td class="t5"><b>44</b></td></tr>
+            <tr><td class="bc">TT Cao Thượng - Tân Yên</td><td class="num"><b>65</b></td><td class="t0">7</td><td class="t1">1</td><td class="t2c">57</td><td class="num">—</td><td class="num">—</td><td class="num">—</td><td class="num">—</td><td class="num">—</td></tr>
+            <tr><td class="bc">TL 293 Xóm Rén - Trường Sơn</td><td class="num"><b>41</b></td><td class="t0">2</td><td class="t1">2</td><td class="t2c">37</td><td class="num">—</td><td class="num">—</td><td class="num">—</td><td class="num">—</td><td class="num">—</td></tr>
+            <tr><td class="bc">TDP Đồng Lều - Yên Thế</td><td class="num"><b>38</b></td><td class="t0">1</td><td class="t1">1</td><td class="t2c">36</td><td class="num">—</td><td class="num">—</td><td class="num">—</td><td class="num">—</td><td class="num">—</td></tr>
+            <tr><td class="bc">BC 215 Đề Nắm - Yên Thế</td><td class="num"><b>27</b></td><td class="t0">5</td><td class="t1">—</td><td class="t2c">22</td><td class="num">—</td><td class="num">—</td><td class="num">—</td><td class="num">—</td><td class="num">—</td></tr>
+            <tr><td class="bc">TT Kép - Lạng Giang</td><td class="num"><b>14</b></td><td class="t0">4</td><td class="t1">1</td><td class="t2c">8</td><td class="num">—</td><td class="num">—</td><td class="t5">1</td><td class="num">—</td><td class="t5">1</td></tr>
+            <tr><td class="bc total">Total</td><td class="num total"><b>631</b></td><td class="num total">67</td><td class="num total">43</td><td class="num total">440</td><td class="num total">24</td><td class="num total">39</td><td class="num total">12</td><td class="num total">1</td><td class="num total" style="color:#c62828"><b>52</b></td></tr>
+          </tbody>
+        </table>
+        </div>
+      </div>
     </div>
   </div>
 </div>
 
-<!-- ============================================================ -->
-<!-- TAB 3: ĐƠN AGING > 5 NGÀY -->
-<!-- ============================================================ -->
-<div id="tab3" class="content tab-pane">
-
-  <div class="section">
-    <div class="section-header">
-      ⚠️ Tổng Hợp Đơn Aging &gt; 5 Ngày — Theo Bưu Cục
-      <span class="badge">Cập nhật: 20/06/2026 07:45</span>
-    </div>
-
-    <!-- Bar chart -->
-    <div class="bar-wrap">
-      <div style="font-size:11px; color:#666; margin-bottom:12px;">Biểu đồ: Số đơn tồn đọng theo Bưu Cục và nhóm ngày</div>
-
-      <div class="bar-row">
-        <div class="bar-label">TT Đồi Ngô - Lục Nam</div>
-        <div class="bar-track">
-          <div style="display:flex; height:100%; border-radius:4px; overflow:hidden;">
-            <div class="bar-fill bar-a" style="width:50.9%">27</div>
-            <div class="bar-fill bar-b" style="width:32.1%; color:white; font-size:11px; font-weight:700; display:flex;align-items:center;padding-left:4px">17</div>
-            <div class="bar-fill bar-c" style="width:11.3%; font-size:10px; display:flex;align-items:center;padding-left:2px;color:white">6</div>
-            <div class="bar-fill bar-d" style="width:3.8%; font-size:9px;color:white"></div>
-            <div class="bar-fill bar-e" style="width:1.9%; font-size:9px"></div>
-          </div>
+<!-- ═══════════════════════════════════════════
+     TAB 3: AGING
+═══════════════════════════════════════════ -->
+<div id="m3" class="tab-pane">
+  <div class="content">
+    <div class="card">
+      <div class="card-header">⚠️ Đơn Aging &gt; 5 Ngày — Theo Bưu Cục <span class="badge">Tổng: 124 đơn | 20/06/2026</span></div>
+      <div class="bar-section">
+        <div class="bar-row"><div class="bar-label">TT Đồi Ngô - Lục Nam</div><div class="bar-track"><div class="bar-seg ba" style="width:50.9%">27</div><div class="bar-seg bb" style="width:32.1%">17</div><div class="bar-seg bc2" style="width:11.3%">6</div><div class="bar-seg bd" style="width:3.8%"></div><div class="bar-seg be" style="width:1.9%"></div></div><div class="bar-count">53</div></div>
+        <div class="bar-row"><div class="bar-label">TT Vôi - Lạng Giang</div><div class="bar-track"><div class="bar-seg ba" style="width:20.5%">8</div><div class="bar-seg bb" style="width:43.6%">17</div><div class="bar-seg bc2" style="width:33.3%">13</div><div class="bar-seg bd" style="width:2.6%"></div></div><div class="bar-count">39</div></div>
+        <div class="bar-row"><div class="bar-label">TL 293 Xóm Rén - Trường Sơn</div><div class="bar-track"><div class="bar-seg ba" style="width:45.5%">5</div><div class="bar-seg bb" style="width:45.5%">5</div><div class="bar-seg bd" style="width:9%"></div></div><div class="bar-count">11</div></div>
+        <div class="bar-row"><div class="bar-label">BC 215 Đề Nắm - Yên Thế</div><div class="bar-track"><div class="bar-seg ba" style="width:55.6%">5</div><div class="bar-seg bb" style="width:33.3%">3</div><div class="bar-seg bc2" style="width:11.1%"></div></div><div class="bar-count">9</div></div>
+        <div class="bar-row"><div class="bar-label">TT Kép - Lạng Giang</div><div class="bar-track"><div class="bar-seg ba" style="width:55.6%">5</div><div class="bar-seg bb" style="width:33.3%">3</div><div class="bar-seg bc2" style="width:11.1%"></div></div><div class="bar-count">9</div></div>
+        <div class="bar-row"><div class="bar-label">TT Cao Thượng - Tân Yên</div><div class="bar-track"><div class="bar-seg ba" style="width:100%">3</div></div><div class="bar-count">3</div></div>
+        <div style="display:flex;gap:14px;flex-wrap:wrap;margin-top:10px;font-size:11px;">
+          <span style="display:flex;align-items:center;gap:4px"><span style="width:13px;height:13px;background:#f9a825;border-radius:2px;display:inline-block"></span>(a) 5–6 ngày</span>
+          <span style="display:flex;align-items:center;gap:4px"><span style="width:13px;height:13px;background:#ef6c00;border-radius:2px;display:inline-block"></span>(b) 6–7 ngày</span>
+          <span style="display:flex;align-items:center;gap:4px"><span style="width:13px;height:13px;background:#d84315;border-radius:2px;display:inline-block"></span>(c) 7–8 ngày</span>
+          <span style="display:flex;align-items:center;gap:4px"><span style="width:13px;height:13px;background:#c62828;border-radius:2px;display:inline-block"></span>(d) 8–9 ngày</span>
+          <span style="display:flex;align-items:center;gap:4px"><span style="width:13px;height:13px;background:#7f0000;border-radius:2px;display:inline-block"></span>(e) 9–10 ngày</span>
         </div>
-        <div class="bar-count">53</div>
-      </div>
-
-      <div class="bar-row">
-        <div class="bar-label">TT Vôi - Lạng Giang</div>
-        <div class="bar-track">
-          <div style="display:flex; height:100%; border-radius:4px; overflow:hidden;">
-            <div class="bar-fill bar-a" style="width:20.5%">8</div>
-            <div class="bar-fill bar-b" style="width:43.6%; color:white; font-size:11px;font-weight:700;display:flex;align-items:center;padding-left:4px">17</div>
-            <div class="bar-fill bar-c" style="width:33.3%; display:flex;align-items:center;padding-left:4px">13</div>
-            <div class="bar-fill bar-d" style="width:2.6%"></div>
-          </div>
-        </div>
-        <div class="bar-count">39</div>
-      </div>
-
-      <div class="bar-row">
-        <div class="bar-label">TL 293 Xóm Rén - Trường Sơn</div>
-        <div class="bar-track">
-          <div style="display:flex; height:100%; border-radius:4px; overflow:hidden;">
-            <div class="bar-fill bar-a" style="width:45.5%">5</div>
-            <div class="bar-fill bar-b" style="width:45.5%; display:flex;align-items:center;padding-left:4px">5</div>
-            <div class="bar-fill bar-d" style="width:9%;"></div>
-          </div>
-        </div>
-        <div class="bar-count">11</div>
-      </div>
-
-      <div class="bar-row">
-        <div class="bar-label">BC 215 Đề Nắm - Yên Thế</div>
-        <div class="bar-track">
-          <div style="display:flex; height:100%; border-radius:4px; overflow:hidden;">
-            <div class="bar-fill bar-a" style="width:55.6%">5</div>
-            <div class="bar-fill bar-b" style="width:33.3%; display:flex;align-items:center;padding-left:4px">3</div>
-            <div class="bar-fill bar-c" style="width:11.1%;"></div>
-          </div>
-        </div>
-        <div class="bar-count">9</div>
-      </div>
-
-      <div class="bar-row">
-        <div class="bar-label">TT Kép - Lạng Giang</div>
-        <div class="bar-track">
-          <div style="display:flex; height:100%; border-radius:4px; overflow:hidden;">
-            <div class="bar-fill bar-a" style="width:55.6%">5</div>
-            <div class="bar-fill bar-b" style="width:33.3%; display:flex;align-items:center;padding-left:4px">3</div>
-            <div class="bar-fill bar-c" style="width:11.1%;"></div>
-          </div>
-        </div>
-        <div class="bar-count">9</div>
-      </div>
-
-      <div class="bar-row">
-        <div class="bar-label">TT Cao Thượng - Tân Yên</div>
-        <div class="bar-track">
-          <div style="display:flex; height:100%; border-radius:4px; overflow:hidden;">
-            <div class="bar-fill bar-a" style="width:100%">3</div>
-          </div>
-        </div>
-        <div class="bar-count">3</div>
-      </div>
-
-      <div style="display:flex; gap:16px; margin-top:12px; flex-wrap:wrap;">
-        <div style="display:flex;align-items:center;gap:5px;font-size:11px;"><div style="width:14px;height:14px;background:#f9a825;border-radius:3px;"></div> (a) 5–6 ngày</div>
-        <div style="display:flex;align-items:center;gap:5px;font-size:11px;"><div style="width:14px;height:14px;background:#ef6c00;border-radius:3px;"></div> (b) 6–7 ngày</div>
-        <div style="display:flex;align-items:center;gap:5px;font-size:11px;"><div style="width:14px;height:14px;background:#d84315;border-radius:3px;"></div> (c) 7–8 ngày</div>
-        <div style="display:flex;align-items:center;gap:5px;font-size:11px;"><div style="width:14px;height:14px;background:#c62828;border-radius:3px;"></div> (d) 8–9 ngày</div>
-        <div style="display:flex;align-items:center;gap:5px;font-size:11px;"><div style="width:14px;height:14px;background:#7f0000;border-radius:3px;"></div> (e) 9–10 ngày</div>
       </div>
     </div>
-  </div>
-
-  <!-- Detail table -->
-  <div class="section">
-    <div class="section-header">Chi Tiết Theo Bưu Cục & Nhóm Ngày</div>
-    <div class="table-scroll">
-    <table>
-      <thead>
-        <tr>
-          <th class="left" style="min-width:220px">Bưu Cục</th>
+    <div class="card">
+      <div class="card-header">Chi Tiết Theo Bưu Cục</div>
+      <div class="table-wrap">
+      <table>
+        <thead><tr>
+          <th class="left">Bưu Cục</th>
           <th class="age-a" style="color:#333">(a) 5–6 ngày</th>
           <th class="age-b" style="color:#333">(b) 6–7 ngày</th>
           <th class="age-c" style="color:#333">(c) 7–8 ngày</th>
           <th class="age-d" style="color:#333">(d) 8–9 ngày</th>
           <th class="age-e" style="color:#333">(e) 9–10 ngày</th>
           <th>Tổng</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td class="bc-name">⚠️ TT Đồi Ngô - Lục Nam</td>
-          <td class="num age-a">27</td><td class="num age-b">17</td>
-          <td class="num age-c">6</td><td class="num age-d">2</td><td class="num age-e">1</td>
-          <td class="num"><strong>53</strong></td>
-        </tr>
-        <tr>
-          <td class="bc-name">⚠️ TT Vôi - Lạng Giang</td>
-          <td class="num age-a">8</td><td class="num age-b">17</td>
-          <td class="num age-c">13</td><td class="num age-d">1</td><td class="num">—</td>
-          <td class="num"><strong>39</strong></td>
-        </tr>
-        <tr>
-          <td class="bc-name">TL 293 Xóm Rén - Trường Sơn</td>
-          <td class="num age-a">5</td><td class="num age-b">5</td>
-          <td class="num">—</td><td class="num age-d">1</td><td class="num">—</td>
-          <td class="num"><strong>11</strong></td>
-        </tr>
-        <tr>
-          <td class="bc-name">BC 215 Đề Nắm - Yên Thế</td>
-          <td class="num age-a">5</td><td class="num age-b">3</td>
-          <td class="num age-c">1</td><td class="num">—</td><td class="num">—</td>
-          <td class="num"><strong>9</strong></td>
-        </tr>
-        <tr>
-          <td class="bc-name">TT Kép - Lạng Giang</td>
-          <td class="num age-a">5</td><td class="num age-b">3</td>
-          <td class="num age-c">1</td><td class="num">—</td><td class="num">—</td>
-          <td class="num"><strong>9</strong></td>
-        </tr>
-        <tr>
-          <td class="bc-name">TT Cao Thượng - Tân Yên</td>
-          <td class="num age-a">3</td><td class="num">—</td>
-          <td class="num">—</td><td class="num">—</td><td class="num">—</td>
-          <td class="num"><strong>3</strong></td>
-        </tr>
-        <tr>
-          <td class="bc-name total-row">Grand Total</td>
-          <td class="num total-row">53</td><td class="num total-row">45</td>
-          <td class="num total-row">21</td><td class="num total-row">4</td><td class="num total-row">1</td>
-          <td class="num total-row"><strong>124</strong></td>
-        </tr>
-      </tbody>
-    </table>
-    </div>
-    <div style="padding:12px 16px; background:#fff3cd; border-top:1px solid #ffd700; font-size:12px; color:#856404;">
-      ⚡ <strong>Cần ưu tiên xử lý:</strong> BC TT Đồi Ngô (53 đơn, trong đó 1 đơn 9–10 ngày) và BC TT Vôi (39 đơn, 13 đơn &gt;7 ngày). AM: Phạm Đức Thắng.
+        </tr></thead>
+        <tbody>
+          <tr><td class="bc">⚠️ TT Đồi Ngô - Lục Nam</td><td class="age-a">27</td><td class="age-b">17</td><td class="age-c">6</td><td class="age-d">2</td><td class="age-e">1</td><td class="num"><b>53</b></td></tr>
+          <tr><td class="bc">⚠️ TT Vôi - Lạng Giang</td><td class="age-a">8</td><td class="age-b">17</td><td class="age-c">13</td><td class="age-d">1</td><td class="num">—</td><td class="num"><b>39</b></td></tr>
+          <tr><td class="bc">TL 293 Xóm Rén</td><td class="age-a">5</td><td class="age-b">5</td><td class="num">—</td><td class="age-d">1</td><td class="num">—</td><td class="num"><b>11</b></td></tr>
+          <tr><td class="bc">BC 215 Đề Nắm</td><td class="age-a">5</td><td class="age-b">3</td><td class="age-c">1</td><td class="num">—</td><td class="num">—</td><td class="num"><b>9</b></td></tr>
+          <tr><td class="bc">TT Kép - Lạng Giang</td><td class="age-a">5</td><td class="age-b">3</td><td class="age-c">1</td><td class="num">—</td><td class="num">—</td><td class="num"><b>9</b></td></tr>
+          <tr><td class="bc">TT Cao Thượng - Tân Yên</td><td class="age-a">3</td><td class="num">—</td><td class="num">—</td><td class="num">—</td><td class="num">—</td><td class="num"><b>3</b></td></tr>
+          <tr><td class="bc total">Grand Total</td><td class="num total">53</td><td class="num total">45</td><td class="num total">21</td><td class="num total">4</td><td class="num total">1</td><td class="num total"><b>124</b></td></tr>
+        </tbody>
+      </table>
+      </div>
+      <div class="alert" style="margin:12px;">⚡ <b>Ưu tiên xử lý:</b> BC TT Đồi Ngô (53 đơn, có 1 đơn 9–10 ngày) và BC TT Vôi (39 đơn, 13 đơn &gt;7 ngày). AM: Phạm Đức Thắng — 1900 636677.</div>
     </div>
   </div>
 </div>
 
+</div><!-- end main-content -->
+
+<!-- MAIN TABS (right sidebar) -->
+<div class="main-tabs">
+  <button class="main-tab active" onclick="showMain('m1',this)">📊 Vận Hành Tuần</button>
+  <button class="main-tab" onclick="showMain('m2',this)">📬 Tồn LC Giao + Trả</button>
+  <button class="main-tab" onclick="showMain('m3',this)">⏱️ Đơn Aging &gt; 5 Ngày</button>
+</div>
+
+</div><!-- end body-wrap -->
+
 <script>
-function showTab(id) {
+// ── DATA ──
+const DAYS = ['T2 01/06','T3 02/06','T4 03/06','T5 04/06','T6 05/06','T7 06/06','CN 07/06'];
+const BC = ['BC 215 Đề Nắm','BC TDP Đồng Lều','BC TT Cao Thượng','BC TT Đồi Ngô','BC TT Kép','BC TT Vôi','BC TL 293 Xóm Rén'];
+const GTC_TOTAL = [
+  [55.39,56.58,57.40,60.22,58.37,59.77,57.19],
+  [71.14,70.22,68.98,72.93,73.47,70.95,60.33],
+  [59.16,56.39,57.13,59.83,64.98,55.35,46.30],
+  [56.78,48.53,51.31,44.90,56.43,47.26,44.16],
+  [72.66,68.03,66.83,70.80,70.11,68.07,65.11],
+  [52.59,43.25,50.48,53.34,45.89,50.57,40.69],
+  [55.91,51.87,52.20,40.70,45.27,46.38,36.02]
+];
+const GTC_TTS = [
+  [61.81,62.50,61.97,65.16,61.88,65.06,56.55],
+  [80.00,73.26,67.86,65.91,72.90,64.96,60.76],
+  [59.18,56.60,59.74,63.82,62.70,60.79,48.07],
+  [58.84,51.52,53.61,49.19,57.89,50.49,50.07],
+  [76.24,73.17,73.54,77.58,75.00,70.43,67.59],
+  [58.91,47.18,59.94,58.52,49.12,58.36,42.78],
+  [58.00,55.10,57.23,38.04,45.98,50.49,42.19]
+];
+const OTG = [
+  [93.50,85.42,93.18,92.08,97.98,93.52,96.84],
+  [100,96.83,98.25,98.28,97.44,100,98.96],
+  [95.69,97.50,91.30,96.82,92.81,94.20,93.43],
+  [97.80,95.45,97.00,98.53,93.71,95.37,95.83],
+  [97.71,99.44,96.34,96.33,96.98,98.10,97.13],
+  [96.59,95.07,90.59,98.59,94.64,95.00,97.60],
+  [91.95,87.65,93.41,100,92.23,89.32,91.00]
+];
+const OTL = [
+  [100,46.67,71.43,76.47,80.00,76.19,80.00],
+  [99.31,98.40,99.42,100,99.44,99.53,99.28],
+  [99.80,68.41,98.89,99.50,99.38,100,100],
+  [75.74,78.37,87.89,81.86,75.25,88.14,93.53],
+  [96.64,100,97.83,70.56,68.08,76.53,47.86],
+  [49.70,53.14,85.73,89.25,68.48,68.14,46.96],
+  [null,null,null,null,100,null,null]
+];
+
+let currentDay = 'all';
+
+function showMain(id, btn) {
   document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
-  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.main-tab').forEach(b => b.classList.remove('active'));
   document.getElementById(id).classList.add('active');
-  event.target.classList.add('active');
+  btn.classList.add('active');
 }
 
-// Color percentage cells dynamically for ontime lấy
-document.querySelectorAll('td.pct').forEach(td => {
-  const txt = td.textContent.trim();
-  if (!txt || txt === '—') return;
-  const val = parseFloat(txt);
-  if (!isNaN(val)) {
-    td.classList.remove('pct-high','pct-mid','pct-low');
-    // For GTC tables (low values): high >= 65, mid 50-65, low < 50
-    // For ontime tables (high values): high >= 90, mid 70-90, low < 70
-    // Check which table by checking parent section
-    const inGtc = td.closest('table') && td.closest('.section') &&
-                   td.closest('.section').querySelector('.section-header').textContent.includes('GTC');
-    if (inGtc) {
-      td.classList.add(val >= 65 ? 'pct-high' : val >= 50 ? 'pct-mid' : 'pct-low');
-    } else {
-      td.classList.add(val >= 90 ? 'pct-high' : val >= 70 ? 'pct-mid' : 'pct-low');
-    }
+function showSub(id, btn) {
+  const pane = btn.closest('.tab-pane') || btn.closest('.sub-tabs').nextElementSibling.parentElement;
+  btn.closest('.sub-tabs').querySelectorAll('.sub-tab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  // find all sub-panes in scope
+  let parent = btn.closest('.tab-pane');
+  if (!parent) parent = document.getElementById('m1');
+  parent.querySelectorAll('.sub-pane').forEach(p => p.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function pctClass(v, isOT) {
+  if (isOT) return v >= 90 ? 'hi' : v >= 80 ? 'md' : 'lo';
+  return v >= 65 ? 'hi' : v >= 50 ? 'md' : 'lo';
+}
+
+function colorAllTables() {
+  // GTC tables (threshold 65/50)
+  ['tbl-gtc-total','tbl-gtc-tts'].forEach(tid => {
+    const tbl = document.getElementById(tid);
+    if (!tbl) return;
+    tbl.querySelectorAll('td[data-v]').forEach(td => {
+      const v = parseFloat(td.dataset.v);
+      td.className = pctClass(v, false) + (td.classList.contains('col-hl') ? ' col-hl' : '');
+    });
+  });
+  // OT tables
+  ['tbl-otg','tbl-otl'].forEach(tid => {
+    const tbl = document.getElementById(tid);
+    if (!tbl) return;
+    tbl.querySelectorAll('td[data-v]').forEach(td => {
+      const v = parseFloat(td.dataset.v);
+      td.className = pctClass(v, true) + (td.classList.contains('col-hl') ? ' col-hl' : '');
+    });
+  });
+}
+
+function filterDay(day, btn) {
+  currentDay = day;
+  document.querySelectorAll('.day-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+
+  // Highlight columns
+  ['tbl-gtc-total','tbl-gtc-tts','tbl-otg','tbl-otl'].forEach(tid => {
+    const tbl = document.getElementById(tid);
+    if (!tbl) return;
+    tbl.querySelectorAll('th[data-col], td[data-col]').forEach(el => {
+      el.classList.toggle('col-hl', day !== 'all' && el.dataset.col === day);
+    });
+  });
+
+  // Show/hide summary
+  const kpiAll = document.getElementById('kpi-all');
+  const dayDetail = document.getElementById('day-detail');
+  if (day === 'all') {
+    kpiAll.style.display = '';
+    dayDetail.style.display = 'none';
+  } else {
+    kpiAll.style.display = 'none';
+    dayDetail.style.display = '';
+    renderDayDetail(parseInt(day));
   }
-});
+
+  colorAllTables();
+}
+
+function renderDayDetail(d) {
+  const title = document.getElementById('day-detail-title');
+  title.textContent = '📅 Chi tiết ' + DAYS[d];
+  const container = document.getElementById('day-cards');
+  container.innerHTML = BC.map((bc, i) => {
+    const gt = GTC_TOTAL[i][d];
+    const gs = GTC_TTS[i][d];
+    const og = OTG[i][d];
+    const ol = OTL[i][d];
+    const color = v => v == null ? '#999' : v >= 65 ? '#2e7d32' : v >= 50 ? '#e65100' : '#c62828';
+    const colorOT = v => v == null ? '#999' : v >= 90 ? '#2e7d32' : v >= 80 ? '#e65100' : '#c62828';
+    const fmt = v => v == null ? '—' : v.toFixed(2) + '%';
+    return `<div class="ds-card">
+      <div class="ds-header">${bc}</div>
+      <div class="ds-row"><span class="ds-metric">GTC Total</span><span class="ds-val" style="color:${color(gt)}">${fmt(gt)}</span></div>
+      <div class="ds-row"><span class="ds-metric">GTC TTS</span><span class="ds-val" style="color:${color(gs)}">${fmt(gs)}</span></div>
+      <div class="ds-row"><span class="ds-metric">Ontime Giao</span><span class="ds-val" style="color:${colorOT(og)}">${fmt(og)}</span></div>
+      <div class="ds-row"><span class="ds-metric">Ontime Lấy</span><span class="ds-val" style="color:${colorOT(ol)}">${fmt(ol)}</span></div>
+    </div>`;
+  }).join('');
+}
+
+// Init
+colorAllTables();
 </script>
 </body>
 </html>
