@@ -736,7 +736,7 @@ async function runAIAnalysis(){
  const systemPrompt='Bạn là chuyên gia phân tích vận hành logistics cho GHN Vùng XBG (Bắc Giang và các tỉnh lân cận). Phân tích dữ liệu chi tiết, cụ thể, dùng số liệu thực tế. Highlight điểm mạnh (🟢) và điểm yếu (🔴). Trả lời bằng tiếng Việt, format rõ ràng với tiêu đề và bullet points.';
  const userMsg=`DỮ LIỆU VẬN HÀNH 7 NGÀY GẦN NHẤT:\n${dataCtx}\n\nYÊU CẦU:\n${userQ}`;
  try{
-  const res=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${key}`,{
+  const res=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${key}`,{
    method:'POST',
    headers:{'Content-Type':'application/json'},
    body:JSON.stringify({
