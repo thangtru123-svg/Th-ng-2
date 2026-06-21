@@ -95,7 +95,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text-main);
 .card-info{font-size:11px;color:var(--text-sub)}
 .table-wrap{overflow-x:auto}
 table{width:100%;border-collapse:collapse;min-width:600px}
-th{background:#F8F9FA;padding:9px 12px;text-align:left;font-size:10px;font-weight:700;color:var(--text-sub);text-transform:uppercase;letter-spacing:.5px;border-bottom:2px solid var(--border);white-space:nowrap}
+th{background:#FEEDE4;padding:9px 12px;text-align:left;font-size:10px;font-weight:700;color:#9A3412;text-transform:uppercase;letter-spacing:.5px;border-bottom:2px solid var(--orange-mid);white-space:nowrap}
 td{padding:8px 12px;border-bottom:1px solid #F3F4F6;font-size:12px;color:var(--text-main);vertical-align:middle}
 tr:last-child td{border-bottom:none}
 tr:hover td{background:#FAFAFA}
@@ -185,20 +185,10 @@ tr.tot td{background:#F8F9FA;font-weight:700;border-top:2px solid var(--orange-m
   <img src="https://cdn.hstatic.net/themes/200000472237/1001423864/14/logo.png?v=2874" alt="GHN">
   <div class="logo-sub">Báo Cáo Vận Hành XBG</div>
  </div>
- <div class="nav-section">Vận hành ngày</div>
- <button class="nav-item active" onclick="show('p1',this)"><span class="icon">📦</span>Vận Hành AM</button>
- <button class="nav-item" onclick="show('p2',this)"><span class="icon">🏪</span>GTC Bưu Cục</button>
- <button class="nav-item" onclick="show('p3',this)"><span class="icon">✅</span>GTC TTS / AM</button>
- <button class="nav-item" onclick="show('p4',this)"><span class="icon">⏱️</span>Ontime TTS</button>
- <div class="nav-section">Tỉ lệ hoàn</div>
- <button class="nav-item" onclick="show('p5',this)"><span class="icon">↩️</span>FD Hoàn – AM</button>
- <button class="nav-item" onclick="show('p6',this)"><span class="icon">📮</span>FD Hoàn – BC</button>
- <div class="nav-section">Phân tích</div>
- <button class="nav-item" onclick="show('p7',this)"><span class="icon">📊</span>GTC Giao / Hàng AM</button>
  <div class="nav-section">Từ GHN Report</div>
- <button class="nav-item" onclick="show('p8',this)"><span class="icon">📋</span>Tổng quan 7 ngày theo AM</button>
+ <button class="nav-item active" onclick="show('p8',this)"><span class="icon">📋</span>Tổng quan 7 ngày theo AM</button>
  <button class="nav-item" onclick="show('p9',this)"><span class="icon">🏪</span>Tổng quan 7 ngày theo BC</button>
-<button class="nav-item" onclick="show('p10',this)"><span class="icon">📦</span>Tổng quan GTC đơn TTS</button>
+ <button class="nav-item" onclick="show('p10',this)"><span class="icon">📦</span>Tổng quan GTC đơn TTS</button>
  <button class="refresh-btn" id="refreshBtn" onclick="loadAll()">
   <span class="spin" id="spinIcon">🔄</span> Cập nhật dữ liệu
  </button>
@@ -206,49 +196,18 @@ tr.tot td{background:#F8F9FA;font-weight:700;border-top:2px solid var(--orange-m
 </nav>
 
 <main class="main">
- <div class="page active" id="p1"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
- <div class="page" id="p2"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
- <div class="page" id="p3"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
- <div class="page" id="p4"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
- <div class="page" id="p5"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
- <div class="page" id="p6"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
- <div class="page" id="p7"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
- <div class="page" id="p8"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
+ <div class="page active" id="p8"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
  <div class="page" id="p9"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
 <div class="page" id="p10"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
 </main>
 
 <script>
-const SELF='Phạm Đức Thắng';
-const SID='1zNYw6PMBa_hNxnfyREstfg-L78djDNym0rMU-LXzicg';
-const SHEETS={
- vanHanh:{name:'VẬN HÀNH AM',range:'A1:I33'},
- bcGiao:{name:'BƯU CỤC-GIAO',range:'A1:F100'},
- gtcTTS:{name:'GTC TTS',range:'A1:F33'},
- ontime:{name:'AM-ONTIME TTS',range:'A1:F33'},
- fdAM:{name:'FD( tỉ lệ trả) - AM',range:'A1:E24'},
- fdBC:{name:'FD( tỉ lệ trả) - Bưu Cục',range:'A1:G98'},
- vAM:{name:'v_AM',range:'A1:P100'},
-};
-function sheetURL(n,r){return`https://docs.google.com/spreadsheets/d/${SID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(n)}&range=${r}`;}
-function parseCSV(text){return text.trim().split('\n').filter(l=>l.trim()).map(line=>{const cols=[];let cur='',inQ=false;for(const c of line){if(c==='"')inQ=!inQ;else if(c===','&&!inQ){cols.push(cur.trim());cur='';}else cur+=c;}cols.push(cur.trim());return cols;});}
-async function fetchSheet(name,range){const res=await fetch(sheetURL(name,range));if(!res.ok)throw new Error(`HTTP ${res.status}`);return parseCSV(await res.text());}
-
 // helpers
 function show(id,btn){document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));document.querySelectorAll('.nav-item').forEach(b=>b.classList.remove('active'));document.getElementById(id).classList.add('active');btn.classList.add('active');}
-function pn(v){return parseFloat((v||'').replace(/,/g,'').replace('%',''))||0;}
-function pi(v){return parseInt((v||'').replace(/,/g,''))||0;}
 // parse số từ GHN export (dùng dấu phẩy làm thập phân, VD: "0,7882")
 function pnG(v){return parseFloat((v||'').replace(',','.'))||0;}
-function gc(v,g,m){const n=pn(v);return n>=g?'g':n>=m?'m':'b';}
-function fd(v){const n=pn(v);return n<=8?'g':n<=12?'m':'b';}
-function bar(pct,cls){const bc=cls==='bgg'?'g':cls==='brd'?'b':'m';return`<span class="pct ${bc}">${pct}</span>`;}
-function am(n){return n;}
-function rk(i){const c=i===0?'r1':i===1?'r2':i===2?'r3':'rn';return`<div class="rank ${c}">${i+1}</div>`;}
-function bg(v,g,m){return`<span class="pct ${gc(v,g,m)}">${v}</span>`;}
-function fb(v){return`<span class="pct ${fd(v)}">${v}</span>`;}
 function fmt(n){return n.toLocaleString('vi-VN');}
-function mkTable(heads,rows){const t=document.createElement('table');t.innerHTML=`<thead><tr>${heads.map(h=>`<th>${h}</th>`).join('')}</tr></thead><tbody></tbody>`;rows.forEach(r=>t.querySelector('tbody').appendChild(r));return t;}
+function parseCSV(text){return text.trim().split('\n').filter(l=>l.trim()).map(line=>{const cols=[];let cur='',inQ=false;for(const c of line){if(c==='"')inQ=!inQ;else if(c===','&&!inQ){cols.push(cur.trim());cur='';}else cur+=c;}cols.push(cur.trim());return cols;});}
 function errPage(msg){return`<div class="error-box">⚠️ Không thể tải dữ liệu: ${msg}<br><small>Kiểm tra kết nối mạng hoặc quyền truy cập Google Sheet.</small></div>`;}
 
 // === XỬ LÝ THÀNH CÔNG (p8) ===
@@ -301,6 +260,7 @@ function buildXuLy(rowsA,rowsB){
    const vol=Math.round(pnG(r[3]));const pct=pnG(r[mCol])*100;
    grandPivot[date]={vol,pct,volTC:Math.round(vol*pct/100)};
   });
+  if(!Object.keys(grandPivot).length){dates7.forEach(d=>{let tv=0,tc=0;Object.values(pivot).forEach(row=>{if(row[d]){tv+=row[d].vol;tc+=row[d].volTC;}});if(tv>0)grandPivot[d]={vol:tv,pct:tc/tv*100,volTC:tc};});}
   const _latestAM=dates7[dates7.length-1];const amNames=Object.keys(pivot).sort((a,b)=>{const pA=pivot[a][_latestAM]?pivot[a][_latestAM].pct:999;const pB=pivot[b][_latestAM]?pivot[b][_latestAM].pct:999;return pA-pB;});
   let html=`<div class="table-wrap"><table><thead><tr><th rowspan="2" style="text-align:center;width:36px">STT</th><th rowspan="2" style="min-width:130px">AM</th>${dates7.map(d=>`<th colspan="3" style="text-align:center;border-left:1px solid var(--border)">${shortDate(d)}</th>`).join('')}</tr><tr>${dates7.map(()=>`<th style="text-align:right;border-left:1px solid var(--border)">Vol</th><th style="text-align:right">${tcLabel}</th><th style="text-align:center">${mLabel}</th>`).join('')}</tr></thead><tbody>`;
   amNames.forEach((name,i)=>{
@@ -362,9 +322,10 @@ function buildXuLyBC(rowsC,rowsD){
    const vol=Math.round(pnG(r[3]));const pct=pnG(r[mCol])*100;
    grandPivot[date]={vol,pct,volTC:Math.round(vol*pct/100)};
   });
+  if(!Object.keys(grandPivot).length){dates7.forEach(d=>{let tv=0,tc=0;Object.values(pivot).forEach(row=>{if(row[d]){tv+=row[d].vol;tc+=row[d].volTC;}});if(tv>0)grandPivot[d]={vol:tv,pct:tc/tv*100,volTC:tc};});}
   const _latestBC=dates7[dates7.length-1];const bcNames=Object.keys(pivot).sort((a,b)=>{const pA=pivot[a][_latestBC]?pivot[a][_latestBC].pct:999;const pB=pivot[b][_latestBC]?pivot[b][_latestBC].pct:999;return pA-pB;});
   const cs='padding:4px 8px;font-size:12px;';
-  let html=`<div class="table-wrap" style="max-height:420px;overflow-y:auto;"><table style="font-size:12px;"><thead style="position:sticky;top:0;z-index:2;background:var(--bg-card)"><tr><th rowspan="2" style="text-align:center;width:32px;${cs}">STT</th><th rowspan="2" style="min-width:140px;${cs}">Bưu Cục</th><th rowspan="2" style="min-width:90px;${cs}">AM</th>${dates7.map(d=>`<th colspan="3" style="text-align:center;border-left:1px solid var(--border);${cs}">${shortDate(d)}</th>`).join('')}</tr><tr>${dates7.map(()=>`<th style="text-align:right;border-left:1px solid var(--border);${cs}">Vol</th><th style="text-align:right;${cs}">${tcLabel}</th><th style="text-align:center;${cs}">${mLabel}</th>`).join('')}</tr></thead><tbody>`;
+  let html=`<div class="table-wrap" style="max-height:960px;overflow-y:auto;"><table style="font-size:12px;"><thead style="position:sticky;top:0;z-index:2;background:var(--bg-card)"><tr><th rowspan="2" style="text-align:center;width:32px;${cs}">STT</th><th rowspan="2" style="min-width:140px;${cs}">Bưu Cục</th><th rowspan="2" style="min-width:90px;${cs}">AM</th>${dates7.map(d=>`<th colspan="3" style="text-align:center;border-left:1px solid var(--border);${cs}">${shortDate(d)}</th>`).join('')}</tr><tr>${dates7.map(()=>`<th style="text-align:right;border-left:1px solid var(--border);${cs}">Vol</th><th style="text-align:right;${cs}">${tcLabel}</th><th style="text-align:center;${cs}">${mLabel}</th>`).join('')}</tr></thead><tbody>`;
   bcNames.forEach((name,i)=>{
    const row=pivot[name];
    html+=`<tr><td style="text-align:center;color:var(--text-sub);font-size:11px;${cs}">${i+1}</td><td style="white-space:nowrap;${cs}"><strong>${name}</strong></td><td style="color:var(--text-sub);font-size:11px;${cs}">${row.amName||''}</td>`;
@@ -469,7 +430,7 @@ function buildTTSGiao(rowsAM,rowsBC){
   const latest=dates7[dates7.length-1];
   const cs='padding:4px 8px;font-size:12px;';
   const bcNames=Object.keys(pivot).sort((a,b)=>{const pA=pivot[a][latest]?pivot[a][latest].pct:999;const pB=pivot[b][latest]?pivot[b][latest].pct:999;return pA-pB;});
-  let html=`<div class="table-wrap" style="max-height:420px;overflow-y:auto;"><table style="font-size:12px;"><thead style="position:sticky;top:0;z-index:2;background:var(--bg-card)"><tr><th rowspan="2" style="text-align:center;width:32px;${cs}">STT</th><th rowspan="2" style="min-width:140px;${cs}">Bưu Cục</th><th rowspan="2" style="min-width:90px;${cs}">AM</th>${dates7.map(d=>`<th colspan="3" style="text-align:center;border-left:1px solid var(--border);${cs}">${shortDate(d)}</th>`).join('')}</tr><tr>${dates7.map(()=>`<th style="text-align:right;border-left:1px solid var(--border);${cs}">Vol</th><th style="text-align:right;${cs}">GTC</th><th style="text-align:center;${cs}">%GTC</th>`).join('')}</tr></thead><tbody>`;
+  let html=`<div class="table-wrap" style="max-height:960px;overflow-y:auto;"><table style="font-size:12px;"><thead style="position:sticky;top:0;z-index:2;background:var(--bg-card)"><tr><th rowspan="2" style="text-align:center;width:32px;${cs}">STT</th><th rowspan="2" style="min-width:140px;${cs}">Bưu Cục</th><th rowspan="2" style="min-width:90px;${cs}">AM</th>${dates7.map(d=>`<th colspan="3" style="text-align:center;border-left:1px solid var(--border);${cs}">${shortDate(d)}</th>`).join('')}</tr><tr>${dates7.map(()=>`<th style="text-align:right;border-left:1px solid var(--border);${cs}">Vol</th><th style="text-align:right;${cs}">GTC</th><th style="text-align:center;${cs}">%GTC</th>`).join('')}</tr></thead><tbody>`;
   bcNames.forEach((name,i)=>{
    const row=pivot[name];
    html+=`<tr><td style="text-align:center;color:var(--text-sub);font-size:11px;${cs}">${i+1}</td><td style="white-space:nowrap;${cs}"><strong>${name}</strong></td><td style="color:var(--text-sub);font-size:11px;${cs}">${row.amName||''}</td>`;
@@ -497,69 +458,6 @@ function buildTTSGiao(rowsAM,rowsBC){
   <div class="card"><div class="card-header"><div class="card-title"><div class="card-icon">🏪</div>Báo Cáo Giao TTS Theo Bưu Cục</div><div class="card-info">%GTC: Xanh ≥65% · Vàng ≥50% · Đỏ &lt;50%</div></div>${buildBCTable(rowsBC)}</div>`;
 }
 
-// === GIAO OVERVIEW cho p1 ===
-function buildGiaoOverview(rowsB){
- if(!rowsB||rowsB.length<2)return'';
- function parseAMName(s){if(!s)return'';const i=s.lastIndexOf(',');return i>0?s.substring(0,i).trim():s.trim();}
- function shortDate(d){const m=(d||'').match(/(\d{4})-(\d{2})-(\d{2})/);return m?`${+m[3]}/${+m[2]}`:d.slice(0,10);}
- function isoDate(d){const m=(d||'').match(/\d{4}-\d{2}-\d{2}/);return m?m[0]:'';}
- const data=rowsB.slice(1).filter(r=>r[1]&&r[1].trim());
- const amRows=data.filter(r=>{const b=(r[1]||'').trim().toLowerCase();return b&&!b.includes('grand total')&&!b.includes('tổng số');});
- const grandRows=data.filter(r=>{const b=(r[1]||'').trim().toLowerCase();return b.includes('grand total')||b.includes('tổng số');});
- const allDates=[...new Set(amRows.map(r=>(r[2]||'').trim()).filter(d=>d))].sort((a,b)=>isoDate(b).localeCompare(isoDate(a)));
- const dates7=allDates.slice(0,7).reverse();
- if(!dates7.length)return'';
- const pivot={};
- amRows.forEach(r=>{
-  const amName=parseAMName((r[1]||'').trim());
-  const date=(r[2]||'').trim();
-  if(!amName||!dates7.includes(date))return;
-  if(!pivot[amName])pivot[amName]={};
-  pivot[amName][date]={vol:Math.round(pnG(r[3])),pGTC:pnG(r[5])*100,pGan:pnG(r[4])*100};
- });
- const grandPivot={};
- grandRows.forEach(r=>{
-  const date=(r[2]||'').trim();
-  if(!dates7.includes(date))return;
-  grandPivot[date]={vol:Math.round(pnG(r[3])),pGTC:pnG(r[5])*100};
- });
- const amNames=Object.keys(pivot).sort();
- // KPIs: latest date stats
- const latestDate=dates7[dates7.length-1];
- const latestGrand=grandPivot[latestDate];
- const latestAMs=amNames.filter(n=>pivot[n][latestDate]);
- const below50=latestAMs.filter(n=>pivot[n][latestDate].pGTC<50).length;
- const above65=latestAMs.filter(n=>pivot[n][latestDate].pGTC>=65).length;
- const kpiHTML=latestGrand?`<div class="kpi-row" style="margin-bottom:14px">
-  <div class="kpi"><div class="kpi-label">Vol Giao (${shortDate(latestDate)})</div><div class="kpi-value">${fmt(latestGrand.vol)}</div><div class="kpi-sub">đơn giao trong ngày</div></div>
-  <div class="kpi"><div class="kpi-label">%GTC Tổng</div><div class="kpi-value" style="color:${latestGrand.pGTC>=65?'var(--green)':latestGrand.pGTC>=50?'var(--yellow)':'var(--red)'}">${latestGrand.pGTC.toFixed(1)}%</div><div class="kpi-sub">Mục tiêu ≥65%</div></div>
-  <div class="kpi"><div class="kpi-label">AM ≥65%</div><div class="kpi-value" style="color:var(--green)">${above65}</div><div class="kpi-sub">/${latestAMs.length} AM đạt</div></div>
-  <div class="kpi"><div class="kpi-label">AM &lt;50%</div><div class="kpi-value" style="color:var(--red)">${below50}</div><div class="kpi-sub">AM cần cải thiện</div></div>
- </div>`:'';
- let tbl=`<div class="table-wrap"><table><thead><tr><th rowspan="2" style="min-width:130px">AM</th>${dates7.map(d=>`<th colspan="2" style="text-align:center;border-left:1px solid var(--border)">${shortDate(d)}</th>`).join('')}</tr><tr>${dates7.map(()=>`<th style="text-align:right;border-left:1px solid var(--border)">Vol</th><th style="text-align:center">%GTC</th>`).join('')}</tr></thead><tbody>`;
- amNames.forEach(name=>{
-  const row=pivot[name];
-  tbl+=`<tr><td style="white-space:nowrap"><strong>${name}</strong></td>`;
-  dates7.forEach(d=>{
-   const cell=row[d];
-   if(cell){const p=cell.pGTC.toFixed(1);const c=cell.pGTC>=65?'g':cell.pGTC>=50?'m':'b';tbl+=`<td style="text-align:right;border-left:1px solid #F3F4F6">${fmt(cell.vol)}</td><td style="text-align:center"><span class="pct ${c}">${p}%</span></td>`;}
-   else tbl+=`<td style="text-align:right;border-left:1px solid #F3F4F6;color:var(--text-sub)">—</td><td>—</td>`;
-  });
-  tbl+='</tr>';
- });
- if(Object.keys(grandPivot).length){
-  tbl+=`<tr class="tot"><td>Grand Total</td>`;
-  dates7.forEach(d=>{
-   const cell=grandPivot[d];
-   if(cell){const p=cell.pGTC.toFixed(1);const c=cell.pGTC>=65?'g':cell.pGTC>=50?'m':'b';tbl+=`<td style="text-align:right;border-left:1px solid #F3F4F6">${fmt(cell.vol)}</td><td style="text-align:center"><span class="pct ${c}">${p}%</span></td>`;}
-   else tbl+=`<td style="border-left:1px solid #F3F4F6">—</td><td>—</td>`;
-  });
-  tbl+='</tr>';
- }
- tbl+='</tbody></table></div>';
- return`<div class="card"><div class="card-header"><div class="card-title"><div class="card-icon">🚚</div>Tổng Quan Giao Thành Công — 7 Ngày Gần Nhất</div><div class="card-info">%GTC: Xanh ≥65% · Vàng ≥50% · Đỏ &lt;50%</div></div><div style="padding:14px 18px 0">${kpiHTML}</div>${tbl}</div>`;
-}
-
 // splash
 function initSplash(){
  const container=document.getElementById('splashParticles');
@@ -581,369 +479,9 @@ function dismissSplash(){
  if(s){s.classList.add('fade-out');setTimeout(()=>s.remove(),700);}
 }
 
-// enrich helpers
-function enrichVH(r){
- const v1=pi(r[2]),p1=pn(r[3]),v2=pi(r[4]),p2=pn(r[5]),vT=pi(r[6]||''),pT=pn(r[7]||'');
- const g1=Math.round(v1*p1/100),g2=Math.round(v2*p2/100),gT=Math.round(vT*pT/100);
- const tot=v1+v2+vT,gan=g1+g2+gT;
- const pctTot=tot>0?((gan/tot)*100).toFixed(1)+'%':'0%';
- return{v1,p1,v2,p2,vT,pT,g1,g2,gT,tot,gan,pctTot};
-}
-
-// BUILD VAN HANH
-function buildVanHanh(rows,gtcMap={}){
- const data=rows.slice(1).filter(r=>r[0]&&r[0].trim());
- const totRow=data.find(r=>!r[0].match(/^\d+$/));
- const dr=data.filter(r=>r[0].match(/^\d+$/));
- const en=dr.map(r=>({r,...enrichVH(r)}));
- const sumV1=en.reduce((s,x)=>s+x.v1,0),sumV2=en.reduce((s,x)=>s+x.v2,0),sumVT=en.reduce((s,x)=>s+x.vT,0);
- const sumGan=en.reduce((s,x)=>s+x.gan,0),sumTot=sumV1+sumV2+sumVT;
- const kV1=totRow&&totRow[2]?totRow[2]:fmt(sumV1);
- const kP1=totRow&&totRow[3]?totRow[3]:(sumV1>0?((en.reduce((s,x)=>s+x.v1*x.p1,0)/sumV1)).toFixed(1)+'%':'—');
- const kV2=totRow&&totRow[4]?totRow[4]:fmt(sumV2);
- const kP2=totRow&&totRow[5]?totRow[5]:(sumV2>0?((en.reduce((s,x)=>s+x.v2*x.p2,0)/sumV2)).toFixed(1)+'%':'—');
- const kVT=totRow&&pi(totRow[6]||'')>0?fmt(pi(totRow[6])):sumVT>0?fmt(sumVT):'—';
- const kPT=totRow&&totRow[7]?totRow[7]:(sumVT>0?((en.reduce((s,x)=>s+x.vT*x.pT,0)/sumVT)).toFixed(1)+'%':'—');
- const kGanPct=sumTot>0?((sumGan/sumTot)*100).toFixed(1)+'%':'—';
- const totGTC=gtcMap._totalGTC||{pctGTC:0,volGTC:0};
- const totGTCPct=totGTC.pctGTC>0?totGTC.pctGTC.toFixed(1)+'%':'—';
- const totGTCVol=totGTC.volGTC>0?fmt(totGTC.volGTC):'—';
- const totGTCColor=totGTC.pctGTC>=65?'var(--green)':totGTC.pctGTC>=50?'var(--yellow)':'var(--red)';
- return`<div class="page-header"><div class="page-title">Báo Cáo Vận Hành Theo AM</div>
-  <div class="page-meta"><span class="tag tag-orange">📅 Dữ liệu thực tế từ Google Sheet</span><span>${dr.length} AMs · Tổng Vol: ${fmt(sumTot)} đơn</span></div></div>
-  <div class="kpi-row" style="grid-template-columns:repeat(3,1fr)">
-   <div class="kpi"><div class="kpi-label">Tổng Vol Ca 1</div><div class="kpi-value">${kV1}</div><div class="kpi-sub">%Gán Ca1 TB: ${kP1}</div></div>
-   <div class="kpi"><div class="kpi-label">Tổng Vol Ca 2</div><div class="kpi-value">${kV2}</div><div class="kpi-sub">%Gán Ca2 TB: ${kP2}</div></div>
-   <div class="kpi"><div class="kpi-label">Tổng Vol Hàng Tồn</div><div class="kpi-value">${kVT}</div><div class="kpi-sub">%Gán Tồn: ${kPT}</div></div>
-  </div>
-  <div class="kpi" style="display:grid;grid-template-columns:1fr 1fr;gap:0;margin-bottom:18px;padding:0;border:1px solid var(--orange-mid)">
-   <div style="padding:14px 16px;border-right:1px solid var(--border)">
-    <div class="kpi-label">Tổng Tất Cả Loại Hàng</div>
-    <div class="kpi-value">${fmt(sumTot)} <span style="font-size:13px;font-weight:400;color:var(--text-sub)">đơn</span></div>
-    <div class="kpi-sub">Đơn gán: ${fmt(sumGan)} · %Gán: ${kGanPct}</div>
-   </div>
-   <div style="padding:14px 16px">
-    <div class="kpi-label">GTC Tổng Tất Cả</div>
-    <div class="kpi-value" style="color:${totGTCColor}">${totGTCPct}</div>
-    <div class="kpi-sub">Vol GTC: ${totGTCVol} đơn</div>
-   </div>
-  </div>
-  <div class="card"><div class="card-header"><div class="card-title"><div class="card-icon">📦</div>Chi Tiết Vận Hành Theo AM</div><div class="card-info">%Gán: Xanh ≥90% · Vàng 80–90% · Đỏ &lt;80% &nbsp;|&nbsp; %GTC: Xanh ≥65% · Vàng 50–65% · Đỏ &lt;50%</div></div><div class="table-wrap"></div></div>`;
-}
-
-// BUILD BC GIAO
-function buildBCGiao(rows){
- const data=rows.slice(1).filter(r=>r[0]&&r[0].trim());
- const totRow=data.find(r=>!r[0].match(/^\d+$/));
- const dr=data.filter(r=>r[0].match(/^\d+$/));
- const sumV1=dr.reduce((s,r)=>s+pi(r[3]),0);
- const sumGTC=dr.reduce((s,r)=>s+Math.round(pi(r[3])*pn(r[5])/100),0);
- const pctAvg=sumV1>0?((sumGTC/sumV1)*100).toFixed(1)+'%':'—';
- const kGTCPct=totRow?totRow[5]:pctAvg;
- const kGTCColor=pn(kGTCPct)>=70?'var(--green)':pn(kGTCPct)>=60?'var(--yellow)':'var(--red)';
- const countBelow50=dr.filter(r=>pn(r[5])>0&&pn(r[5])<50).length;
- const countAbove50=dr.filter(r=>pn(r[5])>=50).length;
- return`<div class="page-header"><div class="page-title">GTC Theo Bưu Cục</div>
-  <div class="page-meta"><span class="tag tag-orange">📅 Dữ liệu thực tế từ Google Sheet</span><span>${dr.length} bưu cục</span></div></div>
-  <div class="kpi-row">
-   <div class="kpi"><div class="kpi-label">Tổng Bưu Cục</div><div class="kpi-value">${dr.length}</div><div class="kpi-sub">đang hoạt động</div></div>
-   <div class="kpi"><div class="kpi-label">Số Bưu Cục GTC Dưới 50%</div><div class="kpi-value" style="color:var(--red)">${countBelow50}</div><div class="kpi-sub">bưu cục cần cải thiện</div></div>
-   <div class="kpi"><div class="kpi-label">Số Bưu Cục GTC Trên 50%</div><div class="kpi-value" style="color:var(--green)">${countAbove50}</div><div class="kpi-sub">bưu cục đạt hiệu quả</div></div>
-   <div class="kpi"><div class="kpi-label">%GTC Tổng</div><div class="kpi-value" style="color:${kGTCColor}">${kGTCPct}</div><div class="kpi-sub">Mục tiêu ≥70%</div></div>
-  </div>
-  <div class="card"><div class="card-header"><div class="card-title"><div class="card-icon">🏪</div>Hiệu Suất GTC Bưu Cục</div><div class="card-info">%GTC: Xanh ≥70% · Vàng 60–70% · Đỏ &lt;60%</div></div><div class="table-wrap"></div></div>`;
-}
-
-function buildGTCTTS(rows){
- const data=rows.slice(1).filter(r=>r[0]&&r[0].trim());
- const totRow=data.find(r=>!r[0].match(/^\d+$/));
- const dr=data.filter(r=>r[0].match(/^\d+$/));
- const mx=dr.reduce((a,b)=>pn(b[4])>pn(a[4])?b:a,dr[0]||['','','','','']);
- const mn=dr.reduce((a,b)=>pn(b[4])<pn(a[4])?b:a,dr[0]||['','','','','']);
- return`<div class="page-header"><div class="page-title">GTC TTS Theo AM</div>
-  <div class="page-meta"><span class="tag tag-orange">📅 Dữ liệu thực tế từ Google Sheet</span><span>Tổng: ${totRow?totRow[2]:'—'} · %GTC TB: ${totRow?totRow[4]:'—'}</span></div></div>
-  <div class="kpi-row">
-   <div class="kpi"><div class="kpi-label">Tổng Ca 1 TTS</div><div class="kpi-value">${totRow?totRow[2]:'—'}</div><div class="kpi-sub">%Gán: ${totRow?totRow[3]:'—'}</div></div>
-   <div class="kpi"><div class="kpi-label">%GTC Trung Bình</div><div class="kpi-value" style="color:var(--yellow)">${totRow?totRow[4]:'—'}</div><div class="kpi-sub">Mục tiêu ≥80%</div></div>
-   <div class="kpi"><div class="kpi-label">GTC Cao Nhất</div><div class="kpi-value" style="color:var(--green)">${mx[4]||'—'}</div><div class="kpi-sub">${mx[1]||'—'}</div></div>
-   <div class="kpi"><div class="kpi-label">GTC Thấp Nhất</div><div class="kpi-value" style="color:var(--red)">${mn[4]||'—'}</div><div class="kpi-sub">${mn[1]||'—'}</div></div>
-  </div>
-  <div class="card"><div class="card-header"><div class="card-title"><div class="card-icon">✅</div>Tỉ Lệ GTC TTS Theo AM</div><div class="card-info">%GTC: Xanh ≥80% · Vàng 70–80% · Đỏ &lt;70%</div></div><div class="table-wrap"></div></div>`;
-}
-
-function buildOntime(rows){
- const allRows=rows.slice(1).filter(r=>r.some(c=>c&&c.trim()));
- const totRow=allRows.find(r=>(r[0]||'').toLowerCase().includes('grand')||(r[0]||'').toLowerCase().includes('total')||(r[1]||'').toLowerCase().includes('grand')||(r[1]||'').toLowerCase().includes('total'));
- const dr=allRows.filter(r=>r[0]&&r[0].match(/^\d+$/));
- const mx=dr.reduce((a,b)=>pn(b[4])>pn(a[4])?b:a,dr[0]||[]);
- const mn=dr.reduce((a,b)=>pn(b[4])<pn(a[4])?b:a,dr[0]||[]);
- const totVol=totRow?totRow[3]:'—';
- const totOntime=totRow?totRow[4]:'—';
- const totPct=pn(totOntime);
- const totColor=totPct>=96?'var(--green)':totPct>0?'var(--red)':'var(--text-sub)';
- return`<div class="page-header"><div class="page-title">Ontime TTS Theo AM</div>
-  <div class="page-meta"><span class="tag tag-orange">📅 ${dr[0]?dr[0][2]:'Ngày hiện tại'}</span><span>Tổng Vol GTC: ${totVol} · %Ontime TB: ${totOntime}</span></div></div>
-  <div class="kpi-row">
-   <div class="kpi"><div class="kpi-label">Tổng Vol GTC</div><div class="kpi-value">${totVol}</div><div class="kpi-sub">Vol đúng hạn: ${totRow?totRow[5]:'—'}</div></div>
-   <div class="kpi"><div class="kpi-label">%Ontime TB</div><div class="kpi-value" style="color:${totColor}">${totOntime}</div><div class="kpi-sub">Mục tiêu ≥96%</div></div>
-   <div class="kpi"><div class="kpi-label">Ontime Cao Nhất</div><div class="kpi-value" style="color:var(--green)">${mx[4]||'—'}</div><div class="kpi-sub">${mx[1]||'—'}</div></div>
-   <div class="kpi"><div class="kpi-label">Ontime Thấp Nhất</div><div class="kpi-value" style="color:var(--red)">${mn[4]||'—'}</div><div class="kpi-sub">${mn[1]||'—'}</div></div>
-  </div>
-  <div class="card"><div class="card-header"><div class="card-title"><div class="card-icon">⏱️</div>Ontime TTS Ngày</div><div class="card-info">%Ontime: Xanh ≥96% · Đỏ &lt;96% · Target tối thiểu 96%</div></div><div class="table-wrap"></div></div>`;
-}
-
-function buildFDAM(rows){
- const data=rows.slice(1).filter(r=>r[0]&&r[0].trim());
- const totRow=data.find(r=>(r[0]||'').toUpperCase().includes('TOTAL'));
- const dr=data.filter(r=>!(r[0]||'').toUpperCase().includes('TOTAL'));
- const self=dr.find(r=>(r[0]||'').includes(SELF));
- const mx=dr.reduce((a,b)=>pn(b[1])>pn(a[1])?b:a,dr[0]||[]);
- const mn=dr.reduce((a,b)=>pn(b[1])<pn(a[1])?b:a,dr[0]||[]);
- return`<div class="page-header"><div class="page-title">Tỉ Lệ Hoàn (FD) Theo AM</div>
-  <div class="page-meta"><span class="tag tag-orange">📅 Dữ liệu thực tế từ Google Sheet</span><span>TOTAL: ${totRow?totRow[1]:'—'} · SME: ${totRow?totRow[2]:'—'} · TTS: ${totRow?totRow[3]:'—'} · Shopee: ${totRow?totRow[4]:'—'}</span></div></div>
-  <div class="kpi-row">
-   <div class="kpi"><div class="kpi-label">FD Trung Bình</div><div class="kpi-value" style="color:var(--yellow)">${totRow?totRow[1]:'—'}</div><div class="kpi-sub">Mục tiêu ≤8%</div></div>
-   <div class="kpi"><div class="kpi-label">FD Cao Nhất</div><div class="kpi-value" style="color:var(--red)">${mx[1]||'—'}</div><div class="kpi-sub">${mx[0]||'—'}</div></div>
-   <div class="kpi"><div class="kpi-label">FD Thấp Nhất</div><div class="kpi-value" style="color:var(--green)">${mn[1]||'—'}</div><div class="kpi-sub">${mn[0]||'—'}</div></div>
-   <div class="kpi"><div class="kpi-label">Phạm Đức Thắng</div><div class="kpi-value" style="color:var(--yellow)">${self?self[1]:'—'}</div><div class="kpi-sub">SME ${self?self[2]:'—'} · TTS ${self?self[3]:'—'} · Shopee ${self?self[4]:'—'}</div></div>
-  </div>
-  <div class="card"><div class="card-header"><div class="card-title"><div class="card-icon">↩️</div>FD Hoàn Theo AM — Giảm Dần</div><div class="card-info">FD: Xanh ≤8% · Vàng 8–12% · Đỏ &gt;12%</div></div><div class="table-wrap"></div></div>`;
-}
-
-function buildGTCAM(rows){
- const data=rows.slice(1).filter(r=>r.some(c=>c&&c.trim()));
- const giaoTot=data.find(r=>(r[1]||'').trim()==='Grand Total');
- const hangTot=data.find(r=>(r[9]||'').trim()==='Grand Total');
- const dateRaw=(data.find(r=>r[2]&&r[2].trim())||{})[2]||'';
- const dateLabel=dateRaw.split(' - ')[0]||dateRaw;
- const amGiaoRows=data.filter(r=>r[1]&&r[1].trim()&&r[1].trim()!=='Grand Total'&&!r[1].includes(','));
- const amHangRows=data.filter(r=>r[10]&&r[10].trim()&&r[10].trim()!=='Grand Total'&&!r[10].includes(','));
- const nAM=amGiaoRows.length;
- const totVol=giaoTot?pi(giaoTot[3]):0;
- const totGTC=giaoTot?pn(giaoTot[5]):0;
- const totGTCCls=totGTC>=65?'var(--green)':totGTC>=50?'var(--yellow)':'var(--red)';
- const totHangVol=hangTot?pi(hangTot[12]):0;
- const totLTC=hangTot?pn(hangTot[14]):0;
- const totLC=hangTot?pn(hangTot[15]):0;
- // Top 5 AM thấp nhất
- const topLow=[...amGiaoRows].sort((a,b)=>pn(a[5])-pn(b[5])).slice(0,5);
- const topLowHTML=topLow.map(r=>{
-  const p=pn(r[5]);const cls=p>=65?'g':p>=50?'m':'b';
-  return`<div class="gtc-top-row"><span class="gtc-am-name">${r[1]}</span><span class="pct ${cls}">${r[5]}</span><div class="gtc-bar"><div class="gtc-bar-fill ${p>=65?'fill-g':p>=50?'fill-m':'fill-b'}" style="width:${Math.min(100,p)}%"></div></div></div>`;
- }).join('');
- return`<div class="page-header"><div class="page-title">Giao Thành Công & Hàng Mới Theo AM</div>
-  <div class="page-meta"><span class="tag tag-orange">📅 ${dateLabel}</span><span>${nAM} AMs · Nguồn: v_AM (Cột B–F: Giao · Cột K–P: Hàng)</span></div></div>
-  <div class="kpi-row">
-   <div class="kpi"><div class="kpi-label">Tổng Vol Giao</div><div class="kpi-value">${fmt(totVol)}</div><div class="kpi-sub">%Gán: ${giaoTot?giaoTot[4]:'—'}</div></div>
-   <div class="kpi"><div class="kpi-label">%GTC Tổng</div><div class="kpi-value" style="color:${totGTCCls}">${giaoTot?giaoTot[5]:'—'}</div><div class="kpi-sub">Mục tiêu ≥65%</div></div>
-   <div class="kpi"><div class="kpi-label">Tổng Hàng Lấy</div><div class="kpi-value">${fmt(totHangVol)}</div><div class="kpi-sub">%Gán: ${hangTot?hangTot[13]:'—'}</div></div>
-   <div class="kpi"><div class="kpi-label">%LTC / %LC Tổng</div><div class="kpi-value" style="font-size:16px">${hangTot?hangTot[14]:'—'} / <span style="color:var(--green)">${hangTot?hangTot[15]:'—'}</span></div><div class="kpi-sub">Lấy TC / Lấy Chuyển</div></div>
-  </div>
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px">
-   <div class="card"><div class="card-header"><div class="card-title"><div class="card-icon">🔴</div>Top 5 AM %GTC Thấp Nhất</div></div><div style="padding:14px 18px">${topLowHTML}</div></div>
-   <div class="card"><div class="card-header"><div class="card-title"><div class="card-icon">📋</div>Ghi Chú</div></div>
-    <div style="padding:14px 18px;font-size:12px;color:var(--text-sub);line-height:1.8">
-     <div>• <strong>Vol hàng giao</strong>: Tổng đơn cần giao (cột D)</div>
-     <div>• <strong>%GTC</strong>: Tỉ lệ giao thành công (cột F) — Xanh ≥65%, Vàng 50–65%, Đỏ &lt;50%</div>
-     <div>• <strong>Vol hàng lấy</strong>: Vol hàng lấy (cột M)</div>
-     <div>• <strong>%LTC</strong>: % Lấy thành công (cột O) — Xanh ≥90%, Vàng 80–90%, Đỏ &lt;80%</div>
-     <div>• <strong>%LC</strong>: % Lấy chuyển (cột P)</div>
-    </div>
-   </div>
-  </div>
-  <div class="card"><div class="card-header"><div class="card-title"><div class="card-icon">📦</div>Bảng Giao &amp; Hàng Lấy Theo AM</div><div class="card-info">Giao: sort %GTC tăng dần · Hàng lấy: sort %LTC tăng dần · Ngày: ${dateLabel}</div></div><div class="table-wrap"></div></div>`;
-}
-
-function buildFDBC(rows){
- const data=rows.slice(1).filter(r=>r[0]&&r[0].trim()&&r[2]&&r[2].trim());
- return`<div class="page-header"><div class="page-title">Tỉ Lệ Hoàn (FD) Theo Bưu Cục</div>
-  <div class="page-meta"><span class="tag tag-orange">📅 Dữ liệu thực tế từ Google Sheet</span><span>${data.length} bưu cục — sắp xếp theo %FD giảm dần</span></div></div>
-  <div class="card"><div class="card-header"><div class="card-title"><div class="card-icon">📮</div>FD Hoàn Theo Bưu Cục</div><div class="card-info">FD: Xanh ≤8% · Vàng 8–12% · Đỏ &gt;12%</div></div><div class="table-wrap"></div></div>`;
-}
-
-// TABLE BUILDER
-function buildTableForPage(id,rows,gtcMap={}){
- const data=rows.slice(1).filter(r=>r.some(c=>c&&c.trim()));
- if(id==='p1'){
-  const dr=data.filter(r=>r[0].match(/^\d+$/));
-  const trs=dr.map((r,i)=>{
-   const e=enrichVH(r);
-   const barCls=pn(e.pctTot)>=90?'bgg':pn(e.pctTot)>=80?'bo':'brd';
-   const amName=(r[1]||'').trim();
-   const gtc=gtcMap[amName]||{pctGTC:0,volGTC:0};
-   const gtcCls=gtc.pctGTC>=65?'bgg':gtc.pctGTC>=50?'bo':'brd';
-   const pctGTCStr=gtc.pctGTC>0?gtc.pctGTC.toFixed(1)+'%':'—';
-   const volGTCStr=gtc.volGTC>0?fmt(gtc.volGTC):'—';
-   const vTon=e.vT>0?fmt(e.vT):'—';
-   const pTonStr=e.pT>0?(e.pT.toFixed(1)+'%'):'—';
-   const tonCls=e.pT>=90?'bgg':e.pT>=80?'bo':'brd';
-   const tr=document.createElement('tr');
-   tr.innerHTML=`<td>${rk(i)}</td><td>${am(r[1]||'')}</td><td><strong>${r[2]||''}</strong></td><td>${bar(r[3]||'','bo')}</td><td><strong>${r[4]||''}</strong></td><td>${bar(r[5]||'','bo')}</td><td><strong>${vTon}</strong></td><td>${e.pT>0?bar(pTonStr,tonCls):pTonStr}</td><td><strong>${fmt(e.tot)}</strong></td><td class="vol-gtc">${fmt(e.gan)}</td><td>${bar(e.pctTot,barCls)}</td><td>${bar(pctGTCStr,gtcCls)}</td><td class="vol-gtc">${volGTCStr}</td>`;
-   return tr;
-  });
-  {
-   // Compute Grand Total from individual rows (sheet's total row often has empty cells)
-   const enAll=dr.map(enrichVH);
-   const sv1=enAll.reduce((s,e)=>s+e.v1,0),sv2=enAll.reduce((s,e)=>s+e.v2,0),svT=enAll.reduce((s,e)=>s+e.vT,0);
-   const sg=enAll.reduce((s,e)=>s+e.gan,0),st=sv1+sv2+svT;
-   const ap1=sv1>0?(enAll.reduce((s,e)=>s+e.v1*e.p1,0)/sv1).toFixed(1)+'%':'—';
-   const ap2=sv2>0?(enAll.reduce((s,e)=>s+e.v2*e.p2,0)/sv2).toFixed(1)+'%':'—';
-   const aPT=svT>0?(enAll.reduce((s,e)=>s+e.vT*e.pT,0)/svT).toFixed(1)+'%':'—';
-   const pTotT=st>0?((sg/st)*100).toFixed(1)+'%':'0%';
-   const pTotTCls=pn(pTotT)>=90?'bgg':pn(pTotT)>=80?'bo':'brd';
-   const totGTC=gtcMap._totalGTC||{pctGTC:0,volGTC:0};
-   const totGTCPct=totGTC.pctGTC>0?totGTC.pctGTC.toFixed(1)+'%':'—';
-   const totGTCVol=totGTC.volGTC>0?fmt(totGTC.volGTC):'—';
-   const totGTCCls=totGTC.pctGTC>=65?'bgg':totGTC.pctGTC>=50?'bo':'brd';
-   const trT=document.createElement('tr');trT.className='tot';
-   trT.innerHTML=`<td colspan="2">Grand Total</td><td><strong>${fmt(sv1)}</strong></td><td>${bar(ap1,'bo')}</td><td><strong>${fmt(sv2)}</strong></td><td>${bar(ap2,'bo')}</td><td><strong>${svT>0?fmt(svT):'—'}</strong></td><td>${svT>0?bar(aPT,'bo'):'—'}</td><td><strong>${fmt(st)}</strong></td><td class="vol-gtc"><strong>${fmt(sg)}</strong></td><td>${bar(pTotT,pTotTCls)}</td><td>${bar(totGTCPct,totGTCCls)}</td><td class="vol-gtc"><strong>${totGTCVol}</strong></td>`;
-   trs.push(trT);
-  }
-  return mkTable(['#','AM','Ca1 Vol','%Gán Ca1','Ca2 Vol','%Gán Ca2','Hàng Tồn','%Gán Tồn','Tổng Vol','Số Gán','%Gán Tổng','%GTC','Vol GTC'],trs);
- }
- if(id==='p2'){
-  const trs=data.filter(r=>r[0]&&r[0].trim()).map((r,i)=>{
-   const v1=pi(r[3]),pGTC=pn(r[5]),volGTC=Math.round(v1*pGTC/100);
-   const gcls=gc(r[5],70,60);const bc=gcls==='g'?'bgg':gcls==='m'?'bo':'brd';
-   const tr=document.createElement('tr');
-   tr.innerHTML=`<td>${rk(i)}</td><td>${am(r[1]||'')}</td><td style="font-size:11px">${r[2]||''}</td><td><strong>${r[3]||''}</strong></td><td>${bar(r[4]||'','bo')}</td><td>${bar(r[5]||'',bc)}</td><td class="vol-gtc">${fmt(volGTC)}</td>`;
-   return tr;
-  });
-  return mkTable(['#','AM','Bưu Cục','Tổng Vol','%Gán','%GTC','Vol GTC'],trs);
- }
- if(id==='p3'){
-  const dr=data.filter(r=>r[0].match(/^\d+$/));
-  const totRow=data.find(r=>!r[0].match(/^\d+$/)&&r[1]);
-  const trs=dr.map((r,i)=>{const tr=document.createElement('tr');tr.innerHTML=`<td>${rk(i)}</td><td>${am(r[1]||'')}</td><td><strong>${r[2]||''}</strong></td><td>${bar(r[3]||'','bo')}</td><td>${bg(r[4]||'',80,70)}</td><td>${r[5]||''}</td>`;return tr;});
-  if(totRow){const tr=document.createElement('tr');tr.className='tot';tr.innerHTML=`<td colspan="2">${totRow[1]||'Total'}</td><td><strong>${totRow[2]||''}</strong></td><td>${bar(totRow[3]||'','bo')}</td><td>${bg(totRow[4]||'',80,70)}</td><td>${totRow[5]||''}</td>`;trs.push(tr);}
-  return mkTable(['#','AM','Ca1 Vol','%Gán','%GTC','Ca2 Vol'],trs);
- }
- if(id==='p4'){
-  const dr=data.filter(r=>r[0]&&r[0].match(/^\d+$/));
-  const totRow=data.find(r=>(r[0]||'').toLowerCase().includes('grand')||(r[0]||'').toLowerCase().includes('total')||(r[1]||'').toLowerCase().includes('grand'));
-  const trs=dr.map((r,i)=>{
-   const pOT=pn(r[4]);const otCls=pOT>=96?'g':'b';
-   const tr=document.createElement('tr');
-   tr.innerHTML=`<td>${rk(i)}</td><td>${am(r[1]||'')}</td><td><strong>${r[3]||''}</strong></td><td><span class="pct ${otCls}">${r[4]||''}</span></td><td>${r[5]||''}</td>`;
-   return tr;
-  });
-  if(totRow){
-   const pOT=pn(totRow[4]);const otCls=pOT>=96?'g':'b';
-   const tr=document.createElement('tr');tr.className='tot';
-   tr.innerHTML=`<td colspan="2">Grand Total</td><td><strong>${totRow[3]||''}</strong></td><td><span class="pct ${otCls}">${totRow[4]||''}</span></td><td><strong>${totRow[5]||''}</strong></td>`;
-   trs.push(tr);
-  }
-  return mkTable(['#','AM','Vol GTC','%Ontime','Vol Đúng Hạn'],trs);
- }
- if(id==='p5'){
-  const dr=data.filter(r=>!(r[0]||'').toUpperCase().includes('TOTAL')&&r[0].trim());
-  const totRow=data.find(r=>(r[0]||'').toUpperCase().includes('TOTAL'));
-  const trs=dr.map((r,i)=>{const tr=document.createElement('tr');tr.innerHTML=`<td>${rk(i)}</td><td>${am(r[0]||'')}</td><td>${fb(r[1]||'')}</td><td>${fb(r[2]||'')}</td><td>${fb(r[3]||'')}</td><td>${fb(r[4]||'')}</td>`;return tr;});
-  if(totRow){const tr=document.createElement('tr');tr.className='tot';tr.innerHTML=`<td colspan="2">TOTAL</td><td>${fb(totRow[1]||'')}</td><td>${fb(totRow[2]||'')}</td><td>${fb(totRow[3]||'')}</td><td>${fb(totRow[4]||'')}</td>`;trs.push(tr);}
-  return mkTable(['#','AM','FD Total','SME (COD)','TTS','Shopee'],trs);
- }
- if(id==='p6'){
-  const trs=data.filter(r=>r[0]&&r[0].trim()&&r[2]&&r[2].trim()).map((r,i)=>{const tr=document.createElement('tr');tr.innerHTML=`<td>${rk(i)}</td><td>${am(r[1]||'')}</td><td style="font-size:11px">${r[2]||''}</td><td>${fb(r[3]||'')}</td><td>${fb(r[4]||'')}</td><td>${fb(r[5]||'')}</td><td>${fb(r[6]||'')}</td>`;return tr;});
-  return mkTable(['#','AM','Bưu Cục','FD Total','SME (COD)','TTS','Shopee'],trs);
- }
- if(id==='p7'){
-  // Giao map (col B=r[1], D=r[3], E=r[4], F=r[5])
-  const giaoMap={};
-  data.filter(r=>r[1]&&r[1].trim()&&r[1].trim()!=='Grand Total').forEach(r=>{
-   const n=(r[1]||'').trim();
-   if(!giaoMap[n])giaoMap[n]={vol:pi(r[3]),pGan:pn(r[4]),pGTC:pn(r[5]),raw:r};
-  });
-  // Hang map (col K=r[10], M=r[12], N=r[13], O=r[14], P=r[15])
-  const hangMap={};
-  data.filter(r=>r[10]&&r[10].trim()&&r[10].trim()!=='Grand Total').forEach(r=>{
-   const n=(r[10]||'').trim();
-   if(!hangMap[n])hangMap[n]={vol:pi(r[12]),pGan:pn(r[13]),pLTC:pn(r[14]),pLC:pn(r[15]),raw:r};
-  });
-  const giaoTot=data.find(r=>(r[1]||'').trim()==='Grand Total');
-  const hangTot=data.find(r=>(r[9]||'').trim()==='Grand Total');
-  // --- GIAO TABLE ---
-  const giaoNames=Object.keys(giaoMap).filter(n=>!n.includes(','));
-  giaoNames.sort((a,b)=>giaoMap[a].pGTC-giaoMap[b].pGTC);
-  const giaoTrs=giaoNames.map((name,i)=>{
-   const g=giaoMap[name];
-   const pGTC=g.pGTC;const gtcCls=pGTC>=65?'bgg':pGTC>=50?'bo':'brd';
-   const pGan=g.pGan;const ganCls=pGan>=90?'bgg':pGan>=80?'bo':'brd';
-   const tr=document.createElement('tr');
-   tr.innerHTML=`<td>${rk(i)}</td><td><strong>${am(name)}</strong></td>`+
-    `<td><strong>${fmt(g.vol)}</strong></td>`+
-    `<td>${bar(g.raw[4]||'',ganCls)}</td>`+
-    `<td>${bar(g.raw[5]||'',gtcCls)}</td>`;
-   return tr;
-  });
-  if(giaoTot){
-   const tGTC=pn(giaoTot[5]);const tCls=tGTC>=65?'bgg':tGTC>=50?'bo':'brd';
-   const tGan=pn(giaoTot[4]);const tGCls=tGan>=90?'bgg':tGan>=80?'bo':'brd';
-   const tr=document.createElement('tr');tr.className='tot';
-   tr.innerHTML=`<td colspan="2">Grand Total</td>`+
-    `<td><strong>${giaoTot[3]||'—'}</strong></td>`+
-    `<td>${bar(giaoTot[4]||'',tGCls)}</td>`+
-    `<td>${bar(giaoTot[5]||'',tCls)}</td>`;
-   giaoTrs.push(tr);
-  }
-  // --- HANG TABLE ---
-  const hangNames=Object.keys(hangMap).filter(n=>!n.includes(','));
-  hangNames.sort((a,b)=>hangMap[a].pLTC-hangMap[b].pLTC);
-  const hangTrs=hangNames.map((name,i)=>{
-   const h=hangMap[name];
-   const pLTC=h.pLTC;const ltcCls=pLTC>=90?'bgg':pLTC>=80?'bo':'brd';
-   const pLC=h.pLC;const lcCls=pLC>=85?'g':pLC>=75?'m':'b';
-   const pGan=h.pGan;const ganCls=pGan>=90?'bgg':pGan>=80?'bo':'brd';
-   const tr=document.createElement('tr');
-   tr.innerHTML=`<td>${rk(i)}</td><td><strong>${am(name)}</strong></td>`+
-    `<td><strong>${fmt(h.vol)}</strong></td>`+
-    `<td>${bar(h.raw[13]||'',ganCls)}</td>`+
-    `<td>${bar(h.raw[14]||'',ltcCls)}</td>`+
-    `<td><span class="pct ${lcCls}">${h.raw[15]||'—'}</span></td>`;
-   return tr;
-  });
-  if(hangTot){
-   const tLTC=pn(hangTot[14]);const tLCls=tLTC>=90?'bgg':tLTC>=80?'bo':'brd';
-   const tLC=pn(hangTot[15]);const tLCCls=tLC>=85?'g':tLC>=75?'m':'b';
-   const tGan=pn(hangTot[13]);const tGCls=tGan>=90?'bgg':tGan>=80?'bo':'brd';
-   const tr=document.createElement('tr');tr.className='tot';
-   tr.innerHTML=`<td colspan="2">Grand Total</td>`+
-    `<td><strong>${hangTot[12]||'—'}</strong></td>`+
-    `<td>${bar(hangTot[13]||'',tGCls)}</td>`+
-    `<td>${bar(hangTot[14]||'',tLCls)}</td>`+
-    `<td><span class="pct ${tLCCls}">${hangTot[15]||'—'}</span></td>`;
-   hangTrs.push(tr);
-  }
-  const giaoTable=mkTable(['#','AM','Vol Hàng Giao','%Gán','%GTC'],giaoTrs);
-  const hangTable=mkTable(['#','AM','Vol Hàng Lấy','%Gán Hàng','%LTC','%LC'],hangTrs);
-  const container=document.createElement('div');
-  const h1=document.createElement('div');
-  h1.style.cssText='padding:10px 18px 8px;font-size:12px;font-weight:700;color:var(--text-sub);text-transform:uppercase;letter-spacing:.5px;background:#F8F9FA;border-bottom:1px solid var(--border)';
-  h1.textContent='📦 Vận Hành Giao';
-  const h2=document.createElement('div');
-  h2.style.cssText='padding:10px 18px 8px;font-size:12px;font-weight:700;color:var(--text-sub);text-transform:uppercase;letter-spacing:.5px;background:#F8F9FA;border-top:2px solid var(--orange-mid);border-bottom:1px solid var(--border);margin-top:8px';
-  h2.textContent='📬 Vận Hành Hàng Lấy';
-  container.appendChild(h1);
-  container.appendChild(giaoTable);
-  container.appendChild(h2);
-  container.appendChild(hangTable);
-  return container;
- }
-}
-
 async function init(){
- const configs=[
-  {id:'p1',key:'vanHanh',build:buildVanHanh},
-  {id:'p2',key:'bcGiao',build:buildBCGiao},
-  {id:'p3',key:'gtcTTS',build:buildGTCTTS},
-  {id:'p4',key:'ontime',build:buildOntime},
-  {id:'p5',key:'fdAM',build:buildFDAM},
-  {id:'p6',key:'fdBC',build:buildFDBC},
-  {id:'p7',key:'vAM',build:buildGTCAM},
- ];
  const btn=document.getElementById('refreshBtn');
  btn.classList.add('spinning');btn.disabled=true;
- // Fetch all sheets simultaneously (including external XL sheets)
- const rawData={};
  let xlA=null,xlB=null,xlErrA=null,xlErrB=null;
  let xlC=null,xlD=null,xlErrC=null,xlErrD=null;
  let ttsAM=null,ttsBC=null,ttsErrAM=null,ttsErrBC=null;
@@ -955,56 +493,7 @@ async function init(){
  if(SHEET_XL_D)xlFetches.push(fetchExtSheet(SHEET_XL_D).then(d=>xlD=d).catch(e=>xlErrD=e.message));
  if(SHEET_TTS_AM)xlFetches.push(fetchExtSheet(SHEET_TTS_AM).then(d=>ttsAM=d).catch(e=>ttsErrAM=e.message));
  if(SHEET_TTS_BC)xlFetches.push(fetchExtSheet(SHEET_TTS_BC).then(d=>ttsBC=d).catch(e=>ttsErrBC=e.message));
- await Promise.all([
-  ...configs.map(async({id,key})=>{
-   try{const{name,range}=SHEETS[key];rawData[key]=await fetchSheet(name,range);}
-   catch(e){rawData[key]=null;rawData[key+'_err']=e.message;}
-  }),
-  ...xlFetches,
- ]);
- // Build GTC TTS lookup map: amName → {pctGTC, volGTC} (used for p3 GTC TTS page)
- const gtcMap={};
- if(rawData.gtcTTS){
-  const allGTCRows=rawData.gtcTTS.slice(1).filter(r=>r.some(c=>c&&c.trim()));
-  const gtcTotRow=allGTCRows.find(r=>(r[1]||'').trim().toLowerCase().includes('grand')||(r[0]||'').trim().toLowerCase().includes('grand')||(!((r[0]||'').trim().match(/^\d+$/))&&(r[1]||'').trim()));
-  allGTCRows.filter(r=>(r[0]||'').trim().match(/^\d+$/)).forEach(r=>{
-   const amName=(r[1]||'').trim();
-   if(amName){const v1=pi(r[2]),pg=pn(r[4]);gtcMap[amName]={pctGTC:pg,volGTC:Math.round(v1*pg/100)};}
-  });
-  if(gtcTotRow){
-   gtcMap._totalGTC={pctGTC:pn(gtcTotRow[4]),volGTC:Math.round(pi(gtcTotRow[2])*pn(gtcTotRow[4])/100)};
-  }
- }
- // Build GTC map from v_AM (all customers — used for p1 Vận Hành AM)
- const vamGtcMap={};
- if(rawData.vAM){
-  const vd=rawData.vAM.slice(1).filter(r=>r.some(c=>c&&c.trim()));
-  const vTot=vd.find(r=>(r[1]||'').trim()==='Grand Total');
-  vd.filter(r=>r[1]&&r[1].trim()&&r[1].trim()!=='Grand Total').forEach(r=>{
-   const n=(r[1]||'').trim();
-   const vol=pi(r[3]),pGTC=pn(r[5]);
-   if(n&&!vamGtcMap[n])vamGtcMap[n]={pctGTC:pGTC,volGTC:Math.round(vol*pGTC/100)};
-  });
-  if(vTot){
-   const tVol=pi(vTot[3]),tPct=pn(vTot[5]);
-   vamGtcMap._totalGTC={pctGTC:tPct,volGTC:Math.round(tVol*tPct/100)};
-  }
- }
- // Build each page
- configs.forEach(({id,key,build})=>{
-  const rows=rawData[key];
-  if(!rows){document.getElementById(id).innerHTML=errPage(rawData[key+'_err']||'unknown');return;}
-  const el=document.getElementById(id);
-  const theMap=id==='p1'?vamGtcMap:gtcMap;
-  el.innerHTML=build(rows,theMap);
-  const wrap=el.querySelector('.table-wrap');
-  if(wrap){const tbl=buildTableForPage(id,rows,theMap);if(tbl)wrap.appendChild(tbl);}
- });
- // Append giao 7-day overview to p1 (Vận Hành AM)
- if(xlB){
-  const p1el=document.getElementById('p1');
-  if(p1el)p1el.insertAdjacentHTML('beforeend',buildGiaoOverview(xlB));
- }
+ await Promise.all(xlFetches);
  // Build p8 — Tổng quan 7 ngày theo AM
  const p8el=document.getElementById('p8');
  if(xlErrA||xlErrB){
@@ -1044,7 +533,7 @@ async function init(){
 loadAll=async function(){
  const btn=document.getElementById('refreshBtn');
  btn.classList.add('spinning');btn.disabled=true;
- document.querySelectorAll('.page').forEach(p=>{p.innerHTML='<div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu mới...</div></div>';});
+ ['p8','p9','p10'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML='<div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu mới...</div></div>';});
  await init();
 };
 
