@@ -448,7 +448,6 @@ function buildTableForPage(id,rows,gtcMap={}){
  const data=rows.slice(1).filter(r=>r.some(c=>c&&c.trim()));
  if(id==='p1'){
   const dr=data.filter(r=>r[0].match(/^\d+$/));
-  const totRow=data.find(r=>!r[0].match(/^\d+$/)&&r[1]);
   const trs=dr.map((r,i)=>{
    const e=enrichVH(r);
    const barCls=pn(e.pctTot)>=90?'bgg':pn(e.pctTot)>=80?'bo':'brd';
@@ -464,18 +463,23 @@ function buildTableForPage(id,rows,gtcMap={}){
    tr.innerHTML=`<td>${rk(i)}</td><td>${am(r[1]||'')}</td><td><strong>${r[2]||''}</strong></td><td>${bar(r[3]||'','bo')}</td><td><strong>${r[4]||''}</strong></td><td>${bar(r[5]||'','bo')}</td><td><strong>${vTon}</strong></td><td>${e.pT>0?bar(pTonStr,tonCls):pTonStr}</td><td><strong>${fmt(e.tot)}</strong></td><td class="vol-gtc">${fmt(e.gan)}</td><td>${bar(e.pctTot,barCls)}</td><td>${bar(pctGTCStr,gtcCls)}</td><td class="vol-gtc">${volGTCStr}</td>`;
    return tr;
   });
-  if(totRow){
-   const e=enrichVH(totRow);
+  {
+   // Compute Grand Total from individual rows (sheet's total row often has empty cells)
+   const enAll=dr.map(enrichVH);
+   const sv1=enAll.reduce((s,e)=>s+e.v1,0),sv2=enAll.reduce((s,e)=>s+e.v2,0),svT=enAll.reduce((s,e)=>s+e.vT,0);
+   const sg=enAll.reduce((s,e)=>s+e.gan,0),st=sv1+sv2+svT;
+   const ap1=sv1>0?(enAll.reduce((s,e)=>s+e.v1*e.p1,0)/sv1).toFixed(1)+'%':'—';
+   const ap2=sv2>0?(enAll.reduce((s,e)=>s+e.v2*e.p2,0)/sv2).toFixed(1)+'%':'—';
+   const aPT=svT>0?(enAll.reduce((s,e)=>s+e.vT*e.pT,0)/svT).toFixed(1)+'%':'—';
+   const pTotT=st>0?((sg/st)*100).toFixed(1)+'%':'0%';
+   const pTotTCls=pn(pTotT)>=90?'bgg':pn(pTotT)>=80?'bo':'brd';
    const totGTC=gtcMap._totalGTC||{pctGTC:0,volGTC:0};
    const totGTCPct=totGTC.pctGTC>0?totGTC.pctGTC.toFixed(1)+'%':'—';
    const totGTCVol=totGTC.volGTC>0?fmt(totGTC.volGTC):'—';
    const totGTCCls=totGTC.pctGTC>=65?'bgg':totGTC.pctGTC>=50?'bo':'brd';
-   const totVTon=pi(totRow[6]||'')>0?fmt(pi(totRow[6])):'—';
-   const totPTon=totRow[7]||'—';
-   const totTonCls=pn(totPTon)>=90?'bgg':pn(totPTon)>=80?'bo':'brd';
-   const tr=document.createElement('tr');tr.className='tot';
-   tr.innerHTML=`<td colspan="2">${totRow[1]||'Grand Total'}</td><td><strong>${totRow[2]||''}</strong></td><td>${bar(totRow[3]||'','bo')}</td><td><strong>${totRow[4]||''}</strong></td><td>${bar(totRow[5]||'','bo')}</td><td><strong>${totVTon}</strong></td><td>${pn(totPTon)>0?bar(totPTon,totTonCls):totPTon}</td><td><strong>${fmt(e.tot)}</strong></td><td class="vol-gtc"><strong>${fmt(e.gan)}</strong></td><td>${bar(e.pctTot,'bgg')}</td><td>${bar(totGTCPct,totGTCCls)}</td><td class="vol-gtc"><strong>${totGTCVol}</strong></td>`;
-   trs.push(tr);
+   const trT=document.createElement('tr');trT.className='tot';
+   trT.innerHTML=`<td colspan="2">Grand Total</td><td><strong>${fmt(sv1)}</strong></td><td>${bar(ap1,'bo')}</td><td><strong>${fmt(sv2)}</strong></td><td>${bar(ap2,'bo')}</td><td><strong>${svT>0?fmt(svT):'—'}</strong></td><td>${svT>0?bar(aPT,'bo'):'—'}</td><td><strong>${fmt(st)}</strong></td><td class="vol-gtc"><strong>${fmt(sg)}</strong></td><td>${bar(pTotT,pTotTCls)}</td><td>${bar(totGTCPct,totGTCCls)}</td><td class="vol-gtc"><strong>${totGTCVol}</strong></td>`;
+   trs.push(trT);
   }
   return mkTable(['#','AM','Ca1 Vol','%Gán Ca1','Ca2 Vol','%Gán Ca2','Hàng Tồn','%Gán Tồn','Tổng Vol','Số Gán','%Gán Tổng','%GTC','Vol GTC'],trs);
  }
