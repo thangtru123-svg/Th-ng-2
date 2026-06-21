@@ -234,6 +234,8 @@ async function fetchSheet(name,range){const res=await fetch(sheetURL(name,range)
 function show(id,btn){document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));document.querySelectorAll('.nav-item').forEach(b=>b.classList.remove('active'));document.getElementById(id).classList.add('active');btn.classList.add('active');}
 function pn(v){return parseFloat((v||'').replace(/,/g,'').replace('%',''))||0;}
 function pi(v){return parseInt((v||'').replace(/,/g,''))||0;}
+// parse số từ GHN export (dùng dấu phẩy làm thập phân, VD: "0,7882")
+function pnG(v){return parseFloat((v||'').replace(',','.'))||0;}
 function gc(v,g,m){const n=pn(v);return n>=g?'g':n>=m?'m':'b';}
 function fd(v){const n=pn(v);return n<=8?'g':n<=12?'m':'b';}
 function bar(pct,cls){const bc=cls==='bgg'?'g':cls==='brd'?'b':'m';return`<span class="pct ${bc}">${pct}</span>`;}
@@ -272,13 +274,13 @@ function buildXuLy(rowsA,rowsB){
    const date=(r[2]||'').trim();
    if(!amName||!dates7.includes(date))return;
    if(!pivot[amName])pivot[amName]={vung};
-   pivot[amName][date]={vol:Math.round(parseFloat(r[3])||0),pct:(parseFloat(r[mCol])||0)*100};
+   pivot[amName][date]={vol:Math.round(pnG(r[3])),pct:pnG(r[mCol])*100};
   });
   const grandPivot={};
   grandRows.forEach(r=>{
    const date=(r[2]||'').trim();
    if(!dates7.includes(date))return;
-   grandPivot[date]={vol:Math.round(parseFloat(r[3])||0),pct:(parseFloat(r[mCol])||0)*100};
+   grandPivot[date]={vol:Math.round(pnG(r[3])),pct:pnG(r[mCol])*100};
   });
   const amNames=Object.keys(pivot).sort();
   let html=`<div class="table-wrap"><table><thead><tr><th rowspan="2" style="min-width:130px">AM</th>${dates7.map(d=>`<th colspan="2" style="text-align:center;border-left:1px solid var(--border)">${shortDate(d)}</th>`).join('')}</tr><tr>${dates7.map(()=>`<th style="text-align:right;border-left:1px solid var(--border)">Vol</th><th style="text-align:center">${mLabel}</th>`).join('')}</tr></thead><tbody>`;
@@ -330,13 +332,13 @@ function buildGiaoOverview(rowsB){
   const date=(r[2]||'').trim();
   if(!amName||!dates7.includes(date))return;
   if(!pivot[amName])pivot[amName]={};
-  pivot[amName][date]={vol:Math.round(parseFloat(r[3])||0),pGTC:(parseFloat(r[5])||0)*100,pGan:(parseFloat(r[4])||0)*100};
+  pivot[amName][date]={vol:Math.round(pnG(r[3])),pGTC:pnG(r[5])*100,pGan:pnG(r[4])*100};
  });
  const grandPivot={};
  grandRows.forEach(r=>{
   const date=(r[2]||'').trim();
   if(!dates7.includes(date))return;
-  grandPivot[date]={vol:Math.round(parseFloat(r[3])||0),pGTC:(parseFloat(r[5])||0)*100};
+  grandPivot[date]={vol:Math.round(pnG(r[3])),pGTC:pnG(r[5])*100};
  });
  const amNames=Object.keys(pivot).sort();
  // KPIs: latest date stats
