@@ -587,23 +587,20 @@ window._D={};
 // === AI PAGE ===
 function buildAIPage(){
  const p12=document.getElementById('p12');
+ const savedKey=localStorage.getItem('geminiApiKey')||'';
  p12.innerHTML=`
  <div class="page-header">
   <div class="page-title">✨ AI - Phân Tích Tổng Quan</div>
-  <div class="page-meta"><span class="tag tag-orange">🤖 Powered by Claude AI · Dữ liệu từ 4 dashboard</span></div>
+  <div class="page-meta"><span class="tag tag-orange">🤖 Powered by Google Gemini · Dữ liệu từ 4 dashboard</span></div>
  </div>
- <div class="card" style="margin-bottom:14px;background:linear-gradient(135deg,rgba(124,58,237,0.08),rgba(91,33,182,0.04));border-color:rgba(124,58,237,0.2)">
-  <div style="display:flex;align-items:flex-start;gap:14px">
-   <div style="font-size:32px;line-height:1">🚀</div>
-   <div>
-    <div style="font-weight:700;font-size:14px;margin-bottom:6px;color:#A78BFA">Cách dùng — chỉ 2 bước:</div>
-    <div style="font-size:13px;color:var(--text);line-height:1.8">
-     <b>1.</b> Chọn loại phân tích hoặc tự nhập câu hỏi bên dưới<br>
-     <b>2.</b> Click <b>"Gửi sang Claude"</b> → tab claude.ai mở ra với dữ liệu đã điền sẵn → nhấn <b>Enter</b> là xong
-    </div>
-    <div style="margin-top:8px;font-size:11px;color:var(--text-sub)">💡 Bạn đang dùng Claude Pro — tính năng này dùng luôn tài khoản đó, không cần thêm gì.</div>
-   </div>
+ <div class="card" style="margin-bottom:14px">
+  <div class="card-header"><div class="card-title"><div class="card-icon">🔑</div>Google Gemini API Key <span style="font-size:11px;font-weight:400;color:var(--text-sub)">(miễn phí — chỉ cần nhập 1 lần)</span></div></div>
+  <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+   <input type="password" id="geminiKeyInput" value="${savedKey}" placeholder="AIza..." style="flex:1;min-width:200px;padding:9px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg-main);color:var(--text);font-size:13px">
+   <button onclick="saveGeminiKey()" style="background:var(--orange);color:#fff;border:none;padding:9px 18px;border-radius:8px;cursor:pointer;font-weight:600;font-size:13px">Lưu</button>
+   <span id="geminiKeySaved" style="font-size:12px;color:#4ade80">${savedKey?'✅ Đã lưu':''}</span>
   </div>
+  <div style="margin-top:8px;font-size:11px;color:var(--text-sub)">Lấy key miễn phí tại <a href="https://aistudio.google.com/apikey" target="_blank" style="color:var(--orange)">aistudio.google.com/apikey</a> (đăng nhập Google → Get API Key → Create)</div>
  </div>
  <div class="card">
   <div class="card-header"><div class="card-title"><div class="card-icon">💬</div>Nội dung phân tích</div></div>
@@ -618,30 +615,17 @@ function buildAIPage(){
   <textarea class="ai-textarea" id="aiPromptArea" placeholder="Hoặc tự nhập câu hỏi... Ví dụ: Ai đang làm tốt nhất tuần này? Ai cần cải thiện gấp?"></textarea>
   <div style="display:flex;align-items:center;gap:12px;margin-top:12px;flex-wrap:wrap">
    <button class="ai-run-btn" id="aiRunBtn" onclick="runAIAnalysis()">
-    <span>🚀</span><span>Gửi sang Claude</span>
+    <span>✨</span><span>Phân tích ngay</span>
    </button>
-   <span style="font-size:11px;color:var(--text-sub)" id="aiStatus"></span>
+   <span style="font-size:12px;color:var(--text-sub)" id="aiStatus"></span>
   </div>
  </div>
- <div class="card" id="aiResultCard" style="display:none">
-  <div class="card-header"><div class="card-title"><div class="card-icon">✅</div>Đã copy xong!</div></div>
-  <div style="padding:16px 0 4px">
-   <div style="font-size:14px;color:var(--text);margin-bottom:12px">Toàn bộ dữ liệu + câu hỏi đã được copy vào clipboard và tab <strong>claude.ai</strong> vừa mở ra.<br>Chỉ cần <kbd style="background:var(--bg-main);border:1px solid var(--border);padding:2px 7px;border-radius:4px;font-size:12px">Ctrl+V</kbd> rồi nhấn <kbd style="background:var(--bg-main);border:1px solid var(--border);padding:2px 7px;border-radius:4px;font-size:12px">Enter</kbd> là Claude phân tích ngay!</div>
-   <details style="cursor:pointer">
-    <summary style="font-size:12px;color:var(--text-sub);user-select:none">👁 Xem trước nội dung đã copy</summary>
-    <pre id="aiPreviewArea" style="margin-top:10px;padding:12px;background:var(--bg-main);border-radius:8px;border:1px solid var(--border);font-size:11px;color:var(--text-sub);white-space:pre-wrap;max-height:300px;overflow-y:auto"></pre>
-   </details>
+ <div class="card" id="aiResultCard" style="display:none;margin-top:14px">
+  <div class="card-header">
+   <div class="card-title"><div class="card-icon">📊</div>Kết quả phân tích</div>
+   <button onclick="copyAIResult()" style="background:none;border:1px solid var(--border);padding:5px 12px;border-radius:6px;color:var(--text-sub);font-size:11px;cursor:pointer">📋 Copy</button>
   </div>
- </div>
- <div class="card" style="margin-top:14px">
-  <div class="card-header"><div class="card-title"><div class="card-icon">📋</div>Kết quả từ Claude</div></div>
-  <div style="margin-bottom:10px;font-size:12px;color:var(--text-sub)">Sau khi Claude trả lời, copy toàn bộ kết quả và dán vào đây để hiển thị đẹp:</div>
-  <textarea id="aiPasteArea" style="width:100%;min-height:120px;padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg-main);color:var(--text);font-size:13px;font-family:inherit;resize:vertical;box-sizing:border-box" placeholder="Dán kết quả từ Claude vào đây (Ctrl+V)..."></textarea>
-  <div style="display:flex;gap:10px;margin-top:10px">
-   <button onclick="renderAIPaste()" style="background:linear-gradient(135deg,#7C3AED,#5B21B6);color:#fff;border:none;padding:9px 20px;border-radius:8px;cursor:pointer;font-weight:600;font-size:13px">✨ Hiển thị kết quả</button>
-   <button onclick="document.getElementById('aiPasteArea').value='';document.getElementById('aiPasteResult').style.display='none'" style="background:none;border:1px solid var(--border);color:var(--text-sub);padding:9px 16px;border-radius:8px;cursor:pointer;font-size:13px">🗑 Xoá</button>
-  </div>
-  <div id="aiPasteResult" style="display:none;margin-top:16px;padding:16px;background:var(--bg-main);border-radius:10px;border:1px solid var(--border);line-height:1.7;font-size:13.5px"></div>
+  <div class="ai-result" id="aiResultArea" style="padding:8px 0;line-height:1.8;font-size:13.5px"></div>
  </div>`;
 }
 
@@ -731,40 +715,50 @@ function md2html(text){
   .replace(/🔴/g,'<span class="ai-tag-ll">🔴 LL</span>');
 }
 
+function saveGeminiKey(){
+ const k=(document.getElementById('geminiKeyInput').value||'').trim();
+ localStorage.setItem('geminiApiKey',k);
+ document.getElementById('geminiKeySaved').textContent=k?'✅ Đã lưu':'';
+}
+
 async function runAIAnalysis(){
+ const key=localStorage.getItem('geminiApiKey')||'';
+ if(!key){document.getElementById('aiStatus').textContent='⚠️ Chưa nhập Gemini API Key';document.getElementById('geminiKeyInput').focus();return;}
  const userQ=(document.getElementById('aiPromptArea').value||'').trim();
  if(!userQ){document.getElementById('aiStatus').textContent='⚠️ Vui lòng nhập nội dung cần phân tích';return;}
  const btn=document.getElementById('aiRunBtn');
- btn.disabled=true;btn.innerHTML='<span>⏳</span><span>Đang chuẩn bị...</span>';
+ btn.disabled=true;btn.innerHTML='<span>⏳</span><span>Đang phân tích...</span>';
  document.getElementById('aiStatus').textContent='';
+ const card=document.getElementById('aiResultCard');
+ card.style.display='block';
+ document.getElementById('aiResultArea').innerHTML='<div class="ai-thinking"><div class="ai-thinking-dot"></div><div class="ai-thinking-dot"></div><div class="ai-thinking-dot"></div><span style="margin-left:8px;color:var(--text-sub)">AI đang phân tích dữ liệu...</span></div>';
  const dataCtx=gatherDashboardData();
- const fullPrompt=`Bạn là chuyên gia phân tích vận hành logistics cho GHN Vùng XBG (Bắc Giang và các tỉnh lân cận). Phân tích dữ liệu chi tiết, cụ thể, dùng số liệu thực tế. Highlight điểm mạnh (🟢) và điểm yếu (🔴). Trả lời bằng tiếng Việt, format rõ ràng với tiêu đề và bullet points.
-
-DỮ LIỆU VẬN HÀNH 7 NGÀY GẦN NHẤT:
-${dataCtx}
-
-YÊU CẦU:
-${userQ}`;
+ const systemPrompt='Bạn là chuyên gia phân tích vận hành logistics cho GHN Vùng XBG (Bắc Giang và các tỉnh lân cận). Phân tích dữ liệu chi tiết, cụ thể, dùng số liệu thực tế. Highlight điểm mạnh (🟢) và điểm yếu (🔴). Trả lời bằng tiếng Việt, format rõ ràng với tiêu đề và bullet points.';
+ const userMsg=`DỮ LIỆU VẬN HÀNH 7 NGÀY GẦN NHẤT:\n${dataCtx}\n\nYÊU CẦU:\n${userQ}`;
  try{
-  await navigator.clipboard.writeText(fullPrompt);
-  window.open('https://claude.ai/new','_blank');
-  const card=document.getElementById('aiResultCard');
-  card.style.display='block';
-  document.getElementById('aiPreviewArea').textContent=fullPrompt;
-  document.getElementById('aiStatus').textContent='✅ Đã copy! Dán vào Claude.ai (Ctrl+V) rồi Enter';
+  const res=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${key}`,{
+   method:'POST',
+   headers:{'Content-Type':'application/json'},
+   body:JSON.stringify({
+    systemInstruction:{parts:[{text:systemPrompt}]},
+    contents:[{parts:[{text:userMsg}]}],
+    generationConfig:{temperature:0.7,maxOutputTokens:4096}
+   })
+  });
+  if(!res.ok){const e=await res.json().catch(()=>({}));throw new Error(e.error?.message||`Lỗi HTTP ${res.status}`);}
+  const data=await res.json();
+  const text=data.candidates?.[0]?.content?.parts?.[0]?.text||'(Không có phản hồi)';
+  document.getElementById('aiResultArea').innerHTML=md2html(text);
+  window._lastAIResult=text;
+  card.scrollIntoView({behavior:'smooth',block:'start'});
  }catch(e){
-  document.getElementById('aiStatus').textContent='⚠️ Không copy được: '+e.message;
+  document.getElementById('aiResultArea').innerHTML=`<div style="color:#f87171;padding:12px;background:rgba(248,113,113,0.08);border-radius:8px;border:1px solid rgba(248,113,113,0.2)">❌ ${e.message}</div>`;
  }
- btn.disabled=false;btn.innerHTML='<span>🚀</span><span>Gửi sang Claude</span>';
+ btn.disabled=false;btn.innerHTML='<span>✨</span><span>Phân tích ngay</span>';
 }
 
-function renderAIPaste(){
- const txt=(document.getElementById('aiPasteArea').value||'').trim();
- if(!txt){return;}
- const out=document.getElementById('aiPasteResult');
- out.innerHTML=md2html(txt);
- out.style.display='block';
- out.scrollIntoView({behavior:'smooth',block:'start'});
+function copyAIResult(){
+ if(window._lastAIResult)navigator.clipboard.writeText(window._lastAIResult).then(()=>{const s=document.getElementById('aiStatus');s.textContent='✅ Đã copy!';setTimeout(()=>s.textContent='',2000);});
 }
 
 async function init(){
