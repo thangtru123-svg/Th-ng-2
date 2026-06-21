@@ -6,31 +6,47 @@
 <title>Báo Cáo Vận Hành XBG</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-:root {
-  --orange:#F15D29;--orange-dark:#C8461A;--orange-light:#FFF0EB;--orange-mid:#FFD5C2;
-  --sidebar-w:204px;--text-main:#1C1C1E;--text-sub:#6B7280;
-  --border:#E5E7EB;--bg:#F4F6F9;--card:#FFFFFF;
-  --shadow-sm:0 1px 3px rgba(0,0,0,0.08);--radius:10px;
-  --green:#16A34A;--yellow:#D97706;--red:#DC2626;
-  --green-bg:#DCFCE7;--yellow-bg:#FEF9C3;--red-bg:#FEE2E2;
-}
+:root{--orange:#F15D29;--orange-dark:#C8461A;--orange-light:#FFF0EB;--orange-mid:#FFD5C2;--sidebar-w:204px;--text-main:#1C1C1E;--text-sub:#6B7280;--border:#E5E7EB;--bg:#F4F6F9;--card:#FFFFFF;--shadow-sm:0 1px 3px rgba(0,0,0,0.08);--radius:10px;--green:#16A34A;--yellow:#D97706;--red:#DC2626;--green-bg:#DCFCE7;--yellow-bg:#FEF9C3;--red-bg:#FEE2E2}
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text-main);display:flex;min-height:100vh;font-size:13px}
+
+/* SPLASH */
+.splash-overlay{position:fixed;inset:0;z-index:9999;background:linear-gradient(135deg,#0D1B2A 0%,#1A2E45 40%,#0D2137 70%,#1A1A1A 100%);display:flex;align-items:center;justify-content:center;transition:opacity 0.6s ease;cursor:pointer;overflow:hidden}
+.splash-overlay.fade-out{opacity:0;pointer-events:none}
+.splash-inner{display:flex;flex-direction:column;align-items:center;gap:16px;max-width:920px;width:100%;padding:28px 24px}
+.splash-logo-wrap{display:flex;align-items:center;gap:10px}
+.splash-logo-txt{font-size:34px;font-weight:900;background:linear-gradient(135deg,#F15D29,#FF9A6C);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;letter-spacing:-1px}
+.splash-divider{width:1px;height:28px;background:rgba(255,255,255,0.2)}
+.splash-vung{color:rgba(255,255,255,0.45);font-size:11px;font-weight:600;letter-spacing:2px;text-transform:uppercase}
+.splash-title{font-size:22px;font-weight:800;color:#fff;text-align:center;line-height:1.3;text-shadow:0 2px 20px rgba(241,93,41,0.25)}
+.splash-title span{color:#F15D29}
+.map-row{display:flex;align-items:flex-start;gap:20px;width:100%}
+.prov-grid{flex:1;display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px}
+.prov-card{background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:8px 10px;transition:background .2s}
+.prov-card:hover{background:rgba(255,255,255,0.1)}
+.prov-name{font-size:11px;font-weight:700;margin-bottom:3px;white-space:nowrap}
+.prov-spec{font-size:10px;color:rgba(255,255,255,0.5);line-height:1.5}
+.c-bg{color:#FF8A56}.c-ls{color:#FBBF24}.c-qn{color:#38BDF8}.c-bn{color:#A78BFA}.c-hd{color:#34D399}.c-hp{color:#60A5FA}
+.splash-bar-wrap{width:100%;max-width:360px}
+.splash-bar-bg{height:3px;background:rgba(255,255,255,0.12);border-radius:2px;overflow:hidden}
+.splash-bar-fg{height:100%;background:linear-gradient(90deg,#F15D29,#FF9A6C);border-radius:2px;width:0%;transition:width 0.95s linear}
+.splash-hint{color:rgba(255,255,255,0.3);font-size:11px;text-align:center}
+@keyframes fadeInUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.splash-inner>*{animation:fadeInUp 0.5s ease both}
+.splash-inner>*:nth-child(1){animation-delay:.05s}.splash-inner>*:nth-child(2){animation-delay:.15s}.splash-inner>*:nth-child(3){animation-delay:.25s}.splash-inner>*:nth-child(4){animation-delay:.35s}.splash-inner>*:nth-child(5){animation-delay:.45s}
+@keyframes pulse{0%,100%{opacity:.8}50%{opacity:1}}
+.prov-shape{animation:pulse 3s ease-in-out infinite}
 
 /* SIDEBAR */
 .sidebar{width:var(--sidebar-w);background:linear-gradient(180deg,#1A1A1A 0%,#252525 100%);display:flex;flex-direction:column;position:fixed;top:0;left:0;height:100vh;z-index:100;overflow-y:auto}
 .logo-area{padding:16px 14px 12px;border-bottom:1px solid rgba(255,255,255,0.08)}
-.logo-area img{height:28px;filter:brightness(0) invert(1)}
+.logo-area img{height:28px;filter:brightness(0) saturate(100%) invert(42%) sepia(96%) saturate(1220%) hue-rotate(342deg) brightness(101%) contrast(97%)}
 .logo-sub{color:rgba(255,255,255,0.4);font-size:9px;font-weight:600;letter-spacing:.8px;margin-top:5px;text-transform:uppercase}
 .nav-section{padding:12px 14px 4px;color:rgba(255,255,255,0.3);font-size:9px;font-weight:600;letter-spacing:.9px;text-transform:uppercase}
 .nav-item{display:flex;align-items:center;gap:8px;padding:9px 12px;margin:2px 6px;border-radius:7px;cursor:pointer;color:rgba(255,255,255,0.6);font-size:12px;font-weight:500;transition:all .15s;border:none;background:none;width:calc(100% - 12px);text-align:left}
 .nav-item:hover{background:rgba(255,255,255,0.08);color:#fff}
 .nav-item.active{background:var(--orange);color:#fff;font-weight:600}
 .nav-item .icon{font-size:14px;flex-shrink:0;width:18px;text-align:center}
-.nav-item .badge{margin-left:auto;background:rgba(255,255,255,0.15);color:rgba(255,255,255,0.75);font-size:9px;padding:2px 6px;border-radius:10px;font-weight:600}
-.nav-item.active .badge{background:rgba(255,255,255,0.25)}
-
-/* refresh button */
 .refresh-btn{display:flex;align-items:center;gap:6px;margin:10px 8px 4px;padding:8px 12px;border-radius:7px;background:rgba(241,93,41,0.15);border:1px solid rgba(241,93,41,0.3);color:var(--orange);font-size:11px;font-weight:600;cursor:pointer;transition:all .15s;width:calc(100% - 16px)}
 .refresh-btn:hover{background:rgba(241,93,41,0.25)}
 .refresh-btn.spinning .spin{animation:spin .8s linear infinite}
@@ -41,40 +57,28 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text-main);
 /* MAIN */
 .main{margin-left:var(--sidebar-w);flex:1;padding:22px 26px;max-width:calc(100vw - var(--sidebar-w));overflow-x:hidden}
 .page{display:none}.page.active{display:block}
-
-/* LOADING */
 .loading{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:300px;gap:12px}
 .spinner{width:36px;height:36px;border:3px solid var(--border);border-top-color:var(--orange);border-radius:50%;animation:spin .8s linear infinite}
 .loading-text{color:var(--text-sub);font-size:13px}
-
-/* ERROR */
 .error-box{background:#FEF2F2;border:1px solid #FECACA;border-radius:var(--radius);padding:16px;color:var(--red);font-size:13px;margin:20px 0}
-
-/* PAGE HEADER */
 .page-header{margin-bottom:18px}
 .page-title{font-size:19px;font-weight:700;color:var(--text-main)}
 .page-meta{color:var(--text-sub);font-size:12px;margin-top:4px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .tag{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:500}
 .tag-orange{background:var(--orange-light);color:var(--orange-dark)}
-
-/* KPI */
 .kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:18px}
 .kpi{background:var(--card);border-radius:var(--radius);padding:14px 16px;box-shadow:var(--shadow-sm);border:1px solid var(--border);position:relative;overflow:hidden}
 .kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--orange)}
 .kpi-label{font-size:10px;color:var(--text-sub);font-weight:600;text-transform:uppercase;letter-spacing:.5px}
 .kpi-value{font-size:22px;font-weight:700;margin-top:5px;color:var(--text-main);line-height:1.1}
 .kpi-sub{font-size:11px;color:var(--text-sub);margin-top:3px}
-
-/* CARD */
 .card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow-sm);border:1px solid var(--border);overflow:hidden;margin-bottom:18px}
 .card-header{padding:13px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:linear-gradient(135deg,#fff 0%,var(--orange-light) 100%)}
 .card-title{font-size:13px;font-weight:600;color:var(--text-main);display:flex;align-items:center;gap:9px}
 .card-icon{width:28px;height:28px;background:var(--orange);border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0}
 .card-info{font-size:11px;color:var(--text-sub)}
-
-/* TABLE */
 .table-wrap{overflow-x:auto}
-table{width:100%;border-collapse:collapse;min-width:500px}
+table{width:100%;border-collapse:collapse;min-width:600px}
 th{background:#F8F9FA;padding:9px 12px;text-align:left;font-size:10px;font-weight:700;color:var(--text-sub);text-transform:uppercase;letter-spacing:.5px;border-bottom:2px solid var(--border);white-space:nowrap}
 td{padding:8px 12px;border-bottom:1px solid #F3F4F6;font-size:12px;color:var(--text-main);vertical-align:middle}
 tr:last-child td{border-bottom:none}
@@ -82,520 +86,361 @@ tr:hover td{background:#FAFAFA}
 tr.hl td{background:linear-gradient(90deg,#FFF5F0,transparent)}
 tr.hl:hover td{background:linear-gradient(90deg,#FFE9E0,transparent)}
 tr.tot td{background:#F8F9FA;font-weight:700;border-top:2px solid var(--orange-mid)}
-
-/* RANK */
 .rank{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700}
 .r1{background:#FEF9C3;color:#854D0E}.r2{background:#F1F5F9;color:#475569}.r3{background:#FEF3C7;color:#92400E}.rn{background:#F3F4F6;color:var(--text-sub)}
-
-/* BADGES */
 .pct{display:inline-block;padding:3px 8px;border-radius:5px;font-size:11px;font-weight:600;white-space:nowrap}
 .g{background:var(--green-bg);color:var(--green)}.m{background:var(--yellow-bg);color:var(--yellow)}.b{background:var(--red-bg);color:var(--red)}
-
-/* BAR */
 .bw{display:flex;align-items:center;gap:6px}
 .bgr{flex:1;height:5px;background:#E5E7EB;border-radius:3px;overflow:hidden;min-width:36px}
 .bf{height:100%;border-radius:3px}
 .bo{background:var(--orange)}.bgg{background:var(--green)}.brd{background:var(--red)}
 .bv{font-size:11px;font-weight:600;color:var(--text-main);white-space:nowrap;min-width:42px;text-align:right}
 .am-self{font-weight:700;color:var(--orange-dark)}
-
+.vol-gtc{color:var(--green);font-weight:700}
 @media(max-width:1200px){.kpi-row{grid-template-columns:repeat(2,1fr)}}
 </style>
 </head>
 <body>
 
-<nav class="sidebar">
-  <div class="logo-area">
-    <img src="https://cdn.hstatic.net/themes/200000472237/1001423864/14/logo.png?v=2874" alt="GHN">
-    <div class="logo-sub">Báo Cáo Vận Hành XBG</div>
+<!-- SPLASH -->
+<div id="splash" class="splash-overlay" onclick="dismissSplash()">
+ <div class="splash-inner">
+  <div class="splash-logo-wrap">
+   <div class="splash-logo-txt">GHN</div>
+   <div class="splash-divider"></div>
+   <div class="splash-vung">Vùng XBG · Bắc Giang</div>
   </div>
-  <div class="nav-section">Vận hành ngày</div>
-  <button class="nav-item active" onclick="show('p1',this)"><span class="icon">📦</span>Vận Hành AM</button>
-  <button class="nav-item" onclick="show('p2',this)"><span class="icon">🏪</span>GTC Bưu Cục</button>
-  <button class="nav-item" onclick="show('p3',this)"><span class="icon">✅</span>GTC TTS / AM</button>
-  <button class="nav-item" onclick="show('p4',this)"><span class="icon">⏱️</span>Ontime TTS</button>
-  <div class="nav-section">Tỉ lệ hoàn</div>
-  <button class="nav-item" onclick="show('p5',this)"><span class="icon">↩️</span>FD Hoàn – AM</button>
-  <button class="nav-item" onclick="show('p6',this)"><span class="icon">📮</span>FD Hoàn – BC</button>
-  <button class="refresh-btn" id="refreshBtn" onclick="loadAll()">
-    <span class="spin" id="spinIcon">🔄</span> Cập nhật dữ liệu
-  </button>
-  <div class="last-update" id="lastUpdate"></div>
+  <div class="splash-title">GHN – Vùng XBG<br><span>XIN CHÀO BẠN! 👋</span></div>
+  <div class="map-row">
+   <svg viewBox="0 0 480 340" width="320" height="227" xmlns="http://www.w3.org/2000/svg">
+    <rect width="480" height="340" fill="rgba(255,255,255,0.02)" rx="10"/>
+    <!-- Lạng Sơn -->
+    <path class="prov-shape" d="M 78,12 L 272,12 L 296,52 L 282,122 L 255,150 L 192,153 L 132,143 L 86,113 L 65,66 Z" fill="#FBBF24" fill-opacity=".72" stroke="#fff" stroke-width="1.5"/>
+    <text x="178" y="78" text-anchor="middle" fill="white" font-size="11" font-weight="700" font-family="Inter,sans-serif">Lạng Sơn</text>
+    <text x="178" y="93" text-anchor="middle" fill="rgba(255,255,255,.7)" font-size="8.5" font-family="Inter,sans-serif">🍊 Hồng · 🥩 Khâu nhục</text>
+    <!-- Bắc Giang -->
+    <path class="prov-shape" d="M 86,156 L 195,154 L 265,156 L 282,195 L 265,246 L 224,268 L 174,270 L 124,255 L 97,226 L 82,190 Z" fill="#F15D29" fill-opacity=".82" stroke="#fff" stroke-width="1.5"/>
+    <text x="183" y="203" text-anchor="middle" fill="white" font-size="11" font-weight="700" font-family="Inter,sans-serif">Bắc Giang</text>
+    <text x="183" y="218" text-anchor="middle" fill="rgba(255,255,255,.8)" font-size="8.5" font-family="Inter,sans-serif">🍒 Vải thiều · 🐓 Gà đồi</text>
+    <!-- Quảng Ninh -->
+    <path class="prov-shape" d="M 288,46 L 392,28 L 462,85 L 470,178 L 448,258 L 410,292 L 364,286 L 323,258 L 288,210 L 284,145 L 290,88 Z" fill="#38BDF8" fill-opacity=".68" stroke="#fff" stroke-width="1.5"/>
+    <text x="378" y="152" text-anchor="middle" fill="white" font-size="11" font-weight="700" font-family="Inter,sans-serif">Quảng Ninh</text>
+    <text x="378" y="167" text-anchor="middle" fill="rgba(255,255,255,.78)" font-size="8.5" font-family="Inter,sans-serif">🦀 Chả mực · 🦪 Hàu</text>
+    <!-- Bắc Ninh -->
+    <path class="prov-shape" d="M 89,274 L 178,272 L 196,294 L 187,330 L 143,335 L 93,320 L 81,298 Z" fill="#A78BFA" fill-opacity=".75" stroke="#fff" stroke-width="1.5"/>
+    <text x="138" y="302" text-anchor="middle" fill="white" font-size="10" font-weight="700" font-family="Inter,sans-serif">Bắc Ninh</text>
+    <text x="138" y="316" text-anchor="middle" fill="rgba(255,255,255,.72)" font-size="8" font-family="Inter,sans-serif">🎎 Bánh phu thê</text>
+    <!-- Hải Dương -->
+    <path class="prov-shape" d="M 200,274 L 282,265 L 330,276 L 326,312 L 300,338 L 252,340 L 200,324 L 194,300 Z" fill="#34D399" fill-opacity=".7" stroke="#fff" stroke-width="1.5"/>
+    <text x="262" y="300" text-anchor="middle" fill="white" font-size="10" font-weight="700" font-family="Inter,sans-serif">Hải Dương</text>
+    <text x="262" y="313" text-anchor="middle" fill="rgba(255,255,255,.72)" font-size="8" font-family="Inter,sans-serif">🌿 Bánh đậu xanh</text>
+    <!-- Hải Phòng -->
+    <path class="prov-shape" d="M 334,278 L 390,268 L 438,284 L 446,318 L 420,338 L 372,338 L 332,320 L 328,296 Z" fill="#60A5FA" fill-opacity=".75" stroke="#fff" stroke-width="1.5"/>
+    <text x="387" y="300" text-anchor="middle" fill="white" font-size="10" font-weight="700" font-family="Inter,sans-serif">Hải Phòng</text>
+    <text x="387" y="313" text-anchor="middle" fill="rgba(255,255,255,.72)" font-size="8" font-family="Inter,sans-serif">🦀 Bánh đa cua</text>
+    <!-- Sea -->
+    <path d="M 462,85 L 470,178 L 448,258 L 410,292 L 438,284 L 446,318 L 480,330 L 480,65 Z" fill="#0EA5E9" fill-opacity=".12"/>
+    <text x="472" y="200" text-anchor="middle" fill="rgba(255,255,255,.25)" font-size="9" font-style="italic" transform="rotate(90,472,200)" font-family="Inter,sans-serif">Biển Đông</text>
+   </svg>
+   <div class="prov-grid">
+    <div class="prov-card"><div class="prov-name c-bg">🍒 Bắc Giang</div><div class="prov-spec">Vải thiều Lục Ngạn<br>Gà đồi Yên Thế<br>Bánh đa nem Thủ Dương</div></div>
+    <div class="prov-card"><div class="prov-name c-ls">🍊 Lạng Sơn</div><div class="prov-spec">Hồng Bảo Lâm<br>Khâu nhục, Mác mật<br>Bánh coón phở</div></div>
+    <div class="prov-card"><div class="prov-name c-qn">🦀 Quảng Ninh</div><div class="prov-spec">Chả mực Hạ Long<br>Hàu Vân Đồn<br>Bánh cuốn Tiên Yên</div></div>
+    <div class="prov-card"><div class="prov-name c-bn">🎎 Bắc Ninh</div><div class="prov-spec">Bánh phu thê<br>Nem Bùi, Tương Đình Tổ<br>Rượu Làng Vân</div></div>
+    <div class="prov-card"><div class="prov-name c-hd">🌿 Hải Dương</div><div class="prov-spec">Bánh đậu xanh<br>Bánh gai Ninh Giang<br>Vải Thanh Hà</div></div>
+    <div class="prov-card"><div class="prov-name c-hp">🦀 Hải Phòng</div><div class="prov-spec">Bánh đa cua<br>Nem cua bể<br>Bánh mì cay</div></div>
+   </div>
+  </div>
+  <div class="splash-bar-wrap">
+   <div class="splash-bar-bg"><div id="splashBar" class="splash-bar-fg"></div></div>
+  </div>
+  <div class="splash-hint">Nhấn bất kỳ đâu để bỏ qua · Tự chuyển sau <span id="splashCount">5</span>s</div>
+ </div>
+</div>
+
+<nav class="sidebar">
+ <div class="logo-area">
+  <img src="https://cdn.hstatic.net/themes/200000472237/1001423864/14/logo.png?v=2874" alt="GHN">
+  <div class="logo-sub">Báo Cáo Vận Hành XBG</div>
+ </div>
+ <div class="nav-section">Vận hành ngày</div>
+ <button class="nav-item active" onclick="show('p1',this)"><span class="icon">📦</span>Vận Hành AM</button>
+ <button class="nav-item" onclick="show('p2',this)"><span class="icon">🏪</span>GTC Bưu Cục</button>
+ <button class="nav-item" onclick="show('p3',this)"><span class="icon">✅</span>GTC TTS / AM</button>
+ <button class="nav-item" onclick="show('p4',this)"><span class="icon">⏱️</span>Ontime TTS</button>
+ <div class="nav-section">Tỉ lệ hoàn</div>
+ <button class="nav-item" onclick="show('p5',this)"><span class="icon">↩️</span>FD Hoàn – AM</button>
+ <button class="nav-item" onclick="show('p6',this)"><span class="icon">📮</span>FD Hoàn – BC</button>
+ <button class="refresh-btn" id="refreshBtn" onclick="loadAll()">
+  <span class="spin" id="spinIcon">🔄</span> Cập nhật dữ liệu
+ </button>
+ <div class="last-update" id="lastUpdate"></div>
 </nav>
 
 <main class="main">
-  <div class="page active" id="p1"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
-  <div class="page" id="p2"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
-  <div class="page" id="p3"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
-  <div class="page" id="p4"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
-  <div class="page" id="p5"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
-  <div class="page" id="p6"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
+ <div class="page active" id="p1"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
+ <div class="page" id="p2"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
+ <div class="page" id="p3"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
+ <div class="page" id="p4"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
+ <div class="page" id="p5"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
+ <div class="page" id="p6"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
 </main>
 
 <script>
-const SELF = 'Phạm Đức Thắng';
-const SID  = '1zNYw6PMBa_hNxnfyREstfg-L78djDNym0rMU-LXzicg';
-
-const SHEETS = {
-  vanHanh:  { name:'VẬN HÀNH AM',              range:'A1:F33' },
-  bcGiao:   { name:'BƯU CỤC-GIAO',             range:'A1:F33' },
-  gtcTTS:   { name:'GTC TTS',                  range:'A1:F33' },
-  ontime:   { name:'AM-ONTIME TTS',            range:'A1:F33' },
-  fdAM:     { name:'FD( tỉ lệ trả) - AM',      range:'A1:E24' },
-  fdBC:     { name:'FD( tỉ lệ trả) - Bưu Cục',range:'A1:G98' },
+const SELF='Phạm Đức Thắng';
+const SID='1zNYw6PMBa_hNxnfyREstfg-L78djDNym0rMU-LXzicg';
+const SHEETS={
+ vanHanh:{name:'VẬN HÀNH AM',range:'A1:F33'},
+ bcGiao:{name:'BƯU CỤC-GIAO',range:'A1:F33'},
+ gtcTTS:{name:'GTC TTS',range:'A1:F33'},
+ ontime:{name:'AM-ONTIME TTS',range:'A1:F33'},
+ fdAM:{name:'FD( tỉ lệ trả) - AM',range:'A1:E24'},
+ fdBC:{name:'FD( tỉ lệ trả) - Bưu Cục',range:'A1:G98'},
 };
+function sheetURL(n,r){return`https://docs.google.com/spreadsheets/d/${SID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(n)}&range=${r}`;}
+function parseCSV(text){return text.trim().split('\n').filter(l=>l.trim()).map(line=>{const cols=[];let cur='',inQ=false;for(const c of line){if(c==='"')inQ=!inQ;else if(c===','&&!inQ){cols.push(cur.trim());cur='';}else cur+=c;}cols.push(cur.trim());return cols;});}
+async function fetchSheet(name,range){const res=await fetch(sheetURL(name,range));if(!res.ok)throw new Error(`HTTP ${res.status}`);return parseCSV(await res.text());}
 
-function sheetURL(sheetName, range) {
-  return `https://docs.google.com/spreadsheets/d/${SID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheetName)}&range=${range}`;
-}
-
-function parseCSV(text) {
-  return text.trim().split('\n').filter(l=>l.trim()).map(line=>{
-    const cols=[]; let cur='', inQ=false;
-    for(const c of line){
-      if(c==='"') inQ=!inQ;
-      else if(c===','&&!inQ){cols.push(cur.trim());cur='';}
-      else cur+=c;
-    }
-    cols.push(cur.trim());
-    return cols;
-  });
-}
-
-async function fetchSheet(sheetName, range) {
-  const res = await fetch(sheetURL(sheetName, range));
-  if(!res.ok) throw new Error(`HTTP ${res.status}`);
-  return parseCSV(await res.text());
-}
-
-// ── HELPERS ──
-function show(id,btn){
-  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
-  document.querySelectorAll('.nav-item').forEach(b=>b.classList.remove('active'));
-  document.getElementById(id).classList.add('active');
-  btn.classList.add('active');
-}
-function gc(v,g,m){const n=parseFloat(v);if(isNaN(n))return'';return n>=g?'g':n>=m?'m':'b';}
-function fd(v){const n=parseFloat(v);if(isNaN(n))return'';return n<=8?'g':n<=12?'m':'b';}
-function bar(pct,cls){const w=Math.min(100,parseFloat(pct)||0);return`<div class="bw"><div class="bgr"><div class="bf ${cls}" style="width:${w}%"></div></div><span class="bv">${pct}</span></div>`;}
+// helpers
+function show(id,btn){document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));document.querySelectorAll('.nav-item').forEach(b=>b.classList.remove('active'));document.getElementById(id).classList.add('active');btn.classList.add('active');}
+function pn(v){return parseFloat((v||'').replace(/,/g,'').replace('%',''))||0;}
+function pi(v){return parseInt((v||'').replace(/,/g,''))||0;}
+function gc(v,g,m){const n=pn(v);return n>=g?'g':n>=m?'m':'b';}
+function fd(v){const n=pn(v);return n<=8?'g':n<=12?'m':'b';}
+function bar(pct,cls){const w=Math.min(100,pn(pct)||0);return`<div class="bw"><div class="bgr"><div class="bf ${cls}" style="width:${w}%"></div></div><span class="bv">${pct}</span></div>`;}
 function am(n){return n.includes(SELF)?`<span class="am-self">⭐ ${n}</span>`:n;}
 function rk(i){const c=i===0?'r1':i===1?'r2':i===2?'r3':'rn';return`<div class="rank ${c}">${i+1}</div>`;}
 function bg(v,g,m){return`<span class="pct ${gc(v,g,m)}">${v}</span>`;}
 function fb(v){return`<span class="pct ${fd(v)}">${v}</span>`;}
+function fmt(n){return n.toLocaleString('vi-VN');}
+function mkTable(heads,rows){const t=document.createElement('table');t.innerHTML=`<thead><tr>${heads.map(h=>`<th>${h}</th>`).join('')}</tr></thead><tbody></tbody>`;rows.forEach(r=>t.querySelector('tbody').appendChild(r));return t;}
+function errPage(msg){return`<div class="error-box">⚠️ Không thể tải dữ liệu: ${msg}<br><small>Kiểm tra kết nối mạng hoặc quyền truy cập Google Sheet.</small></div>`;}
 
-function mkTable(heads,rows,totRow){
-  const t=document.createElement('table');
-  t.innerHTML=`<thead><tr>${heads.map(h=>`<th>${h}</th>`).join('')}</tr></thead><tbody></tbody>`;
-  const tb=t.querySelector('tbody');
-  rows.forEach(r=>tb.appendChild(r));
-  if(totRow)tb.appendChild(totRow);
-  return t;
+// splash
+function initSplash(){
+ const splash=document.getElementById('splash');if(!splash)return;
+ let count=5;
+ const bar=document.getElementById('splashBar'),ctr=document.getElementById('splashCount');
+ const tmr=setInterval(()=>{count--;if(ctr)ctr.textContent=count;if(bar)bar.style.width=((5-count)/5*100)+'%';if(count<=0){clearInterval(tmr);dismissSplash();}},1000);
+ window._splashTimer=tmr;
+}
+function dismissSplash(){
+ if(window._splashTimer)clearInterval(window._splashTimer);
+ const s=document.getElementById('splash');
+ if(s){s.classList.add('fade-out');setTimeout(()=>s.remove(),600);}
 }
 
-function setPage(id, html) {
-  document.getElementById(id).innerHTML = html;
+// enrich helpers
+function enrichVH(r){
+ const v1=pi(r[2]),p1=pn(r[3]),v2=pi(r[4]),p2=pn(r[5]);
+ const g1=Math.round(v1*p1/100),g2=Math.round(v2*p2/100);
+ const tot=v1+v2,gan=g1+g2;
+ const pctTot=tot>0?((gan/tot)*100).toFixed(1)+'%':'0%';
+ return{v1,p1,v2,p2,g1,g2,tot,gan,pctTot};
 }
 
-function errPage(msg) {
-  return `<div class="error-box">⚠️ Không thể tải dữ liệu: ${msg}<br><small>Kiểm tra kết nối mạng hoặc quyền truy cập Google Sheet.</small></div>`;
+// BUILD VAN HANH
+function buildVanHanh(rows){
+ const data=rows.slice(1).filter(r=>r[0]&&r[0].trim());
+ const totRow=data.find(r=>!r[0].match(/^\d+$/));
+ const dr=data.filter(r=>r[0].match(/^\d+$/));
+ const en=dr.map(r=>({r,...enrichVH(r)}));
+ const sumV1=en.reduce((s,x)=>s+x.v1,0),sumV2=en.reduce((s,x)=>s+x.v2,0);
+ const sumGan=en.reduce((s,x)=>s+x.gan,0),sumTot=sumV1+sumV2;
+ const kV1=totRow?totRow[2]:fmt(sumV1);
+ const kP1=totRow?totRow[3]:(sumV1>0?((en.reduce((s,x)=>s+x.v1*x.p1,0)/sumV1)).toFixed(1)+'%':'—');
+ const kV2=totRow?totRow[4]:fmt(sumV2);
+ const kP2=totRow?totRow[5]:(sumV2>0?((en.reduce((s,x)=>s+x.v2*x.p2,0)/sumV2)).toFixed(1)+'%':'—');
+ const kGan=fmt(sumGan);
+ const kGanPct=sumTot>0?((sumGan/sumTot)*100).toFixed(1)+'%':'—';
+ const mxVol=en.reduce((a,b)=>b.tot>a.tot?b:a,en[0]||{});
+ return`<div class="page-header"><div class="page-title">Báo Cáo Vận Hành Theo AM</div>
+  <div class="page-meta"><span class="tag tag-orange">📅 Dữ liệu thực tế từ Google Sheet</span><span>${dr.length} AMs · Tổng Vol: ${fmt(sumTot)} đơn</span></div></div>
+  <div class="kpi-row">
+   <div class="kpi"><div class="kpi-label">Tổng Vol Ca 1</div><div class="kpi-value">${kV1}</div><div class="kpi-sub">%Gán Ca1 TB: ${kP1}</div></div>
+   <div class="kpi"><div class="kpi-label">Tổng Vol Ca 2</div><div class="kpi-value">${kV2}</div><div class="kpi-sub">%Gán Ca2 TB: ${kP2}</div></div>
+   <div class="kpi"><div class="kpi-label">Tổng Số Đơn Gán</div><div class="kpi-value" style="color:var(--green)">${kGan}</div><div class="kpi-sub">%Gán tổng: ${kGanPct}</div></div>
+   <div class="kpi"><div class="kpi-label">Vol Cao Nhất</div><div class="kpi-value" style="font-size:14px;padding-top:4px">${mxVol.r?mxVol.r[1]:'—'}</div><div class="kpi-sub">${mxVol.tot?fmt(mxVol.tot)+' đơn · '+mxVol.pctTot:'—'}</div></div>
+  </div>
+  <div class="card"><div class="card-header"><div class="card-title"><div class="card-icon">📦</div>Chi Tiết Vận Hành Theo AM</div><div class="card-info">%Gán: Xanh ≥90% · Vàng 80–90% · Đỏ &lt;80%</div></div><div class="table-wrap"></div></div>`;
 }
 
-// ── BUILD PAGES ──
-function buildVanHanh(rows) {
-  // rows[0] = header, skip; find grand total row
-  const data = rows.slice(1).filter(r=>r[0]&&r[0].trim()&&r[0]!=='');
-  const totRow = data.find(r=>!r[0].match(/^\d+$/));
-  const dataRows = data.filter(r=>r[0].match(/^\d+$/));
+// BUILD BC GIAO
+function buildBCGiao(rows){
+ const data=rows.slice(1).filter(r=>r[0]&&r[0].trim());
+ const totRow=data.find(r=>!r[0].match(/^\d+$/));
+ const dr=data.filter(r=>r[0].match(/^\d+$/));
+ const sumV1=dr.reduce((s,r)=>s+pi(r[3]),0);
+ const sumGTC=dr.reduce((s,r)=>s+Math.round(pi(r[3])*pn(r[5])/100),0);
+ const pctAvg=sumV1>0?((sumGTC/sumV1)*100).toFixed(1)+'%':'—';
+ const kV1=totRow?totRow[3]:fmt(sumV1);
+ const kGanPct=totRow?totRow[4]:'—';
+ const kGTCPct=totRow?totRow[5]:pctAvg;
+ const kGTCColor=pn(kGTCPct)>=70?'var(--green)':pn(kGTCPct)>=60?'var(--yellow)':'var(--red)';
+ return`<div class="page-header"><div class="page-title">GTC Theo Bưu Cục</div>
+  <div class="page-meta"><span class="tag tag-orange">📅 Dữ liệu thực tế từ Google Sheet</span><span>${dr.length} bưu cục</span></div></div>
+  <div class="kpi-row">
+   <div class="kpi"><div class="kpi-label">Tổng Bưu Cục</div><div class="kpi-value">${dr.length}</div><div class="kpi-sub">đang hoạt động</div></div>
+   <div class="kpi"><div class="kpi-label">Tổng Vol Ca 1</div><div class="kpi-value">${kV1}</div><div class="kpi-sub">%Gán TB: ${kGanPct}</div></div>
+   <div class="kpi"><div class="kpi-label">Vol Giao Thành Công</div><div class="kpi-value" style="color:var(--green)">${fmt(sumGTC)}</div><div class="kpi-sub">tính từ %GTC × Vol</div></div>
+   <div class="kpi"><div class="kpi-label">%GTC Tổng</div><div class="kpi-value" style="color:${kGTCColor}">${kGTCPct}</div><div class="kpi-sub">Mục tiêu ≥70%</div></div>
+  </div>
+  <div class="card"><div class="card-header"><div class="card-title"><div class="card-icon">🏪</div>Hiệu Suất GTC Bưu Cục</div><div class="card-info">%GTC: Xanh ≥70% · Vàng 60–70% · Đỏ &lt;60%</div></div><div class="table-wrap"></div></div>`;
+}
 
-  const vol1All = dataRows.map(r=>parseInt((r[2]||'').replace(/,/g,''))||0);
-  const maxVol1 = Math.max(...vol1All);
-  const maxAM = dataRows.find(r=>(parseInt((r[2]||'').replace(/,/g,''))||0)===maxVol1);
-  const maxGan = dataRows.reduce((a,b)=>parseFloat(b[3])>parseFloat(a[3])?b:a, dataRows[0]);
-  const totalVol1 = totRow?totRow[2]:'—';
-  const totalPct1 = totRow?totRow[3]:'—';
-  const totalVol2 = totRow?totRow[4]:'—';
+function buildGTCTTS(rows){
+ const data=rows.slice(1).filter(r=>r[0]&&r[0].trim());
+ const totRow=data.find(r=>!r[0].match(/^\d+$/));
+ const dr=data.filter(r=>r[0].match(/^\d+$/));
+ const mx=dr.reduce((a,b)=>pn(b[4])>pn(a[4])?b:a,dr[0]||['','','','','']);
+ const mn=dr.reduce((a,b)=>pn(b[4])<pn(a[4])?b:a,dr[0]||['','','','','']);
+ return`<div class="page-header"><div class="page-title">GTC TTS Theo AM</div>
+  <div class="page-meta"><span class="tag tag-orange">📅 Dữ liệu thực tế từ Google Sheet</span><span>Tổng: ${totRow?totRow[2]:'—'} · %GTC TB: ${totRow?totRow[4]:'—'}</span></div></div>
+  <div class="kpi-row">
+   <div class="kpi"><div class="kpi-label">Tổng Ca 1 TTS</div><div class="kpi-value">${totRow?totRow[2]:'—'}</div><div class="kpi-sub">%Gán: ${totRow?totRow[3]:'—'}</div></div>
+   <div class="kpi"><div class="kpi-label">%GTC Trung Bình</div><div class="kpi-value" style="color:var(--yellow)">${totRow?totRow[4]:'—'}</div><div class="kpi-sub">Mục tiêu ≥80%</div></div>
+   <div class="kpi"><div class="kpi-label">GTC Cao Nhất</div><div class="kpi-value" style="color:var(--green)">${mx[4]||'—'}</div><div class="kpi-sub">${mx[1]||'—'}</div></div>
+   <div class="kpi"><div class="kpi-label">GTC Thấp Nhất</div><div class="kpi-value" style="color:var(--red)">${mn[4]||'—'}</div><div class="kpi-sub">${mn[1]||'—'}</div></div>
+  </div>
+  <div class="card"><div class="card-header"><div class="card-title"><div class="card-icon">✅</div>Tỉ Lệ GTC TTS Theo AM</div><div class="card-info">%GTC: Xanh ≥80% · Vàng 70–80% · Đỏ &lt;70%</div></div><div class="table-wrap"></div></div>`;
+}
 
-  const tableRows = dataRows.map((r,i)=>{
-    const tr=document.createElement('tr');
-    if(r[1]&&r[1].includes(SELF)) tr.className='hl';
-    tr.innerHTML=`<td>${rk(i)}</td><td>${am(r[1]||'')}</td><td><strong>${r[2]||''}</strong></td><td>${bar(r[3]||'0%','bo')}</td><td>${r[4]||''}</td><td>${bar(r[5]||'0%','bo')}</td>`;
-    return tr;
+function buildOntime(rows){
+ const data=rows.slice(1).filter(r=>r[0]&&r[0].trim()&&r[1]&&r[1].trim());
+ const totRow=data.find(r=>(r[0]||'').toLowerCase().includes('total')||(r[0]||'').toLowerCase().includes('grand'));
+ const dr=data.filter(r=>r[0].match(/^\d+$/));
+ const mx=dr.reduce((a,b)=>pn(b[4])>pn(a[4])?b:a,dr[0]||[]);
+ const mn=dr.reduce((a,b)=>pn(b[4])<pn(a[4])?b:a,dr[0]||[]);
+ return`<div class="page-header"><div class="page-title">Ontime TTS Theo AM</div>
+  <div class="page-meta"><span class="tag tag-orange">📅 ${dr[0]?dr[0][2]:'Ngày hiện tại'}</span><span>Tổng: ${totRow?totRow[3]:'—'} · %Ontime TB: ${totRow?totRow[4]:'—'}</span></div></div>
+  <div class="kpi-row">
+   <div class="kpi"><div class="kpi-label">Tổng Vol GTC</div><div class="kpi-value">${totRow?totRow[3]:'—'}</div><div class="kpi-sub">Vol đúng hạn: ${totRow?totRow[5]:'—'}</div></div>
+   <div class="kpi"><div class="kpi-label">%Ontime TB</div><div class="kpi-value" style="color:var(--yellow)">${totRow?totRow[4]:'—'}</div><div class="kpi-sub">Mục tiêu ≥90%</div></div>
+   <div class="kpi"><div class="kpi-label">Ontime Cao Nhất</div><div class="kpi-value" style="color:var(--green)">${mx[4]||'—'}</div><div class="kpi-sub">${mx[1]||'—'}</div></div>
+   <div class="kpi"><div class="kpi-label">Ontime Thấp Nhất</div><div class="kpi-value" style="color:var(--red)">${mn[4]||'—'}</div><div class="kpi-sub">${mn[1]||'—'}</div></div>
+  </div>
+  <div class="card"><div class="card-header"><div class="card-title"><div class="card-icon">⏱️</div>Ontime TTS Ngày</div><div class="card-info">%Ontime: Xanh ≥90% · Vàng 80–90% · Đỏ &lt;80%</div></div><div class="table-wrap"></div></div>`;
+}
+
+function buildFDAM(rows){
+ const data=rows.slice(1).filter(r=>r[0]&&r[0].trim());
+ const totRow=data.find(r=>(r[0]||'').toUpperCase().includes('TOTAL'));
+ const dr=data.filter(r=>!(r[0]||'').toUpperCase().includes('TOTAL'));
+ const self=dr.find(r=>(r[0]||'').includes(SELF));
+ const mx=dr.reduce((a,b)=>pn(b[1])>pn(a[1])?b:a,dr[0]||[]);
+ const mn=dr.reduce((a,b)=>pn(b[1])<pn(a[1])?b:a,dr[0]||[]);
+ return`<div class="page-header"><div class="page-title">Tỉ Lệ Hoàn (FD) Theo AM</div>
+  <div class="page-meta"><span class="tag tag-orange">📅 Dữ liệu thực tế từ Google Sheet</span><span>TOTAL: ${totRow?totRow[1]:'—'} · SME: ${totRow?totRow[2]:'—'} · TTS: ${totRow?totRow[3]:'—'} · Shopee: ${totRow?totRow[4]:'—'}</span></div></div>
+  <div class="kpi-row">
+   <div class="kpi"><div class="kpi-label">FD Trung Bình</div><div class="kpi-value" style="color:var(--yellow)">${totRow?totRow[1]:'—'}</div><div class="kpi-sub">Mục tiêu ≤8%</div></div>
+   <div class="kpi"><div class="kpi-label">FD Cao Nhất</div><div class="kpi-value" style="color:var(--red)">${mx[1]||'—'}</div><div class="kpi-sub">${mx[0]||'—'}</div></div>
+   <div class="kpi"><div class="kpi-label">FD Thấp Nhất</div><div class="kpi-value" style="color:var(--green)">${mn[1]||'—'}</div><div class="kpi-sub">${mn[0]||'—'}</div></div>
+   <div class="kpi"><div class="kpi-label">⭐ Phạm Đức Thắng</div><div class="kpi-value" style="color:var(--yellow)">${self?self[1]:'—'}</div><div class="kpi-sub">SME ${self?self[2]:'—'} · TTS ${self?self[3]:'—'} · Shopee ${self?self[4]:'—'}</div></div>
+  </div>
+  <div class="card"><div class="card-header"><div class="card-title"><div class="card-icon">↩️</div>FD Hoàn Theo AM — Giảm Dần</div><div class="card-info">FD: Xanh ≤8% · Vàng 8–12% · Đỏ &gt;12%</div></div><div class="table-wrap"></div></div>`;
+}
+
+function buildFDBC(rows){
+ const data=rows.slice(1).filter(r=>r[0]&&r[0].trim()&&r[2]&&r[2].trim());
+ return`<div class="page-header"><div class="page-title">Tỉ Lệ Hoàn (FD) Theo Bưu Cục</div>
+  <div class="page-meta"><span class="tag tag-orange">📅 Dữ liệu thực tế từ Google Sheet</span><span>${data.length} bưu cục — sắp xếp theo %FD giảm dần</span></div></div>
+  <div class="card"><div class="card-header"><div class="card-title"><div class="card-icon">📮</div>FD Hoàn Theo Bưu Cục</div><div class="card-info">FD: Xanh ≤8% · Vàng 8–12% · Đỏ &gt;12%</div></div><div class="table-wrap"></div></div>`;
+}
+
+// TABLE BUILDER
+function buildTableForPage(id,rows){
+ const data=rows.slice(1).filter(r=>r.some(c=>c&&c.trim()));
+ if(id==='p1'){
+  const dr=data.filter(r=>r[0].match(/^\d+$/));
+  const totRow=data.find(r=>!r[0].match(/^\d+$/)&&r[1]);
+  const trs=dr.map((r,i)=>{
+   const e=enrichVH(r);
+   const barCls=pn(e.pctTot)>=90?'bgg':pn(e.pctTot)>=80?'bo':'brd';
+   const tr=document.createElement('tr');
+   if((r[1]||'').includes(SELF))tr.className='hl';
+   tr.innerHTML=`<td>${rk(i)}</td><td>${am(r[1]||'')}</td><td><strong>${r[2]||''}</strong></td><td>${bar(r[3]||'','bo')}</td><td><strong>${r[4]||''}</strong></td><td>${bar(r[5]||'','bo')}</td><td><strong>${fmt(e.tot)}</strong></td><td class="vol-gtc">${fmt(e.gan)}</td><td>${bar(e.pctTot,barCls)}</td>`;
+   return tr;
   });
   if(totRow){
-    const tr=document.createElement('tr');tr.className='tot';
-    tr.innerHTML=`<td colspan="2">${totRow[1]||'Grand Total'}</td><td><strong>${totRow[2]||''}</strong></td><td>${bar(totRow[3]||'','bo')}</td><td><strong>${totRow[4]||''}</strong></td><td>${bar(totRow[5]||'','bo')}</td>`;
-    tableRows.push(tr);
+   const e=enrichVH(totRow);
+   const tr=document.createElement('tr');tr.className='tot';
+   tr.innerHTML=`<td colspan="2">${totRow[1]||'Grand Total'}</td><td><strong>${totRow[2]||''}</strong></td><td>${bar(totRow[3]||'','bo')}</td><td><strong>${totRow[4]||''}</strong></td><td>${bar(totRow[5]||'','bo')}</td><td><strong>${fmt(e.tot)}</strong></td><td class="vol-gtc"><strong>${fmt(e.gan)}</strong></td><td>${bar(e.pctTot,'bgg')}</td>`;
+   trs.push(tr);
   }
-  const table = mkTable(['#','AM','Ca1 Vol','%Gán Ca1','Ca2 Vol','%Gán Ca2'],tableRows,null);
-
-  return `
-    <div class="page-header">
-      <div class="page-title">Báo Cáo Vận Hành Theo AM</div>
-      <div class="page-meta"><span class="tag tag-orange">📅 Dữ liệu thực tế từ Google Sheet</span><span>${dataRows.length} AMs · Tổng: ${totalVol1} đơn Ca1</span></div>
-    </div>
-    <div class="kpi-row">
-      <div class="kpi"><div class="kpi-label">Tổng Ca 1</div><div class="kpi-value">${totalVol1}</div><div class="kpi-sub">%Gán TB: ${totalPct1}</div></div>
-      <div class="kpi"><div class="kpi-label">Tổng Ca 2</div><div class="kpi-value">${totalVol2}</div><div class="kpi-sub">%Gán TB: ${totRow?totRow[5]:'—'}</div></div>
-      <div class="kpi"><div class="kpi-label">Volume Cao Nhất</div><div class="kpi-value" style="font-size:14px;padding-top:4px">${maxAM?maxAM[1]:'—'}</div><div class="kpi-sub">${maxVol1.toLocaleString()} đơn · ${maxAM?maxAM[3]:'—'}</div></div>
-      <div class="kpi"><div class="kpi-label">%Gán Ca1 Cao Nhất</div><div class="kpi-value" style="color:var(--green)">${maxGan?maxGan[3]:'—'}</div><div class="kpi-sub">${maxGan?maxGan[1]:'—'}</div></div>
-    </div>
-    <div class="card">
-      <div class="card-header"><div class="card-title"><div class="card-icon">📦</div>Chi Tiết Vận Hành Theo AM</div><div class="card-info">%Gán: Xanh ≥90% · Vàng 80–90% · Đỏ &lt;80%</div></div>
-      <div class="table-wrap"></div>
-    </div>`;
-}
-
-function buildBCGiao(rows) {
-  const data = rows.slice(1).filter(r=>r[0]&&r[0].trim());
-  const tableRows = data.map((r,i)=>{
-    const tr=document.createElement('tr');
-    if((r[1]||'').includes(SELF)) tr.className='hl';
-    const gcls=gc(r[5],70,60);
-    const bc=gcls==='g'?'bgg':gcls==='m'?'bo':'brd';
-    tr.innerHTML=`<td>${rk(i)}</td><td>${am(r[1]||'')}</td><td style="font-size:11px">${r[2]||''}</td><td><strong>${r[3]||''}</strong></td><td>${bar(r[4]||'0%','bo')}</td><td>${bar(r[5]||'0%',bc)}</td>`;
-    return tr;
+  return mkTable(['#','AM','Ca1 Vol','%Gán Ca1','Ca2 Vol','%Gán Ca2','Tổng Vol','Số Gán','%Gán Tổng'],trs);
+ }
+ if(id==='p2'){
+  const trs=data.filter(r=>r[0]&&r[0].trim()).map((r,i)=>{
+   const v1=pi(r[3]),pGTC=pn(r[5]),volGTC=Math.round(v1*pGTC/100);
+   const gcls=gc(r[5],70,60);const bc=gcls==='g'?'bgg':gcls==='m'?'bo':'brd';
+   const tr=document.createElement('tr');
+   if((r[1]||'').includes(SELF))tr.className='hl';
+   tr.innerHTML=`<td>${rk(i)}</td><td>${am(r[1]||'')}</td><td style="font-size:11px">${r[2]||''}</td><td><strong>${r[3]||''}</strong></td><td>${bar(r[4]||'','bo')}</td><td>${bar(r[5]||'',bc)}</td><td class="vol-gtc">${fmt(volGTC)}</td>`;
+   return tr;
   });
-  const table = mkTable(['#','AM','Bưu Cục','Ca1 Vol','%Gán','%GTC'],tableRows,null);
-
-  return `
-    <div class="page-header">
-      <div class="page-title">GTC Theo Bưu Cục</div>
-      <div class="page-meta"><span class="tag tag-orange">📅 Dữ liệu thực tế từ Google Sheet</span><span>${data.length} bưu cục</span></div>
-    </div>
-    <div class="card">
-      <div class="card-header"><div class="card-title"><div class="card-icon">🏪</div>Hiệu Suất GTC Bưu Cục</div><div class="card-info">%GTC: Xanh ≥70% · Vàng 60–70% · Đỏ &lt;60%</div></div>
-      <div class="table-wrap"></div>
-    </div>`;
+  return mkTable(['#','AM','Bưu Cục','Ca1 Vol','%Gán','%GTC','Vol GTC'],trs);
+ }
+ if(id==='p3'){
+  const dr=data.filter(r=>r[0].match(/^\d+$/));
+  const totRow=data.find(r=>!r[0].match(/^\d+$/)&&r[1]);
+  const trs=dr.map((r,i)=>{const tr=document.createElement('tr');if((r[1]||'').includes(SELF))tr.className='hl';tr.innerHTML=`<td>${rk(i)}</td><td>${am(r[1]||'')}</td><td><strong>${r[2]||''}</strong></td><td>${bar(r[3]||'','bo')}</td><td>${bg(r[4]||'',80,70)}</td><td>${r[5]||''}</td>`;return tr;});
+  if(totRow){const tr=document.createElement('tr');tr.className='tot';tr.innerHTML=`<td colspan="2">${totRow[1]||'Total'}</td><td><strong>${totRow[2]||''}</strong></td><td>${bar(totRow[3]||'','bo')}</td><td>${bg(totRow[4]||'',80,70)}</td><td>${totRow[5]||''}</td>`;trs.push(tr);}
+  return mkTable(['#','AM','Ca1 Vol','%Gán','%GTC','Ca2 Vol'],trs);
+ }
+ if(id==='p4'){
+  const dr=data.filter(r=>r[0].match(/^\d+$/));
+  const totRow=data.find(r=>(r[0]||'').toLowerCase().includes('total')||(r[0]||'').toLowerCase().includes('grand'));
+  const trs=dr.map((r,i)=>{const tr=document.createElement('tr');if((r[1]||'').includes(SELF))tr.className='hl';tr.innerHTML=`<td>${rk(i)}</td><td>${am(r[1]||'')}</td><td><strong>${r[3]||''}</strong></td><td>${bg(r[4]||'',90,80)}</td><td>${r[5]||''}</td>`;return tr;});
+  if(totRow){const tr=document.createElement('tr');tr.className='tot';tr.innerHTML=`<td colspan="2">Grand Total</td><td><strong>${totRow[3]||''}</strong></td><td>${bg(totRow[4]||'',90,80)}</td><td><strong>${totRow[5]||''}</strong></td>`;trs.push(tr);}
+  return mkTable(['#','AM','Vol GTC','%Ontime','Vol Đúng Hạn'],trs);
+ }
+ if(id==='p5'){
+  const dr=data.filter(r=>!(r[0]||'').toUpperCase().includes('TOTAL')&&r[0].trim());
+  const totRow=data.find(r=>(r[0]||'').toUpperCase().includes('TOTAL'));
+  const trs=dr.map((r,i)=>{const tr=document.createElement('tr');if((r[0]||'').includes(SELF))tr.className='hl';tr.innerHTML=`<td>${rk(i)}</td><td>${am(r[0]||'')}</td><td>${fb(r[1]||'')}</td><td>${fb(r[2]||'')}</td><td>${fb(r[3]||'')}</td><td>${fb(r[4]||'')}</td>`;return tr;});
+  if(totRow){const tr=document.createElement('tr');tr.className='tot';tr.innerHTML=`<td colspan="2">TOTAL</td><td>${fb(totRow[1]||'')}</td><td>${fb(totRow[2]||'')}</td><td>${fb(totRow[3]||'')}</td><td>${fb(totRow[4]||'')}</td>`;trs.push(tr);}
+  return mkTable(['#','AM','FD Total','SME (COD)','TTS','Shopee'],trs);
+ }
+ if(id==='p6'){
+  const trs=data.filter(r=>r[0]&&r[0].trim()&&r[2]&&r[2].trim()).map((r,i)=>{const tr=document.createElement('tr');if((r[1]||'').includes(SELF))tr.className='hl';tr.innerHTML=`<td>${rk(i)}</td><td>${am(r[1]||'')}</td><td style="font-size:11px">${r[2]||''}</td><td>${fb(r[3]||'')}</td><td>${fb(r[4]||'')}</td><td>${fb(r[5]||'')}</td><td>${fb(r[6]||'')}</td>`;return tr;});
+  return mkTable(['#','AM','Bưu Cục','FD Total','SME (COD)','TTS','Shopee'],trs);
+ }
 }
 
-function buildGTCTTS(rows) {
-  const data = rows.slice(1).filter(r=>r[0]&&r[0].trim());
-  const totRow = data.find(r=>!r[0].match(/^\d+$/));
-  const dataRows = data.filter(r=>r[0].match(/^\d+$/));
-
-  const maxGTC = dataRows.reduce((a,b)=>parseFloat(b[4])>parseFloat(a[4])?b:a,dataRows[0]||['','','','','']);
-  const minGTC = dataRows.reduce((a,b)=>parseFloat(b[4])<parseFloat(a[4])?b:a,dataRows[0]||['','','','','']);
-
-  const tableRows = dataRows.map((r,i)=>{
-    const tr=document.createElement('tr');
-    if((r[1]||'').includes(SELF)) tr.className='hl';
-    tr.innerHTML=`<td>${rk(i)}</td><td>${am(r[1]||'')}</td><td><strong>${r[2]||''}</strong></td><td>${bar(r[3]||'0%','bo')}</td><td>${bg(r[4]||'0%',80,70)}</td><td>${r[5]||''}</td>`;
-    return tr;
-  });
-  if(totRow){
-    const tr=document.createElement('tr');tr.className='tot';
-    tr.innerHTML=`<td colspan="2">${totRow[1]||'Grand Total'}</td><td><strong>${totRow[2]||''}</strong></td><td>${bar(totRow[3]||'','bo')}</td><td>${bg(totRow[4]||'',80,70)}</td><td>${totRow[5]||''}</td>`;
-    tableRows.push(tr);
-  }
-  const table = mkTable(['#','AM','Ca1 Vol','%Gán','%GTC','Ca2 Vol'],tableRows,null);
-
-  return `
-    <div class="page-header">
-      <div class="page-title">GTC TTS Theo AM</div>
-      <div class="page-meta"><span class="tag tag-orange">📅 Dữ liệu thực tế từ Google Sheet</span><span>Tổng: ${totRow?totRow[2]:'—'} · %GTC TB: ${totRow?totRow[4]:'—'}</span></div>
-    </div>
-    <div class="kpi-row">
-      <div class="kpi"><div class="kpi-label">Tổng Ca 1 TTS</div><div class="kpi-value">${totRow?totRow[2]:'—'}</div><div class="kpi-sub">%Gán: ${totRow?totRow[3]:'—'}</div></div>
-      <div class="kpi"><div class="kpi-label">%GTC Trung Bình</div><div class="kpi-value" style="color:var(--yellow)">${totRow?totRow[4]:'—'}</div><div class="kpi-sub">Mục tiêu ≥80%</div></div>
-      <div class="kpi"><div class="kpi-label">GTC Cao Nhất</div><div class="kpi-value" style="color:var(--green)">${maxGTC[4]||'—'}</div><div class="kpi-sub">${maxGTC[1]||'—'}</div></div>
-      <div class="kpi"><div class="kpi-label">GTC Thấp Nhất</div><div class="kpi-value" style="color:var(--red)">${minGTC[4]||'—'}</div><div class="kpi-sub">${minGTC[1]||'—'}</div></div>
-    </div>
-    <div class="card">
-      <div class="card-header"><div class="card-title"><div class="card-icon">✅</div>Tỉ Lệ GTC TTS Theo AM</div><div class="card-info">%GTC: Xanh ≥80% · Vàng 70–80% · Đỏ &lt;70%</div></div>
-      <div class="table-wrap"></div>
-    </div>`;
+async function init(){
+ const configs=[
+  {id:'p1',key:'vanHanh',build:buildVanHanh},
+  {id:'p2',key:'bcGiao',build:buildBCGiao},
+  {id:'p3',key:'gtcTTS',build:buildGTCTTS},
+  {id:'p4',key:'ontime',build:buildOntime},
+  {id:'p5',key:'fdAM',build:buildFDAM},
+  {id:'p6',key:'fdBC',build:buildFDBC},
+ ];
+ const btn=document.getElementById('refreshBtn');
+ btn.classList.add('spinning');btn.disabled=true;
+ await Promise.all(configs.map(async({id,key,build})=>{
+  try{
+   const{name,range}=SHEETS[key];
+   const rows=await fetchSheet(name,range);
+   const el=document.getElementById(id);
+   el.innerHTML=build(rows);
+   const wrap=el.querySelector('.table-wrap');
+   if(wrap){const tbl=buildTableForPage(id,rows);if(tbl)wrap.appendChild(tbl);}
+  }catch(e){document.getElementById(id).innerHTML=errPage(e.message);}
+ }));
+ btn.classList.remove('spinning');btn.disabled=false;
+ const now=new Date();
+ document.getElementById('lastUpdate').textContent=`Cập nhật: ${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`;
 }
 
-function buildOntime(rows) {
-  const data = rows.slice(1).filter(r=>r[0]&&r[0].trim()&&r[1]&&r[1].trim());
-  const totRow = data.find(r=>(r[0]||'').toLowerCase().includes('total')||(r[0]||'').toLowerCase().includes('grand'));
-  const dataRows = data.filter(r=>r[0].match(/^\d+$/));
-
-  const maxOn = dataRows.reduce((a,b)=>parseFloat(b[4])>parseFloat(a[4])?b:a,dataRows[0]||[]);
-  const minOn = dataRows.reduce((a,b)=>parseFloat(b[4])<parseFloat(a[4])?b:a,dataRows[0]||[]);
-
-  const tableRows = dataRows.map((r,i)=>{
-    const tr=document.createElement('tr');
-    if((r[1]||'').includes(SELF)) tr.className='hl';
-    tr.innerHTML=`<td>${rk(i)}</td><td>${am(r[1]||'')}</td><td><strong>${r[3]||''}</strong></td><td>${bg(r[4]||'0%',90,80)}</td><td>${r[5]||''}</td>`;
-    return tr;
-  });
-  if(totRow){
-    const tr=document.createElement('tr');tr.className='tot';
-    tr.innerHTML=`<td colspan="2">Grand Total</td><td><strong>${totRow[3]||''}</strong></td><td>${bg(totRow[4]||'',90,80)}</td><td><strong>${totRow[5]||''}</strong></td>`;
-    tableRows.push(tr);
-  }
-  const dateLabel = dataRows[0]?dataRows[0][2]:'Ngày hiện tại';
-
-  return `
-    <div class="page-header">
-      <div class="page-title">Ontime TTS Theo AM</div>
-      <div class="page-meta"><span class="tag tag-orange">📅 ${dateLabel}</span><span>Tổng: ${totRow?totRow[3]:'—'} · %Ontime TB: ${totRow?totRow[4]:'—'}</span></div>
-    </div>
-    <div class="kpi-row">
-      <div class="kpi"><div class="kpi-label">Tổng Vol GTC</div><div class="kpi-value">${totRow?totRow[3]:'—'}</div><div class="kpi-sub">Vol đúng hạn: ${totRow?totRow[5]:'—'}</div></div>
-      <div class="kpi"><div class="kpi-label">%Ontime TB</div><div class="kpi-value" style="color:var(--yellow)">${totRow?totRow[4]:'—'}</div><div class="kpi-sub">Mục tiêu ≥90%</div></div>
-      <div class="kpi"><div class="kpi-label">Ontime Cao Nhất</div><div class="kpi-value" style="color:var(--green)">${maxOn[4]||'—'}</div><div class="kpi-sub">${maxOn[1]||'—'}</div></div>
-      <div class="kpi"><div class="kpi-label">Ontime Thấp Nhất</div><div class="kpi-value" style="color:var(--red)">${minOn[4]||'—'}</div><div class="kpi-sub">${minOn[1]||'—'}</div></div>
-    </div>
-    <div class="card">
-      <div class="card-header"><div class="card-title"><div class="card-icon">⏱️</div>Ontime TTS Ngày</div><div class="card-info">%Ontime: Xanh ≥90% · Vàng 80–90% · Đỏ &lt;80%</div></div>
-      <div class="table-wrap"></div>
-    </div>`;
-}
-
-function buildFDAM(rows) {
-  const data = rows.slice(1).filter(r=>r[0]&&r[0].trim());
-  const totRow = data.find(r=>(r[0]||'').toUpperCase().includes('TOTAL'));
-  const dataRows = data.filter(r=>!(r[0]||'').toUpperCase().includes('TOTAL'));
-
-  const selfRow = dataRows.find(r=>(r[0]||'').includes(SELF));
-  const maxFD = dataRows.reduce((a,b)=>parseFloat(b[1])>parseFloat(a[1])?b:a,dataRows[0]||[]);
-  const minFD = dataRows.reduce((a,b)=>parseFloat(b[1])<parseFloat(a[1])?b:a,dataRows[0]||[]);
-
-  const tableRows = dataRows.map((r,i)=>{
-    const tr=document.createElement('tr');
-    if((r[0]||'').includes(SELF)) tr.className='hl';
-    tr.innerHTML=`<td>${rk(i)}</td><td>${am(r[0]||'')}</td><td>${fb(r[1]||'')}</td><td>${fb(r[2]||'')}</td><td>${fb(r[3]||'')}</td><td>${fb(r[4]||'')}</td>`;
-    return tr;
-  });
-  if(totRow){
-    const tr=document.createElement('tr');tr.className='tot';
-    tr.innerHTML=`<td colspan="2">TOTAL</td><td>${fb(totRow[1]||'')}</td><td>${fb(totRow[2]||'')}</td><td>${fb(totRow[3]||'')}</td><td>${fb(totRow[4]||'')}</td>`;
-    tableRows.push(tr);
-  }
-
-  return `
-    <div class="page-header">
-      <div class="page-title">Tỉ Lệ Hoàn (FD) Theo AM</div>
-      <div class="page-meta"><span class="tag tag-orange">📅 Dữ liệu thực tế từ Google Sheet</span><span>TOTAL: ${totRow?totRow[1]:'—'} · SME: ${totRow?totRow[2]:'—'} · TTS: ${totRow?totRow[3]:'—'} · Shopee: ${totRow?totRow[4]:'—'}</span></div>
-    </div>
-    <div class="kpi-row">
-      <div class="kpi"><div class="kpi-label">FD Trung Bình</div><div class="kpi-value" style="color:var(--yellow)">${totRow?totRow[1]:'—'}</div><div class="kpi-sub">Mục tiêu ≤8%</div></div>
-      <div class="kpi"><div class="kpi-label">FD Cao Nhất</div><div class="kpi-value" style="color:var(--red)">${maxFD[1]||'—'}</div><div class="kpi-sub">${maxFD[0]||'—'}</div></div>
-      <div class="kpi"><div class="kpi-label">FD Thấp Nhất</div><div class="kpi-value" style="color:var(--green)">${minFD[1]||'—'}</div><div class="kpi-sub">${minFD[0]||'—'}</div></div>
-      <div class="kpi"><div class="kpi-label">⭐ Phạm Đức Thắng</div><div class="kpi-value" style="color:var(--yellow)">${selfRow?selfRow[1]:'—'}</div><div class="kpi-sub">SME ${selfRow?selfRow[2]:'—'} · TTS ${selfRow?selfRow[3]:'—'} · Shopee ${selfRow?selfRow[4]:'—'}</div></div>
-    </div>
-    <div class="card">
-      <div class="card-header"><div class="card-title"><div class="card-icon">↩️</div>FD Hoàn Theo AM — Giảm Dần</div><div class="card-info">FD: Xanh ≤8% · Vàng 8–12% · Đỏ &gt;12%</div></div>
-      <div class="table-wrap"></div>
-    </div>`;
-}
-
-function buildFDBC(rows) {
-  const data = rows.slice(1).filter(r=>r[0]&&r[0].trim()&&r[2]&&r[2].trim());
-  const tableRows = data.map((r,i)=>{
-    const tr=document.createElement('tr');
-    if((r[1]||'').includes(SELF)) tr.className='hl';
-    tr.innerHTML=`<td>${rk(i)}</td><td>${am(r[1]||'')}</td><td style="font-size:11px">${r[2]||''}</td><td>${fb(r[3]||'')}</td><td>${fb(r[4]||'')}</td><td>${fb(r[5]||'')}</td><td>${fb(r[6]||'')}</td>`;
-    return tr;
-  });
-  const table = mkTable(['#','AM','Bưu Cục','FD Total','SME (COD)','TTS','Shopee'],tableRows,null);
-
-  return `
-    <div class="page-header">
-      <div class="page-title">Tỉ Lệ Hoàn (FD) Theo Bưu Cục</div>
-      <div class="page-meta"><span class="tag tag-orange">📅 Dữ liệu thực tế từ Google Sheet</span><span>${data.length} bưu cục — sắp xếp theo %FD giảm dần</span></div>
-    </div>
-    <div class="card">
-      <div class="card-header"><div class="card-title"><div class="card-icon">📮</div>FD Hoàn Theo Bưu Cục</div><div class="card-info">FD: Xanh ≤8% · Vàng 8–12% · Đỏ &gt;12%</div></div>
-      <div class="table-wrap"></div>
-    </div>`;
-}
-
-// ── MAIN LOADER ──
-async function loadAll() {
-  const btn = document.getElementById('refreshBtn');
-  const spin = document.getElementById('spinIcon');
-  btn.classList.add('spinning');
-  btn.disabled = true;
-
-  // show loading on all pages
-  document.querySelectorAll('.page').forEach(p=>{
-    p.innerHTML='<div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div>';
-  });
-
-  const builders = [
-    { id:'p1', key:'vanHanh', build: buildVanHanh },
-    { id:'p2', key:'bcGiao',  build: buildBCGiao  },
-    { id:'p3', key:'gtcTTS',  build: buildGTCTTS  },
-    { id:'p4', key:'ontime',  build: buildOntime  },
-    { id:'p5', key:'fdAM',    build: buildFDAM    },
-    { id:'p6', key:'fdBC',    build: buildFDBC    },
-  ];
-
-  await Promise.all(builders.map(async ({id, key, build}) => {
-    try {
-      const sheet = SHEETS[key];
-      const rows = await fetchSheet(sheet.name, sheet.range);
-      const html = build(rows);
-      const el = document.getElementById(id);
-      el.innerHTML = html;
-      // attach table to .table-wrap
-      const wrap = el.querySelector('.table-wrap');
-      if(wrap) {
-        const tableRows = Array.from(el.querySelectorAll('tr[class]')||[]);
-        // rebuild table from the rows already in DOM — simpler: just redo
-        attachTable(id, rows, build);
-      }
-    } catch(e) {
-      document.getElementById(id).innerHTML = errPage(e.message);
-    }
-  }));
-
-  btn.classList.remove('spinning');
-  btn.disabled = false;
-  const now = new Date();
-  document.getElementById('lastUpdate').textContent =
-    `Cập nhật: ${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`;
-}
-
-// cleaner approach: build HTML string then append real table element
-async function loadPage(id, sheetName, range, buildFn) {
-  try {
-    const rows = await fetchSheet(sheetName, range);
-    const el = document.getElementById(id);
-    el.innerHTML = buildFn(rows);
-    // now rebuild actual table element and append to .table-wrap
-    buildTableElement(id, rows, buildFn);
-  } catch(e) {
-    document.getElementById(id).innerHTML = errPage(e.message);
-  }
-}
-
-function buildTableElement(id, rows, buildFn) {
-  // the build functions return HTML with empty .table-wrap divs
-  // we need to fill them with real table elements
-  const el = document.getElementById(id);
-  const wrap = el.querySelector('.table-wrap');
-  if(!wrap) return;
-  // dispatch to correct table builder
-  const tableEl = buildTableForPage(id, rows);
-  if(tableEl) wrap.appendChild(tableEl);
-}
-
-function buildTableForPage(id, rows) {
-  const data = rows.slice(1).filter(r=>r.some(c=>c&&c.trim()));
-
-  if(id==='p1') {
-    const dataRows = data.filter(r=>r[0].match(/^\d+$/));
-    const totRow = data.find(r=>!r[0].match(/^\d+$/)&&r[1]);
-    const trs = dataRows.map((r,i)=>{
-      const tr=document.createElement('tr');
-      if((r[1]||'').includes(SELF)) tr.className='hl';
-      tr.innerHTML=`<td>${rk(i)}</td><td>${am(r[1]||'')}</td><td><strong>${r[2]||''}</strong></td><td>${bar(r[3]||'','bo')}</td><td>${r[4]||''}</td><td>${bar(r[5]||'','bo')}</td>`;
-      return tr;
-    });
-    if(totRow){const tr=document.createElement('tr');tr.className='tot';tr.innerHTML=`<td colspan="2">${totRow[1]||'Total'}</td><td><strong>${totRow[2]||''}</strong></td><td>${bar(totRow[3]||'','bo')}</td><td><strong>${totRow[4]||''}</strong></td><td>${bar(totRow[5]||'','bo')}</td>`;trs.push(tr);}
-    return mkTable(['#','AM','Ca1 Vol','%Gán Ca1','Ca2 Vol','%Gán Ca2'],trs,null);
-  }
-  if(id==='p2') {
-    const trs = data.filter(r=>r[0]&&r[0].trim()).map((r,i)=>{
-      const tr=document.createElement('tr');
-      if((r[1]||'').includes(SELF)) tr.className='hl';
-      const gcls=gc(r[5],70,60);const bc=gcls==='g'?'bgg':gcls==='m'?'bo':'brd';
-      tr.innerHTML=`<td>${rk(i)}</td><td>${am(r[1]||'')}</td><td style="font-size:11px">${r[2]||''}</td><td><strong>${r[3]||''}</strong></td><td>${bar(r[4]||'','bo')}</td><td>${bar(r[5]||'',bc)}</td>`;
-      return tr;
-    });
-    return mkTable(['#','AM','Bưu Cục','Ca1 Vol','%Gán','%GTC'],trs,null);
-  }
-  if(id==='p3') {
-    const dataRows = data.filter(r=>r[0].match(/^\d+$/));
-    const totRow = data.find(r=>!r[0].match(/^\d+$/)&&r[1]);
-    const trs = dataRows.map((r,i)=>{
-      const tr=document.createElement('tr');
-      if((r[1]||'').includes(SELF)) tr.className='hl';
-      tr.innerHTML=`<td>${rk(i)}</td><td>${am(r[1]||'')}</td><td><strong>${r[2]||''}</strong></td><td>${bar(r[3]||'','bo')}</td><td>${bg(r[4]||'',80,70)}</td><td>${r[5]||''}</td>`;
-      return tr;
-    });
-    if(totRow){const tr=document.createElement('tr');tr.className='tot';tr.innerHTML=`<td colspan="2">${totRow[1]||'Total'}</td><td><strong>${totRow[2]||''}</strong></td><td>${bar(totRow[3]||'','bo')}</td><td>${bg(totRow[4]||'',80,70)}</td><td>${totRow[5]||''}</td>`;trs.push(tr);}
-    return mkTable(['#','AM','Ca1 Vol','%Gán','%GTC','Ca2 Vol'],trs,null);
-  }
-  if(id==='p4') {
-    const dataRows = data.filter(r=>r[0].match(/^\d+$/));
-    const totRow = data.find(r=>(r[0]||'').toLowerCase().includes('total')||(r[0]||'').toLowerCase().includes('grand'));
-    const trs = dataRows.map((r,i)=>{
-      const tr=document.createElement('tr');
-      if((r[1]||'').includes(SELF)) tr.className='hl';
-      tr.innerHTML=`<td>${rk(i)}</td><td>${am(r[1]||'')}</td><td><strong>${r[3]||''}</strong></td><td>${bg(r[4]||'',90,80)}</td><td>${r[5]||''}</td>`;
-      return tr;
-    });
-    if(totRow){const tr=document.createElement('tr');tr.className='tot';tr.innerHTML=`<td colspan="2">Grand Total</td><td><strong>${totRow[3]||''}</strong></td><td>${bg(totRow[4]||'',90,80)}</td><td><strong>${totRow[5]||''}</strong></td>`;trs.push(tr);}
-    return mkTable(['#','AM','Vol GTC','%Ontime','Vol Đúng Hạn'],trs,null);
-  }
-  if(id==='p5') {
-    const dataRows = data.filter(r=>!(r[0]||'').toUpperCase().includes('TOTAL')&&r[0].trim());
-    const totRow = data.find(r=>(r[0]||'').toUpperCase().includes('TOTAL'));
-    const trs = dataRows.map((r,i)=>{
-      const tr=document.createElement('tr');
-      if((r[0]||'').includes(SELF)) tr.className='hl';
-      tr.innerHTML=`<td>${rk(i)}</td><td>${am(r[0]||'')}</td><td>${fb(r[1]||'')}</td><td>${fb(r[2]||'')}</td><td>${fb(r[3]||'')}</td><td>${fb(r[4]||'')}</td>`;
-      return tr;
-    });
-    if(totRow){const tr=document.createElement('tr');tr.className='tot';tr.innerHTML=`<td colspan="2">TOTAL</td><td>${fb(totRow[1]||'')}</td><td>${fb(totRow[2]||'')}</td><td>${fb(totRow[3]||'')}</td><td>${fb(totRow[4]||'')}</td>`;trs.push(tr);}
-    return mkTable(['#','AM','FD Total','SME (COD)','TTS','Shopee'],trs,null);
-  }
-  if(id==='p6') {
-    const trs = data.filter(r=>r[0]&&r[0].trim()&&r[2]&&r[2].trim()).map((r,i)=>{
-      const tr=document.createElement('tr');
-      if((r[1]||'').includes(SELF)) tr.className='hl';
-      tr.innerHTML=`<td>${rk(i)}</td><td>${am(r[1]||'')}</td><td style="font-size:11px">${r[2]||''}</td><td>${fb(r[3]||'')}</td><td>${fb(r[4]||'')}</td><td>${fb(r[5]||'')}</td><td>${fb(r[6]||'')}</td>`;
-      return tr;
-    });
-    return mkTable(['#','AM','Bưu Cục','FD Total','SME (COD)','TTS','Shopee'],trs,null);
-  }
-}
-
-// ── INIT: load all pages simultaneously ──
-async function init() {
-  const configs = [
-    { id:'p1', key:'vanHanh', build: buildVanHanh },
-    { id:'p2', key:'bcGiao',  build: buildBCGiao  },
-    { id:'p3', key:'gtcTTS',  build: buildGTCTTS  },
-    { id:'p4', key:'ontime',  build: buildOntime  },
-    { id:'p5', key:'fdAM',    build: buildFDAM    },
-    { id:'p6', key:'fdBC',    build: buildFDBC    },
-  ];
-
-  const btn = document.getElementById('refreshBtn');
-  btn.classList.add('spinning');
-  btn.disabled = true;
-
-  await Promise.all(configs.map(async ({id, key, build}) => {
-    try {
-      const {name, range} = SHEETS[key];
-      const rows = await fetchSheet(name, range);
-      const el = document.getElementById(id);
-      el.innerHTML = build(rows);
-      const wrap = el.querySelector('.table-wrap');
-      if(wrap) {
-        const tbl = buildTableForPage(id, rows);
-        if(tbl) wrap.appendChild(tbl);
-      }
-    } catch(e) {
-      document.getElementById(id).innerHTML = errPage(e.message);
-    }
-  }));
-
-  btn.classList.remove('spinning');
-  btn.disabled = false;
-  const now = new Date();
-  document.getElementById('lastUpdate').textContent =
-    `Cập nhật: ${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`;
-}
-
-// override loadAll to use init logic
-loadAll = async function() {
-  const btn = document.getElementById('refreshBtn');
-  btn.classList.add('spinning');
-  btn.disabled = true;
-  document.querySelectorAll('.page').forEach(p=>{
-    p.innerHTML='<div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu mới...</div></div>';
-  });
-  await init();
+loadAll=async function(){
+ const btn=document.getElementById('refreshBtn');
+ btn.classList.add('spinning');btn.disabled=true;
+ document.querySelectorAll('.page').forEach(p=>{p.innerHTML='<div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu mới...</div></div>';});
+ await init();
 };
 
-// start on load
+initSplash();
 init();
 </script>
 </body>
