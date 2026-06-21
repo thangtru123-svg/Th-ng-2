@@ -198,7 +198,7 @@ tr.tot td{background:#F8F9FA;font-weight:700;border-top:2px solid var(--orange-m
  <div class="nav-section">Từ GHN Report</div>
  <button class="nav-item" onclick="show('p8',this)"><span class="icon">📋</span>Tổng quan 7 ngày theo AM</button>
  <button class="nav-item" onclick="show('p9',this)"><span class="icon">🏪</span>Tổng quan 7 ngày theo BC</button>
-<button class="nav-item" onclick="show('p10',this)"><span class="icon">📦</span>Báo cáo Giao TTS</button>
+<button class="nav-item" onclick="show('p10',this)"><span class="icon">📦</span>Tổng quan GTC đơn TTS</button>
  <button class="refresh-btn" id="refreshBtn" onclick="loadAll()">
   <span class="spin" id="spinIcon">🔄</span> Cập nhật dữ liệu
  </button>
@@ -491,7 +491,7 @@ function buildTTSGiao(rowsAM,rowsBC){
   }
   html+='</tbody></table></div>';return html;
  }
- return`<div class="page-header"><div class="page-title">Báo Cáo Giao TTS</div>
+ return`<div class="page-header"><div class="page-title">Tổng Quan GTC Đơn TTS</div>
   <div class="page-meta"><span class="tag tag-orange">📦 Loại khách hàng: TTS · Nguồn: GHN Looker</span><span>%GTC: Xanh ≥65% · Vàng ≥50% · Đỏ &lt;50%</span></div></div>
   <div class="card"><div class="card-header"><div class="card-title"><div class="card-icon">👤</div>Báo Cáo Giao TTS Theo AM</div><div class="card-info">%GTC: Xanh ≥65% · Vàng ≥50% · Đỏ &lt;50%</div></div>${buildAMTable(rowsAM)}</div>
   <div class="card"><div class="card-header"><div class="card-title"><div class="card-icon">🏪</div>Báo Cáo Giao TTS Theo Bưu Cục</div><div class="card-info">%GTC: Xanh ≥65% · Vàng ≥50% · Đỏ &lt;50%</div></div>${buildBCTable(rowsBC)}</div>`;
