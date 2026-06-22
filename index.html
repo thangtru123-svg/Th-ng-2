@@ -891,37 +891,38 @@ function buildAgingHTML(rows){
     <span style="font-weight:700;font-size:14px">${title}</span>
     <span style="background:var(--orange);color:#fff;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px">${badge}</span>
    </div>
-   <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px">
+   <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:13px">
    <thead><tr style="background:var(--bg)">
-    <th style="padding:8px 12px;text-align:left;font-weight:700;font-size:10px;color:var(--text-sub);text-transform:uppercase;border-bottom:2px solid var(--border);white-space:nowrap">#</th>
-    <th style="padding:8px 12px;text-align:left;font-weight:700;font-size:10px;color:var(--text-sub);text-transform:uppercase;border-bottom:2px solid var(--border);white-space:nowrap">${keyField==='am'?'AM':'Bưu Cục'}</th>`;
+    <th style="padding:10px 14px;text-align:left;font-weight:700;font-size:11px;color:var(--text-sub);text-transform:uppercase;letter-spacing:.5px;border-bottom:2px solid var(--border);white-space:nowrap">#</th>
+    <th style="padding:10px 14px;text-align:left;font-weight:700;font-size:11px;color:var(--text-sub);text-transform:uppercase;letter-spacing:.5px;border-bottom:2px solid var(--border);white-space:nowrap">${keyField==='am'?'AM':'Bưu Cục'}</th>`;
   last7.forEach((d,i)=>{
-   const bg=i===last7.length-1?'background:#FFF0EB;color:var(--orange-dark,#C8461A)':'';
-   t+=`<th style="padding:8px 12px;text-align:right;font-weight:700;font-size:10px;color:var(--text-sub);text-transform:uppercase;border-bottom:2px solid var(--border);white-space:nowrap;${bg}">${agingFmtDate(d)}</th>`;
+   const isLast=i===last7.length-1;
+   const bg=isLast?'background:#FFF0EB;color:var(--orange-dark,#C8461A);font-size:12px':'color:var(--text-sub)';
+   t+=`<th style="padding:10px 14px;text-align:right;font-weight:800;font-size:11px;text-transform:uppercase;letter-spacing:.3px;border-bottom:2px solid var(--border);white-space:nowrap;${bg}">${agingFmtDate(d)}</th>`;
   });
-  t+=`<th style="padding:8px 12px;text-align:right;font-weight:700;font-size:10px;color:var(--text-sub);text-transform:uppercase;border-bottom:2px solid var(--border)">Trend</th>
+  t+=`<th style="padding:10px 14px;text-align:right;font-weight:700;font-size:11px;color:var(--text-sub);text-transform:uppercase;border-bottom:2px solid var(--border)">Trend</th>
   </tr></thead><tbody>`;
   arr.forEach((row,idx)=>{
    const name=row[keyField]||'—';
    const isUnstable=unstableBCSet.has(name);
-   const rankColor=idx<3?'color:var(--orange);font-weight:700':'color:var(--text-sub)';
+   const rankColor=idx<3?'color:var(--orange);font-weight:800;font-size:14px':'color:var(--text-sub);font-weight:600';
    t+=`<tr style="border-bottom:1px solid var(--border)">
-    <td style="padding:8px 12px;${rankColor}">${idx+1}</td>
-    <td style="padding:8px 12px;font-weight:500">${name}${isUnstable?'<span style="display:inline-block;background:#FEE2E2;color:var(--red);border:1px solid #FECACA;border-radius:4px;font-size:9px;font-weight:700;padding:1px 5px;margin-left:5px">⚠ bất ổn</span>':''}</td>`;
+    <td style="padding:9px 14px;${rankColor}">${idx+1}</td>
+    <td style="padding:9px 14px;font-weight:600;font-size:13px">${name}${isUnstable?'<span style="display:inline-block;background:#FEE2E2;color:var(--red);border:1px solid #FECACA;border-radius:4px;font-size:9px;font-weight:700;padding:1px 5px;margin-left:5px">⚠ bất ổn</span>':''}</td>`;
    last7.forEach((d,i)=>{
     const v=row[d]||0;
     const isLatest=i===last7.length-1;
     const barW=isLatest&&maxV>0?Math.round((v/maxV)*50):0;
     if(isLatest){
-     t+=`<td style="padding:8px 12px;text-align:right;background:#FFF0EB"><div style="display:flex;align-items:center;justify-content:flex-end;gap:5px"><div style="height:5px;border-radius:3px;background:var(--orange);width:${barW}px;min-width:${v>0?2:0}px"></div><span style="font-weight:700;color:var(--orange-dark,#C8461A)">${v>0?v:'—'}</span></div></td>`;
+     t+=`<td style="padding:9px 14px;text-align:right;background:#FFF0EB"><div style="display:flex;align-items:center;justify-content:flex-end;gap:5px"><div style="height:5px;border-radius:3px;background:var(--orange);width:${barW}px;min-width:${v>0?2:0}px"></div><span style="font-weight:800;font-size:14px;color:var(--orange-dark,#C8461A)">${v>0?v.toLocaleString('vi-VN'):'—'}</span></div></td>`;
     } else {
-     t+=`<td style="padding:8px 12px;text-align:right;color:${v>0?'var(--text-main)':'var(--border)'}">${v>0?v:'—'}</td>`;
+     t+=`<td style="padding:9px 14px;text-align:right;font-weight:500;color:${v>0?'var(--text-main)':'var(--border)'}">${v>0?v.toLocaleString('vi-VN'):'—'}</td>`;
     }
    });
    const curr=row[latest]||0;const prevRow=row[prev]||0;
    const trendColor=curr<prevRow?'var(--green)':curr>prevRow?'var(--red)':'var(--text-sub)';
    const trendTxt=curr<prevRow?`▼ ${prevRow-curr}`:curr>prevRow?`▲ ${curr-prevRow}`:'—';
-   t+=`<td style="padding:8px 12px;text-align:right;color:${trendColor};font-weight:600;white-space:nowrap">${trendTxt}</td></tr>`;
+   t+=`<td style="padding:9px 14px;text-align:right;color:${trendColor};font-weight:700;font-size:13px;white-space:nowrap">${trendTxt}</td></tr>`;
   });
   // Tổng cộng row
   t+=`<tfoot><tr style="background:var(--orange-light,#FFF0EB);border-top:2px solid var(--orange)">
