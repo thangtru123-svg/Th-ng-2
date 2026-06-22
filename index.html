@@ -923,7 +923,22 @@ function buildAgingHTML(rows){
    const trendTxt=curr<prevRow?`▼ ${prevRow-curr}`:curr>prevRow?`▲ ${curr-prevRow}`:'—';
    t+=`<td style="padding:8px 12px;text-align:right;color:${trendColor};font-weight:600;white-space:nowrap">${trendTxt}</td></tr>`;
   });
-  t+=`</tbody></table></div></div>`;
+  // Tổng cộng row
+  t+=`<tfoot><tr style="background:var(--orange-light,#FFF0EB);border-top:2px solid var(--orange)">
+   <td style="padding:9px 12px;font-weight:800;color:var(--orange)"></td>
+   <td style="padding:9px 12px;font-weight:800;color:var(--orange)">TỔNG CỘNG</td>`;
+  last7.forEach((d,i)=>{
+   const sum=arr.reduce((s,r)=>s+(r[d]||0),0);
+   const isLatest=i===last7.length-1;
+   t+=`<td style="padding:9px 12px;text-align:right;font-weight:800;${isLatest?'color:var(--orange-dark,#C8461A);background:#FFE0CC':'color:var(--text-main)'}">${sum.toLocaleString()}</td>`;
+  });
+  const sumCurr=arr.reduce((s,r)=>s+(r[latest]||0),0);
+  const sumPrev=arr.reduce((s,r)=>s+(r[prev]||0),0);
+  const sumDelta=sumCurr-sumPrev;
+  const sumColor=sumDelta<0?'var(--green)':sumDelta>0?'var(--red)':'var(--text-sub)';
+  const sumTxt=sumDelta<0?`▼ ${sumPrev-sumCurr}`:sumDelta>0?`▲ ${sumCurr-sumPrev}`:'—';
+  t+=`<td style="padding:9px 12px;text-align:right;color:${sumColor};font-weight:800;white-space:nowrap">${sumTxt}</td></tr></tfoot>`;
+  t+=`</table></div></div>`;
   return t;
  }
 
