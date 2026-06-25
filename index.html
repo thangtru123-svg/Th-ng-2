@@ -9,7 +9,7 @@
 <style>
 :root{--orange:#F15D29;--orange-dark:#C8461A;--orange-light:#FFF0EB;--orange-mid:#FFD5C2;--sidebar-w:204px;--text-main:#1C1C1E;--text-sub:#6B7280;--border:#E5E7EB;--bg:#F4F6F9;--card:#FFFFFF;--shadow-sm:0 1px 3px rgba(0,0,0,0.08);--radius:10px;--green:#16A34A;--yellow:#D97706;--red:#DC2626;--green-bg:#DCFCE7;--yellow-bg:#FEF9C3;--red-bg:#FEE2E2}
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text-main);display:flex;min-height:100vh;font-size:13px}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text-main);display:flex;min-height:100vh;font-size:14px}
 .splash-overlay{position:fixed;inset:0;z-index:9999;background:url('bg.jpg') center/cover no-repeat;display:flex;align-items:center;justify-content:center;transition:opacity 0.7s ease;overflow:hidden}
 .splash-overlay::before{content:'';position:absolute;inset:0;background:linear-gradient(to bottom,rgba(0,0,0,0.55) 0%,rgba(0,0,0,0.35) 50%,rgba(0,0,0,0.65) 100%);z-index:0}
 .splash-overlay.fade-out{opacity:0;pointer-events:none}
@@ -79,13 +79,13 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text-main);
 .table-wrap{overflow-x:auto;overflow-y:auto;max-height:70vh}
 .table-wrap table thead th{position:sticky;top:0;z-index:4;background-color:#FAFAFA}
 .table-wrap table thead tr[style*="background"] th{background:inherit}
-table{width:100%;border-collapse:collapse;min-width:400px}
-th{background:#FEEDE4;padding:8px 10px;text-align:left;font-size:12px;font-weight:700;color:#9A3412;border-bottom:2px solid var(--orange-mid);white-space:nowrap}
-td{padding:7px 10px;border-bottom:1px solid #F3F4F6;font-size:12px;color:var(--text-main);vertical-align:middle}
+table{width:auto;border-collapse:collapse;min-width:600px}
+th{background:#FEEDE4;padding:8px 10px;text-align:left;font-size:13px;font-weight:700;color:#9A3412;border-bottom:2px solid var(--orange-mid);white-space:nowrap}
+td{padding:7px 10px;border-bottom:1px solid #F3F4F6;font-size:13px;color:var(--text-main);vertical-align:middle}
 tr:last-child td{border-bottom:none}
 tr:hover td{background:#FAFAFA}
 tr.tot td{background:#F8F9FA;font-weight:700;border-top:2px solid var(--orange-mid)}
-.pct{display:inline-block;padding:2px 7px;border-radius:5px;font-size:11px;font-weight:600;white-space:nowrap}
+.pct{display:inline-block;padding:2px 7px;border-radius:5px;font-size:12px;font-weight:600;white-space:nowrap}
 .g{background:var(--green-bg);color:var(--green)}.m{background:var(--yellow-bg);color:var(--yellow)}.b{background:var(--red-bg);color:var(--red)}
 .red-cell{background:#FEE2E2!important;color:#DC2626!important;font-weight:700}
 .analysis-box{margin:10px 16px 4px;padding:11px 15px;background:#FFF7ED;border-radius:8px;font-size:12.5px;line-height:1.65;border-left:3px solid var(--orange)}
@@ -254,10 +254,10 @@ function renderGTCAmTable(rows,dates){
  const cs='padding:6px 9px;';
  const sH='position:sticky;left:0;z-index:3;background:#FEEDE4;';
  const sH2='position:sticky;left:32px;z-index:3;background:#FEEDE4;';
- let h=`<div class="table-wrap" style="overflow-x:auto"><table style="font-size:12px"><thead>
+ let h=`<div class="table-wrap" style="overflow-x:auto"><table><thead>
   <tr>
    <th rowspan="2" style="${cs}${sH}width:32px;text-align:center">STT</th>
-   <th rowspan="2" style="${cs}${sH2}min-width:130px">AM</th>
+   <th rowspan="2" style="${cs}${sH2}width:160px">AM</th>
    ${dates.map(d=>`<th colspan="4" style="${cs}text-align:center;border-left:2px solid #E5E7EB"><strong>${shortDDow(d)}</strong></th>`).join('')}
   </tr>
   <tr>
@@ -265,7 +265,7 @@ function renderGTCAmTable(rows,dates){
   </tr>
  </thead><tbody>`;
  names.forEach((name,i)=>{
-  h+=`<tr><td style="${cs}text-align:center;color:var(--text-sub);font-size:11px;position:sticky;left:0;background:#fff;z-index:2">${i+1}</td><td style="${cs}white-space:nowrap;font-weight:700;position:sticky;left:32px;background:#fff;z-index:2">${name}</td>`;
+  h+=`<tr><td style="${cs}text-align:center;color:var(--text-sub);font-size:11px;position:sticky;left:0;background:#fff;z-index:2">${i+1}</td><td style="${cs}font-weight:700;word-break:break-word;position:sticky;left:32px;background:#fff;z-index:2">${name}</td>`;
   dates.forEach(d=>{const c=pivot[name]?.[d];if(c){const gc=c.gtc>=65?'g':c.gtc>=50?'m':'b';h+=`<td style="${cs}text-align:right;border-left:2px solid #F3F4F6">${fmt(c.vol)}</td><td style="${cs}text-align:center">${c.gan.toFixed(1)}%</td><td style="${cs}text-align:center"><span class="pct ${gc}">${c.gtc.toFixed(1)}%</span></td><td style="${cs}text-align:right;color:var(--green);font-weight:600">${fmt(c.nGTC)}</td>`;}else{h+=`<td colspan="4" style="${cs}text-align:center;border-left:2px solid #F3F4F6;color:var(--text-sub)">—</td>`;}});
   h+='</tr>';
  });
@@ -308,7 +308,7 @@ function renderGTCBcTable(rows,dates,last5D){
  const latest=dates[0];
  const displayNames=activeNames.sort((a,b)=>(pivot[a][latest]?.gtc??999)-(pivot[b][latest]?.gtc??999));
  const cs='padding:5px 8px;';
- let h=`<div class="table-wrap" style="overflow-x:auto"><table style="font-size:12px"><thead style="position:sticky;top:0;z-index:4;background:#FEEDE4">
+ let h=`<div class="table-wrap" style="overflow-x:auto"><table><thead style="position:sticky;top:0;z-index:4;background:#FEEDE4">
   <tr>
    <th rowspan="2" style="${cs}text-align:center;width:30px;position:sticky;left:0;z-index:5;background:#FEEDE4">STT</th>
    <th rowspan="2" style="${cs}min-width:140px;position:sticky;left:30px;z-index:5;background:#FEEDE4">Bưu Cục</th>
@@ -321,7 +321,7 @@ function renderGTCBcTable(rows,dates,last5D){
  </thead><tbody>`;
  displayNames.forEach((name,i)=>{
   const row=pivot[name];
-  h+=`<tr><td style="${cs}text-align:center;color:var(--text-sub);font-size:11px;position:sticky;left:0;background:#fff;z-index:2">${i+1}</td><td style="${cs}white-space:nowrap;font-weight:700;position:sticky;left:30px;background:#fff;z-index:2">${name}</td><td style="${cs}color:var(--text-sub);font-size:11px;position:sticky;left:170px;background:#fff;z-index:2">${row.am||''}</td>`;
+  h+=`<tr><td style="${cs}text-align:center;color:var(--text-sub);font-size:11px;position:sticky;left:0;background:#fff;z-index:2">${i+1}</td><td style="${cs}font-weight:700;word-break:break-word;position:sticky;left:30px;background:#fff;z-index:2">${name}</td><td style="${cs}color:var(--text-sub);font-size:11px;position:sticky;left:170px;background:#fff;z-index:2">${row.am||''}</td>`;
   dates.forEach(d=>{const c=row[d];if(c){const gc=c.gtc>=65?'g':c.gtc>=50?'m':'b';h+=`<td style="${cs}text-align:right;border-left:2px solid #F3F4F6">${fmt(c.vol)}</td><td style="${cs}text-align:center">${c.gan.toFixed(1)}%</td><td style="${cs}text-align:center"><span class="pct ${gc}">${c.gtc.toFixed(1)}%</span></td><td style="${cs}text-align:right;color:var(--green);font-weight:600">${fmt(c.nGTC)}</td>`;}else{h+=`<td colspan="4" style="${cs}text-align:center;border-left:2px solid #F3F4F6;color:var(--text-sub)">—</td>`;}});
   h+='</tr>';
  });
@@ -462,15 +462,15 @@ function buildFDDayTable(sheetArr,labels,dates,nameLabel){
  if(!names.length)return`<p style="padding:16px;color:var(--text-sub)">Không có dữ liệu</p>`;
  const cs='padding:6px 8px;';
  const isBC=nameLabel==='Bưu Cục';
- let h=`<div class="table-wrap" style="overflow-x:auto"><table style="font-size:12px"><thead style="position:sticky;top:0;z-index:4">`;
- h+=`<tr><th rowspan="2" style="${cs}position:sticky;left:0;z-index:5;background:#FEEDE4;width:32px;text-align:center">STT</th><th rowspan="2" style="${cs}position:sticky;left:32px;z-index:5;background:#FEEDE4;min-width:130px">${nameLabel}</th>`;
+ let h=`<div class="table-wrap" style="overflow-x:auto"><table><thead style="position:sticky;top:0;z-index:4">`;
+ h+=`<tr><th rowspan="2" style="${cs}position:sticky;left:0;z-index:5;background:#FEEDE4;width:32px;text-align:center">STT</th><th rowspan="2" style="${cs}position:sticky;left:32px;z-index:5;background:#FEEDE4;width:160px">${nameLabel}</th>`;
  dates.forEach((d,di)=>{const bg=DC[di%DC.length];h+=`<th colspan="${labels.length}" style="${cs}text-align:center;border-left:3px solid #D1D5DB;background:${bg}"><strong>${shortDDow(d)}</strong></th>`;});
  h+='</tr><tr>';
  dates.forEach((d,di)=>{const bg=DC[di%DC.length];labels.forEach(l=>{h+=`<th style="${cs}text-align:center;border-left:1px solid #E5E7EB;background:${bg}">%FD<br><small style="font-weight:400;font-size:10px">${l}</small></th>`;});});
  h+='</tr></thead><tbody>';
  names.forEach((name,i)=>{
   const isG=isGrand(name);
-  h+=`<tr${isG?' class="tot"':''}><td style="${cs}text-align:center;color:var(--text-sub);font-size:11px;position:sticky;left:0;background:${isG?'#F8F9FA':'#fff'};z-index:2">${isG?'':i+1}</td><td style="${cs}font-weight:${isG?800:600};white-space:nowrap;position:sticky;left:32px;background:${isG?'#F8F9FA':'#fff'};z-index:2">${name}</td>`;
+  h+=`<tr${isG?' class="tot"':''}><td style="${cs}text-align:center;color:var(--text-sub);font-size:11px;position:sticky;left:0;background:${isG?'#F8F9FA':'#fff'};z-index:2">${isG?'':i+1}</td><td style="${cs}font-weight:${isG?800:600};word-break:break-word;position:sticky;left:32px;background:${isG?'#F8F9FA':'#fff'};z-index:2">${name}</td>`;
   dates.forEach((d,di)=>{
    const bg=DC[di%DC.length];
    labels.forEach((_,si)=>{
@@ -565,15 +565,15 @@ function buildFDWeekTable(sheetArr,labels,isBC,selWeeks){
  const sorted=active.sort((a,b)=>(p0Map[b]?.[latestWk]??-1)-(p0Map[a]?.[latestWk]??-1));
  const names=[...sorted,...grands];
  const cs='padding:6px 9px;';
- let h=`<div class="table-wrap" style="overflow-x:auto"><table style="font-size:12px"><thead style="position:sticky;top:0;z-index:4">`;
- h+=`<tr><th rowspan="2" style="${cs}width:32px;text-align:center;background:#FEEDE4">STT</th><th rowspan="2" style="${cs}min-width:130px;background:#FEEDE4">${hLabel}</th>`;
+ let h=`<div class="table-wrap" style="overflow-x:auto"><table><thead style="position:sticky;top:0;z-index:4">`;
+ h+=`<tr><th rowspan="2" style="${cs}width:32px;text-align:center;background:#FEEDE4">STT</th><th rowspan="2" style="${cs}width:160px;background:#FEEDE4">${hLabel}</th>`;
  selWeeks.forEach((w,wi)=>{const bg=WC[wi%WC.length];h+=`<th colspan="${labels.length}" style="${cs}text-align:center;border-left:3px solid #D1D5DB;background:${bg}"><strong>Tuần ${w}</strong></th>`;});
  h+='</tr><tr>';
  selWeeks.forEach((w,wi)=>{const bg=WC[wi%WC.length];labels.forEach(l=>{h+=`<th style="${cs}text-align:center;border-left:1px solid #E5E7EB;background:${bg}">%FD<br><small style="font-weight:400;font-size:10px">${l}</small></th>`;});});
  h+='</tr></thead><tbody>';
  names.forEach((name,i)=>{
   const isG=isGrand(name);
-  h+=`<tr${isG?' class="tot"':''}><td style="${cs}text-align:center;color:var(--text-sub);font-size:11px">${isG?'':i+1}</td><td style="${cs}font-weight:${isG?800:600};white-space:nowrap">${name}</td>`;
+  h+=`<tr${isG?' class="tot"':''}><td style="${cs}text-align:center;color:var(--text-sub);font-size:11px">${isG?'':i+1}</td><td style="${cs}font-weight:${isG?800:600};word-break:break-word">${name}</td>`;
   selWeeks.forEach((w,wi)=>{
    const bg=WC[wi%WC.length];
    labels.forEach((_,si)=>{
@@ -659,16 +659,16 @@ function buildOntimePage(rowsAM,rowsBC,title,volLabel,countLabel,greenThr,yellow
   const latest=dates[0];
   const names=Object.keys(pivot).sort((a,b)=>(pivot[a][latest]?.pct??999)-(pivot[b][latest]?.pct??999));
   const cs='padding:6px 10px;';
-  let h=`<div class="table-wrap" style="overflow-x:auto"><table style="font-size:12px"><thead>
+  let h=`<div class="table-wrap" style="overflow-x:auto"><table><thead>
    <tr>
     <th rowspan="2" style="${cs}text-align:center;width:32px">STT</th>
-    <th rowspan="2" style="${cs}min-width:130px">AM</th>
+    <th rowspan="2" style="${cs}width:160px">AM</th>
     ${dates.map(d=>`<th colspan="2" style="${cs}text-align:center;border-left:2px solid #E5E7EB"><strong>${shortD(d)}</strong></th>`).join('')}
    </tr>
    <tr>${dates.map(()=>`<th style="${cs}text-align:right;border-left:2px solid #E5E7EB">${volLabel}</th><th style="${cs}text-align:center">%Ontime</th>`).join('')}</tr>
   </thead><tbody>`;
   names.forEach((name,i)=>{
-   h+=`<tr><td style="${cs}text-align:center;color:var(--text-sub);font-size:11px">${i+1}</td><td style="${cs}font-weight:700;white-space:nowrap">${name}</td>`;
+   h+=`<tr><td style="${cs}text-align:center;color:var(--text-sub);font-size:11px">${i+1}</td><td style="${cs}font-weight:700;word-break:break-word">${name}</td>`;
    dates.forEach(d=>{const c=pivot[name]?.[d];if(c){const gc=c.pct>=greenThr?'g':c.pct>=yellowThr?'m':'b';h+=`<td style="${cs}text-align:right;border-left:2px solid #F3F4F6">${fmt(c.vol)}</td><td style="${cs}text-align:center"><span class="pct ${gc}">${c.pct.toFixed(1)}%</span></td>`;}else{h+=`<td style="${cs}text-align:right;border-left:2px solid #F3F4F6;color:var(--text-sub)">—</td><td>—</td>`;}});
    h+='</tr>';
   });
@@ -708,7 +708,7 @@ function buildOntimePage(rowsAM,rowsBC,title,volLabel,countLabel,greenThr,yellow
   const latest=dates[0];
   const names=Object.keys(pivot).sort((a,b)=>(pivot[a][latest]?.pct??999)-(pivot[b][latest]?.pct??999));
   const cs='padding:5px 8px;';
-  let h=`<div class="table-wrap" style="overflow-x:auto"><table style="font-size:12px"><thead style="position:sticky;top:0;z-index:4;background:#FEEDE4">
+  let h=`<div class="table-wrap" style="overflow-x:auto"><table><thead style="position:sticky;top:0;z-index:4;background:#FEEDE4">
    <tr>
     <th rowspan="2" style="${cs}text-align:center;width:30px;position:sticky;left:0;z-index:5;background:#FEEDE4">STT</th>
     <th rowspan="2" style="${cs}min-width:140px;position:sticky;left:30px;z-index:5;background:#FEEDE4">Bưu Cục</th>
@@ -719,7 +719,7 @@ function buildOntimePage(rowsAM,rowsBC,title,volLabel,countLabel,greenThr,yellow
   </thead><tbody>`;
   names.forEach((name,i)=>{
    const row=pivot[name];
-   h+=`<tr><td style="${cs}text-align:center;color:var(--text-sub);font-size:11px;position:sticky;left:0;background:#fff;z-index:2">${i+1}</td><td style="${cs}font-weight:700;white-space:nowrap;position:sticky;left:30px;background:#fff;z-index:2">${name}</td><td style="${cs}color:var(--text-sub);font-size:11px;position:sticky;left:170px;background:#fff;z-index:2">${row.am||''}</td>`;
+   h+=`<tr><td style="${cs}text-align:center;color:var(--text-sub);font-size:11px;position:sticky;left:0;background:#fff;z-index:2">${i+1}</td><td style="${cs}font-weight:700;word-break:break-word;position:sticky;left:30px;background:#fff;z-index:2">${name}</td><td style="${cs}color:var(--text-sub);font-size:11px;position:sticky;left:170px;background:#fff;z-index:2">${row.am||''}</td>`;
    dates.forEach(d=>{const c=row[d];if(c){const gc=c.pct>=greenThr?'g':c.pct>=yellowThr?'m':'b';h+=`<td style="${cs}text-align:right;border-left:2px solid #F3F4F6">${fmt(c.vol)}</td><td style="${cs}text-align:center"><span class="pct ${gc}">${c.pct.toFixed(1)}%</span></td>`;}else{h+=`<td style="${cs}text-align:right;border-left:2px solid #F3F4F6;color:var(--text-sub)">—</td><td>—</td>`;}});
    h+='</tr>';
   });
@@ -1242,10 +1242,10 @@ function buildDailyReportPage(rowsCa12,rowsLTC,rowsCa12TTS,rowsODR,rowsOPR){
  const amNames=Object.keys(pivot).sort((a,b)=>computeTong(pivot,a).gtc-computeTong(pivot,b).gtc);
 
  // === TABLE 1 ===
- let tbl1=`<div class="table-wrap" style="overflow-x:auto"><table style="font-size:12px;border-collapse:collapse"><thead>
+ let tbl1=`<div class="table-wrap" style="overflow-x:auto"><table style="border-collapse:collapse"><thead>
   <tr>
    <th rowspan="2" style="${cs}text-align:center;width:28px;position:sticky;left:0;z-index:5;background:#FEEDE4">STT</th>
-   <th rowspan="2" style="${cs}min-width:120px;position:sticky;left:29px;z-index:5;background:#FEEDE4">AM</th>
+   <th rowspan="2" style="${cs}width:160px;position:sticky;left:29px;z-index:5;background:#FEEDE4">AM</th>
    <th colspan="2" style="${cs}text-align:center;border-left:3px solid #BFDBFE;background:#EFF6FF">Ca 1</th>
    <th colspan="2" style="${cs}text-align:center;border-left:3px solid #BBF7D0;background:#F0FDF4">Ca 2</th>
    <th colspan="2" style="${cs}text-align:center;border-left:3px solid #FED7AA;background:#FFF7ED">Hàng Tồn</th>
@@ -1266,7 +1266,7 @@ function buildDailyReportPage(rowsCa12,rowsLTC,rowsCa12TTS,rowsODR,rowsOPR){
   const ltcPct=ltc&&ltc.vol>0?ltc.nLTC/ltc.vol*100:null;
   tbl1+=`<tr>
    <td style="${cs}text-align:center;color:var(--text-sub);font-size:11px;position:sticky;left:0;background:#fff;z-index:2">${i+1}</td>
-   <td style="${cs}font-weight:700;white-space:nowrap;position:sticky;left:29px;background:#fff;z-index:2">${am}</td>`;
+   <td style="${cs}font-weight:700;word-break:break-word;position:sticky;left:29px;background:#fff;z-index:2">${am}</td>`;
   tbl1+=ca1?`<td style="${cs2}border-left:3px solid #BFDBFE">${fmt(ca1.vol)}</td><td style="${cs3}">${ca1.gan.toFixed(1)}%</td>`:`<td colspan="2" style="${cs3}border-left:3px solid #BFDBFE;color:var(--text-sub)">—</td>`;
   tbl1+=ca2?`<td style="${cs2}border-left:3px solid #BBF7D0">${fmt(ca2.vol)}</td><td style="${cs3}">${ca2.gan.toFixed(1)}%</td>`:`<td colspan="2" style="${cs3}border-left:3px solid #BBF7D0;color:var(--text-sub)">—</td>`;
   tbl1+=ton?`<td style="${cs2}border-left:3px solid #FED7AA">${fmt(ton.vol)}</td><td style="${cs3}">${ton.gan.toFixed(1)}%</td>`:`<td colspan="2" style="${cs3}border-left:3px solid #FED7AA;color:var(--text-sub)">—</td>`;
@@ -1306,10 +1306,10 @@ function buildDailyReportPage(rowsCa12,rowsLTC,rowsCa12TTS,rowsODR,rowsOPR){
  if(p2){
   const{pivot:piv2,grandByLoai:grand2,latest:lat2}=p2;
   const amNames2=Object.keys(piv2).sort((a,b)=>computeTong(piv2,a).gtc-computeTong(piv2,b).gtc);
-  let tbl2=`<div class="table-wrap" style="overflow-x:auto"><table style="font-size:12px;border-collapse:collapse"><thead>
+  let tbl2=`<div class="table-wrap" style="overflow-x:auto"><table style="border-collapse:collapse"><thead>
   <tr>
    <th rowspan="2" style="${cs}text-align:center;width:28px;position:sticky;left:0;z-index:5;background:#FEEDE4">STT</th>
-   <th rowspan="2" style="${cs}min-width:120px;position:sticky;left:29px;z-index:5;background:#FEEDE4">AM</th>
+   <th rowspan="2" style="${cs}width:160px;position:sticky;left:29px;z-index:5;background:#FEEDE4">AM</th>
    <th colspan="3" style="${cs}text-align:center;border-left:3px solid #BFDBFE;background:#EFF6FF">Ca 1</th>
    <th colspan="3" style="${cs}text-align:center;border-left:3px solid #BBF7D0;background:#F0FDF4">Ca 2</th>
    <th colspan="3" style="${cs}text-align:center;border-left:3px solid #FED7AA;background:#FFF7ED">Hàng Tồn</th>
@@ -1329,7 +1329,7 @@ function buildDailyReportPage(rowsCa12,rowsLTC,rowsCa12TTS,rowsODR,rowsOPR){
    const tong=computeTong(piv2,am);const odr=odrMap[am];const opr=oprMap[am];
    tbl2+=`<tr>
     <td style="${cs}text-align:center;color:var(--text-sub);font-size:11px;position:sticky;left:0;background:#fff;z-index:2">${i+1}</td>
-    <td style="${cs}font-weight:700;white-space:nowrap;position:sticky;left:29px;background:#fff;z-index:2">${am}</td>`;
+    <td style="${cs}font-weight:700;word-break:break-word;position:sticky;left:29px;background:#fff;z-index:2">${am}</td>`;
    tbl2+=ca1?`<td style="${cs2}border-left:3px solid #BFDBFE">${fmt(ca1.vol)}</td><td style="${cs3}">${ca1.gan.toFixed(1)}%</td><td style="${cs3}"><span class="pct ${gc(ca1.gtc)}">${ca1.gtc.toFixed(1)}%</span></td>`:`<td colspan="3" style="${cs3}border-left:3px solid #BFDBFE;color:var(--text-sub)">—</td>`;
    tbl2+=ca2?`<td style="${cs2}border-left:3px solid #BBF7D0">${fmt(ca2.vol)}</td><td style="${cs3}">${ca2.gan.toFixed(1)}%</td><td style="${cs3}"><span class="pct ${gc(ca2.gtc)}">${ca2.gtc.toFixed(1)}%</span></td>`:`<td colspan="3" style="${cs3}border-left:3px solid #BBF7D0;color:var(--text-sub)">—</td>`;
    tbl2+=ton?`<td style="${cs2}border-left:3px solid #FED7AA">${fmt(ton.vol)}</td><td style="${cs3}">${ton.gan.toFixed(1)}%</td><td style="${cs3}"><span class="pct ${gc(ton.gtc)}">${ton.gtc.toFixed(1)}%</span></td>`:`<td colspan="3" style="${cs3}border-left:3px solid #FED7AA;color:var(--text-sub)">—</td>`;
