@@ -1159,7 +1159,7 @@ function copyAIResult(){if(window._lastAIResult)navigator.clipboard.writeText(wi
 // GTC ca 1,2: col[0]=AM, col[1]=Loại hàng, col[2]=Ngày, col[3]=Vol, col[4]=%Gán, col[5]=%GTC, col[6]=Số đơn GTC
 // LTC - AM:   col[0]=AM (' '=Grand Total), col[1]=Ngày, col[2]=Vol, col[3]=%Gán, col[4]=Số đơn LTC
 // ODR TTS-AM: col[0]=AM, col[1]=Ngày, col[2]=Vol GTC, col[3]=% Ontime, col[4]=GTC đúng Ontime
-function buildDailyReportPage(rowsCa12,rowsLTC,rowsCa12TTS,rowsODR){
+function buildDailyReportPage(rowsCa12,rowsLTC,rowsCa12TTS,rowsODR,rowsOPR){
  const cs='padding:5px 9px;';const cs2='padding:5px 9px;text-align:right;';const cs3='padding:5px 9px;text-align:center;';
  // Parse helper: group by AM and Loại hàng for latest date
  function parseCa12(rows){
@@ -1200,18 +1200,22 @@ function buildDailyReportPage(rowsCa12,rowsLTC,rowsCa12TTS,rowsODR){
   });
   return ltc;
  }
- function parseODR(rows){
+ function parseOntime(rows){
+  // col[0]=AM, col[1]=Ngày, col[2]=Vol, col[3]=% Ontime (0-1), col[4]=Count ontime
   if(!rows||rows.length<2)return{};
   const data=rows.slice(1).filter(r=>r.length>3);
   const allD=[...new Set(data.map(r=>isoD(r[1])).filter(d=>d))].sort((a,b)=>b.localeCompare(a));
   const latest=allD[0];if(!latest)return{};
-  const odr={};
-  data.filter(r=>isoD(r[1])===latest).forEach(r=>{
-   const am=(r[0]||'').trim();
-   const isGrand=!am||(r[0]||'').toLowerCase().includes('grand total');
-   odr[isGrand?'__grand__':am]=parsePct(r[3]);
+  const isGrand=r=>!(r[0]||'').trim()||(r[0]||'').toLowerCase().includes('grand total');
+  const result={};let gVol=0,gCnt=0;
+  data.filter(r=>isoD(r[1])===latest&&!isGrand(r)).forEach(r=>{
+   const am=(r[0]||'').trim();if(!am)return;
+   const vol=Math.round(parseFloat(r[2])||0),cnt=Math.round(parseFloat(r[4])||0);
+   result[am]=parsePct(r[3]);
+   gVol+=vol;gCnt+=cnt;
   });
-  return odr;
+  if(gVol>0)result['__grand__']=gCnt/gVol*100;
+  return result;
  }
  function computeTong(piv,am){
   let tv=0,tg=0,tgv=0;
@@ -1231,7 +1235,8 @@ function buildDailyReportPage(rowsCa12,rowsLTC,rowsCa12TTS,rowsODR){
  const{pivot,grandByLoai,prevGrand,latest,prev}=p1;
  const ltcMap=parseLTC(rowsLTC);
  const p2=parseCa12(rowsCa12TTS);
- const odrMap=parseODR(rowsODR);
+ const odrMap=parseOntime(rowsODR);
+ const oprMap=parseOntime(rowsOPR);
 
  // Sorted AM list (by Tổng %GTC asc)
  const amNames=Object.keys(pivot).sort((a,b)=>computeTong(pivot,a).gtc-computeTong(pivot,b).gtc);
@@ -1310,6 +1315,7 @@ function buildDailyReportPage(rowsCa12,rowsLTC,rowsCa12TTS,rowsODR){
    <th colspan="3" style="${cs}text-align:center;border-left:3px solid #FED7AA;background:#FFF7ED">Hàng Tồn</th>
    <th colspan="3" style="${cs}text-align:center;border-left:3px solid #FDBA74;background:#FEEDE4">Tổng Ngày</th>
    <th rowspan="2" style="${cs}text-align:center;border-left:3px solid #99F6E4;background:#F0FDFA;min-width:60px">ODR</th>
+   <th rowspan="2" style="${cs}text-align:center;border-left:3px solid #6EE7B7;background:#ECFDF5;min-width:60px">OPR</th>
   </tr>
   <tr>
    <th style="${cs}text-align:right;border-left:3px solid #BFDBFE;background:#EFF6FF">Vol</th><th style="${cs}text-align:center;background:#EFF6FF">%Gán</th><th style="${cs}text-align:center;background:#EFF6FF">%GTC</th>
@@ -1320,7 +1326,7 @@ function buildDailyReportPage(rowsCa12,rowsLTC,rowsCa12TTS,rowsODR){
  </thead><tbody>`;
   amNames2.forEach((am,i)=>{
    const ca1=piv2[am]?.['Hàng Mới Ca 1'];const ca2=piv2[am]?.['Hàng Mới Ca 2'];const ton=piv2[am]?.['Hàng Tồn'];
-   const tong=computeTong(piv2,am);const odr=odrMap[am];
+   const tong=computeTong(piv2,am);const odr=odrMap[am];const opr=oprMap[am];
    tbl2+=`<tr>
     <td style="${cs}text-align:center;color:var(--text-sub);font-size:11px;position:sticky;left:0;background:#fff;z-index:2">${i+1}</td>
     <td style="${cs}font-weight:700;white-space:nowrap;position:sticky;left:29px;background:#fff;z-index:2">${am}</td>`;
@@ -1329,17 +1335,19 @@ function buildDailyReportPage(rowsCa12,rowsLTC,rowsCa12TTS,rowsODR){
    tbl2+=ton?`<td style="${cs2}border-left:3px solid #FED7AA">${fmt(ton.vol)}</td><td style="${cs3}">${ton.gan.toFixed(1)}%</td><td style="${cs3}"><span class="pct ${gc(ton.gtc)}">${ton.gtc.toFixed(1)}%</span></td>`:`<td colspan="3" style="${cs3}border-left:3px solid #FED7AA;color:var(--text-sub)">—</td>`;
    tbl2+=tong.vol>0?`<td style="${cs2}border-left:3px solid #FDBA74">${fmt(tong.vol)}</td><td style="${cs3}">${tong.gan.toFixed(1)}%</td><td style="${cs3}"><span class="pct ${gc(tong.gtc)}">${tong.gtc.toFixed(1)}%</span></td>`:`<td colspan="3" style="${cs3}border-left:3px solid #FDBA74;color:var(--text-sub)">—</td>`;
    tbl2+=odr!=null?`<td style="${cs3}border-left:3px solid #99F6E4"><span class="pct ${gco(odr)}">${odr.toFixed(1)}%</span></td>`:`<td style="${cs3}border-left:3px solid #99F6E4;color:var(--text-sub)">—</td>`;
+   tbl2+=opr!=null?`<td style="${cs3}border-left:3px solid #6EE7B7"><span class="pct ${gco(opr)}">${opr.toFixed(1)}%</span></td>`:`<td style="${cs3}border-left:3px solid #6EE7B7;color:var(--text-sub)">—</td>`;
    tbl2+='</tr>';
   });
   // Grand Total row table 2
   const gC1=grand2['Hàng Mới Ca 1'],gC2=grand2['Hàng Mới Ca 2'],gT2=grand2['Hàng Tồn'];
-  const gT2ng=computeGrandTong(grand2);const gODR=odrMap['__grand__'];
+  const gT2ng=computeGrandTong(grand2);const gODR=odrMap['__grand__'];const gOPR=oprMap['__grand__'];
   tbl2+=`<tr class="tot"><td style="${cs}position:sticky;left:0;background:#F8F9FA;z-index:2"></td><td style="${cs}font-weight:700;position:sticky;left:29px;background:#F8F9FA;z-index:2">Grand Total</td>`;
   tbl2+=gC1?`<td style="${cs2}border-left:3px solid #BFDBFE">${fmt(gC1.vol)}</td><td style="${cs3}">${gC1.gan.toFixed(1)}%</td><td style="${cs3}"><span class="pct ${gc(gC1.gtc)}">${gC1.gtc.toFixed(1)}%</span></td>`:`<td colspan="3" style="${cs3}border-left:3px solid #BFDBFE">—</td>`;
   tbl2+=gC2?`<td style="${cs2}border-left:3px solid #BBF7D0">${fmt(gC2.vol)}</td><td style="${cs3}">${gC2.gan.toFixed(1)}%</td><td style="${cs3}"><span class="pct ${gc(gC2.gtc)}">${gC2.gtc.toFixed(1)}%</span></td>`:`<td colspan="3" style="${cs3}border-left:3px solid #BBF7D0">—</td>`;
   tbl2+=gT2?`<td style="${cs2}border-left:3px solid #FED7AA">${fmt(gT2.vol)}</td><td style="${cs3}">${gT2.gan.toFixed(1)}%</td><td style="${cs3}"><span class="pct ${gc(gT2.gtc)}">${gT2.gtc.toFixed(1)}%</span></td>`:`<td colspan="3" style="${cs3}border-left:3px solid #FED7AA">—</td>`;
   tbl2+=gT2ng.vol>0?`<td style="${cs2}border-left:3px solid #FDBA74">${fmt(gT2ng.vol)}</td><td style="${cs3}">${gT2ng.gan.toFixed(1)}%</td><td style="${cs3}"><span class="pct ${gc(gT2ng.gtc)}">${gT2ng.gtc.toFixed(1)}%</span></td>`:`<td colspan="3" style="${cs3}border-left:3px solid #FDBA74">—</td>`;
   tbl2+=gODR!=null?`<td style="${cs3}border-left:3px solid #99F6E4"><span class="pct ${gco(gODR)}">${gODR.toFixed(1)}%</span></td>`:`<td style="${cs3}border-left:3px solid #99F6E4">—</td>`;
+  tbl2+=gOPR!=null?`<td style="${cs3}border-left:3px solid #6EE7B7"><span class="pct ${gco(gOPR)}">${gOPR.toFixed(1)}%</span></td>`:`<td style="${cs3}border-left:3px solid #6EE7B7">—</td>`;
   tbl2+='</tr></tbody></table></div>';
   tbl2Html=`<div class="card">
   <div class="card-header"><div class="card-title"><div class="card-icon">🎯</div>B. Báo Cáo Tỷ Lệ GTC TTS</div><div class="card-info">Sắp xếp: %GTC Tổng thấp → cao · Ngày ${shortD(lat2||latest)}</div></div>
@@ -1427,7 +1435,7 @@ async function init(){
  // p16 — Báo Cáo Vận Hành Ngày
  const p16el=document.getElementById('p16');
  if(R['GTC ca 1,2 theo AM']){
-  p16el.innerHTML=buildDailyReportPage(R['GTC ca 1,2 theo AM'],R['LTC - AM'],R['GTC ca 1,2 TTS theo AM'],R['ODR TTS - AM']);
+  p16el.innerHTML=buildDailyReportPage(R['GTC ca 1,2 theo AM'],R['LTC - AM'],R['GTC ca 1,2 TTS theo AM'],R['ODR TTS - AM'],R['OPR TTS - AM']);
   addBCSearch(p16el);
  }else p16el.innerHTML=errPage('Không thể tải dữ liệu GTC ca 1,2 theo AM');
  // p0 — Tổng quan (sau khi có đủ data)
