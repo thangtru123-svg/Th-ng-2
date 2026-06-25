@@ -476,8 +476,17 @@ function buildFDDayTable(sheetArr,labels,dates,nameLabel,gtcMap){
  const cs='padding:6px 8px;';
  // Số trả = fd/100 × nGTC / (1 - fd/100)
  const calcSoTra=(name,d,fd)=>{
-  const nGTC=gtcMap?.[name]?.[d]??null;
-  if(fd===null||nGTC===null||nGTC===0||fd>=100)return null;
+  if(!gtcMap||fd===null||fd>=100)return null;
+  // Tên có thể là nhiều AM gộp (vd: "Chu Mạnh Dũng,Cao Văn Đức") → split và cộng nGTC
+  let nGTC=gtcMap[name]?.[d]??null;
+  if(nGTC===null){
+   const parts=name.split(',').map(s=>s.trim()).filter(Boolean);
+   if(parts.length>1){
+    const total=parts.reduce((s,p)=>s+(gtcMap[p]?.[d]??0),0);
+    nGTC=total>0?total:null;
+   }
+  }
+  if(nGTC===null||nGTC===0)return null;
   return Math.round(fd/100*nGTC/(1-fd/100));
  };
  const hasGTC=!!gtcMap;
