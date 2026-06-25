@@ -411,6 +411,19 @@ function addBCSearch(el,nc){
 
 // BC FD sheets: same (BC name in col 0)
 window._FD={};
+window._GTC_MAP_AM={};window._GTC_MAP_BC={};
+// Build nGTC lookup map: {[name][isoDate] = nGTC}
+function buildGTCMap(rows,nameCol,dateCol,nGTCCol){
+ const map={};if(!rows||rows.length<2)return map;
+ rows.slice(1).forEach(r=>{
+  const name=(r[nameCol]||'').trim(),d=isoD(r[dateCol]);
+  if(!name||!d||name.toLowerCase().includes('grand total'))return;
+  const n=Math.round(parseFloat(r[nGTCCol])||0);
+  if(!map[name])map[name]={};
+  map[name][d]=(map[name][d]||0)+n;
+ });
+ return map;
+}
 const DC=['#FFF8F5','#F0FDF4','#EFF6FF','#FAF5FF','#FEFCE8','#F0FDFA'];
 function buildFDDayPage(fd){
  if(!fd.totalAM||fd.totalAM.length<2)return errPage('Không có dữ liệu FD');
@@ -438,12 +451,12 @@ function renderFDDay(){
  const dTo=document.getElementById('fdDay_dTo')?.value||allD[0];
  const lo=dFrom<=dTo?dFrom:dTo,hi=dFrom<=dTo?dTo:dFrom;
  const dates=allD.filter(d=>d>=lo&&d<=hi);
- document.getElementById('fdDayAMTable').innerHTML=buildFDDayTable([fd.totalAM,fd.smeAM,fd.ttsAM,fd.shopeeAM],['Total','SME','TTS','Shopee'],dates,'AM');
- document.getElementById('fdDayBCTable').innerHTML=buildFDDayTable([fd.totalBC,fd.smeBC,fd.ttsBC,fd.shopeeBC],['Total','SME','TTS','Shopee'],dates,'Bưu Cục');
+ document.getElementById('fdDayAMTable').innerHTML=buildFDDayTable([fd.totalAM,fd.smeAM,fd.ttsAM,fd.shopeeAM],['Total','SME','TTS','Shopee'],dates,'AM',window._GTC_MAP_AM);
+ document.getElementById('fdDayBCTable').innerHTML=buildFDDayTable([fd.totalBC,fd.smeBC,fd.ttsBC,fd.shopeeBC],['Total','SME','TTS','Shopee'],dates,'Bưu Cục',window._GTC_MAP_BC);
  addBCSearch(document.getElementById('fdDayAMTable'));
  addBCSearch(document.getElementById('fdDayBCTable'));
 }
-function buildFDDayTable(sheetArr,labels,dates,nameLabel){
+function buildFDDayTable(sheetArr,labels,dates,nameLabel,gtcMap){
  if(!dates||!dates.length)return'<p style="padding:16px;color:var(--text-sub)">Chọn khoảng ngày hợp lệ</p>';
  function getDataD(rows,dISO){
   if(!rows||rows.length<2)return{};
@@ -461,12 +474,24 @@ function buildFDDayTable(sheetArr,labels,dates,nameLabel){
  const names=[...sorted,...grands];
  if(!names.length)return`<p style="padding:16px;color:var(--text-sub)">Không có dữ liệu</p>`;
  const cs='padding:6px 8px;';
- const isBC=nameLabel==='Bưu Cục';
+ // Số trả = fd/100 × nGTC / (1 - fd/100)
+ const calcSoTra=(name,d,fd)=>{
+  const nGTC=gtcMap?.[name]?.[d]??null;
+  if(fd===null||nGTC===null||nGTC===0||fd>=100)return null;
+  return Math.round(fd/100*nGTC/(1-fd/100));
+ };
+ const hasGTC=!!gtcMap;
  let h=`<div class="table-wrap" style="overflow-x:auto"><table><thead style="position:sticky;top:0;z-index:4">`;
  h+=`<tr><th rowspan="2" style="${cs}position:sticky;left:0;z-index:5;background:#FEEDE4;width:32px;text-align:center">STT</th><th rowspan="2" style="${cs}position:sticky;left:32px;z-index:5;background:#FEEDE4;width:200px">${nameLabel}</th>`;
- dates.forEach((d,di)=>{const bg=DC[di%DC.length];h+=`<th colspan="${labels.length}" style="${cs}text-align:center;border-left:3px solid #D1D5DB;background:${bg}"><strong>${shortDDow(d)}</strong></th>`;});
+ dates.forEach((d,di)=>{const bg=DC[di%DC.length];const span=hasGTC?labels.length+1:labels.length;h+=`<th colspan="${span}" style="${cs}text-align:center;border-left:3px solid #D1D5DB;background:${bg}"><strong>${shortDDow(d)}</strong></th>`;});
  h+='</tr><tr>';
- dates.forEach((d,di)=>{const bg=DC[di%DC.length];labels.forEach(l=>{h+=`<th style="${cs}text-align:center;border-left:1px solid #E5E7EB;background:${bg}">%FD<br><small style="font-weight:400;font-size:10px">${l}</small></th>`;});});
+ dates.forEach((d,di)=>{
+  const bg=DC[di%DC.length];
+  labels.forEach((l,li)=>{
+   h+=`<th style="${cs}text-align:center;border-left:${li===0?'3px solid #D1D5DB':'1px solid #E5E7EB'};background:${bg}">%FD<br><small style="font-weight:400;font-size:10px">${l}</small></th>`;
+   if(li===0&&hasGTC)h+=`<th style="${cs}text-align:right;border-left:1px solid #E5E7EB;background:${bg}">Số trả<br><small style="font-weight:400;font-size:10px">Total</small></th>`;
+  });
+ });
  h+='</tr></thead><tbody>';
  names.forEach((name,i)=>{
   const isG=isGrand(name);
@@ -476,11 +501,15 @@ function buildFDDayTable(sheetArr,labels,dates,nameLabel){
    labels.forEach((_,si)=>{
     const cell=dData[di]?.[si]?.[name];const fd=cell?.fd??null;const red=fd!==null&&fd>=15;
     h+=`<td style="${cs}text-align:center;border-left:${si===0?'3px solid #D1D5DB':'1px solid #E5E7EB'};background:${red?'#FEE2E2':bg};color:${red?'#DC2626':'inherit'};font-weight:${red?700:'inherit'}">${fd!==null?fd.toFixed(2)+'%':'—'}</td>`;
+    if(si===0&&hasGTC){
+     const soTra=calcSoTra(name,d,fd);
+     h+=`<td style="${cs}text-align:right;border-left:1px solid #E5E7EB;background:${bg};font-weight:${soTra!==null?600:'inherit'}">${soTra!==null?fmt(soTra):'—'}</td>`;
+    }
    });
   });
   h+='</tr>';
  });
- // Grand Total row — tính weighted average fd theo vol cho mỗi ngày × sheet
+ // Grand Total row
  h+=`<tr class="tot"><td style="${cs}position:sticky;left:0;background:#F8F9FA;z-index:2"></td><td style="${cs}font-weight:800;position:sticky;left:32px;background:#F8F9FA;z-index:2">Grand Total</td>`;
  dates.forEach((d,di)=>{
   const bg=DC[di%DC.length];
@@ -492,6 +521,11 @@ function buildFDDayTable(sheetArr,labels,dates,nameLabel){
    const gtFd=sumVol>0?sumFdVol/sumVol:null;
    const red=gtFd!==null&&gtFd>=15;
    h+=`<td style="${cs}text-align:center;border-left:${si===0?'3px solid #D1D5DB':'1px solid #E5E7EB'};background:${red?'#FEE2E2':bg};color:${red?'#DC2626':'inherit'};font-weight:${red?800:600}">${gtFd!==null?gtFd.toFixed(2)+'%':'—'}</td>`;
+   if(si===0&&hasGTC){
+    // Tổng số đơn trả = sum từng AM
+    const gtSoTra=Object.entries(dayData).filter(([n])=>!isGrand(n)).reduce((s,[n,v])=>{const st=calcSoTra(n,d,v.fd??null);return s+(st??0);},0);
+    h+=`<td style="${cs}text-align:right;border-left:1px solid #E5E7EB;background:${bg};font-weight:700">${gtSoTra>0?fmt(gtSoTra):'—'}</td>`;
+   }
   });
  });
  h+='</tr>';
@@ -1407,6 +1441,9 @@ async function init(){
   totalBC:R['FD Total theo Bưu Cục'],smeBC:R['FD SME theo Bưu Cục'],
   ttsBC:R['FD TTS theo Bưu Cục'],shopeeBC:R['FD Shopee theo Bưu Cục']
  };
+ // GTC nGTC maps: AM sheet(col0=AM,col1=Ngày,col5=nGTC), BC sheet(col0=AM,col1=BC,col2=Ngày,col6=nGTC)
+ window._GTC_MAP_AM=buildGTCMap(R['GTC Total theo AM'],0,1,5);
+ window._GTC_MAP_BC=buildGTCMap(R['GTC Total theo Bưu Cục'],1,2,6);
  const p3el=document.getElementById('p3');
  if(R['FD Total theo AM']){
   p3el.innerHTML=buildFDDayPage(window._FD);
