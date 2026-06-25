@@ -583,7 +583,7 @@ function buildOntimePage(rowsAM,rowsBC,title,volLabel,countLabel,greenThr,yellow
   const dRows=data.filter(r=>!isGrand(r));
   const gRows=data.filter(r=>isGrand(r));
   const allD=[...new Set(dRows.map(r=>isoD(r[1])).filter(d=>d))].sort((a,b)=>b.localeCompare(a));
-  const dates=allD.slice(0,7).reverse();
+  const dates=allD.slice(0,7);
   if(!dates.length)return'<p style="padding:16px;color:var(--text-sub)">Không có dữ liệu</p>';
   const pivot={};
   dRows.forEach(r=>{const name=(r[0]||'').trim(),d=isoD(r[1]);if(!name||!dates.includes(d))return;if(!pivot[name])pivot[name]={};pivot[name][d]={vol:Math.round(parseFloat(r[2])||0),pct:(parseFloat(r[3])||0)*100,cnt:Math.round(parseFloat(r[4])||0)};});
@@ -592,7 +592,7 @@ function buildOntimePage(rowsAM,rowsBC,title,volLabel,countLabel,greenThr,yellow
   dates.forEach(d=>{let tv=0,tc=0;Object.values(pivot).forEach(row=>{if(row[d]){tv+=row[d].vol;tc+=row[d].cnt;}});if(tv>0)gPivot[d]={vol:tv,pct:tc/tv*100,cnt:tc};});
   // Fallback from gRows if available
   gRows.forEach(r=>{const d=isoD(r[1]);if(!dates.includes(d))return;gPivot[d]={vol:Math.round(parseFloat(r[2])||0),pct:(parseFloat(r[3])||0)*100,cnt:Math.round(parseFloat(r[4])||0)};});
-  const latest=dates[dates.length-1];
+  const latest=dates[0];
   const names=Object.keys(pivot).sort((a,b)=>(pivot[a][latest]?.pct??999)-(pivot[b][latest]?.pct??999));
   const cs='padding:6px 10px;';
   let h=`<div class="table-wrap" style="overflow-x:auto"><table style="font-size:12px"><thead>
@@ -614,8 +614,19 @@ function buildOntimePage(rowsAM,rowsBC,title,volLabel,countLabel,greenThr,yellow
    h+='</tr>';
   }
   h+='</tbody></table></div>';
-  const lg=gPivot[latest];
-  if(lg){h+=`<div class="analysis-box">⏱️ <strong>AM ngày ${shortD(latest)}:</strong> Tổng ${volLabel} <strong>${fmt(lg.vol)}</strong> · Ontime <strong>${fmt(lg.cnt)}</strong> đơn (<span style="color:${lg.pct>=greenThr?'var(--green)':lg.pct>=yellowThr?'var(--yellow)':'var(--red)'};font-weight:700">${lg.pct.toFixed(1)}%</span>).</div>`;}
+  const lg=gPivot[latest];const prevD=dates[1];const lgPrev=prevD?gPivot[prevD]:null;
+  if(lg){
+   const dPct=lgPrev?+(lg.pct-lgPrev.pct).toFixed(1):null;
+   const worst=names[0],best=names[names.length-1];
+   const worstPct=(pivot[worst]?.[latest]?.pct??0).toFixed(1);
+   const bestPct=(pivot[best]?.[latest]?.pct??0).toFixed(1);
+   const pctC=lg.pct>=greenThr?'var(--green)':lg.pct>=yellowThr?'var(--yellow)':'var(--red)';
+   let ana=`⏱️ <strong>AM ngày ${shortD(latest)}:</strong> %Ontime tổng <strong style="color:${pctC}">${lg.pct.toFixed(1)}%</strong> (${fmt(lg.cnt)}/${fmt(lg.vol)} đơn)`;
+   if(lgPrev){const dc=dPct>=0?'var(--green)':'var(--red)';ana+=`<br>So với ${shortD(prevD)}: <span style="color:${dc};font-weight:700">${dPct>=0?'▲':''} ${dPct>=0?'+':''}${dPct}%</span> (${lgPrev.pct.toFixed(1)}% → ${lg.pct.toFixed(1)}%)`;}
+   ana+=`<br>AM tốt nhất: <strong>${best}</strong> (<span style="color:var(--green);font-weight:700">${bestPct}%</span>)`;
+   ana+=`<br>AM tệ nhất: <strong>${worst}</strong> (<span style="color:var(--red);font-weight:700">${worstPct}%</span>)`;
+   h+=`<div class="analysis-box">${ana}</div>`;
+  }
   return h;
  }
  function bcTbl(rows){
@@ -624,13 +635,13 @@ function buildOntimePage(rowsAM,rowsBC,title,volLabel,countLabel,greenThr,yellow
   const isGrand=r=>(r[1]||'').toLowerCase().includes('grand total')||(r[0]||'').toLowerCase().includes('grand total');
   const dRows=data.filter(r=>!isGrand(r));
   const allD=[...new Set(dRows.map(r=>isoD(r[2])).filter(d=>d))].sort((a,b)=>b.localeCompare(a));
-  const dates=allD.slice(0,7).reverse();
+  const dates=allD.slice(0,7);
   if(!dates.length)return'<p style="padding:16px;color:var(--text-sub)">Không có dữ liệu</p>';
   const pivot={};
   dRows.forEach(r=>{const am=(r[0]||'').trim(),bc=(r[1]||'').trim(),d=isoD(r[2]);if(!bc||!dates.includes(d))return;if(!pivot[bc])pivot[bc]={am};pivot[bc][d]={vol:Math.round(parseFloat(r[3])||0),pct:(parseFloat(r[4])||0)*100,cnt:Math.round(parseFloat(r[5])||0)};});
   const gPivot={};
   dates.forEach(d=>{let tv=0,tc=0;Object.values(pivot).forEach(row=>{if(row[d]){tv+=row[d].vol;tc+=row[d].cnt;}});if(tv>0)gPivot[d]={vol:tv,pct:tc/tv*100,cnt:tc};});
-  const latest=dates[dates.length-1];
+  const latest=dates[0];
   const names=Object.keys(pivot).sort((a,b)=>(pivot[a][latest]?.pct??999)-(pivot[b][latest]?.pct??999));
   const cs='padding:5px 8px;';
   let h=`<div class="table-wrap" style="overflow-x:auto;max-height:1100px"><table style="font-size:12px"><thead style="position:sticky;top:0;z-index:4;background:#FEEDE4">
@@ -654,8 +665,14 @@ function buildOntimePage(rowsAM,rowsBC,title,volLabel,countLabel,greenThr,yellow
    h+='</tr>';
   }
   h+='</tbody></table></div>';
-  const lg=gPivot[latest];
-  if(lg){h+=`<div class="analysis-box">🏪 <strong>BC ngày ${shortD(latest)}:</strong> Tổng ${volLabel} <strong>${fmt(lg.vol)}</strong> · Ontime <strong>${fmt(lg.cnt)}</strong> đơn (<span style="color:${lg.pct>=greenThr?'var(--green)':lg.pct>=yellowThr?'var(--yellow)':'var(--red)'};font-weight:700">${lg.pct.toFixed(1)}%</span>).</div>`;}
+  const lg=gPivot[latest];const prevD2=dates[1];const lgPrev2=prevD2?gPivot[prevD2]:null;
+  if(lg){
+   const dPct2=lgPrev2?+(lg.pct-lgPrev2.pct).toFixed(1):null;
+   const pctC=lg.pct>=greenThr?'var(--green)':lg.pct>=yellowThr?'var(--yellow)':'var(--red)';
+   let ana=`🏪 <strong>BC ngày ${shortD(latest)}:</strong> %Ontime tổng <strong style="color:${pctC}">${lg.pct.toFixed(1)}%</strong> (${fmt(lg.cnt)}/${fmt(lg.vol)} đơn)`;
+   if(lgPrev2){const dc=dPct2>=0?'var(--green)':'var(--red)';ana+=`<br>So với ${shortD(prevD2)}: <span style="color:${dc};font-weight:700">${dPct2>=0?'▲ +':''} ${dPct2}%</span> (${lgPrev2.pct.toFixed(1)}% → ${lg.pct.toFixed(1)}%)`;}
+   h+=`<div class="analysis-box">${ana}</div>`;
+  }
   return h;
  }
  return`<div class="page-header">
