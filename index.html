@@ -588,7 +588,8 @@ const WC=['#FFF8F5','#F0FDF4','#EFF6FF','#FAF5FF','#FEFCE8','#F0FDFA'];
 function buildFDWeekTable(sheetArr,labels,isBC,selWeeks){
  const hLabel=isBC?'Bưu Cục':'AM';
  const parsed=sheetArr.map(s=>parseWeeklySection(s,hLabel));
- const wMap={};parsed.forEach((p,si)=>{wMap[si]={};if(p)p.data.forEach(r=>{wMap[si][r.name]=r.wData;});});
+ // Chỉ lấy dòng đầu tiên của mỗi tên (tránh Grand Total #2 overwrite Grand Total #1)
+ const wMap={};parsed.forEach((p,si)=>{wMap[si]={};if(p)p.data.forEach(r=>{if(!wMap[si][r.name])wMap[si][r.name]=r.wData;});});
  const allNames=new Set();
  parsed.forEach(p=>{if(p)p.data.forEach(r=>allNames.add(r.name));});
  const isGrand=n=>n.toLowerCase().includes('grand total');
