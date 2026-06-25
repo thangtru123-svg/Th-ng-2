@@ -1070,7 +1070,7 @@ function buildAgingHTML(rows){
  // ─── Bảng BC ổn định (loại bỏ bất ổn + Kho Giao Hàng Nặng) ───
  const bcMap={};recent.forEach(r=>{const bc=r[2],d=r[11];if(!bcMap[bc])bcMap[bc]={bc};bcMap[bc][d]=(bcMap[bc][d]||0)+1;});
  const bcArr=Object.values(bcMap).filter(r=>!unstableBCSet.has(r.bc)&&!(r.bc||'').startsWith('Kho Giao Hàng Nặng')).sort((a,b)=>(b[latest]||0)-(a[latest]||0));
- h+=buildTable(bcArr,'bc','Theo Bưu Cục — 7 ngày gần nhất','🏪',`${bcArr.length} bưu cục`);
+ h+=buildTable(bcArr.slice(0,30),'bc','Theo Bưu Cục — 7 ngày gần nhất','🏪',`${Math.min(bcArr.length,30)} bưu cục`);
  const stableArr=bcArr.filter(r=>!unstableBCSet.has(r.bc));
  const stableCur=stableArr.reduce((s,r)=>s+(r[latest]||0),0);
  const stablePrv=stableArr.reduce((s,r)=>s+(r[prev]||0),0);
