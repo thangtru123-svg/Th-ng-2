@@ -1528,17 +1528,23 @@ function buildWeakBCSection(selDate){
   const body=parts.map(p=>`<div style="font-size:13px;padding-left:18px;line-height:1.8;color:#1E293B">• ${p}</div>`).join('');
   return`<div style="padding:10px 0;border-bottom:2px solid #F1F5F9">${header}${body}</div>`;
  }).join('');
- // Auto summary
- const summaryParts=[];
- const fdUp=top3.filter(b=>b.fd!==null&&b.prevFd!==null&&b.fd>b.prevFd+0.5);
- const agUp=top3.filter(b=>b.aging>b.prevAging+5);
- const gtcImprove=top3.filter(b=>b.prevPct!==null&&b.pctGTC>b.prevPct+1);
- const tonDown=top3.filter(b=>b.prevTon!==null&&b.ton<b.prevTon);
- if(fdUp.length)summaryParts.push(`${fdUp.map(b=>parseBC(b.bc).short).join(' & ')} — FD đang TĂNG ⚠️`);
- if(agUp.length)summaryParts.push(`${agUp.map(b=>`${parseBC(b.bc).short} Aging vọt +${b.aging-b.prevAging} đơn`).join(', ')}`);
- if(tonDown.length>0&&!fdUp.length)summaryParts.push(`tồn kho đã giảm ở ${tonDown.map(b=>parseBC(b.bc).short).join(', ')}`);
- if(gtcImprove.length>0)summaryParts.push(`${gtcImprove.map(b=>parseBC(b.bc).short).join(', ')} — %GTC đã tốt lên`);
- const summary=summaryParts.length?summaryParts.join(', bù lại '):'3 BC này cần theo dõi sát 👀';
+ // Auto summary — nhận xét riêng từng BC, không ghép máy móc
+ const summary=top3.map(b=>{
+  const{short}=parseBC(b.bc);
+  const bad=[];const good=[];
+  if(b.fd!==null&&b.prevFd!==null&&b.fd>b.prevFd+0.5)bad.push(`FD tăng +${(b.fd-b.prevFd).toFixed(1)}%`);
+  if(b.aging>(b.prevAging||0)+5)bad.push(`Aging vọt +${b.aging-(b.prevAging||0)} đơn`);
+  if(b.prevPct!==null&&b.pctGTC<b.prevPct-1)bad.push(`GTC giảm ${(b.pctGTC-b.prevPct).toFixed(1)}%`);
+  if(b.prevTon!==null&&b.ton>b.prevTon+50)bad.push(`tồn tăng +${b.ton-b.prevTon} đơn`);
+  if(b.fd!==null&&b.prevFd!==null&&b.fd<b.prevFd-0.5)good.push(`FD giảm`);
+  if(b.prevAging>0&&b.aging<b.prevAging-5)good.push(`Aging giảm`);
+  if(b.prevPct!==null&&b.pctGTC>b.prevPct+1)good.push(`GTC tốt lên`);
+  if(b.prevTon!==null&&b.ton<b.prevTon-50)good.push(`tồn giảm`);
+  if(bad.length&&good.length)return`${short}: ${bad.join(', ')} — dù vậy ${good.join(', ')}`;
+  if(bad.length)return`${short}: ${bad.join(', ')} ⚠️`;
+  if(good.length)return`${short}: cải thiện được ${good.join(', ')} ✅`;
+  return`${short}: ổn định`;
+ }).join(' | ');
  const dateOpts=datesBC.slice().reverse().map(d=>`<option value="${d}"${d===latest?' selected':''}>${fmtS(d)}</option>`).join('');
  return`<div class="card" id="weakBCSection">
   <div class="card-header">
