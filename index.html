@@ -1053,7 +1053,7 @@ function buildAgingHTML(rows){
  const recent=rows.filter(r=>last7.includes(r[11]));
  const unstableRows=recent.filter(r=>r[12]&&r[12].includes('bất ổn'));
  const unstableBCSet=new Set(unstableRows.map(r=>r[2]));
- const byDate={};recent.forEach(r=>{byDate[r[11]]=(byDate[r[11]]||0)+1;});
+ const byDate={};recent.forEach(r=>{const _am=(r[10]||'').trim();if(_am&&(_am==='#N/A'||_am.startsWith('#')))return;byDate[r[11]]=(byDate[r[11]]||0)+1;});
  const latestTotal=byDate[latest]||0;const prevTotal=byDate[prev]||0;const delta=latestTotal-prevTotal;
  const unstableLatest=unstableRows.filter(r=>r[11]===latest).length;
  const deltaSign=delta>0?'+':'';const deltaIcon=delta<0?'▼':delta>0?'▲':'—';const deltaColor=delta<0?'var(--green)':delta>0?'var(--red)':'var(--text-sub)';
