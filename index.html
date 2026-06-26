@@ -1524,7 +1524,9 @@ function buildWeakBCSection(selDate){
    `Aging >5 ngày: <b>${b.aging}</b> (${b.prevAging}) ${deltaT(b.aging,b.prevAging,false,true)}`,
    b.fd!==null?`FD: <b>${b.fd.toFixed(1)}%</b> (${b.prevFd!==null?b.prevFd.toFixed(1)+'%':'—'}) ${deltaT(b.fd,b.prevFd,true,true)}`:'FD: —',
   ];
-  return`<div style="padding:7px 0;border-bottom:1px solid #F1F5F9;font-size:13px;line-height:1.8">${medals[i]} <b>${codeStr}${short}</b> — AM ${b.amList||'—'} &nbsp;&nbsp;•&nbsp;&nbsp; ${parts.join(' &nbsp;<span style="color:#E2E8F0">•</span>&nbsp; ')}</div>`;
+  const header=`<div style="font-size:13.5px;font-weight:700;margin-bottom:3px">${medals[i]} ${codeStr}${short} — <span style="font-weight:400">AM ${b.amList||'—'}</span></div>`;
+  const body=parts.map(p=>`<div style="font-size:13px;padding-left:18px;line-height:1.8;color:#1E293B">• ${p}</div>`).join('');
+  return`<div style="padding:10px 0;border-bottom:2px solid #F1F5F9">${header}${body}</div>`;
  }).join('');
  // Auto summary
  const summaryParts=[];
