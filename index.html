@@ -385,7 +385,7 @@ function addBCSearch(el,nc){
  el.querySelectorAll('table').forEach(tbl=>{
   if(tbl.dataset.bcSrch)return;tbl.dataset.bcSrch='1';
   const rows=[...tbl.querySelectorAll('tbody tr')];
-  const names=[...new Set(rows.flatMap(r=>(r.cells[nc]?.textContent||'').split('\n').map(s=>s.trim()).filter(s=>s&&!s.toLowerCase().includes('grand total'))))].sort((a,b)=>a.localeCompare(b,'vi'));
+  const names=[...new Set(rows.flatMap(r=>(r.cells[nc]?.innerText||r.cells[nc]?.textContent||'').split('\n').map(s=>s.trim()).filter(s=>s&&!s.toLowerCase().includes('grand total'))))].sort((a,b)=>a.localeCompare(b,'vi'));
   if(!names.length)return;
   const uid='mf'+Math.random().toString(36).slice(2,8);
   const sel=new Set();
@@ -401,7 +401,7 @@ function addBCSearch(el,nc){
    let vis=0;
    tbl.querySelectorAll('tbody tr').forEach(r=>{
     if(r.classList.contains('tot')||r.parentElement.tagName==='TFOOT'){r.style.display='';return;}
-    const name=(r.cells[nc]?.textContent||'').trim();
+    const name=(r.cells[nc]?.innerText||r.cells[nc]?.textContent||'').trim();
     const show=sel.size===0||[...sel].some(s=>name.split('\n').map(t=>t.trim()).includes(s));
     r.style.display=show?'':'none';if(show)vis++;
    });
