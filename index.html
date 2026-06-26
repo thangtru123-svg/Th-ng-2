@@ -1444,7 +1444,104 @@ function buildDailyReportPage(rowsCa12,rowsLTC,rowsCa12TTS,rowsODR,rowsOPR,selDa
   ${tbl1}
   ${ana1?`<div class="analysis-box">${ana1}</div>`:''}
  </div>
- ${tbl2Html}`;
+ ${tbl2Html}
+ ${buildWeakBCSection(selDate)}`;
+}
+
+/* ===== 3 BC YẾU NHẤT (p16) ===== */
+function buildWeakBCSection(selDate){
+ const bcRows=window._D?.gtcTotalBC;
+ const fdRows=window._FD?.totalBC;
+ const agRows=window._agingRows;
+ if(!bcRows||bcRows.length<2)return'';
+ // Available dates from BC sheet
+ const datesBC=[...new Set(bcRows.slice(1).map(r=>isoD(r[2])).filter(d=>d))].sort();
+ if(!datesBC.length)return'';
+ let latIdx=selDate&&datesBC.includes(selDate)?datesBC.indexOf(selDate):datesBC.length-1;
+ if(latIdx<0)latIdx=datesBC.length-1;
+ const latest=datesBC[latIdx];
+ const prev=latIdx>0?datesBC[latIdx-1]:null;
+ const fmtS=iso=>iso?`${iso.slice(8,10)}/${iso.slice(5,7)}`:'—';
+ // GTC BC: col[0]=AM, col[1]=BC, col[2]=Ngày, col[3]=Vol, col[5]=%GTC, col[6]=nGTC
+ function buildBCData(d){
+  const m={};
+  bcRows.slice(1).forEach(r=>{
+   if(isoD(r[2])!==d)return;
+   const bc=(r[1]||'').trim(),am=(r[0]||'').trim();
+   if(!bc||bc.toLowerCase().includes('grand'))return;
+   if(!m[bc])m[bc]={bc,ams:[],vol:0,nGTC:0};
+   if(am&&!am.toLowerCase().includes('grand')&&!m[bc].ams.includes(am))m[bc].ams.push(am);
+   m[bc].vol+=Math.round(parseFloat(r[3])||0);
+   m[bc].nGTC+=Math.round(parseFloat(r[6])||0);
+  });
+  Object.values(m).forEach(x=>{x.pctGTC=x.vol>0?x.nGTC/x.vol*100:0;x.ton=Math.max(0,x.vol-x.nGTC);x.amList=x.ams.join(' / ');});
+  return m;
+ }
+ // FD BC: col[0]=BC, col[1]=Ngày, col[3]=%FD
+ function buildFDData(d){
+  const m={};
+  if(!fdRows)return m;
+  fdRows.slice(1).forEach(r=>{if(isoD(r[1])!==d)return;const bc=(r[0]||'').trim();if(bc&&!bc.toLowerCase().includes('grand'))m[bc]=parsePct(r[3]);});
+  return m;
+ }
+ // Aging: r[2]=BC, r[11]=date dạng DD/MM/YYYY
+ function buildAgData(d){
+  const m={};
+  if(!agRows)return m;
+  const agISO=s=>{const p=(s||'').split('/');return p.length===3?`${p[2]}-${p[1]}-${p[0]}`:isoD(s);};
+  agRows.forEach(r=>{if(agISO(r[11])!==d)return;const bc=(r[2]||'').trim();if(bc)m[bc]=(m[bc]||0)+1;});
+  return m;
+ }
+ const bL=buildBCData(latest),bP=prev?buildBCData(prev):{};
+ const fL=buildFDData(latest),fP=prev?buildFDData(prev):{};
+ const aL=buildAgData(latest),aP=prev?buildAgData(prev):{};
+ const list=Object.values(bL).filter(b=>b.vol>0).map(b=>({
+  ...b,prevPct:bP[b.bc]?.pctGTC??null,prevTon:bP[b.bc]?.ton??null,prevNGTC:bP[b.bc]?.nGTC??null,
+  fd:fL[b.bc]??null,prevFd:fP[b.bc]??null,aging:aL[b.bc]||0,prevAging:aP[b.bc]||0
+ }));
+ list.sort((a,b)=>a.pctGTC-b.pctGTC);
+ const top3=list.slice(0,3);
+ if(!top3.length)return'';
+ const medals=['🥇','🥈','🥉'];
+ const borders=['#D97706','#94A3B8','#92400E'];
+ const hdrs=['#B45309','#64748B','#78350F'];
+ const arw=(c,p,lb=false)=>{if(p===null||p===undefined)return'';const d=c-p;if(Math.abs(d)<0.05)return'<span style="color:#94A3B8">→</span>';const g=lb?d<0:d>0;return`<span style="color:${g?'#16A34A':'#DC2626'}">${d>0?'▲':'▼'}</span>`;};
+ const dif=(c,p,isPct=false,lb=false)=>{if(p===null||p===undefined)return'';const d=c-p;if(Math.abs(d)<0.05)return'';const g=lb?d<0:d>0;const v=isPct?`${d>0?'+':''}${d.toFixed(1)}%`:`${d>0?'+':''}${Math.round(d)}`;return`<span style="color:${g?'#16A34A':'#DC2626'};font-size:10px">(${v})</span>`;};
+ const mRow=(icon,lbl,c,cS,p,pS,lb=false)=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid #F1F5F9;gap:4px"><span style="color:#64748B;font-size:11.5px;flex-shrink:0">${icon} ${lbl}</span><span style="font-size:12px;font-weight:600;text-align:right">${cS} ${arw(c,p,lb)} ${dif(c,p,typeof c==='number'&&c<200,lb)}${p!==null&&p!==undefined?`<span style="font-size:10px;color:#94A3B8;margin-left:3px">/${pS}</span>`:''}</span></div>`;
+ const cards=top3.map((b,i)=>`<div style="flex:1;min-width:250px;max-width:380px;border:2px solid ${borders[i]};border-radius:12px;overflow:hidden;background:#fff;box-shadow:0 2px 8px rgba(0,0,0,0.07)">
+  <div style="background:${hdrs[i]};padding:10px 14px;display:flex;align-items:center;gap:10px">
+   <span style="font-size:22px">${medals[i]}</span>
+   <div style="flex:1;min-width:0"><div style="font-weight:700;color:#fff;font-size:13.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${b.bc}</div><div style="color:rgba(255,255,255,0.85);font-size:10.5px;margin-top:2px">${b.amList||'—'}</div></div>
+   <div style="text-align:right;flex-shrink:0"><div style="font-size:22px;font-weight:800;color:#fff">${b.pctGTC.toFixed(1)}%</div><div style="font-size:10px;color:rgba(255,255,255,0.8)">%GTC</div></div>
+  </div>
+  <div style="padding:10px 14px">
+   ${mRow('📦','Số đơn GTC',b.nGTC,fmt(b.nGTC),b.prevNGTC,b.prevNGTC!==null?fmt(b.prevNGTC):null)}
+   ${mRow('📊','% GTC',b.pctGTC,b.pctGTC.toFixed(1)+'%',b.prevPct,b.prevPct!==null?b.prevPct.toFixed(1)+'%':null)}
+   ${mRow('🕐','Đơn tồn',b.ton,fmt(b.ton),b.prevTon,b.prevTon!==null?fmt(b.prevTon):null,true)}
+   ${mRow('⚠️','Aging >5 ngày',b.aging,b.aging+'đ',b.prevAging,b.prevAging+'đ',true)}
+   ${b.fd!==null?mRow('↩️','FD%',b.fd,b.fd.toFixed(1)+'%',b.prevFd,b.prevFd!==null?b.prevFd.toFixed(1)+'%':null,true):'<div style="padding:5px 0;font-size:11px;color:#94A3B8">↩️ FD% — không có dữ liệu</div>'}
+  </div>
+ </div>`).join('');
+ const dateOpts=datesBC.slice().reverse().map(d=>`<option value="${d}"${d===latest?' selected':''}>${fmtS(d)}</option>`).join('');
+ return`<div class="card" id="weakBCSection">
+  <div class="card-header">
+   <div class="card-title"><div class="card-icon">📊</div>C. 3 Bưu Cục Yếu Nhất — 5 Chỉ Số</div>
+   <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+    <span style="font-size:12px;color:var(--text-sub)">Ngày:</span>
+    <select onchange="rebuildWeakBC(this.value)" style="font-size:12px;padding:3px 8px;border:1px solid #CBD5E1;border-radius:6px;background:#fff;cursor:pointer">${dateOpts}</select>
+    <span style="font-size:12px;color:var(--text-sub)">vs ${prev?fmtS(prev):'—'}</span>
+   </div>
+  </div>
+  <div id="weakBCCards" style="display:flex;gap:14px;flex-wrap:wrap;padding:14px">${cards}</div>
+  <div style="padding:4px 14px 12px;font-size:11.5px;color:var(--text-sub)">Xếp hạng theo %GTC tổng ngày thấp nhất · ${fmtS(latest)} vs ${prev?fmtS(prev):'—'} · Hiển thị 3 / ${list.length} bưu cục có đơn</div>
+ </div>`;
+}
+function rebuildWeakBC(dateISO){
+ const el=document.getElementById('weakBCSection');
+ if(!el)return;
+ const tmp=document.createElement('div');
+ tmp.innerHTML=buildWeakBCSection(dateISO);
+ if(tmp.firstElementChild)el.replaceWith(tmp.firstElementChild);
 }
 
 /* ===== INIT ===== */
