@@ -416,7 +416,7 @@ window._GTC_MAP_AM={};window._GTC_MAP_BC={};
 function buildGTCMap(rows,nameCol,dateCol,nGTCCol){
  const map={};if(!rows||rows.length<2)return map;
  rows.slice(1).forEach(r=>{
-  const name=(r[nameCol]||'').trim().replace(/\s*,\s*/g,','),d=isoD(r[dateCol]);
+  const name=(r[nameCol]||'').trim().split(',').map(s=>s.trim()).sort().join(','),d=isoD(r[dateCol]);
   if(!name||!d||name.toLowerCase().includes('grand total'))return;
   const n=Math.round(parseFloat(r[nGTCCol])||0);
   if(!map[name])map[name]={};
@@ -477,7 +477,7 @@ function buildFDDayTable(sheetArr,labels,dates,nameLabel,gtcMap){
  // Số trả = fd/100 × nGTC / (1 - fd/100)
  const calcSoTra=(name,d,fd)=>{
   if(!gtcMap||fd===null||fd>=100)return null;
-  const normName=name.replace(/\s*,\s*/g,',');
+  const normName=name.split(',').map(s=>s.trim()).sort().join(',');
   const nGTC=gtcMap[normName]?.[d]??null;
   if(nGTC===null||nGTC===0)return null;
   return Math.round(fd/100*nGTC/(1-fd/100));
