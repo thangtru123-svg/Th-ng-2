@@ -237,8 +237,8 @@ tr.tot td{background:#FFF0EB!important;font-weight:800!important;border-top:2px 
 
 <script>
 /* ===== AUTH CONFIG — ĐỀ QUÂN ĐIỀN VÀO ĐÂY ===== */
-const AUTH_CLIENT_ID   = 'YOUR_GOOGLE_CLIENT_ID';   // Điền Client ID từ Google Cloud Console
-const WHITELIST_SHEET_ID = 'YOUR_WHITELIST_SHEET_ID'; // Điền Sheet ID bảng email được phép
+const AUTH_CLIENT_ID   = '307904146149-7kg0dkc0rbcm5vdjfe1ltnvrlg3mv1uv.apps.googleusercontent.com';
+const WHITELIST_SHEET_ID = '1w4Ufjf6_P46bfK5LxW0ORqUhr__q1ghNqfGZ3_w6KQ0';
 
 /* ===== AUTH LOGIC ===== */
 function _decodeJWT(t){try{const b=t.split('.')[1].replace(/-/g,'+').replace(/_/g,'/');return JSON.parse(decodeURIComponent(atob(b).split('').map(c=>'%'+('00'+c.charCodeAt(0).toString(16)).slice(-2)).join('')));}catch{return{};}}
