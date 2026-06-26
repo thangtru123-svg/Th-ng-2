@@ -1503,37 +1503,53 @@ function buildWeakBCSection(selDate){
  const top3=list.slice(0,3);
  if(!top3.length)return'';
  const medals=['🥇','🥈','🥉'];
- const borders=['#D97706','#94A3B8','#92400E'];
- const hdrs=['#B45309','#64748B','#78350F'];
- const arw=(c,p,lb=false)=>{if(p===null||p===undefined)return'';const d=c-p;if(Math.abs(d)<0.05)return'<span style="color:#94A3B8">→</span>';const g=lb?d<0:d>0;return`<span style="color:${g?'#16A34A':'#DC2626'}">${d>0?'▲':'▼'}</span>`;};
- const dif=(c,p,isPct=false,lb=false)=>{if(p===null||p===undefined)return'';const d=c-p;if(Math.abs(d)<0.05)return'';const g=lb?d<0:d>0;const v=isPct?`${d>0?'+':''}${d.toFixed(1)}%`:`${d>0?'+':''}${Math.round(d)}`;return`<span style="color:${g?'#16A34A':'#DC2626'};font-size:10px">(${v})</span>`;};
- const mRow=(icon,lbl,c,cS,p,pS,lb=false)=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid #F1F5F9;gap:4px"><span style="color:#64748B;font-size:11.5px;flex-shrink:0">${icon} ${lbl}</span><span style="font-size:12px;font-weight:600;text-align:right">${cS} ${arw(c,p,lb)} ${dif(c,p,typeof c==='number'&&c<200,lb)}${p!==null&&p!==undefined?`<span style="font-size:10px;color:#94A3B8;margin-left:3px">/${pS}</span>`:''}</span></div>`;
- const cards=top3.map((b,i)=>`<div style="flex:1;min-width:250px;max-width:380px;border:2px solid ${borders[i]};border-radius:12px;overflow:hidden;background:#fff;box-shadow:0 2px 8px rgba(0,0,0,0.07)">
-  <div style="background:${hdrs[i]};padding:10px 14px;display:flex;align-items:center;gap:10px">
-   <span style="font-size:22px">${medals[i]}</span>
-   <div style="flex:1;min-width:0"><div style="font-weight:700;color:#fff;font-size:13.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${b.bc}</div><div style="color:rgba(255,255,255,0.85);font-size:10.5px;margin-top:2px">${b.amList||'—'}</div></div>
-   <div style="text-align:right;flex-shrink:0"><div style="font-size:22px;font-weight:800;color:#fff">${b.pctGTC.toFixed(1)}%</div><div style="font-size:10px;color:rgba(255,255,255,0.8)">%GTC</div></div>
-  </div>
-  <div style="padding:10px 14px">
-   ${mRow('📦','Số đơn GTC',b.nGTC,fmt(b.nGTC),b.prevNGTC,b.prevNGTC!==null?fmt(b.prevNGTC):null)}
-   ${mRow('📊','% GTC',b.pctGTC,b.pctGTC.toFixed(1)+'%',b.prevPct,b.prevPct!==null?b.prevPct.toFixed(1)+'%':null)}
-   ${mRow('🕐','Đơn tồn',b.ton,fmt(b.ton),b.prevTon,b.prevTon!==null?fmt(b.prevTon):null,true)}
-   ${mRow('⚠️','Aging >5 ngày',b.aging,b.aging+'đ',b.prevAging,b.prevAging+'đ',true)}
-   ${b.fd!==null?mRow('↩️','FD%',b.fd,b.fd.toFixed(1)+'%',b.prevFd,b.prevFd!==null?b.prevFd.toFixed(1)+'%':null,true):'<div style="padding:5px 0;font-size:11px;color:#94A3B8">↩️ FD% — không có dữ liệu</div>'}
-  </div>
- </div>`).join('');
+ const fN=n=>(+n||0).toLocaleString('vi-VN');
+ const parseBC=name=>{const m=name.match(/^([A-Z]{2,4})\s+(.+)/);return m?{code:m[1],short:m[2]}:{code:'',short:name};};
+ const deltaT=(curr,prev,isPercent=false,lowerBetter=false)=>{
+  if(prev===null||prev===undefined)return'';
+  const d=curr-prev;if(Math.abs(d)<0.05)return'<span style="color:#94A3B8">→ không đổi</span>';
+  const good=lowerBetter?d<0:d>0;const color=good?'#16A34A':'#DC2626';
+  const sign=d>0?'+':'';const arrow=d>0?'▲':'▼';
+  const val=isPercent?`${sign}${d.toFixed(1)}%`:`${sign}${fN(Math.round(d))} đơn`;
+  return`<span style="color:${color}">→ ${arrow}${val}</span>`;
+ };
+ const lines=top3.map((b,i)=>{
+  const{code,short}=parseBC(b.bc);
+  const codeStr=code?`(${code}) `:'';
+  const prevD=prev?fmtS(prev):fmtS(latest);
+  const parts=[
+   `Số đơn GTC: <b>${fN(b.nGTC)}</b> (${prevD}: ${b.prevNGTC!==null?fN(b.prevNGTC):'—'}) ${deltaT(b.nGTC,b.prevNGTC)}`,
+   `% GTC: <b>${b.pctGTC.toFixed(1)}%</b> (${b.prevPct!==null?b.prevPct.toFixed(1)+'%':'—'}) ${deltaT(b.pctGTC,b.prevPct,true)}`,
+   `Số đơn tồn: <b>${fN(b.ton)}</b> (${b.prevTon!==null?fN(b.prevTon):'—'}) ${deltaT(b.ton,b.prevTon,false,true)}`,
+   `Aging >5 ngày: <b>${b.aging}</b> (${b.prevAging}) ${deltaT(b.aging,b.prevAging,false,true)}`,
+   b.fd!==null?`FD: <b>${b.fd.toFixed(1)}%</b> (${b.prevFd!==null?b.prevFd.toFixed(1)+'%':'—'}) ${deltaT(b.fd,b.prevFd,true,true)}`:'FD: —',
+  ];
+  return`<div style="padding:7px 0;border-bottom:1px solid #F1F5F9;font-size:13px;line-height:1.8">${medals[i]} <b>${codeStr}${short}</b> — AM ${b.amList||'—'} &nbsp;&nbsp;•&nbsp;&nbsp; ${parts.join(' &nbsp;<span style="color:#E2E8F0">•</span>&nbsp; ')}</div>`;
+ }).join('');
+ // Auto summary
+ const summaryParts=[];
+ const fdUp=top3.filter(b=>b.fd!==null&&b.prevFd!==null&&b.fd>b.prevFd+0.5);
+ const agUp=top3.filter(b=>b.aging>b.prevAging+5);
+ const gtcImprove=top3.filter(b=>b.prevPct!==null&&b.pctGTC>b.prevPct+1);
+ const tonDown=top3.filter(b=>b.prevTon!==null&&b.ton<b.prevTon);
+ if(fdUp.length)summaryParts.push(`${fdUp.map(b=>parseBC(b.bc).short).join(' & ')} — FD đang TĂNG ⚠️`);
+ if(agUp.length)summaryParts.push(`${agUp.map(b=>`${parseBC(b.bc).short} Aging vọt +${b.aging-b.prevAging} đơn`).join(', ')}`);
+ if(tonDown.length>0&&!fdUp.length)summaryParts.push(`tồn kho đã giảm ở ${tonDown.map(b=>parseBC(b.bc).short).join(', ')}`);
+ if(gtcImprove.length>0)summaryParts.push(`${gtcImprove.map(b=>parseBC(b.bc).short).join(', ')} — %GTC đã tốt lên`);
+ const summary=summaryParts.length?summaryParts.join(', bù lại '):'3 BC này cần theo dõi sát 👀';
  const dateOpts=datesBC.slice().reverse().map(d=>`<option value="${d}"${d===latest?' selected':''}>${fmtS(d)}</option>`).join('');
  return`<div class="card" id="weakBCSection">
   <div class="card-header">
-   <div class="card-title"><div class="card-icon">📊</div>C. 3 Bưu Cục Yếu Nhất — 5 Chỉ Số</div>
+   <div class="card-title"><div class="card-icon">📊</div>C. 3 BC Yếu Nhất — 5 Chỉ Số (${fmtS(latest)} vs ${prev?fmtS(prev):'—'})</div>
    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
     <span style="font-size:12px;color:var(--text-sub)">Ngày:</span>
     <select onchange="rebuildWeakBC(this.value)" style="font-size:12px;padding:3px 8px;border:1px solid #CBD5E1;border-radius:6px;background:#fff;cursor:pointer">${dateOpts}</select>
     <span style="font-size:12px;color:var(--text-sub)">vs ${prev?fmtS(prev):'—'}</span>
    </div>
   </div>
-  <div id="weakBCCards" style="display:flex;gap:14px;flex-wrap:wrap;padding:14px">${cards}</div>
-  <div style="padding:4px 14px 12px;font-size:11.5px;color:var(--text-sub)">Xếp hạng theo %GTC tổng ngày thấp nhất · ${fmtS(latest)} vs ${prev?fmtS(prev):'—'} · Hiển thị 3 / ${list.length} bưu cục có đơn</div>
+  <div style="padding:10px 18px">${lines}
+   <div style="margin-top:10px;padding:8px 12px;background:#FEF9EE;border-left:3px solid #F59E0B;border-radius:4px;font-size:12.5px;color:#78350F;line-height:1.6">📌 <b>Tổng hợp:</b> ${summary}</div>
+  </div>
  </div>`;
 }
 function rebuildWeakBC(dateISO){
