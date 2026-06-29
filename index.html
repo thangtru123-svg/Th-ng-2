@@ -247,6 +247,7 @@ const WHITELIST_SHEET_ID = '1w4Ufjf6_P46bfK5LxW0ORqUhr__q1ghNqfGZ3_w6KQ0';
 const TG_TOKEN   = '7471088067:AAGje2KrjUTzlkIiU05h1bm21IUkB0J2J0s';
 const TG_AGING_CHAT   = -1003802272887;
 const TG_AGING_THREAD = 4; // topic "Aging/ Backlog"
+const TG_VH_THREAD   = 5; // topic "Vận hành chung"
 
 /* ===== AUTH LOGIC ===== */
 function _decodeJWT(t){try{const b=t.split('.')[1].replace(/-/g,'+').replace(/_/g,'/');return JSON.parse(decodeURIComponent(atob(b).split('').map(c=>'%'+('00'+c.charCodeAt(0).toString(16)).slice(-2)).join('')));}catch{return{};}}
@@ -445,7 +446,7 @@ function buildGTCPage(rowsAM,rowsBC,title,pid){
  const mkOpts=sv=>allD.map(d=>`<option value="${d}"${d===sv?' selected':''}>${shortDDow(d)}</option>`).join('');
  return`<div class="page-header">
   <div class="page-title">${title}</div>
-  <div class="page-meta"><span class="tag tag-orange">📅 Lọc theo ngày · Nguồn: Google Sheet</span><span>%GTC: Xanh ≥65% · Vàng ≥50% · Đỏ &lt;50%</span></div>
+  <div class="page-meta"><span class="tag tag-orange">📅 Lọc theo ngày · Nguồn: Google Sheet</span><span>%GTC: Xanh ≥65% · Vàng ≥50% · Đỏ &lt;50%</span>${pid==='p1'?`<button onclick="sendGTCTotalToTelegram()" style="display:inline-block;background:#229ED9;color:#fff;border:none;border-radius:8px;padding:7px 16px;font-size:12px;font-weight:700;cursor:pointer;flex-shrink:0">📤 Gửi Telegram</button>`:''}</div>
  </div>
  <div class="date-filter-bar">
   <label>Từ ngày:</label>
@@ -453,7 +454,7 @@ function buildGTCPage(rowsAM,rowsBC,title,pid){
   <label>Đến ngày:</label>
   <select id="${pid}_dTo" onchange="renderGTC('${pid}')">${mkOpts(dTo)}</select>
  </div>
- <div class="card"><div class="card-header"><div class="card-title"><div class="card-icon">👤</div>A. Theo AM</div><div class="card-info">Sắp xếp: %GTC cao → thấp · Cố định cột tên</div></div><div id="${pid}_amTable"></div></div>
+ <div class="card" id="${pid}_amCard"><div class="card-header"><div class="card-title"><div class="card-icon">👤</div>A. Theo AM</div><div class="card-info">Sắp xếp: %GTC cao → thấp · Cố định cột tên</div></div><div id="${pid}_amTable"></div></div>
  <div class="card"><div class="card-header"><div class="card-title"><div class="card-icon">🏪</div>B. Theo Bưu Cục</div><div class="card-info">Top 30 BC · Grand Total cố định cuối</div></div><div id="${pid}_bcTable"></div></div>`;
 }
 
@@ -1376,6 +1377,44 @@ async function sendAgingToTelegram(){
  }
 }
 
+/* ===== TELEGRAM: P16 VẬN HÀNH NGÀY ===== */
+async function sendP16ToTelegram(){
+ const p16=document.getElementById('p16');
+ if(!p16||getComputedStyle(p16).display==='none'){
+  const nav=document.querySelector('[onclick="show(\'p16\',this)"]');
+  if(nav)nav.click();
+  await new Promise(r=>setTimeout(r,600));
+ }
+ const cardA=document.getElementById('p16-card-a');
+ const cardB=document.getElementById('p16-card-b');
+ if(!cardA){alert('Chưa có dữ liệu trang Vận Hành Ngày!');return;}
+ try{
+  const img1=await _captureEl('p16-card-a');
+  await _tgSendPhoto(TG_AGING_CHAT,TG_VH_THREAD,img1,`📦 <b>BÁO CÁO VẬN HÀNH NGÀY</b>`);
+  if(cardB&&cardB.innerHTML.trim()){
+   await new Promise(r=>setTimeout(r,600));
+   const img2=await _captureEl('p16-card-b');
+   await _tgSendPhoto(TG_AGING_CHAT,TG_VH_THREAD,img2,`🎯 <b>BÁO CÁO TỶ LỆ GTC TTS</b>`);
+  }
+ }catch(e){console.error('TG P16 Error:',e);alert('Lỗi gửi Telegram: '+e.message);}
+}
+
+/* ===== TELEGRAM: P1 GTC TOTAL THEO AM ===== */
+async function sendGTCTotalToTelegram(){
+ const p1=document.getElementById('p1');
+ if(!p1||getComputedStyle(p1).display==='none'){
+  const nav=document.querySelector('[onclick="show(\'p1\',this)"]');
+  if(nav)nav.click();
+  await new Promise(r=>setTimeout(r,600));
+ }
+ const card=document.getElementById('p1_amCard');
+ if(!card){alert('Chưa có dữ liệu GTC Total!');return;}
+ try{
+  const img=await _captureEl('p1_amCard');
+  await _tgSendPhoto(TG_AGING_CHAT,TG_VH_THREAD,img,`📦 <b>TỔNG QUAN GTC TOTAL — THEO AM</b>`);
+ }catch(e){console.error('TG GTC Error:',e);alert('Lỗi gửi Telegram: '+e.message);}
+}
+
 /* ===== AI PAGE ===== */
 window._D={};
 function buildAIPage(){
@@ -1677,14 +1716,14 @@ function buildDailyReportPage(rowsCa12,rowsLTC,rowsCa12TTS,rowsODR,rowsOPR,selDa
  }
  return`<div class="page-header">
   <div class="page-title">📋 Báo Cáo Vận Hành Ngày</div>
-  <div class="page-meta"><span>Chọn ngày: ${dateSelect}</span><span>Dữ liệu: Ca 1 · Ca 2 · Hàng Tồn · Tổng Giao · LẤY</span></div>
+  <div class="page-meta"><span>Chọn ngày: ${dateSelect}</span><span>Dữ liệu: Ca 1 · Ca 2 · Hàng Tồn · Tổng Giao · LẤY</span><button onclick="sendP16ToTelegram()" style="display:inline-block;background:#229ED9;color:#fff;border:none;border-radius:8px;padding:7px 16px;font-size:12px;font-weight:700;cursor:pointer;flex-shrink:0">📤 Gửi Telegram</button></div>
  </div>
- <div class="card">
+ <div class="card" id="p16-card-a">
   <div class="card-header"><div class="card-title"><div class="card-icon">📦</div>A. Báo Cáo Vận Hành Ngày</div><div class="card-info">Sắp xếp: %GTC Tổng thấp → cao</div></div>
   ${tbl1}
   ${ana1?`<div class="analysis-box">${ana1}</div>`:''}
  </div>
- ${tbl2Html}
+ <div id="p16-card-b">${tbl2Html}</div>
  ${buildWeakBCSection(selDate)}`;
 }
 
