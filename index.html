@@ -1681,7 +1681,6 @@ function buildWeeklyReport(){
  const wALabel=wLabel(wA),wBLabel=wLabel(wB);
  const datesA=new Set(),datesB=new Set();
  src.slice(1).forEach(r=>{const d=isoD(r[1]);if(d){const w=getW(d);if(w===wA)datesA.add(d);if(w===wB)datesB.add(d);}});
- // Cũng build dateSet từ các nguồn khác để phủ đủ
  const buildDS=(rows,dcol)=>{const a=new Set(),b=new Set();(rows||[]).slice(1).forEach(r=>{const d=isoD(r[dcol]);if(d){const w=getW(d);if(w===wA)a.add(d);if(w===wB)b.add(d);}});return{a,b};};
  const isGrand=r=>(r[0]||'').toLowerCase().includes('grand total');
  const p0=(vol,cnt)=>vol>0?cnt/vol*100:0;
@@ -1690,6 +1689,8 @@ function buildWeeklyReport(){
  const gco=v=>v>=90?'g':v>=80?'m':'b';
  const gcfd=v=>v<10?'g':v<15?'m':'b';
  const cs='padding:7px 10px;';
+ const ANA=(html)=>`<div class="analysis-box">${html}</div>`;
+ const dc=(d,rev=false)=>rev?(d<=0?'var(--green)':'var(--red)'):(d>=0?'var(--green)':'var(--red)');
 
  /* ── Bảng 1: GTC Total Vùng Ca1/Ca2/Hàng Tồn ── */
  function bld1(){
@@ -1709,17 +1710,27 @@ function buildWeeklyReport(){
    <th style="${cs}text-align:right;border-left:2px solid #E5E7EB">Vol</th><th style="${cs}text-align:right">nGTC</th><th style="${cs}text-align:center">%GTC</th>
    <th style="${cs}text-align:center;border-left:2px solid #E5E7EB">${wBLabel}−${wALabel}</th>
   </tr></thead><tbody>`;
-  loais.forEach(l=>{const av=a[l]||{v:0,n:0,g:0},bv=b[l]||{v:0,n:0,g:0};tA.v+=av.v;tA.n+=av.n;tB.v+=bv.v;tB.n+=bv.n;const d=bv.g-av.g,dc=d>=0?'var(--green)':'var(--red)';
+  loais.forEach(l=>{const av=a[l]||{v:0,n:0,g:0},bv=b[l]||{v:0,n:0,g:0};tA.v+=av.v;tA.n+=av.n;tB.v+=bv.v;tB.n+=bv.n;const dv=bv.g-av.g,dcolor=dv>=0?'var(--green)':'var(--red)';
    h+=`<tr><td style="${cs}font-weight:600">${l}</td>
     <td style="${cs}text-align:right;border-left:2px solid #F3F4F6">${num(av.v)}</td><td style="${cs}text-align:right">${num(av.n)}</td><td style="${cs}text-align:center"><span class="pct ${gc(av.g)}">${av.g.toFixed(1)}%</span></td>
     <td style="${cs}text-align:right;border-left:2px solid #F3F4F6">${num(bv.v)}</td><td style="${cs}text-align:right">${num(bv.n)}</td><td style="${cs}text-align:center"><span class="pct ${gc(bv.g)}">${bv.g.toFixed(1)}%</span></td>
-    <td style="${cs}text-align:center;font-weight:700;color:${dc};border-left:2px solid #F3F4F6">${d>=0?'+':''}${d.toFixed(1)}%</td></tr>`;});
+    <td style="${cs}text-align:center;font-weight:700;color:${dcolor};border-left:2px solid #F3F4F6">${dv>=0?'+':''}${dv.toFixed(1)}%</td></tr>`;});
   const tAg=p0(tA.v,tA.n),tBg=p0(tB.v,tB.n),td=tBg-tAg,tdc=td>=0?'var(--green)':'var(--red)';
   h+=`<tr class="tot"><td style="${cs}">Tổng</td>
    <td style="${cs}text-align:right;border-left:2px solid #F3F4F6">${num(tA.v)}</td><td style="${cs}text-align:right">${num(tA.n)}</td><td style="${cs}text-align:center"><span class="pct ${gc(tAg)}">${tAg.toFixed(1)}%</span></td>
    <td style="${cs}text-align:right;border-left:2px solid #F3F4F6">${num(tB.v)}</td><td style="${cs}text-align:right">${num(tB.n)}</td><td style="${cs}text-align:center"><span class="pct ${gc(tBg)}">${tBg.toFixed(1)}%</span></td>
    <td style="${cs}text-align:center;font-weight:700;color:${tdc};border-left:2px solid #F3F4F6">${td>=0?'+':''}${td.toFixed(1)}%</td></tr>`;
-  return h+'</tbody></table></div>';
+  h+='</tbody></table></div>';
+  // Analysis
+  const worst=loais.sort((x,y)=>(b[x]?.g??999)-(b[y]?.g??999))[0];
+  const best=loais.sort((x,y)=>(b[y]?.g??0)-(b[x]?.g??0))[0];
+  const pctC=tBg>=65?'var(--green)':tBg>=50?'var(--yellow)':'var(--red)';
+  const dC=td>=0?'var(--green)':'var(--red)';
+  let ana=`📦 <strong>${wBLabel}:</strong> Tổng vol <strong>${num(tB.v)}</strong> đơn · %GTC tổng <strong style="color:${pctC}">${tBg.toFixed(1)}%</strong>`;
+  ana+=` · So với ${wALabel}: <span style="color:${dC};font-weight:700">${td>=0?'▲ tăng':'▼ giảm'} ${Math.abs(td).toFixed(1)}%</span> (${tAg.toFixed(1)}% → ${tBg.toFixed(1)}%)`;
+  if(worst&&b[worst])ana+=`<br>📍 <strong>Loại kém nhất ${wBLabel}:</strong> <strong>${worst}</strong> — %GTC <span style="color:var(--red);font-weight:700">${b[worst].g.toFixed(1)}%</span>`;
+  if(best&&b[best]&&best!==worst)ana+=` · <strong>Tốt nhất:</strong> <strong>${best}</strong> — %GTC <span style="color:var(--green);font-weight:700">${b[best].g.toFixed(1)}%</span>`;
+  return h+ANA(ana);
  }
 
  /* ── Bảng 2: GTC theo AM ── */
@@ -1738,12 +1749,25 @@ function buildWeeklyReport(){
    <th style="${cs}text-align:right;border-left:2px solid #E5E7EB">Vol</th><th style="${cs}text-align:right">nGTC</th><th style="${cs}text-align:center">%GTC</th>
    <th style="${cs}text-align:center;border-left:2px solid #E5E7EB">${wBLabel}−${wALabel}</th>
   </tr></thead><tbody>`;
-  names.forEach((n,i)=>{const av=a[n]||{v:0,nG:0,g:0},bv=b[n]||{v:0,nG:0,g:0};const d=bv.g-av.g,dc=d>=0?'var(--green)':'var(--red)';
+  names.forEach((n,i)=>{const av=a[n]||{v:0,nG:0,g:0},bv=b[n]||{v:0,nG:0,g:0};const dv=bv.g-av.g,dcolor=dv>=0?'var(--green)':'var(--red)';
    h+=`<tr><td style="${cs}text-align:center;color:var(--text-sub);font-size:11px">${i+1}</td><td style="${cs}font-weight:700">${n}</td>
     <td style="${cs}text-align:right;border-left:2px solid #F3F4F6">${num(av.v)}</td><td style="${cs}text-align:right">${num(av.nG)}</td><td style="${cs}text-align:center"><span class="pct ${gc(av.g)}">${av.g.toFixed(1)}%</span></td>
     <td style="${cs}text-align:right;border-left:2px solid #F3F4F6">${num(bv.v)}</td><td style="${cs}text-align:right">${num(bv.nG)}</td><td style="${cs}text-align:center"><span class="pct ${gc(bv.g)}">${bv.g.toFixed(1)}%</span></td>
-    <td style="${cs}text-align:center;font-weight:700;color:${dc};border-left:2px solid #F3F4F6">${d>=0?'+':''}${d.toFixed(1)}%</td></tr>`;});
-  return h+'</tbody></table></div>';
+    <td style="${cs}text-align:center;font-weight:700;color:${dcolor};border-left:2px solid #F3F4F6">${dv>=0?'+':''}${dv.toFixed(1)}%</td></tr>`;});
+  h+='</tbody></table></div>';
+  // Analysis
+  const withB=names.filter(n=>b[n]&&b[n].v>0);
+  const worst=withB[0],best=withB[withB.length-1];
+  const improved=withB.filter(n=>a[n]&&b[n].g>a[n].g);
+  const degraded=withB.filter(n=>a[n]&&b[n].g<a[n].g);
+  const topImp=withB.filter(n=>a[n]).sort((x,y)=>(b[y].g-a[y].g)-(b[x].g-a[x].g))[0];
+  const topDeg=withB.filter(n=>a[n]).sort((x,y)=>(b[x].g-a[x].g)-(b[y].g-a[y].g))[0];
+  let ana=`👤 <strong>${wBLabel}:</strong> <strong>${withB.length} AM</strong> có dữ liệu · <span style="color:var(--green);font-weight:700">${improved.length} AM ↑ cải thiện</span> · <span style="color:var(--red);font-weight:700">${degraded.length} AM ↓ tụt giảm</span>`;
+  if(worst&&b[worst])ana+=`<br>📍 AM tệ nhất ${wBLabel}: <strong>${worst}</strong> — %GTC <span style="color:var(--red);font-weight:700">${b[worst].g.toFixed(1)}%</span>`;
+  if(best&&b[best]&&best!==worst)ana+=` · Tốt nhất: <strong>${best}</strong> — <span style="color:var(--green);font-weight:700">${b[best].g.toFixed(1)}%</span>`;
+  if(topImp&&a[topImp])ana+=`<br>📈 Cải thiện mạnh nhất: <strong>${topImp}</strong> <span style="color:var(--green);font-weight:700">${(b[topImp].g-a[topImp].g>=0?'+':'')}${(b[topImp].g-a[topImp].g).toFixed(1)}%</span> (${a[topImp].g.toFixed(1)}% → ${b[topImp].g.toFixed(1)}%)`;
+  if(topDeg&&a[topDeg])ana+=` · Tụt nhiều nhất: <strong>${topDeg}</strong> <span style="color:var(--red);font-weight:700">${(b[topDeg].g-a[topDeg].g).toFixed(1)}%</span> (${a[topDeg].g.toFixed(1)}% → ${b[topDeg].g.toFixed(1)}%)`;
+  return h+ANA(ana);
  }
 
  /* ── Bảng 3: Top 20 BC GTC tệ nhất T26 ── */
@@ -1762,33 +1786,64 @@ function buildWeeklyReport(){
    <th style="${cs}text-align:right;border-left:2px solid #E5E7EB">Vol</th><th style="${cs}text-align:right">nGTC</th><th style="${cs}text-align:center">%GTC</th>
    <th style="${cs}text-align:center;border-left:2px solid #E5E7EB">${wBLabel}−${wALabel}</th>
   </tr></thead><tbody>`;
-  top20.forEach((bc,i)=>{const av=a[bc]||{v:0,nG:0,g:0},bv=b[bc]||{v:0,nG:0,g:0};const amN=bv.am||av.am||'';const d=bv.g-av.g,dc=d>=0?'var(--green)':'var(--red)';
+  top20.forEach((bc,i)=>{const av=a[bc]||{v:0,nG:0,g:0},bv=b[bc]||{v:0,nG:0,g:0};const amN=bv.am||av.am||'';const dv=bv.g-av.g,dcolor=dv>=0?'var(--green)':'var(--red)';
    h+=`<tr><td style="${cs}text-align:center;color:var(--text-sub);font-size:11px">${i+1}</td><td style="${cs}font-weight:700">${bc}</td><td style="${cs}color:var(--text-sub);font-size:11px">${amN}</td>
     <td style="${cs}text-align:right;border-left:2px solid #F3F4F6">${num(av.v)}</td><td style="${cs}text-align:right">${num(av.nG)}</td><td style="${cs}text-align:center">${av.v>0?`<span class="pct ${gc(av.g)}">${av.g.toFixed(1)}%</span>`:'—'}</td>
     <td style="${cs}text-align:right;border-left:2px solid #F3F4F6">${num(bv.v)}</td><td style="${cs}text-align:right">${num(bv.nG)}</td><td style="${cs}text-align:center"><span class="pct ${gc(bv.g)}">${bv.g.toFixed(1)}%</span></td>
-    <td style="${cs}text-align:center;font-weight:700;color:${dc};border-left:2px solid #F3F4F6">${d>=0?'+':''}${d.toFixed(1)}%</td></tr>`;});
-  return h+'</tbody></table></div>';
+    <td style="${cs}text-align:center;font-weight:700;color:${dcolor};border-left:2px solid #F3F4F6">${dv>=0?'+':''}${dv.toFixed(1)}%</td></tr>`;});
+  h+='</tbody></table></div>';
+  // Analysis
+  const bot=top20[0],topBc=top20[top20.length-1];
+  const withA20=top20.filter(bc=>a[bc]&&a[bc].v>0);
+  const topImp=withA20.sort((x,y)=>(b[y].g-a[y].g)-(b[x].g-a[x].g))[0];
+  const topDeg=withA20.sort((x,y)=>(b[x].g-a[x].g)-(b[y].g-a[y].g))[0];
+  const countBelow50=top20.filter(bc=>b[bc]&&b[bc].g<50).length;
+  let ana=`🏪 <strong>Top 20 BC GTC tệ nhất ${wBLabel}:</strong>`;
+  if(bot&&b[bot])ana+=` BC yếu nhất: <strong>${bot}</strong> (${b[bot].am||''}) — %GTC <span style="color:var(--red);font-weight:700">${b[bot].g.toFixed(1)}%</span>`;
+  if(countBelow50>0)ana+=` · <span style="color:var(--red);font-weight:700">${countBelow50} BC</span> có %GTC < 50%`;
+  if(topImp&&a[topImp])ana+=`<br>📈 Cải thiện nhất trong top 20: <strong>${topImp}</strong> <span style="color:var(--green);font-weight:700">+${(b[topImp].g-a[topImp].g).toFixed(1)}%</span> (${a[topImp].g.toFixed(1)}% → ${b[topImp].g.toFixed(1)}%)`;
+  if(topDeg&&a[topDeg]&&topDeg!==topImp)ana+=` · Tụt thêm nhiều nhất: <strong>${topDeg}</strong> <span style="color:var(--red);font-weight:700">${(b[topDeg].g-a[topDeg].g).toFixed(1)}%</span> (${a[topDeg].g.toFixed(1)}% → ${b[topDeg].g.toFixed(1)}%)`;
+  return h+ANA(ana);
  }
 
  /* ── Bảng 4 & 5: TLT theo AM/BC ── */
- function bldTlt(rows,nameCol,fdCol,dateCol){
+ function bldTlt(rows,nameCol,fdCol,dateCol,label){
   if(!rows)return '<p style="padding:16px;color:var(--text-sub)">Không có dữ liệu</p>';
   const {a:dA,b:dB}=buildDS(rows,dateCol);
   function agg(ds){const m={},c={};rows.slice(1).forEach(r=>{const d=isoD(r[dateCol]);if(!d||!ds.has(d))return;const n=(r[nameCol]||'').trim();if(!n||n.toLowerCase().includes('grand'))return;const fd=parsePct(r[fdCol]);if(!m[n]){m[n]=0;c[n]=0;}m[n]+=fd;c[n]++;});const res={};Object.keys(m).forEach(n=>res[n]=c[n]>0?m[n]/c[n]:0);return res;}
   const a=agg(dA),b=agg(dB);
   const names=[...new Set([...Object.keys(a),...Object.keys(b)])].sort((x,y)=>(b[y]??0)-(b[x]??0));
   let h=`<div class="table-wrap" style="overflow-x:auto"><table><thead><tr>
-   <th style="${cs}">STT</th><th style="${cs}">Tên</th>
+   <th style="${cs}">STT</th><th style="${cs}">${label}</th>
    <th style="${cs}text-align:center;border-left:2px solid #E5E7EB">${wALabel} %FD</th>
    <th style="${cs}text-align:center;border-left:2px solid #E5E7EB">${wBLabel} %FD</th>
    <th style="${cs}text-align:center;border-left:2px solid #E5E7EB">Δ %FD</th>
   </tr></thead><tbody>`;
-  names.forEach((n,i)=>{const av=a[n]??null,bv=b[n]??null;const d=(av!==null&&bv!==null)?bv-av:null;const dc=d!==null?(d<=0?'var(--green)':'var(--red)'):'var(--text-sub)';
+  names.forEach((n,i)=>{const av=a[n]??null,bv=b[n]??null;const dv=(av!==null&&bv!==null)?bv-av:null;const dcolor=dv!==null?(dv<=0?'var(--green)':'var(--red)'):'var(--text-sub)';
    h+=`<tr><td style="${cs}text-align:center;color:var(--text-sub);font-size:11px">${i+1}</td><td style="${cs}font-weight:700">${n}</td>
     <td style="${cs}text-align:center;border-left:2px solid #F3F4F6">${av!==null?`<span class="pct ${gcfd(av)}">${av.toFixed(1)}%</span>`:'—'}</td>
     <td style="${cs}text-align:center;border-left:2px solid #F3F4F6">${bv!==null?`<span class="pct ${gcfd(bv)}">${bv.toFixed(1)}%</span>`:'—'}</td>
-    <td style="${cs}text-align:center;font-weight:700;color:${dc};border-left:2px solid #F3F4F6">${d!==null?((d<=0?'':'+')+(d.toFixed(1))+'%'):'—'}</td></tr>`;});
-  return h+'</tbody></table></div>';
+    <td style="${cs}text-align:center;font-weight:700;color:${dcolor};border-left:2px solid #F3F4F6">${dv!==null?((dv<=0?'':'+')+(dv.toFixed(1))+'%'):'—'}</td></tr>`;});
+  h+='</tbody></table></div>';
+  // Analysis
+  const withB=names.filter(n=>b[n]!==undefined);
+  const worst=withB[0],best=withB[withB.length-1];
+  const above15=withB.filter(n=>b[n]>=15).length;
+  const above10=withB.filter(n=>b[n]>=10&&b[n]<15).length;
+  const withBoth=withB.filter(n=>a[n]!==undefined);
+  const improved=withBoth.filter(n=>b[n]<a[n]).length;
+  const degraded=withBoth.filter(n=>b[n]>a[n]).length;
+  const topImp=withBoth.sort((x,y)=>(a[x]-b[x])-(a[y]-b[y]))[0];
+  const topDeg=withBoth.sort((x,y)=>(b[x]-a[x])-(b[y]-a[y]))[0];
+  let ana=`📊 <strong>${wBLabel} — ${label}:</strong>`;
+  if(above15>0)ana+=` <span style="color:var(--red);font-weight:700">${above15} ${label.toLowerCase()} %FD ≥ 15%</span>`;
+  if(above10>0)ana+=` · <span style="color:var(--yellow);font-weight:700">${above10} ${label.toLowerCase()} 10–15%</span>`;
+  if(worst&&b[worst]!==undefined)ana+=`<br>📍 ${label} FD cao nhất: <strong>${worst}</strong> — <span style="color:var(--red);font-weight:700">${b[worst].toFixed(1)}%</span>`;
+  if(best&&b[best]!==undefined&&best!==worst)ana+=` · Thấp nhất: <strong>${best}</strong> — <span style="color:var(--green);font-weight:700">${b[best].toFixed(1)}%</span>`;
+  if(withBoth.length)ana+=`<br>So với ${wALabel}: <span style="color:var(--green);font-weight:700">${improved} ↓ giảm FD</span> · <span style="color:var(--red);font-weight:700">${degraded} ↑ tăng FD</span>`;
+  if(topImp&&a[topImp]!==undefined)ana+=` · Giảm mạnh nhất: <strong>${topImp}</strong> <span style="color:var(--green);font-weight:700">-${(a[topImp]-b[topImp]).toFixed(1)}%</span>`;
+  if(topDeg&&a[topDeg]!==undefined&&topDeg!==topImp)ana+=` · Tăng nhiều nhất: <strong>${topDeg}</strong> <span style="color:var(--red);font-weight:700">+${(b[topDeg]-a[topDeg]).toFixed(1)}%</span>`;
+  return h+ANA(ana);
  }
 
  /* ── Bảng 6: Aging theo AM 7 ngày gần nhất ── */
@@ -1798,7 +1853,7 @@ function buildWeeklyReport(){
   const dates=allDts.slice(0,7);if(!dates.length)return '<p style="padding:16px;color:var(--text-sub)">Không có dữ liệu</p>';
   const pivot={};
   rows.forEach(r=>{const am=(r[10]||'').trim();const d=(r[11]||'').toString().match(/\d{4}-\d{2}-\d{2}/)?.[0]||'';if(!am||!dates.includes(d))return;if(!pivot[am])pivot[am]={};pivot[am][d]=(pivot[am][d]||0)+1;});
-  const latest=dates[0];const names=Object.keys(pivot).sort((a,b)=>(pivot[b][latest]||0)-(pivot[a][latest]||0));
+  const latest=dates[0],prev=dates[1];const names=Object.keys(pivot).sort((a,b)=>(pivot[b][latest]||0)-(pivot[a][latest]||0));
   let h=`<div class="table-wrap" style="overflow-x:auto"><table><thead><tr>
    <th style="${cs}">STT</th><th style="${cs}">AM</th>
    ${dates.map(d=>`<th style="${cs}text-align:center;border-left:2px solid #E5E7EB"><strong>${shortD(d)}</strong></th>`).join('')}
@@ -1808,13 +1863,23 @@ function buildWeeklyReport(){
    dates.forEach(d=>{const v=pivot[am]?.[d];h+=`<td style="${cs}text-align:center;border-left:2px solid #F3F4F6;font-weight:600;color:${v?'var(--red)':'var(--text-sub)'}">${v||0}</td>`;});
    h+='</tr>';});
   h+=`<tr class="tot"><td colspan="2" style="${cs}">Tổng</td>`;
-  dates.forEach(d=>{const t=Object.values(pivot).reduce((s,r)=>s+(r[d]||0),0);h+=`<td style="${cs}text-align:center;border-left:2px solid #F3F4F6;font-weight:700;color:var(--orange)">${t}</td>`;});
-  h+='</tr>';
-  return h+'</tbody></table></div>';
+  const totByDate={};
+  dates.forEach(d=>{const t=Object.values(pivot).reduce((s,r)=>s+(r[d]||0),0);totByDate[d]=t;h+=`<td style="${cs}text-align:center;border-left:2px solid #F3F4F6;font-weight:700;color:var(--orange)">${t}</td>`;});
+  h+='</tr></tbody></table></div>';
+  // Analysis
+  const totLatest=totByDate[latest]||0,totPrev=totByDate[prev]||0,delta=totLatest-totPrev;
+  const worstAM=names[0];const worstVal=worstAM?pivot[worstAM][latest]||0:0;
+  const dC=delta<=0?'var(--green)':'var(--red)';
+  let ana=`⏳ <strong>Aging ngày ${shortD(latest)}:</strong> Tổng <strong style="color:var(--orange)">${num(totLatest)} đơn</strong>`;
+  if(prev)ana+=` · Ngày ${shortD(prev)}: ${num(totPrev)} đơn · <span style="color:${dC};font-weight:700">${delta>0?'▲ tăng':'▼ giảm'} ${Math.abs(delta)} đơn</span>`;
+  if(worstAM)ana+=`<br>📍 AM nhiều Aging nhất: <strong>${worstAM}</strong> — <span style="color:var(--red);font-weight:700">${worstVal} đơn</span>`;
+  const top3=names.slice(0,3).map(am=>`${am}: ${pivot[am][latest]||0}`).join(' · ');
+  if(names.length>1)ana+=`<br>Top 3 AM: ${top3}`;
+  return h+ANA(ana);
  }
 
  /* ── Bảng 7 & 9: Ontime theo AM ── */
- function bldOntAM(rows){
+ function bldOntAM(rows,typeLabel){
   if(!rows||rows.length<2)return '<p style="padding:16px;color:var(--text-sub)">Không có dữ liệu</p>';
   const {a:dA,b:dB}=buildDS(rows,1);
   function agg(ds){const m={};rows.slice(1).filter(r=>!isGrand(r)&&ds.has(isoD(r[1]))).forEach(r=>{const n=(r[0]||'').trim();if(!n)return;if(!m[n])m[n]={v:0,c:0};m[n].v+=Math.round(parseFloat(r[2])||0);m[n].c+=Math.round(parseFloat(r[4])||0);});Object.values(m).forEach(x=>x.pct=p0(x.v,x.c));return m;}
@@ -1830,16 +1895,35 @@ function buildWeeklyReport(){
    <th style="${cs}text-align:right;border-left:2px solid #E5E7EB">Vol</th><th style="${cs}text-align:right">Count</th><th style="${cs}text-align:center">%Ontime</th>
    <th style="${cs}text-align:center;border-left:2px solid #E5E7EB"></th>
   </tr></thead><tbody>`;
-  names.forEach((n,i)=>{const av=a[n]||{v:0,c:0,pct:0},bv=b[n]||{v:0,c:0,pct:0};const d=bv.pct-av.pct,dc=d>=0?'var(--green)':'var(--red)';
+  names.forEach((n,i)=>{const av=a[n]||{v:0,c:0,pct:0},bv=b[n]||{v:0,c:0,pct:0};const dv=bv.pct-av.pct,dcolor=dv>=0?'var(--green)':'var(--red)';
    h+=`<tr><td style="${cs}text-align:center;color:var(--text-sub);font-size:11px">${i+1}</td><td style="${cs}font-weight:700">${n}</td>
     <td style="${cs}text-align:right;border-left:2px solid #F3F4F6">${num(av.v)}</td><td style="${cs}text-align:right">${num(av.c)}</td><td style="${cs}text-align:center"><span class="pct ${gco(av.pct)}">${av.pct.toFixed(1)}%</span></td>
     <td style="${cs}text-align:right;border-left:2px solid #F3F4F6">${num(bv.v)}</td><td style="${cs}text-align:right">${num(bv.c)}</td><td style="${cs}text-align:center"><span class="pct ${gco(bv.pct)}">${bv.pct.toFixed(1)}%</span></td>
-    <td style="${cs}text-align:center;font-weight:700;color:${dc};border-left:2px solid #F3F4F6">${d>=0?'+':''}${d.toFixed(1)}%</td></tr>`;});
-  return h+'</tbody></table></div>';
+    <td style="${cs}text-align:center;font-weight:700;color:${dcolor};border-left:2px solid #F3F4F6">${dv>=0?'+':''}${dv.toFixed(1)}%</td></tr>`;});
+  h+='</tbody></table></div>';
+  // Analysis
+  const withB=names.filter(n=>b[n]&&b[n].v>0);
+  const tBv=withB.reduce((s,n)=>s+b[n].v,0),tBc=withB.reduce((s,n)=>s+b[n].c,0);
+  const tAv=names.filter(n=>a[n]&&a[n].v>0).reduce((s,n)=>s+a[n].v,0);
+  const tAc=names.filter(n=>a[n]&&a[n].v>0).reduce((s,n)=>s+a[n].c,0);
+  const tBpct=p0(tBv,tBc),tApct=p0(tAv,tAc),td=tBpct-tApct;
+  const worst=withB.sort((x,y)=>b[x].pct-b[y].pct)[0];
+  const best=withB.sort((x,y)=>b[y].pct-b[x].pct)[0];
+  const below80=withB.filter(n=>b[n].pct<80).length;
+  const improved=withB.filter(n=>a[n]&&b[n].pct>a[n].pct).length;
+  const pctC=tBpct>=90?'var(--green)':tBpct>=80?'var(--yellow)':'var(--red)';
+  const dC=td>=0?'var(--green)':'var(--red)';
+  let ana=`⏱️ <strong>${typeLabel||'Ontime'} ${wBLabel}:</strong> Tổng vol <strong>${num(tBv)}</strong> · %Ontime tổng <strong style="color:${pctC}">${tBpct.toFixed(1)}%</strong>`;
+  ana+=` · So với ${wALabel}: <span style="color:${dC};font-weight:700">${td>=0?'▲':''} ${td>=0?'+':''}${td.toFixed(1)}%</span>`;
+  if(below80>0)ana+=` · <span style="color:var(--red);font-weight:700">${below80} AM dưới 80%</span>`;
+  if(worst&&b[worst])ana+=`<br>📍 Tệ nhất ${wBLabel}: <strong>${worst}</strong> <span style="color:var(--red);font-weight:700">${b[worst].pct.toFixed(1)}%</span>`;
+  if(best&&b[best]&&best!==worst)ana+=` · Tốt nhất: <strong>${best}</strong> <span style="color:var(--green);font-weight:700">${b[best].pct.toFixed(1)}%</span>`;
+  ana+=` · <span style="color:var(--green)">${improved}/${withB.length} AM cải thiện</span> so với ${wALabel}`;
+  return h+ANA(ana);
  }
 
  /* ── Bảng 8, 10, 11: Ontime theo BC ── */
- function bldOntBC(rows,filterLow=false,limit=50){
+ function bldOntBC(rows,filterLow=false,limit=50,typeLabel=''){
   if(!rows||rows.length<2)return '<p style="padding:16px;color:var(--text-sub)">Không có dữ liệu</p>';
   const {a:dA,b:dB}=buildDS(rows,2);
   function agg(ds){const m={};rows.slice(1).filter(r=>!isGrand(r)&&ds.has(isoD(r[2]))).forEach(r=>{const bc=(r[1]||'').trim(),am=(r[0]||'').trim();if(!bc)return;if(!m[bc])m[bc]={v:0,c:0,am};m[bc].v+=Math.round(parseFloat(r[3])||0);m[bc].c+=Math.round(parseFloat(r[5])||0);});Object.values(m).forEach(x=>x.pct=p0(x.v,x.c));return m;}
@@ -1857,12 +1941,42 @@ function buildWeeklyReport(){
    <th style="${cs}text-align:right;border-left:2px solid #E5E7EB">Vol</th><th style="${cs}text-align:right">Count</th><th style="${cs}text-align:center">%Ontime</th>
    <th style="${cs}text-align:center;border-left:2px solid #E5E7EB"></th>
   </tr></thead><tbody>`;
-  names.forEach((bc,i)=>{const av=a[bc]||{v:0,c:0,pct:0,am:''},bv=b[bc]||{v:0,c:0,pct:0,am:''};const amN=bv.am||av.am||'';const d=bv.pct-av.pct,dc=d>=0?'var(--green)':'var(--red)';
+  names.forEach((bc,i)=>{const av=a[bc]||{v:0,c:0,pct:0,am:''},bv=b[bc]||{v:0,c:0,pct:0,am:''};const amN=bv.am||av.am||'';const dv=bv.pct-av.pct,dcolor=dv>=0?'var(--green)':'var(--red)';
    h+=`<tr><td style="${cs}text-align:center;color:var(--text-sub);font-size:11px">${i+1}</td><td style="${cs}font-weight:700">${bc}</td><td style="${cs}color:var(--text-sub);font-size:11px">${amN}</td>
     <td style="${cs}text-align:right;border-left:2px solid #F3F4F6">${num(av.v)}</td><td style="${cs}text-align:right">${num(av.c)}</td><td style="${cs}text-align:center">${av.v>0?`<span class="pct ${gco(av.pct)}">${av.pct.toFixed(1)}%</span>`:'—'}</td>
     <td style="${cs}text-align:right;border-left:2px solid #F3F4F6">${num(bv.v)}</td><td style="${cs}text-align:right">${num(bv.c)}</td><td style="${cs}text-align:center">${bv.v>0?`<span class="pct ${gco(bv.pct)}">${bv.pct.toFixed(1)}%</span>`:'—'}</td>
-    <td style="${cs}text-align:center;font-weight:700;color:${dc};border-left:2px solid #F3F4F6">${d>=0?'+':''}${d.toFixed(1)}%</td></tr>`;});
-  return h+'</tbody></table></div>';
+    <td style="${cs}text-align:center;font-weight:700;color:${dcolor};border-left:2px solid #F3F4F6">${dv>=0?'+':''}${dv.toFixed(1)}%</td></tr>`;});
+  h+='</tbody></table></div>';
+  // Analysis
+  if(filterLow){
+   const totalVol=names.reduce((s,bc)=>s+(b[bc]?.v||0),0);
+   const worst=names.sort((x,y)=>b[x].pct-b[y].pct)[0];
+   let ana=`⚠️ <strong>${wBLabel} — BC OPR < 80%:</strong> Tổng <strong style="color:var(--red)">${names.length} bưu cục</strong> dưới ngưỡng`;
+   ana+=` · Tổng vol LTC ảnh hưởng: <strong>${num(totalVol)}</strong> đơn`;
+   if(worst&&b[worst])ana+=`<br>📍 BC tệ nhất: <strong>${worst}</strong> (${b[worst].am||''}) — OPR <span style="color:var(--red);font-weight:700">${b[worst].pct.toFixed(1)}%</span> · Vol LTC: <strong>${num(b[worst].v)}</strong>`;
+   const topVol=names.slice(0,3).map(bc=>`${bc}: ${num(b[bc].v)} đơn (${b[bc].pct.toFixed(1)}%)`).join(' · ');
+   if(names.length>1)ana+=`<br>BC vol lớn nhất: ${topVol}`;
+   return h+ANA(ana);
+  }else{
+   const withB=names.filter(n=>b[n]&&b[n].v>0);
+   const tBv=withB.reduce((s,n)=>s+b[n].v,0),tBc=withB.reduce((s,n)=>s+b[n].c,0);
+   const tAv=names.filter(n=>a[n]&&a[n].v>0).reduce((s,n)=>s+a[n].v,0);
+   const tAc=names.filter(n=>a[n]&&a[n].v>0).reduce((s,n)=>s+a[n].c,0);
+   const tBpct=p0(tBv,tBc),tApct=p0(tAv,tAc),td=tBpct-tApct;
+   const below80=withB.filter(n=>b[n].pct<80).length;
+   const below90=withB.filter(n=>b[n].pct>=80&&b[n].pct<90).length;
+   const worst=withB.sort((x,y)=>b[x].pct-b[y].pct)[0];
+   const improved=withB.filter(n=>a[n]&&b[n].pct>a[n].pct).length;
+   const pctC=tBpct>=90?'var(--green)':tBpct>=80?'var(--yellow)':'var(--red)';
+   const dC=td>=0?'var(--green)':'var(--red)';
+   let ana=`⏱️ <strong>${typeLabel||'Ontime'} BC ${wBLabel}:</strong> %Ontime tổng <strong style="color:${pctC}">${tBpct.toFixed(1)}%</strong>`;
+   ana+=` · So với ${wALabel}: <span style="color:${dC};font-weight:700">${td>=0?'+':''}${td.toFixed(1)}%</span>`;
+   if(below80>0)ana+=` · <span style="color:var(--red);font-weight:700">${below80} BC dưới 80%</span>`;
+   if(below90>0)ana+=` · <span style="color:var(--yellow);font-weight:700">${below90} BC 80–90%</span>`;
+   if(worst&&b[worst])ana+=`<br>📍 BC tệ nhất ${wBLabel}: <strong>${worst}</strong> (${b[worst].am||''}) <span style="color:var(--red);font-weight:700">${b[worst].pct.toFixed(1)}%</span>`;
+   ana+=` · <span style="color:var(--green)">${improved}/${withB.length} BC cải thiện</span>`;
+   return h+ANA(ana);
+  }
  }
 
  function card(title,icon,content,info=''){return`<div class="card"><div class="card-header"><div class="card-title"><div class="card-icon">${icon}</div>${title}</div>${info?`<div class="card-info">${info}</div>`:''}</div>${content}</div>`;}
@@ -1875,16 +1989,17 @@ function buildWeeklyReport(){
   ${card(`Bảng 1 — GTC Total Vùng: Ca 1 / Ca 2 / Hàng Tồn`,'📦',bld1(),`So sánh ${wALabel} vs ${wBLabel}`)}
   ${card(`Bảng 2 — GTC theo AM`,'👤',bld2(),`Sắp xếp: %GTC ${wBLabel} thấp → cao`)}
   ${card(`Bảng 3 — Top 20 BC GTC tệ nhất ${wBLabel}`,'🏪',bld3(),`Sắp xếp: %GTC ${wBLabel} thấp → cao`)}
-  ${card(`Bảng 4 — Tỉ Lệ Trả (TLT) theo AM`,'👤',bldTlt(window._FD?.totalAM,0,3,1),`Sắp xếp: %FD ${wBLabel} cao → thấp`)}
-  ${card(`Bảng 5 — Tỉ Lệ Trả (TLT) theo Bưu Cục`,'🏪',bldTlt(window._FD?.totalBC,0,3,1),`Sắp xếp: %FD ${wBLabel} cao → thấp`)}
+  ${card(`Bảng 4 — Tỉ Lệ Trả (TLT) theo AM`,'👤',bldTlt(window._FD?.totalAM,0,3,1,'AM'),`Sắp xếp: %FD ${wBLabel} cao → thấp`)}
+  ${card(`Bảng 5 — Tỉ Lệ Trả (TLT) theo Bưu Cục`,'🏪',bldTlt(window._FD?.totalBC,0,3,1,'Bưu Cục'),`Sắp xếp: %FD ${wBLabel} cao → thấp`)}
   ${card(`Bảng 6 — Aging > 5 ngày theo AM (7 ngày gần nhất)`,'⏳',bld6(),'')}
-  ${card(`Bảng 7 — Ontime Giao TTS (ODR) theo AM`,'👤',bldOntAM(window._D?.odrAM),`${wALabel} vs ${wBLabel}`)}
-  ${card(`Bảng 8 — Ontime Giao TTS (ODR) theo Bưu Cục`,'🏪',bldOntBC(window._D?.odrBC),`${wALabel} vs ${wBLabel}`)}
-  ${card(`Bảng 9 — Ontime Lấy TTS (OPR) theo AM`,'👤',bldOntAM(window._D?.oprAM),`${wALabel} vs ${wBLabel}`)}
-  ${card(`Bảng 10 — Ontime Lấy TTS (OPR) theo Bưu Cục`,'🏪',bldOntBC(window._D?.oprBC),`${wALabel} vs ${wBLabel}`)}
-  ${card(`Bảng 11 — BC Vol LTC cao, Ontime OPR < 80%`,'⚠️',bldOntBC(window._D?.oprBC,true,50),`Lọc: ${wBLabel} OPR < 80% · Sắp xếp: Vol LTC ${wBLabel} cao → thấp`)}
+  ${card(`Bảng 7 — Ontime Giao TTS (ODR) theo AM`,'👤',bldOntAM(window._D?.odrAM,'ODR AM'),`${wALabel} vs ${wBLabel}`)}
+  ${card(`Bảng 8 — Ontime Giao TTS (ODR) theo Bưu Cục`,'🏪',bldOntBC(window._D?.odrBC,false,50,'ODR'),`${wALabel} vs ${wBLabel}`)}
+  ${card(`Bảng 9 — Ontime Lấy TTS (OPR) theo AM`,'👤',bldOntAM(window._D?.oprAM,'OPR AM'),`${wALabel} vs ${wBLabel}`)}
+  ${card(`Bảng 10 — Ontime Lấy TTS (OPR) theo Bưu Cục`,'🏪',bldOntBC(window._D?.oprBC,false,50,'OPR'),`${wALabel} vs ${wBLabel}`)}
+  ${card(`Bảng 11 — BC Vol LTC cao, Ontime OPR < 80%`,'⚠️',bldOntBC(window._D?.oprBC,true,50,'OPR'),`Lọc: ${wBLabel} OPR < 80% · Sắp xếp: Vol LTC ${wBLabel} cao → thấp`)}
  `;
 }
+
 
 /* ===== DASHBOARD 9: BÁO CÁO VẬN HÀNH NGÀY (p16) ===== */
 // GTC ca 1,2: col[0]=AM, col[1]=Loại hàng, col[2]=Ngày, col[3]=Vol, col[4]=%Gán, col[5]=%GTC, col[6]=Số đơn GTC
