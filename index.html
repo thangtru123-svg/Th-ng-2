@@ -251,6 +251,7 @@ const TG_AGING_CHAT   = -1003802272887;
 const TG_AGING_THREAD = 4; // topic "Aging/ Backlog"
 const TG_VH_THREAD   = 5; // topic "Vận hành chung"
 const TG_FD_THREAD   = 8250; // topic "FD - Mục tiêu toàn vùng 8%"
+const TG_PICKUP_THREAD = 10934; // topic "Pickup / Luân chuyển"
 
 /* ===== AUTH LOGIC ===== */
 function _decodeJWT(t){try{const b=t.split('.')[1].replace(/-/g,'+').replace(/_/g,'/');return JSON.parse(decodeURIComponent(atob(b).split('').map(c=>'%'+('00'+c.charCodeAt(0).toString(16)).slice(-2)).join('')));}catch{return{};}}
@@ -790,7 +791,7 @@ function buildFDWeekPage(fd){
 /* ===== DASHBOARD 5 & 6: ODR / OPR ===== */
 // AM cols: AM(0), Ngày(1), Vol(2), %Ontime(3), Count(4)
 // BC cols: AM(0), Bưu Cục(1), Ngày(2), Vol(3), %Ontime(4), Count(5)
-function buildOntimePage(rowsAM,rowsBC,title,volLabel,countLabel,greenThr,yellowThr){
+function buildOntimePage(rowsAM,rowsBC,title,volLabel,countLabel,greenThr,yellowThr,pid=''){
  function amTbl(rows){
   if(!rows||rows.length<2)return'<p style="padding:16px;color:var(--text-sub)">Không có dữ liệu</p>';
   const data=rows.slice(1).filter(r=>r.length>3&&(r[0]||'').trim());
@@ -933,9 +934,9 @@ function buildOntimePage(rowsAM,rowsBC,title,volLabel,countLabel,greenThr,yellow
   <div class="page-title">${title}</div>
   <div class="page-meta"><span class="tag tag-orange">⏱️ 15 ngày gần nhất · ONTIME SLA TTS</span><span>%Ontime: Xanh ≥${greenThr}% · Vàng ≥${yellowThr}% · Đỏ &lt;${yellowThr}%</span></div>
  </div>
- <div class="card"><div class="card-header"><div class="card-title"><div class="card-icon">👤</div>A. Theo AM</div><div class="card-info">Sắp xếp: %Ontime thấp → cao</div></div>${amTbl(rowsAM)}</div>
+ <div class="card"${pid?` id="${pid}-card-am"`:''}><div class="card-header"><div class="card-title"><div class="card-icon">👤</div>A. Theo AM</div><div class="card-info">Sắp xếp: %Ontime thấp → cao</div></div>${amTbl(rowsAM)}</div>
  <div class="card"><div class="card-header"><div class="card-title"><div class="card-icon">🏪</div>B. Theo Bưu Cục</div><div class="card-info">Sắp xếp: %Ontime thấp → cao</div></div>${bcTbl(rowsBC)}</div>
- ${yellowThr===80?`<div class="card" style="border-top:3px solid var(--red)"><div class="card-header"><div class="card-title"><div class="card-icon">🚨</div>C. BC Vol LTC cao & %Ontime OPR &lt; 80%</div><div class="card-info">7 ngày gần nhất · Sắp xếp: Vol LTC ngày gần nhất cao nhất</div></div>${alertBCTbl(rowsBC)}</div>`:''}`;
+ ${yellowThr===80?`<div class="card" style="border-top:3px solid var(--red)"${pid?` id="${pid}-card-alert"`:''}><div class="card-header"><div class="card-title"><div class="card-icon">🚨</div>C. BC Vol LTC cao & %Ontime OPR &lt; 80%</div><div class="card-info">7 ngày gần nhất · Sắp xếp: Vol LTC ngày gần nhất cao nhất</div></div>${alertBCTbl(rowsBC)}</div>`:''}`;
 
 }
 
@@ -1514,6 +1515,40 @@ async function sendAllToTelegram(){
   return trimCap(cap);
  }
 
+ /* ── Caption: P6 OPR TTS ── */
+ function capOPR(type){
+  const rows=type==='am'?window._D?.oprAM:window._D?.oprBC;
+  if(!rows||rows.length<2)return`🚀 <b>ONTIME LẤY TTS (OPR) — THEO ${type==='am'?'AM':'BƯU CỤC'}</b>`;
+  const isGrand=r=>(r[0]||'').toLowerCase().includes('grand total')||!(r[0]||'').trim();
+  const nameCol=type==='am'?0:1,dateCol=type==='am'?1:2,volCol=type==='am'?2:3,cntCol=type==='am'?4:5;
+  const allD=[...new Set(rows.slice(1).map(r=>isoD(r[dateCol])).filter(d=>d))].sort((a,b)=>b.localeCompare(a));
+  const latest=allD[0];if(!latest)return`🚀 <b>OPR TTS</b>`;
+  const agg={};rows.slice(1).filter(r=>!isGrand(r)&&isoD(r[dateCol])===latest).forEach(r=>{
+   const n=(r[nameCol]||'').trim();if(!n)return;
+   if(!agg[n])agg[n]={v:0,c:0};
+   agg[n].v+=Math.round(parseFloat(r[volCol])||0);
+   agg[n].c+=Math.round(parseFloat(r[cntCol])||0);
+  });
+  Object.values(agg).forEach(x=>x.pct=x.v>0?x.c/x.v*100:0);
+  const names=Object.keys(agg).filter(n=>agg[n].v>0);
+  const totV=names.reduce((s,n)=>s+agg[n].v,0),totC=names.reduce((s,n)=>s+agg[n].c,0);
+  const totPct=totV>0?totC/totV*100:0;
+  const below80=names.filter(n=>agg[n].pct<80);
+  const sorted=[...names].sort((a,b)=>agg[a].pct-agg[b].pct);
+  const lbl=type==='am'?'AM':'Bưu Cục';
+  const pctC=totPct>=90?'tốt':totPct>=80?'trung bình':'thấp';
+  let cap=`🚀 <b>ONTIME LẤY TTS (OPR) — THEO ${type==='am'?'AM':'BƯU CỤC'}</b>\n`;
+  cap+=`Ngày ${fD(latest)}: %Ontime tổng <b>${totPct.toFixed(1)}%</b> (${pctC})\n`;
+  if(below80.length)cap+=`⚠️ ${below80.length} ${lbl} dưới 80%\n`;
+  cap+=`\n📝 ${lbl} tệ nhất:\n`;
+  cap+=sorted.slice(0,3).map(n=>`• ${n}: ${agg[n].pct.toFixed(1)}% (Vol: ${agg[n].v.toLocaleString('vi-VN')})`).join('\n');
+  if(type==='bc'){
+   cap+=`\n\n⛔ BC Vol LTC cao &lt; 80%:\n`;
+   cap+=below80.sort((a,b)=>agg[b].v-agg[a].v).slice(0,5).map(n=>`• ${n}: ${agg[n].pct.toFixed(1)}% (Vol: ${agg[n].v.toLocaleString('vi-VN')})`).join('\n');
+  }
+  return trimCap(cap);
+ }
+
  /* ── Caption: P3 TLT Theo AM / BC ── */
  function capFD(type){
   const fd=window._FD;const rows=type==='am'?fd?.totalAM:fd?.totalBC;
@@ -1587,6 +1622,15 @@ async function sendAllToTelegram(){
    }else{
     await sendPhoto('TLT Theo BC','p3-card-bc',TG_AGING_CHAT,TG_FD_THREAD,capFD('bc'));
    }
+  }
+
+  /* --- P6: OPR TTS → Pickup/Luân chuyển thread --- */
+  await navTo('p6');
+  await new Promise(r=>setTimeout(r,400));
+  await sendPhoto('OPR Theo AM','p6-card-am',TG_AGING_CHAT,TG_PICKUP_THREAD,capOPR('am'));
+  const alertCard=document.getElementById('p6-card-alert');
+  if(alertCard&&alertCard.innerText.trim()&&!alertCard.innerText.includes('Không có Bưu Cục')){
+   await sendPhoto('OPR BC Alert','p6-card-alert',TG_AGING_CHAT,TG_PICKUP_THREAD,capOPR('bc'));
   }
 
   /* --- P7: Aging → Aging thread (dùng sendAgingToTelegram logic) --- */
@@ -2462,7 +2506,7 @@ async function init(){
  // p6 — OPR
  const p6el=document.getElementById('p6');
  if(R['OPR TTS - AM']&&R['OPR TTS - Bưu Cục']){
-  p6el.innerHTML=buildOntimePage(R['OPR TTS - AM'],R['OPR TTS - Bưu Cục'],'Tổng quan OPR TTS','Vol LTC','LTC đúng Ontime',90,80);
+  p6el.innerHTML=buildOntimePage(R['OPR TTS - AM'],R['OPR TTS - Bưu Cục'],'Tổng quan OPR TTS','Vol LTC','LTC đúng Ontime',90,80,'p6');
   addBCSearch(p6el);
  }else p6el.innerHTML=errPage('Không thể tải OPR TTS. Kiểm tra sheet "OPR TTS - AM" / "OPR TTS - Bưu Cục".');
  // p7 — Aging (await để có data cho overview)
