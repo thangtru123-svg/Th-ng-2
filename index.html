@@ -251,7 +251,7 @@ const TG_AGING_CHAT   = -1003802272887;
 const TG_AGING_THREAD = 4; // topic "Aging/ Backlog"
 const TG_VH_THREAD   = 5; // topic "Vận hành chung"
 const TG_FD_THREAD   = 8250; // topic "FD - Mục tiêu toàn vùng 8%"
-const TG_PICKUP_THREAD = 10934; // topic "Pickup / Luân chuyển"
+const TG_PICKUP_THREAD = 7; // topic "Pickup / Luân chuyển"
 
 /* ===== AUTH LOGIC ===== */
 function _decodeJWT(t){try{const b=t.split('.')[1].replace(/-/g,'+').replace(/_/g,'/');return JSON.parse(decodeURIComponent(atob(b).split('').map(c=>'%'+('00'+c.charCodeAt(0).toString(16)).slice(-2)).join('')));}catch{return{};}}
