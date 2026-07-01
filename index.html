@@ -1563,7 +1563,31 @@ async function sendAllToTelegram(){
   /* --- P3: Tỉ Lệ Trả Ngày → FD thread --- */
   await navTo('p3');
   await sendPhoto('TLT Theo AM','p3-card-am',TG_AGING_CHAT,TG_FD_THREAD,capFD('am'));
-  await sendPhoto('TLT Theo BC','p3-card-bc',TG_AGING_CHAT,TG_FD_THREAD,capFD('bc'));
+  /* BC: chỉ chụp Top 15 FD total cao nhất */
+  {
+   if(btn)btn.innerHTML='⏳ Đang gửi: TLT Theo BC Top 15...';
+   const bcTbl=document.querySelector('#fdDayBCTable table');
+   if(bcTbl){
+    const cl=bcTbl.cloneNode(true);
+    const tb=cl.querySelector('tbody');
+    if(tb){let k=0;[...tb.querySelectorAll('tr')].forEach(tr=>{const isTot=tr.classList.contains('tot')||tr.textContent.toLowerCase().includes('grand total');if(!isTot){if(k>=15)tr.remove();else k++;}});}
+    const tmp=document.createElement('div');
+    tmp.id='tg-bc-top15';
+    tmp.style.cssText='position:fixed;top:-9999px;left:0;z-index:-1;width:1100px;padding:0';
+    tmp.innerHTML='<div class="card" style="margin:0"><div class="card-header"><div class="card-title"><div class="card-icon">🏪</div>B. Theo Bưu Cục — Top 15 FD Total cao nhất</div></div></div>';
+    tmp.querySelector('.card').appendChild(cl);
+    document.body.appendChild(tmp);
+    await new Promise(r=>setTimeout(r,200));
+    try{
+     const img=await _captureEl('tg-bc-top15');
+     const res=await _tgSendPhoto(TG_AGING_CHAT,TG_FD_THREAD,img,capFD('bc'));
+     if(!res.ok)throw new Error(`TLT BC lỗi: ${res.description||JSON.stringify(res)}`);
+    }finally{tmp.remove();}
+    await new Promise(r=>setTimeout(r,600));
+   }else{
+    await sendPhoto('TLT Theo BC','p3-card-bc',TG_AGING_CHAT,TG_FD_THREAD,capFD('bc'));
+   }
+  }
 
   /* --- P7: Aging → Aging thread (dùng sendAgingToTelegram logic) --- */
   await navTo('p7');
