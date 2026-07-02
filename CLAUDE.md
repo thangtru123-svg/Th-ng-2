@@ -157,5 +157,10 @@ const SHEET_OTL_BC= '1UuQHYdFx_8APXS-soTOesfLLYehpNTH8SO7JgxPQM8k'; // Ontime L�
 cd /sessions/adoring-inspiring-planck/mnt/Th-ng
 git add index.html
 git commit -m "message"
-# Sau đó mở GitHub Desktop → click Push origin
 ```
+
+### Push — 2 cách (ưu tiên cách 1):
+1. **Claude tự push** (computer-use): `open_application("GitHub Desktop")` → ngay lập tức `key("cmd+p")` → button "Fetch origin" = synced ✓
+2. **Thủ công**: Mở GitHub Desktop → click "Push origin"
+
+> ⚠️ `bash git push` lỗi 403 proxy — KHÔNG dùng
