@@ -2957,17 +2957,18 @@ window._volRender=function(){
     const tonMoiRatio=mN>0?tN/mN:0;
     const tonMoiPct=(tonMoiRatio*100).toFixed(0)+'%';
     const ratioColor=tonMoiRatio>=1.0?'var(--red)':tonMoiRatio>=0.8?'var(--yellow)':'var(--green)';
-    // Đánh giá tổng hợp
-    let rate=0; // 0=ổn, 1=chú ý, 2=bất ổn
-    if(gtcMoi!==null&&gtcMoi<0.7)rate=Math.max(rate,2);
-    else if(gtcMoi!==null&&gtcMoi<0.8)rate=Math.max(rate,1);
-    if(tP>25&&tN>100)rate=Math.max(rate,2);
-    else if(tP>15&&tN>50)rate=Math.max(rate,1);
-    if(gtcTon!==null&&gtcTon<0.4)rate=Math.max(rate,2);
-    else if(gtcTon!==null&&gtcTon<0.5)rate=Math.max(rate,1);
-    // Tiêu chí Vol: tồn/mới ratio
-    if(tonMoiRatio>=1.0)rate=Math.max(rate,2);       // tồn ≥ mới → bất ổn
-    else if(tonMoiRatio>=0.8)rate=Math.max(rate,1);  // tồn 80-100% mới → cần quan tâm
+    // Đánh giá tổng hợp — logic mới (GTC làm trung tâm)
+    let rate=0; // 0=ổn, 1=cần quan tâm, 2=bất ổn
+    // BẤT ỔN
+    if(gtcMoi!==null&&gtcMoi<0.65)rate=Math.max(rate,2);               // GTC Mới < 65%
+    if(gtcTon!==null&&gtcTon<0.35)rate=Math.max(rate,2);               // GTC Tồn < 35%
+    if(tonMoiRatio>=1.0)rate=Math.max(rate,2);                          // Tồn ≥ Mới
+    if(tonMoiRatio>=0.8&&gtcMoi!==null&&gtcMoi<0.70)rate=Math.max(rate,2); // Combo: Tồn cao + GTC kém
+    // CẦN QUAN TÂM
+    if(gtcMoi!==null&&gtcMoi>=0.65&&gtcMoi<0.70)rate=Math.max(rate,1); // GTC Mới 65–70%
+    if(gtcTon!==null&&gtcTon>=0.35&&gtcTon<0.50)rate=Math.max(rate,1); // GTC Tồn 35–50%
+    if(tonMoiRatio>=0.8&&tonMoiRatio<1.0)rate=Math.max(rate,1);        // Tồn/Mới 80–100%
+    if(tP>30&&tN>50&&gtcMoi!==null&&gtcMoi<0.70)rate=Math.max(rate,1); // Tồn tăng mạnh + GTC <70%
     const badge=rate===2?'<span style="padding:3px 10px;border-radius:20px;background:var(--red-bg);color:var(--red);font-weight:700;font-size:11px">🔴 Bất ổn</span>':rate===1?'<span style="padding:3px 10px;border-radius:20px;background:var(--yellow-bg);color:var(--yellow);font-weight:700;font-size:11px">🟡 Cần quan tâm</span>':'<span style="padding:3px 10px;border-radius:20px;background:var(--green-bg);color:var(--green);font-weight:700;font-size:11px">🟢 Ổn định</span>';
     if(mN>0||tN>0)bcAll.push({t,bc,mN,mC,mD,mP,tN,tC,tD,tP,gtcMoi,gtcTon,rate,badge,tonMoiPct,ratioColor});
    }
@@ -3012,7 +3013,7 @@ window._volRender=function(){
   }).join('')}</tbody></table></div></div>
 
   <div class="card" style="margin:0"><div class="card-header"><div class="card-title"><div class="card-icon">🏪</div>3. Đánh giá chi tiết Bưu Cục — Volume &amp; GTC (N-1 vs ${compLabel})</div>
-   <div style="font-size:11px;color:var(--text-sub)">🔴 Bất ổn: Tồn≥Mới hoặc GTC Mới&lt;70% &nbsp;|&nbsp; 🟡 Cần quan tâm: Tồn 80–100% Mới hoặc GTC Mới 70–80%</div>
+   <div style="font-size:11px;color:var(--text-sub)">🔴 Bất ổn: GTC Mới&lt;65% | GTC Tồn&lt;35% | Tồn≥Mới | (Tồn≥80% Mới &amp; GTC&lt;70%) &nbsp;|&nbsp; 🟡 Cần quan tâm: GTC Mới 65–70% | GTC Tồn 35–50% | Tồn 80–100% Mới</div>
   </div>
   <div class="table-wrap" style="max-height:500px"><table>
   <thead><tr>
