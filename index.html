@@ -2926,6 +2926,12 @@ window._volRender=function(){
     if(GTC[t])for(const bc of Object.keys(GTC[t])){if(GTC[t][bc][lo]&&GTC[t][bc][lo][N1]){sv+=GTC[t][bc][lo][N1].sv;sg+=GTC[t][bc][lo][N1].sg;}}
     stats[lo]=sv>0?sg/sv:null;
    }
+   // GTC Mới tổng hợp Ca1+Ca2
+   let svM=0,sgM=0;
+   for(const lo of['Hàng Mới Ca 1','Hàng Mới Ca 2']){
+    if(GTC[t])for(const bc of Object.keys(GTC[t])){if(GTC[t][bc][lo]&&GTC[t][bc][lo][N1]){svM+=GTC[t][bc][lo][N1].sv;sgM+=GTC[t][bc][lo][N1].sg;}}
+   }
+   stats['Hàng Mới']=svM>0?sgM/svM:null;
    return {t,stats};
   });
 
@@ -2940,10 +2946,12 @@ window._volRender=function(){
     const tC=NHOM.reduce((s,nh)=>s+tonCmp(t,bc,nh),0);
     const mD=mN-mC;const mP=mC?(mD/mC*100):0;
     const tD=tN-tC;const tP=tC?(tD/tC*100):0;
-    // GTC
-    const gM=GTC[t]?.[bc]?.['Hàng Mới Ca 1']?.[N1];
+    // GTC Mới = Ca1+Ca2 combined
+    const gM1=GTC[t]?.[bc]?.['Hàng Mới Ca 1']?.[N1];
+    const gM2=GTC[t]?.[bc]?.['Hàng Mới Ca 2']?.[N1];
+    const svM=(gM1?.sv||0)+(gM2?.sv||0),sgM=(gM1?.sg||0)+(gM2?.sg||0);
     const gT=GTC[t]?.[bc]?.['Hàng Tồn']?.[N1];
-    const gtcMoi=gM&&gM.sv>0?gM.sg/gM.sv:null;
+    const gtcMoi=svM>0?sgM/svM:null;
     const gtcTon=gT&&gT.sv>0?gT.sg/gT.sv:null;
     // Tỉ lệ Tồn/Mới
     const tonMoiRatio=mN>0?tN/mN:0;
@@ -2976,14 +2984,13 @@ window._volRender=function(){
   <thead>
    <tr>
     <th rowspan="2" style="min-width:110px;vertical-align:middle">Tỉnh</th>
-    <th colspan="4" style="text-align:center;border-left:2px solid #E5E7EB;background:#E8F5E9;color:#16A34A">📦 Hàng Mới</th>
+    <th colspan="3" style="text-align:center;border-left:2px solid #E5E7EB;background:#E8F5E9;color:#16A34A">📦 Hàng Mới</th>
     <th colspan="3" style="text-align:center;border-left:2px solid #E5E7EB;background:#FEE2E2;color:#DC2626">📋 Hàng Tồn</th>
    </tr>
    <tr>
     <th style="text-align:right;border-left:2px solid #E5E7EB">Vol N-1</th>
     <th>Δ vs ${compLabel}</th>
-    <th style="text-align:center">GTC Ca1</th>
-    <th style="text-align:center">GTC Ca2</th>
+    <th style="text-align:center">GTC Mới</th>
     <th style="text-align:right;border-left:2px solid #E5E7EB">Vol N-1</th>
     <th>Δ vs ${compLabel}</th>
     <th style="text-align:center">GTC Tồn</th>
@@ -2997,8 +3004,7 @@ window._volRender=function(){
     <td style="font-weight:600">${TINH_FULL[t]||t}</td>
     <td style="text-align:right;font-weight:700;border-left:2px solid #F3F4F6">${fN(mN)}</td>
     <td>${fs(mN-mC,mC?(mN-mC)/mC*100:0,false)}</td>
-    <td style="text-align:center">${gtcBadge(st['Hàng Mới Ca 1'])}</td>
-    <td style="text-align:center">${gtcBadge(st['Hàng Mới Ca 2'])}</td>
+    <td style="text-align:center">${gtcBadge(st['Hàng Mới'])}</td>
     <td style="text-align:right;font-weight:700;border-left:2px solid #F3F4F6">${fN(tN)}</td>
     <td>${fs(tN-tC,tC?(tN-tC)/tC*100:0,true)}</td>
     <td style="text-align:center">${gtcBadge(st['Hàng Tồn'])}</td>
@@ -3014,7 +3020,7 @@ window._volRender=function(){
    <th style="text-align:right">Vol Mới N-1</th><th>Mới Δ</th>
    <th style="text-align:right">Vol Tồn N-1</th><th>Tồn Δ</th>
    <th style="text-align:center">Tồn/Mới</th>
-   <th style="text-align:center">GTC Mới Ca1</th>
+   <th style="text-align:center">GTC Mới</th>
    <th style="text-align:center">GTC Tồn</th>
    <th style="text-align:center">Đánh giá</th>
   </tr></thead>
