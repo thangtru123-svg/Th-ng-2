@@ -1583,12 +1583,50 @@ async function sendAllToTelegram(){
  }
 
  try{
-  /* --- P16: Vận Hành Ngày → VH thread --- */
+  /* --- P16: Vận Hành Ngày → VH thread (clone card, an search bar) --- */
   await navTo('p16');
-  await sendPhoto('Vận Hành Ngày','p16-card-a',TG_AGING_CHAT,TG_VH_THREAD,capP16());
-  const cardB=document.getElementById('p16-card-b');
-  if(cardB&&cardB.innerHTML.trim()){
-   await sendPhoto('TỶ LỆ GTC TTS','p16-card-b',TG_AGING_CHAT,TG_VH_THREAD,`🎯 <b>BÁO CÁO TỶ LỆ GTC TTS</b>`);
+  {
+   if(btn)btn.innerHTML='⏳ Đang gửi: Báo Cáo Vận Hành Ngày...';
+   const p16a=document.getElementById('p16-card-a');
+   if(p16a){
+    const cl=p16a.cloneNode(true);
+    cl.querySelectorAll('.table-wrap>div').forEach(e=>e.remove());
+    const tmp=document.createElement('div');
+    tmp.id='tg-p16-a';
+    tmp.style.cssText='position:fixed;top:-9999px;left:0;z-index:-1;width:1100px;padding:0';
+    tmp.appendChild(cl);
+    document.body.appendChild(tmp);
+    await new Promise(r=>setTimeout(r,300));
+    try{
+     const img=await _captureEl('tg-p16-a');
+     const res=await _tgSendPhoto(TG_AGING_CHAT,TG_VH_THREAD,img,capP16());
+     if(!res.ok)throw new Error('P16 AM loi: '+(res.description||JSON.stringify(res)));
+    }finally{tmp.remove();}
+    await new Promise(r=>setTimeout(r,600));
+   }else{
+    await sendPhoto('Van Hanh Ngay','p16-card-a',TG_AGING_CHAT,TG_VH_THREAD,capP16());
+   }
+  }
+  {
+   const p16b=document.getElementById('p16-card-b');
+   if(p16b&&p16b.innerHTML.trim()){
+    if(btn)btn.innerHTML='⏳ Đang gửi: Báo Cáo GTC TTS...';
+    const cl=p16b.cloneNode(true);
+    cl.querySelectorAll('.table-wrap>div').forEach(e=>e.remove());
+    const tmp=document.createElement('div');
+    tmp.id='tg-p16-b';
+    tmp.style.cssText='position:fixed;top:-9999px;left:0;z-index:-1;width:1300px;padding:0';
+    tmp.appendChild(cl);
+    document.body.appendChild(tmp);
+    await new Promise(r=>setTimeout(r,300));
+    try{
+     const img=await _captureEl('tg-p16-b');
+     const cap=`🎯 <b>BÁO CÁO TỶ LỆ GTC TTS</b>`;
+     const res=await _tgSendPhoto(TG_AGING_CHAT,TG_VH_THREAD,img,cap);
+     if(!res.ok)throw new Error('P16 B loi: '+(res.description||JSON.stringify(res)));
+    }finally{tmp.remove();}
+    await new Promise(r=>setTimeout(r,600));
+   }
   }
 
   /* --- P1: GTC Total Theo BC → VH thread --- */
