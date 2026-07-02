@@ -2778,14 +2778,12 @@ window._volRender=function(){
   return `<div style="line-height:1.5;text-align:center"><div style="font-weight:700">${fN(n1v)}</div><div style="font-size:11px;color:var(--text-sub)">${compLabel}: ${cmpTxt}</div><div style="font-size:11px;font-weight:600;color:${col}">${arr}${pct}%</div></div>`;
  }
 
- // --- Bảng A --- (mỗi tỉnh 1 màu nền riêng)
+ // --- Bảng A ---
  {
-  const TINH_BG=['#EFF6FF','#F0FDF4','#FFF7ED','#F5F3FF','#ECFDF5','#FEFCE8'];
-  const TINH_BG_H=['#DBEAFE','#BBF7D0','#FED7AA','#DDD6FE','#A7F3D0','#FEF08A']; // header đậm hơn
   const nc=TINH_ORDER.length;
   let h=`<table style="min-width:900px"><thead><tr>
    <th style="min-width:140px">Loại / Nhóm hàng</th>
-   ${TINH_ORDER.map((t,i)=>`<th style="text-align:center;min-width:120px;background:${TINH_BG_H[i%6]}">${TINH_FULL[t]||t}</th>`).join('')}
+   ${TINH_ORDER.map(t=>`<th style="text-align:center;min-width:120px">${TINH_FULL[t]||t}</th>`).join('')}
    <th style="text-align:center;min-width:120px">Tổng</th>
   </tr></thead><tbody>`;
   const secs=[
@@ -2799,33 +2797,32 @@ window._volRender=function(){
     const cs=TINH_ORDER.map(t=>s.cfn(t,nh));
     const tN=n1s.reduce((a,b)=>a+b,0),tC=cs.reduce((a,b)=>a+b,0);
     h+=`<tr><td style="padding-left:18px">${NHOM_L[nh]||nh}</td>
-     ${TINH_ORDER.map((_,i)=>`<td style="background:${TINH_BG[i%6]}">${mkCell(n1s[i],cs[i],s.neg)}</td>`).join('')}
+     ${TINH_ORDER.map((_,i)=>`<td>${mkCell(n1s[i],cs[i],s.neg)}</td>`).join('')}
      <td>${mkCell(tN,tC,s.neg)}</td></tr>`;
    }
    const n1s=TINH_ORDER.map(t=>NHOM.reduce((a,nh)=>a+s.n1fn(t,nh),0));
    const cs=TINH_ORDER.map(t=>NHOM.reduce((a,nh)=>a+s.cfn(t,nh),0));
    const tN=n1s.reduce((a,b)=>a+b,0),tC=cs.reduce((a,b)=>a+b,0);
    h+=`<tr class="tot"><td>${s.tot}</td>
-    ${TINH_ORDER.map((_,i)=>`<td style="background:${TINH_BG_H[i%6]}">${mkCell(n1s[i],cs[i],s.neg)}</td>`).join('')}
+    ${TINH_ORDER.map((_,i)=>`<td>${mkCell(n1s[i],cs[i],s.neg)}</td>`).join('')}
     <td>${mkCell(tN,tC,s.neg)}</td></tr>`;
   }
   h+=`</tbody></table>`;
   const el=document.getElementById('vol-tbl-a');if(el)el.innerHTML=h;
  }
 
- // --- Bảng B --- (Hàng Mới = xanh lá, Hàng Tồn = đỏ nhạt)
+ // --- Bảng B ---
  {
-  const BG_MOI='#F0FDF4';const BG_TON='#FFF5F5';
-  const BG_MOI_H='#DCFCE7';const BG_TON_H='#FFE4E6';
   const nc=NHOM.length+1;
+  const r1h=44; // estimated first header row height px
   let h=`<table style="min-width:900px" id="vol-tbl-b-tbl"><thead>
    <tr>
     <th rowspan="2" style="min-width:170px;position:sticky;top:0;z-index:5">Bưu Cục</th>
-    <th colspan="${nc}" style="text-align:center;background:#16A34A;color:#fff;position:sticky;top:0;z-index:4">📦 Hàng Mới (Ca1+Ca2)</th>
-    <th colspan="${nc}" style="text-align:center;background:#DC2626;color:#fff;position:sticky;top:0;z-index:4">📋 Hàng Tồn</th>
+    <th colspan="${nc}" style="text-align:center;background:#E8F5E9;color:#16A34A;position:sticky;top:0;z-index:4">📦 Hàng Mới (Ca1+Ca2)</th>
+    <th colspan="${nc}" style="text-align:center;background:#FEE2E2;color:#DC2626;position:sticky;top:0;z-index:4">📋 Hàng Tồn</th>
    </tr><tr id="vol-tbl-b-row2">
-    ${NHOM.map(n=>`<th style="text-align:center;background:${BG_MOI_H}">${NHOM_L[n]||n}</th>`).join('')}<th style="text-align:center;background:${BG_MOI_H};font-weight:700">Tổng</th>
-    ${NHOM.map(n=>`<th style="text-align:center;background:${BG_TON_H}">${NHOM_L[n]||n}</th>`).join('')}<th style="text-align:center;background:${BG_TON_H};font-weight:700">Tổng</th>
+    ${NHOM.map(n=>`<th style="text-align:center">${NHOM_L[n]||n}</th>`).join('')}<th style="text-align:center">Tổng</th>
+    ${NHOM.map(n=>`<th style="text-align:center">${NHOM_L[n]||n}</th>`).join('')}<th style="text-align:center">Tổng</th>
    </tr></thead><tbody>`;
   let any=false;
   for(const t of TINH_ORDER){
@@ -2843,10 +2840,10 @@ window._volRender=function(){
     const ttN=tn1.reduce((a,b)=>a+b,0),ttC=tc.reduce((a,b)=>a+b,0);
     h+=`<tr>
      <td style="padding-left:12px;white-space:nowrap;font-size:12px">${bc}</td>
-     ${NHOM.map((_,i)=>`<td style="background:${BG_MOI}">${mkCell(mn1[i],mc[i],false)}</td>`).join('')}
-     <td style="background:${BG_MOI_H}">${mkCell(tmN,tmC,false)}</td>
-     ${NHOM.map((_,i)=>`<td style="background:${BG_TON}">${mkCell(tn1[i],tc[i],true)}</td>`).join('')}
-     <td style="background:${BG_TON_H}">${mkCell(ttN,ttC,true)}</td>
+     ${NHOM.map((_,i)=>`<td>${mkCell(mn1[i],mc[i],false)}</td>`).join('')}
+     <td>${mkCell(tmN,tmC,false)}</td>
+     ${NHOM.map((_,i)=>`<td>${mkCell(tn1[i],tc[i],true)}</td>`).join('')}
+     <td>${mkCell(ttN,ttC,true)}</td>
     </tr>`;
     any=true;
    }
@@ -2858,7 +2855,7 @@ window._volRender=function(){
   setTimeout(()=>{
    const r1=document.querySelector('#vol-tbl-b-tbl thead tr:first-child');
    const r2=document.querySelector('#vol-tbl-b-row2');
-   if(r1&&r2){const h1=r1.getBoundingClientRect().height;r2.querySelectorAll('th').forEach((th,i)=>{th.style.position='sticky';th.style.top=h1+'px';th.style.zIndex='3';});}
+   if(r1&&r2){const h1=r1.getBoundingClientRect().height;r2.querySelectorAll('th').forEach(th=>{th.style.position='sticky';th.style.top=h1+'px';th.style.zIndex='3';th.style.backgroundColor='#FAFAFA';});}
   },50);
  }
 
@@ -2869,36 +2866,34 @@ window._volRender=function(){
   const gtcBadge=(g)=>g!==null?`<span style="display:inline-block;padding:2px 8px;border-radius:5px;background:${gtcBg(g)};color:${gtcColor(g)};font-weight:700;font-size:12px">${(g*100).toFixed(1)}%</span>`:'—';
 
   // GTC theo Tỉnh
-  // GTC theo Tỉnh — gộp Ca1+Ca2 thành 'Hàng Mới' (weighted average)
   const tinhGtc=TINH_ORDER.map(t=>{
-   const stats={};let msvAll=0,msgAll=0;
+   const stats={};
    for(const lo of['Hàng Mới Ca 1','Hàng Mới Ca 2','Hàng Tồn']){
     let sv=0,sg=0;
     if(GTC[t])for(const bc of Object.keys(GTC[t])){if(GTC[t][bc][lo]&&GTC[t][bc][lo][N1]){sv+=GTC[t][bc][lo][N1].sv;sg+=GTC[t][bc][lo][N1].sg;}}
     stats[lo]=sv>0?sg/sv:null;
-    if(lo!=='Hàng Tồn'){msvAll+=sv;msgAll+=sg;}
    }
-   stats['Hàng Mới']=msvAll>0?msgAll/msvAll:null;
    return {t,stats};
   });
 
-  // GTC + Volume theo BC — bảng tổng hợp đánh giá (gtcMoi = Ca1+Ca2 gộp)
+  // GTC + Volume theo BC — bảng tổng hợp đánh giá
   const bcAll=[];
   for(const t of TINH_ORDER){if(!V[t])continue;
    for(const bc of Object.keys(V[t]).sort()){
+    // Volume N-1 và cmp
     const mN=NHOM.reduce((s,nh)=>s+moiN1(t,bc,nh),0);
     const mC=NHOM.reduce((s,nh)=>s+moiCmp(t,bc,nh),0);
     const tN=NHOM.reduce((s,nh)=>s+tonN1(t,bc,nh),0);
     const tC=NHOM.reduce((s,nh)=>s+tonCmp(t,bc,nh),0);
     const mD=mN-mC;const mP=mC?(mD/mC*100):0;
     const tD=tN-tC;const tP=tC?(tD/tC*100):0;
-    // GTC Mới = Ca1+Ca2 gộp (weighted)
-    let msv=0,msg=0;
-    for(const lo of['Hàng Mới Ca 1','Hàng Mới Ca 2']){const g=GTC[t]?.[bc]?.[lo]?.[N1];if(g&&g.sv>0){msv+=g.sv;msg+=g.sg;}}
+    // GTC
+    const gM=GTC[t]?.[bc]?.['Hàng Mới Ca 1']?.[N1];
     const gT=GTC[t]?.[bc]?.['Hàng Tồn']?.[N1];
-    const gtcMoi=msv>0?msg/msv:null;
+    const gtcMoi=gM&&gM.sv>0?gM.sg/gM.sv:null;
     const gtcTon=gT&&gT.sv>0?gT.sg/gT.sv:null;
-    let rate=0;
+    // Đánh giá tổng hợp
+    let rate=0; // 0=ổn, 1=chú ý, 2=bất ổn
     if(gtcMoi!==null&&gtcMoi<0.7)rate=Math.max(rate,2);
     else if(gtcMoi!==null&&gtcMoi<0.8)rate=Math.max(rate,1);
     if(tP>25&&tN>100)rate=Math.max(rate,2);
@@ -2909,73 +2904,26 @@ window._volRender=function(){
     if(mN>0||tN>0)bcAll.push({t,bc,mN,mC,mD,mP,tN,tC,tD,tP,gtcMoi,gtcTon,rate,badge});
    }
   }
+  // Sort: bất ổn → chú ý → ổn, trong cùng nhóm sort theo vol mới N-1 desc
   bcAll.sort((a,b)=>b.rate-a.rate||b.mN-a.mN);
 
   const fs=(d,p,isNeg)=>{const up=d>0;const col=d===0?'var(--text-sub)':up?(isNeg?'var(--red)':'var(--green)'):(isNeg?'var(--green)':'var(--red)');const arr=d===0?'—':up?'▲':'▼';return `<span style="color:${col};font-weight:600">${arr} ${d>=0?'+':''}${fN(d)} (${p>=0?'+':''}${p.toFixed(1)}%)</span>`;};
 
   const tinhGtcMap={};tinhGtc.forEach(({t,stats})=>{tinhGtcMap[t]=stats;});
-
-  // Phân tích bảng Tỉnh
-  const tinhRows=TINH_ORDER.map(t=>{
-   const mN=NHOM.reduce((s,nh)=>s+moiTN(t,nh),0);const mC=NHOM.reduce((s,nh)=>s+moiTC(t,nh),0);
-   const tN=NHOM.reduce((s,nh)=>s+tonTN(t,nh),0);const tC=NHOM.reduce((s,nh)=>s+tonTC(t,nh),0);
-   const st=tinhGtcMap[t]||{};
-   return {t,mN,mC,tN,tC,tP:tC?(tN-tC)/tC*100:0,gtcMoi:st['Hàng Mới'],gtcTon:st['Hàng Tồn']};
-  });
-  const tinhAnalysis=(()=>{
-   const parts=[];
-   const gtcWarn=tinhRows.filter(r=>r.gtcMoi!==null&&r.gtcMoi<0.8).sort((a,b)=>a.gtcMoi-b.gtcMoi);
-   if(gtcWarn.length){
-    const redList=gtcWarn.filter(r=>r.gtcMoi<0.7);
-    const yelList=gtcWarn.filter(r=>r.gtcMoi>=0.7);
-    if(redList.length)parts.push(`🔴 <b>GTC Mới dưới 70%:</b> ${redList.map(r=>`<b>${TINH_FULL[r.t]||r.t}</b> (${(r.gtcMoi*100).toFixed(1)}%)`).join(', ')} — tỉ lệ giao thành công thấp, cần tăng cường giám sát và hỗ trợ tài xế ngay hôm nay.`);
-    if(yelList.length)parts.push(`🟡 <b>GTC Mới 70–80%:</b> ${yelList.map(r=>`<b>${TINH_FULL[r.t]||r.t}</b> (${(r.gtcMoi*100).toFixed(1)}%)`).join(', ')} — chưa đạt mục tiêu, cần theo dõi và cải thiện.`);
-   } else {
-    parts.push(`✅ <b>GTC Mới:</b> Tất cả các tỉnh đều ≥ 80% — tỉ lệ giao thành công đang ổn định.`);
-   }
-   const tonWarn=tinhRows.filter(r=>r.tP>15&&r.tN>500).sort((a,b)=>b.tP-a.tP);
-   if(tonWarn.length)parts.push(`📈 <b>Hàng Tồn tăng mạnh:</b> ${tonWarn.map(r=>`<b>${TINH_FULL[r.t]||r.t}</b> (+${r.tP.toFixed(1)}%, ${fN(r.tN)} kiện)`).join(', ')} — số đơn tồn kho tăng cao, có nguy cơ ùn ứ, cần điều phối thêm lực lượng giao.`);
-   const moiDec=tinhRows.filter(r=>r.mC>0&&(r.mN-r.mC)/r.mC*100<-5).sort((a,b)=>(a.mN-a.mC)/a.mC-(b.mN-b.mC)/b.mC);
-   if(moiDec.length)parts.push(`📉 <b>Vol Mới giảm:</b> ${moiDec.map(r=>`<b>${TINH_FULL[r.t]||r.t}</b> (${((r.mN-r.mC)/r.mC*100).toFixed(1)}%)`).join(', ')} — lượng đơn nhập vào giảm, cần kiểm tra nguồn hàng đầu vào từ seller.`);
-   return parts.map(p=>`<div style="padding:8px 12px;border-left:3px solid #E5E7EB;margin-bottom:6px;font-size:13px;line-height:1.65;background:#FAFAFA;border-radius:0 6px 6px 0">${p}</div>`).join('');
-  })();
-
-  // Phân tích bảng BC
-  const bcAnalysis=(()=>{
-   const nBat=bcAll.filter(b=>b.rate===2).length;
-   const nChu=bcAll.filter(b=>b.rate===1).length;
-   const nOn=bcAll.filter(b=>b.rate===0).length;
-   const parts=[];
-   parts.push(`📊 <b>Tổng quan ${bcAll.length} bưu cục:</b> <span style="color:var(--red);font-weight:700">${nBat} Bất ổn</span> &nbsp;·&nbsp; <span style="color:var(--yellow);font-weight:700">${nChu} Cần chú ý</span> &nbsp;·&nbsp; <span style="color:var(--green);font-weight:700">${nOn} Ổn định</span>`);
-   const batOns=bcAll.filter(b=>b.rate===2).slice(0,5);
-   if(batOns.length){
-    const reasons=batOns.map(b=>{
-     const r=[];
-     if(b.gtcMoi!==null&&b.gtcMoi<0.7)r.push(`GTC Mới ${(b.gtcMoi*100).toFixed(1)}%`);
-     if(b.tP>25&&b.tN>100)r.push(`Tồn +${b.tP.toFixed(0)}%`);
-     if(b.gtcTon!==null&&b.gtcTon<0.4)r.push(`GTC Tồn ${(b.gtcTon*100).toFixed(1)}%`);
-     return `<b>${b.bc}</b> (${TINH_FULL[b.t]||b.t}): ${r.join(', ')||'xem chi tiết'}`;
-    });
-    parts.push(`🔴 <b>Bưu cục cần xử lý ngay:</b><br>${reasons.join('<br>')}`);
-   }
-   const gtcBcWarn=bcAll.filter(b=>b.gtcMoi!==null&&b.gtcMoi<0.8&&b.mN>200).sort((a,b)=>a.gtcMoi-b.gtcMoi).slice(0,3);
-   if(gtcBcWarn.length)parts.push(`💡 <b>Gợi ý cải thiện GTC:</b> Tập trung vào ${gtcBcWarn.map(b=>`<b>${b.bc}</b> (${(b.gtcMoi*100).toFixed(1)}%, ${fN(b.mN)} đơn mới)`).join(', ')} — đây là các bưu cục có vol lớn và GTC thấp, cải thiện ở đây sẽ tác động nhiều nhất đến kết quả chung.`);
-   return parts.map(p=>`<div style="padding:8px 12px;border-left:3px solid #E5E7EB;margin-bottom:6px;font-size:13px;line-height:1.65;background:#FAFAFA;border-radius:0 6px 6px 0">${p}</div>`).join('');
-  })();
-
   let h=`<div class="card" style="margin-bottom:16px">
   <div class="card-header"><div class="card-title"><div class="card-icon">📊</div>1. Tổng hợp Volume &amp; GTC theo Tỉnh (N-1 vs ${compLabel})</div></div>
   <div class="table-wrap"><table>
   <thead>
    <tr>
     <th rowspan="2" style="min-width:110px;vertical-align:middle">Tỉnh</th>
-    <th colspan="3" style="text-align:center;border-left:2px solid #E5E7EB;background:#E8F5E9;color:#16A34A">📦 Hàng Mới</th>
+    <th colspan="4" style="text-align:center;border-left:2px solid #E5E7EB;background:#E8F5E9;color:#16A34A">📦 Hàng Mới</th>
     <th colspan="3" style="text-align:center;border-left:2px solid #E5E7EB;background:#FEE2E2;color:#DC2626">📋 Hàng Tồn</th>
    </tr>
    <tr>
     <th style="text-align:right;border-left:2px solid #E5E7EB">Vol N-1</th>
     <th>Δ vs ${compLabel}</th>
-    <th style="text-align:center">GTC Mới</th>
+    <th style="text-align:center">GTC Ca1</th>
+    <th style="text-align:center">GTC Ca2</th>
     <th style="text-align:right;border-left:2px solid #E5E7EB">Vol N-1</th>
     <th>Δ vs ${compLabel}</th>
     <th style="text-align:center">GTC Tồn</th>
@@ -2989,24 +2937,23 @@ window._volRender=function(){
     <td style="font-weight:600">${TINH_FULL[t]||t}</td>
     <td style="text-align:right;font-weight:700;border-left:2px solid #F3F4F6">${fN(mN)}</td>
     <td>${fs(mN-mC,mC?(mN-mC)/mC*100:0,false)}</td>
-    <td style="text-align:center">${gtcBadge(st['Hàng Mới'])}</td>
+    <td style="text-align:center">${gtcBadge(st['Hàng Mới Ca 1'])}</td>
+    <td style="text-align:center">${gtcBadge(st['Hàng Mới Ca 2'])}</td>
     <td style="text-align:right;font-weight:700;border-left:2px solid #F3F4F6">${fN(tN)}</td>
     <td>${fs(tN-tC,tC?(tN-tC)/tC*100:0,true)}</td>
     <td style="text-align:center">${gtcBadge(st['Hàng Tồn'])}</td>
    </tr>`;
-  }).join('')}</tbody></table></div>
-  <div style="padding:12px 16px 4px">${tinhAnalysis}</div>
-  </div>
+  }).join('')}</tbody></table></div></div>
 
   <div class="card" style="margin:0"><div class="card-header"><div class="card-title"><div class="card-icon">🏪</div>3. Đánh giá chi tiết Bưu Cục — Volume &amp; GTC (N-1 vs ${compLabel})</div>
-   <div style="font-size:11px;color:var(--text-sub)">🔴 Bất ổn: GTC Mới&lt;70% hoặc Tồn tăng mạnh &nbsp;|&nbsp; 🟡 Cần chú ý: GTC Mới 70–80% hoặc Tồn tăng &gt;15%</div>
+   <div style="font-size:11px;color:var(--text-sub)">🔴 Bất ổn: GTC Mới&lt;70% hoặc Tồn tăng mạnh &nbsp;|&nbsp; 🟡 Cần chú ý: GTC Mới 70-80% hoặc Tồn tăng &gt;15%</div>
   </div>
   <div class="table-wrap" style="max-height:500px"><table>
   <thead><tr>
    <th style="min-width:160px">Bưu Cục</th>
    <th style="text-align:right">Vol Mới N-1</th><th>Mới Δ</th>
    <th style="text-align:right">Vol Tồn N-1</th><th>Tồn Δ</th>
-   <th style="text-align:center">GTC Mới</th>
+   <th style="text-align:center">GTC Mới Ca1</th>
    <th style="text-align:center">GTC Tồn</th>
    <th style="text-align:center">Đánh giá</th>
   </tr></thead>
@@ -3019,9 +2966,7 @@ window._volRender=function(){
    <td style="text-align:center">${gtcBadge(b.gtcMoi)}</td>
    <td style="text-align:center">${gtcBadge(b.gtcTon)}</td>
    <td style="text-align:center">${b.badge}</td>
-  </tr>`).join('')}</tbody></table></div>
-  <div style="padding:12px 16px 4px">${bcAnalysis}</div>
-  </div>`;
+  </tr>`).join('')}</tbody></table></div></div>`;
   const el=document.getElementById('vol-tbl-c');if(el)el.innerHTML=h;
  }
 };
