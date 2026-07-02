@@ -2860,15 +2860,14 @@ window._volRender=function(){
 
  // --- Bảng C: Phân tích + Cảnh báo GTC ---
  {
-  // GTC weighted avg per tỉnh for N1
   const gtcColor=(g)=>g>=0.8?'var(--green)':g>=0.65?'var(--yellow)':'var(--red)';
-  const gtcBadge=(g)=>{const pct=(g*100).toFixed(1)+'%';const col=gtcColor(g);const bg=g>=0.8?'var(--green-bg)':g>=0.65?'var(--yellow-bg)':'var(--red-bg)';return `<span style="display:inline-block;padding:2px 8px;border-radius:5px;background:${bg};color:${col};font-weight:700;font-size:12px">${pct}</span>`;};
+  const gtcBg=(g)=>g>=0.8?'var(--green-bg)':g>=0.65?'var(--yellow-bg)':'var(--red-bg)';
+  const gtcBadge=(g)=>g!==null?`<span style="display:inline-block;padding:2px 8px;border-radius:5px;background:${gtcBg(g)};color:${gtcColor(g)};font-weight:700;font-size:12px">${(g*100).toFixed(1)}%</span>`:'—';
 
-  // Tỉnh GTC stats
+  // GTC theo Tỉnh
   const tinhGtc=TINH_ORDER.map(t=>{
-   const loais=['Hàng Mới Ca 1','Hàng Mới Ca 2','Hàng Tồn'];
    const stats={};
-   for(const lo of loais){
+   for(const lo of['Hàng Mới Ca 1','Hàng Mới Ca 2','Hàng Tồn']){
     let sv=0,sg=0;
     if(GTC[t])for(const bc of Object.keys(GTC[t])){if(GTC[t][bc][lo]&&GTC[t][bc][lo][N1]){sv+=GTC[t][bc][lo][N1].sv;sg+=GTC[t][bc][lo][N1].sg;}}
     stats[lo]=sv>0?sg/sv:null;
@@ -2876,58 +2875,85 @@ window._volRender=function(){
    return {t,stats};
   });
 
-  // BC GTC stats (lowest Mới)
-  const bcGtcAll=[];
-  for(const t of TINH_ORDER){if(!GTC[t])continue;
-   for(const bc of Object.keys(GTC[t])){
-    const lo='Hàng Mới Ca 1';
-    const g=GTC[t][bc][lo]&&GTC[t][bc][lo][N1]&&GTC[t][bc][lo][N1].sv>0?GTC[t][bc][lo][N1].sg/GTC[t][bc][lo][N1].sv:null;
-    const loT='Hàng Tồn';
-    const gT=GTC[t][bc][loT]&&GTC[t][bc][loT][N1]&&GTC[t][bc][loT][N1].sv>0?GTC[t][bc][loT][N1].sg/GTC[t][bc][loT][N1].sv:null;
-    if(g!==null||gT!==null)bcGtcAll.push({t,bc,gMoi:g,gTon:gT});
+  // GTC + Volume theo BC — bảng tổng hợp đánh giá
+  const bcAll=[];
+  for(const t of TINH_ORDER){if(!V[t])continue;
+   for(const bc of Object.keys(V[t]).sort()){
+    // Volume N-1 và cmp
+    const mN=NHOM.reduce((s,nh)=>s+moiN1(t,bc,nh),0);
+    const mC=NHOM.reduce((s,nh)=>s+moiCmp(t,bc,nh),0);
+    const tN=NHOM.reduce((s,nh)=>s+tonN1(t,bc,nh),0);
+    const tC=NHOM.reduce((s,nh)=>s+tonCmp(t,bc,nh),0);
+    const mD=mN-mC;const mP=mC?(mD/mC*100):0;
+    const tD=tN-tC;const tP=tC?(tD/tC*100):0;
+    // GTC
+    const gM=GTC[t]?.[bc]?.['Hàng Mới Ca 1']?.[N1];
+    const gT=GTC[t]?.[bc]?.['Hàng Tồn']?.[N1];
+    const gtcMoi=gM&&gM.sv>0?gM.sg/gM.sv:null;
+    const gtcTon=gT&&gT.sv>0?gT.sg/gT.sv:null;
+    // Đánh giá tổng hợp
+    let rate=0; // 0=ổn, 1=chú ý, 2=bất ổn
+    if(gtcMoi!==null&&gtcMoi<0.7)rate=Math.max(rate,2);
+    else if(gtcMoi!==null&&gtcMoi<0.8)rate=Math.max(rate,1);
+    if(tP>25&&tN>100)rate=Math.max(rate,2);
+    else if(tP>15&&tN>50)rate=Math.max(rate,1);
+    if(gtcTon!==null&&gtcTon<0.4)rate=Math.max(rate,2);
+    else if(gtcTon!==null&&gtcTon<0.5)rate=Math.max(rate,1);
+    const badge=rate===2?'<span style="padding:3px 10px;border-radius:20px;background:var(--red-bg);color:var(--red);font-weight:700;font-size:11px">🔴 Bất ổn</span>':rate===1?'<span style="padding:3px 10px;border-radius:20px;background:var(--yellow-bg);color:var(--yellow);font-weight:700;font-size:11px">🟡 Cần chú ý</span>':'<span style="padding:3px 10px;border-radius:20px;background:var(--green-bg);color:var(--green);font-weight:700;font-size:11px">🟢 Ổn định</span>';
+    if(mN>0||tN>0)bcAll.push({t,bc,mN,mC,mD,mP,tN,tC,tD,tP,gtcMoi,gtcTon,rate,badge});
    }
   }
-  const bcLowMoi=bcGtcAll.filter(b=>b.gMoi!==null&&b.gMoi<0.8).sort((a,b)=>a.gMoi-b.gMoi).slice(0,12);
-  const bcLowTon=bcGtcAll.filter(b=>b.gTon!==null&&b.gTon<0.65).sort((a,b)=>a.gTon-b.gTon).slice(0,12);
+  // Sort: bất ổn → chú ý → ổn, trong cùng nhóm sort theo vol mới N-1 desc
+  bcAll.sort((a,b)=>b.rate-a.rate||b.mN-a.mN);
 
-  const loLabels={'Hàng Mới Ca 1':'Mới Ca1','Hàng Mới Ca 2':'Mới Ca2','Hàng Tồn':'Tồn'};
+  const fs=(d,p,isNeg)=>{const up=d>0;const col=d===0?'var(--text-sub)':up?(isNeg?'var(--red)':'var(--green)'):(isNeg?'var(--green)':'var(--red)');const arr=d===0?'—':up?'▲':'▼';return `<span style="color:${col};font-weight:600">${arr} ${d>=0?'+':''}${fN(d)} (${p>=0?'+':''}${p.toFixed(1)}%)</span>`;};
 
-  let h=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
-  <div class="card" style="margin:0"><div class="card-header"><div class="card-title"><div class="card-icon">📊</div>Vấn đề 1 — Biến động Volume (N-1 vs ${compLabel})</div></div>
+  let h=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+  <div class="card" style="margin:0"><div class="card-header"><div class="card-title"><div class="card-icon">📊</div>1. Biến động Volume theo Tỉnh (N-1 vs ${compLabel})</div></div>
   <div class="table-wrap"><table>
-  <thead><tr><th>Tỉnh</th><th>Mới N-1</th><th>Mới Δ</th><th>Tồn N-1</th><th>Tồn Δ</th></tr></thead>
+  <thead><tr><th>Tỉnh</th><th style="text-align:right">Mới N-1</th><th>Mới Δ</th><th style="text-align:right">Tồn N-1</th><th>Tồn Δ</th></tr></thead>
   <tbody>${TINH_ORDER.map(t=>{
    const mN=NHOM.reduce((s,nh)=>s+moiTN(t,nh),0);const mC=NHOM.reduce((s,nh)=>s+moiTC(t,nh),0);
    const tN=NHOM.reduce((s,nh)=>s+tonTN(t,nh),0);const tC=NHOM.reduce((s,nh)=>s+tonTC(t,nh),0);
-   const mD=mN-mC;const tD=tN-tC;
-   const mP=mC?(mD/mC*100).toFixed(1):0;const tP=tC?(tD/tC*100).toFixed(1):0;
-   const fs=(d,p)=>`${d>=0?'+':''}${fN(d)} (${p>=0?'+':''}${p}%)`;
    return `<tr><td style="font-weight:600">${TINH_FULL[t]||t}</td>
-    <td style="text-align:right">${fN(mN)}</td>
-    <td style="color:${mD>=0?'var(--green)':'var(--red)'};font-weight:600">${mD>=0?'▲':'▼'} ${fs(mD,mP)}</td>
-    <td style="text-align:right">${fN(tN)}</td>
-    <td style="color:${tD>0?'var(--red)':'var(--green)'};font-weight:600">${tD>0?'▲':'▼'} ${fs(tD,tP)}</td>
+    <td style="text-align:right;font-weight:700">${fN(mN)}</td>
+    <td>${fs(mN-mC,mC?(mN-mC)/mC*100:0,false)}</td>
+    <td style="text-align:right;font-weight:700">${fN(tN)}</td>
+    <td>${fs(tN-tC,tC?(tN-tC)/tC*100:0,true)}</td>
    </tr>`;
   }).join('')}</tbody></table></div></div>
 
-  <div style="display:flex;flex-direction:column;gap:12px">
-  <div class="card" style="margin:0"><div class="card-header"><div class="card-title"><div class="card-icon">🚨</div>Cảnh báo GTC — Theo Tỉnh (N-1)</div></div>
+  <div class="card" style="margin:0"><div class="card-header"><div class="card-title"><div class="card-icon">🚨</div>2. Cảnh báo GTC — Theo Tỉnh (N-1)</div></div>
   <div class="table-wrap"><table>
   <thead><tr><th>Tỉnh</th><th style="text-align:center">GTC Mới Ca1</th><th style="text-align:center">GTC Mới Ca2</th><th style="text-align:center">GTC Tồn</th></tr></thead>
   <tbody>${tinhGtc.map(({t,stats})=>`<tr>
    <td style="font-weight:600">${TINH_FULL[t]||t}</td>
-   ${['Hàng Mới Ca 1','Hàng Mới Ca 2','Hàng Tồn'].map(lo=>`<td style="text-align:center">${stats[lo]!==null?gtcBadge(stats[lo]):'—'}</td>`).join('')}
+   ${['Hàng Mới Ca 1','Hàng Mới Ca 2','Hàng Tồn'].map(lo=>`<td style="text-align:center">${gtcBadge(stats[lo])}</td>`).join('')}
   </tr>`).join('')}</tbody></table></div></div>
+  </div>
 
-  <div class="card" style="margin:0"><div class="card-header"><div class="card-title"><div class="card-icon">⚠️</div>BC có GTC Mới Ca1 thấp (&lt;80%)</div></div>
-  <div class="table-wrap" style="max-height:220px"><table>
-  <thead><tr><th>Bưu Cục</th><th style="text-align:center">GTC Mới Ca1</th><th style="text-align:center">GTC Tồn</th></tr></thead>
-  <tbody>${bcLowMoi.length?bcLowMoi.map(b=>`<tr>
-   <td>${b.bc}<br><span style="font-size:11px;color:var(--text-sub)">${TINH_FULL[b.t]||b.t}</span></td>
-   <td style="text-align:center">${b.gMoi!==null?gtcBadge(b.gMoi):'—'}</td>
-   <td style="text-align:center">${b.gTon!==null?gtcBadge(b.gTon):'—'}</td>
-  </tr>`).join(''):'<tr><td colspan="3" style="text-align:center;color:var(--text-sub)">Tất cả BC đạt ≥80%</td></tr>'}</tbody></table></div></div>
-  </div></div>`;
+  <div class="card" style="margin:0"><div class="card-header"><div class="card-title"><div class="card-icon">🏪</div>3. Đánh giá chi tiết Bưu Cục — Volume &amp; GTC (N-1 vs ${compLabel})</div>
+   <div style="font-size:11px;color:var(--text-sub)">🔴 Bất ổn: GTC Mới&lt;70% hoặc Tồn tăng mạnh &nbsp;|&nbsp; 🟡 Cần chú ý: GTC Mới 70-80% hoặc Tồn tăng &gt;15%</div>
+  </div>
+  <div class="table-wrap" style="max-height:500px"><table>
+  <thead><tr>
+   <th style="min-width:160px">Bưu Cục</th>
+   <th style="text-align:right">Vol Mới N-1</th><th>Mới Δ</th>
+   <th style="text-align:right">Vol Tồn N-1</th><th>Tồn Δ</th>
+   <th style="text-align:center">GTC Mới Ca1</th>
+   <th style="text-align:center">GTC Tồn</th>
+   <th style="text-align:center">Đánh giá</th>
+  </tr></thead>
+  <tbody>${bcAll.map(b=>`<tr>
+   <td><div style="font-weight:600;font-size:12px">${b.bc}</div><div style="font-size:11px;color:var(--text-sub)">${TINH_FULL[b.t]||b.t}</div></td>
+   <td style="text-align:right;font-weight:700">${fN(b.mN)}</td>
+   <td>${fs(b.mD,b.mP,false)}</td>
+   <td style="text-align:right;font-weight:700">${fN(b.tN)}</td>
+   <td>${fs(b.tD,b.tP,true)}</td>
+   <td style="text-align:center">${gtcBadge(b.gtcMoi)}</td>
+   <td style="text-align:center">${gtcBadge(b.gtcTon)}</td>
+   <td style="text-align:center">${b.badge}</td>
+  </tr>`).join('')}</tbody></table></div></div>`;
   const el=document.getElementById('vol-tbl-c');if(el)el.innerHTML=h;
  }
 };
