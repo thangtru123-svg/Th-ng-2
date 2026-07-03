@@ -2858,10 +2858,10 @@ window._volRender=function(){
    <tr>
     <th rowspan="2" style="min-width:170px;position:sticky;top:0;z-index:5">Bưu Cục</th>
     <th colspan="${nc}" style="text-align:center;background:#E8F5E9;color:#16A34A;position:sticky;top:0;z-index:4">📦 Hàng Mới (Ca1+Ca2)</th>
-    <th colspan="${nc}" style="text-align:center;background:#FEE2E2;color:#DC2626;position:sticky;top:0;z-index:4">📋 Hàng Tồn</th>
+    <th colspan="${nc}" style="text-align:center;background:#FEE2E2;color:#DC2626;position:sticky;top:0;z-index:4;border-left:3px solid #bbb">📋 Hàng Tồn</th>
    </tr><tr id="vol-tbl-b-row2">
     ${NHOM.map((n,i)=>`<th style="text-align:center;background:${NHOM_COL_BG[i]}">${NHOM_L[n]||n}</th>`).join('')}<th style="text-align:center;background:${TOT_M_BG}">Tổng</th>
-    ${NHOM.map((n,i)=>`<th style="text-align:center;background:${NHOM_COL_BG[i]}">${NHOM_L[n]||n}</th>`).join('')}<th style="text-align:center;background:${TOT_T_BG}">Tổng</th>
+    ${NHOM.map((n,i)=>`<th style="text-align:center;background:${NHOM_COL_BG[i]}${i===0?';border-left:3px solid #bbb':''}">${NHOM_L[n]||n}</th>`).join('')}<th style="text-align:center;background:${TOT_T_BG}">Tổng</th>
    </tr></thead><tbody>`;
   let any=false;
   for(const t of TINH_ORDER){
@@ -2881,7 +2881,7 @@ window._volRender=function(){
      <td style="padding-left:12px;white-space:nowrap;font-size:12px">${bc}</td>
      ${NHOM.map((_,i)=>`<td style="background:${NHOM_COL_BG[i]}">${mkCell(mn1[i],mc[i],false)}</td>`).join('')}
      <td style="background:${TOT_M_BG}">${mkCell(tmN,tmC,false)}</td>
-     ${NHOM.map((_,i)=>`<td style="background:${NHOM_COL_BG[i]}">${mkCell(tn1[i],tc[i],true)}</td>`).join('')}
+     ${NHOM.map((_,i)=>`<td style="background:${NHOM_COL_BG[i]}${i===0?';border-left:3px solid #bbb':''}">${mkCell(tn1[i],tc[i],true)}</td>`).join('')}
      <td style="background:${TOT_T_BG}">${mkCell(ttN,ttC,true)}</td>
     </tr>`;
     any=true;
