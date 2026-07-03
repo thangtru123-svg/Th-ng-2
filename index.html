@@ -521,6 +521,58 @@ function addBCSearch(el,nc){
  });
 }
 
+/* ===== VOL BC MULTI-SELECT FILTER ===== */
+function addVolBCFilter(el){
+ if(!el)return;
+ const tbl=el.querySelector('table');
+ if(!tbl||tbl.dataset.volBcSrch)return;
+ tbl.dataset.volBcSrch='1';
+ const allRows=[...tbl.querySelectorAll('tbody tr')];
+ const dataRows=allRows.filter(r=>!r.classList.contains('prov-hdr'));
+ const names=[...new Set(dataRows.map(r=>(r.cells[0]?.textContent||'').trim()).filter(n=>n))].sort((a,b)=>a.localeCompare(b,'vi'));
+ if(!names.length)return;
+ const uid='vb'+Math.random().toString(36).slice(2,8);
+ const sel=new Set();
+ const esc=s=>s.replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+ const bar=document.createElement('div');
+ bar.style.cssText='padding:6px 10px;background:#FFF8F5;border-bottom:1px solid #F5D0BE;display:flex;align-items:center;gap:8px;position:sticky;top:0;z-index:10;flex-shrink:0';
+ bar.innerHTML=`<span style="font-size:13px;flex-shrink:0">🔍</span><div style="position:relative;flex-shrink:0;width:260px"><button id="${uid}b" style="width:100%;text-align:left;padding:5px 28px 5px 10px;border:1px solid #D1D5DB;border-radius:6px;font-size:12px;background:#fff;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;position:relative">Tất cả<span style="position:absolute;right:8px;top:50%;transform:translateY(-50%);color:#9CA3AF;pointer-events:none;font-size:10px">▾</span></button><div id="${uid}d" style="display:none;position:absolute;top:calc(100% + 4px);left:0;width:300px;background:#fff;border:1px solid #D1D5DB;border-radius:8px;box-shadow:0 6px 20px rgba(0,0,0,0.15);z-index:9999"><div style="padding:6px 8px;border-bottom:1px solid #F1F5F9;display:flex;gap:4px;align-items:center"><button id="${uid}a" style="font-size:11px;padding:2px 7px;border:1px solid #E5E7EB;border-radius:4px;cursor:pointer;background:#F9FAFB;white-space:nowrap;flex-shrink:0">Tất cả</button><button id="${uid}n" style="font-size:11px;padding:2px 7px;border:1px solid #E5E7EB;border-radius:4px;cursor:pointer;background:#F9FAFB;white-space:nowrap;flex-shrink:0">Bỏ hết</button><input id="${uid}s" placeholder="Tìm nhanh..." style="flex:1;font-size:11px;padding:2px 6px;border:1px solid #E5E7EB;border-radius:4px;outline:none;min-width:0"></div><div id="${uid}l" style="max-height:260px;overflow-y:auto;overflow-x:hidden"><table style="width:100%;border-collapse:collapse;table-layout:fixed"><tbody>${names.map(n=>`<tr data-item="1" style="cursor:pointer;background:#fff" onmouseenter="this.style.background='#FFF8F5'" onmouseleave="this.style.background='#fff'"><td style="width:34px;padding:6px 4px 6px 12px;vertical-align:middle;border-bottom:1px solid #F9FAFB"><input type="checkbox" value="${esc(n)}" style="cursor:pointer;accent-color:var(--orange);width:14px;height:14px;display:block"></td><td style="padding:6px 12px 6px 0;font-size:12px;vertical-align:middle;border-bottom:1px solid #F9FAFB;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${n}</td></tr>`).join('')}</tbody></table></div></div></div><span id="${uid}c" style="font-size:11px;color:var(--text-sub);white-space:nowrap;flex-shrink:0"></span><button id="${uid}x" title="Xóa bộ lọc" style="border:1px solid #E5E7EB;background:#fff;border-radius:5px;cursor:pointer;font-size:11px;color:#9CA3AF;padding:3px 8px;flex-shrink:0">✕</button>`;
+ const btnEl=bar.querySelector('#'+uid+'b'),dd=bar.querySelector('#'+uid+'d');
+ const lst=bar.querySelector('#'+uid+'l'),srch=bar.querySelector('#'+uid+'s');
+ const cntEl=bar.querySelector('#'+uid+'c'),allBtn=bar.querySelector('#'+uid+'a');
+ const noneBtn=bar.querySelector('#'+uid+'n'),clrBtn=bar.querySelector('#'+uid+'x');
+ const doFilter=()=>{
+  allRows.forEach(r=>{
+   if(r.classList.contains('prov-hdr')){r.style.display='';return;}
+   const name=(r.cells[0]?.textContent||'').trim();
+   r.style.display=(sel.size===0||sel.has(name))?'':'none';
+  });
+  // Ẩn tỉnh nếu tất cả BC của tỉnh đó đều bị ẩn
+  tbl.querySelectorAll('tbody tr.prov-hdr').forEach(pr=>{
+   let next=pr.nextElementSibling,anyVis=false;
+   while(next&&!next.classList.contains('prov-hdr')){if(next.style.display!=='none')anyVis=true;next=next.nextElementSibling;}
+   pr.style.display=(anyVis||sel.size===0)?'':'none';
+  });
+  const vis=dataRows.filter(r=>r.style.display!=='none').length;
+  cntEl.textContent=sel.size>0?`${vis}/${dataRows.length} bưu cục`:'';
+  const lbl=sel.size===0?'Tất cả':sel.size===1?[...sel][0]:sel.size+' đã chọn';
+  btnEl.childNodes[0].textContent=lbl+' ';
+ };
+ lst.querySelectorAll('[data-item]').forEach(div=>{
+  div.addEventListener('click',e=>{if(e.target.tagName==='INPUT')return;const cb=div.querySelector('input');cb.checked=!cb.checked;if(cb.checked)sel.add(cb.value);else sel.delete(cb.value);doFilter();});
+  div.querySelector('input').addEventListener('change',e=>{if(e.target.checked)sel.add(e.target.value);else sel.delete(e.target.value);doFilter();});
+ });
+ btnEl.addEventListener('click',e=>{e.stopPropagation();const open=dd.style.display!=='none';dd.style.display=open?'none':'block';if(!open)srch.focus();});
+ dd.addEventListener('click',e=>e.stopPropagation());
+ document.addEventListener('click',()=>{dd.style.display='none';});
+ srch.addEventListener('input',()=>{const q=srch.value.toLowerCase();lst.querySelectorAll('[data-item]').forEach(d=>{d.style.display=(d.textContent||'').toLowerCase().includes(q)?'':'none';});});
+ allBtn.addEventListener('click',()=>{lst.querySelectorAll('[data-item]').forEach(d=>{if(d.style.display==='none')return;const cb=d.querySelector('input');cb.checked=true;sel.add(cb.value);});doFilter();});
+ noneBtn.addEventListener('click',()=>{lst.querySelectorAll('input[type=checkbox]').forEach(cb=>{cb.checked=false;});sel.clear();doFilter();});
+ clrBtn.addEventListener('click',()=>{lst.querySelectorAll('input[type=checkbox]').forEach(cb=>cb.checked=false);sel.clear();srch.value='';lst.querySelectorAll('[data-item]').forEach(d=>d.style.display='');doFilter();});
+ tbl.parentElement.insertBefore(bar,tbl);
+ requestAnimationFrame(()=>{const barH=bar.offsetHeight||37;let top=barH;tbl.querySelectorAll('thead tr').forEach(tr=>{tr.querySelectorAll('th').forEach(th=>{th.style.position='sticky';th.style.top=top+'px';});top+=tr.offsetHeight||34;});});
+}
+
 // BC FD sheets: same (BC name in col 0)
 window._FD={};
 window._GTC_MAP_AM={};window._GTC_MAP_BC={};
@@ -2731,7 +2783,6 @@ function buildVolumePage(csvText){
      <option value="">Tất cả tỉnh</option>
      ${TINH_ORDER.map(t=>`<option value="${t}">${TINH_FULL[t]||t}</option>`).join('')}
     </select>
-    <input id="vol-bc-search" oninput="_volRender()" placeholder="🔍 Tìm bưu cục..." style="padding:5px 10px;border-radius:6px;border:1px solid var(--border);font-size:12px;font-family:inherit;width:160px">
    </div>
   </div>
   <div class="table-wrap" id="vol-tbl-b-wrap" style="max-height:65vh"><div id="vol-tbl-b"></div></div>
@@ -2749,8 +2800,7 @@ window._volRender=function(){
  const {V,GTC,N1,N2,wArr,wPrevArr,TINH_ORDER,TINH_FULL,NHOM,NHOM_L}=d;
  const mode=(document.getElementById('vol-comp-mode')||{}).value||'tb7';
  const tinhFil=(document.getElementById('vol-tinh-filter')||{}).value||'';
- const bcQ=((document.getElementById('vol-bc-search')||{}).value||'').toLowerCase().trim();
-
+ 
  // Determine comparison
  let compDates,compLabel,isSingle=false;
  if(mode==='n2'){compDates=[N2];compLabel='N-2 ('+fmtDD(N2)+')';isSingle=true;}
@@ -2867,9 +2917,9 @@ window._volRender=function(){
   for(const t of TINH_ORDER){
    if(!V[t])continue;
    if(tinhFil&&tinhFil!==t)continue;
-   const bcs=Object.keys(V[t]).sort().filter(bc=>!bcQ||bc.toLowerCase().includes(bcQ)||(TINH_FULL[t]||'').toLowerCase().includes(bcQ));
+   const bcs=Object.keys(V[t]).sort();
    if(!bcs.length)continue;
-   h+=`<tr style="background:#FFF7ED"><td colspan="${2*nc+1}" style="font-weight:700;color:var(--orange-dark);padding:6px 10px">🏙️ ${TINH_FULL[t]||t}</td></tr>`;
+   h+=`<tr class="prov-hdr" style="background:#FFF7ED"><td colspan="${2*nc+1}" style="font-weight:700;color:var(--orange-dark);padding:6px 10px">🏙️ ${TINH_FULL[t]||t}</td></tr>`;
    for(const bc of bcs){
     const mn1=NHOM.map(nh=>moiN1(t,bc,nh));
     const mc=NHOM.map(nh=>moiCmp(t,bc,nh));
@@ -2889,7 +2939,7 @@ window._volRender=function(){
   }
   if(!any)h+=`<tr><td colspan="${2*nc+1}" style="text-align:center;color:var(--text-sub);padding:20px">Không tìm thấy bưu cục phù hợp</td></tr>`;
   h+=`</tbody></table>`;
-  const el=document.getElementById('vol-tbl-b');if(el)el.innerHTML=h;
+  const el=document.getElementById('vol-tbl-b');if(el){el.innerHTML=h;addVolBCFilter(el);}
 
   // --- Analysis B ---
   {
