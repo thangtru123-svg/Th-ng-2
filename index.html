@@ -1599,6 +1599,7 @@ async function sendAllToTelegram(){
    if(p16a){
     const cl=p16a.cloneNode(true);
     cl.querySelectorAll('.table-wrap>div').forEach(e=>e.remove());
+    cl.querySelectorAll('thead,th').forEach(el=>{el.style.position='';el.style.top='';el.style.zIndex='';});
     const tmp=document.createElement('div');
     tmp.id='tg-p16-a';
     tmp.style.cssText='position:fixed;top:-9999px;left:0;z-index:-1;width:1100px;padding:0';
@@ -1621,6 +1622,7 @@ async function sendAllToTelegram(){
     if(btn)btn.innerHTML='⏳ Đang gửi: Báo Cáo GTC TTS...';
     const cl=p16b.cloneNode(true);
     cl.querySelectorAll('.table-wrap>div').forEach(e=>e.remove());
+    cl.querySelectorAll('thead,th').forEach(el=>{el.style.position='';el.style.top='';el.style.zIndex='';});
     const tmp=document.createElement('div');
     tmp.id='tg-p16-b';
     tmp.style.cssText='position:fixed;top:-9999px;left:0;z-index:-1;width:1300px;padding:0';
@@ -1645,6 +1647,7 @@ async function sendAllToTelegram(){
    if(p1bc){
     const cl=p1bc.cloneNode(true);
     cl.querySelectorAll('.table-wrap>div').forEach(e=>e.remove());
+    cl.querySelectorAll('thead,th').forEach(el=>{el.style.position='';el.style.top='';el.style.zIndex='';});
     const tmp=document.createElement('div');
     tmp.id='tg-p1-bc';
     tmp.style.cssText='position:fixed;top:-9999px;left:0;z-index:-1;width:1400px;padding:0';
