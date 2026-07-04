@@ -2834,7 +2834,47 @@ function buildGTCBCPage(csvText){
   if(!bcList.length)h+=`<tr><td colspan="16" style="text-align:center;padding:24px;color:var(--text-sub)">Không có dữ liệu cho ngày này</td></tr>`;
   h+=`</tbody></table>`;
   const tblEl=document.getElementById('gtcbc-table');
-  if(tblEl){tblEl.innerHTML=h;addBCSearch(tblEl,1);}
+  if(tblEl)tblEl.innerHTML=h;
+  // BC filter ngoài scroll container — rebuild mỗi lần render
+  const bcWrap=document.getElementById('gtcbc-bc-filter');
+  if(bcWrap){
+   if(!window._gtcBCSel)window._gtcBCSel=new Set();
+   const sel=window._gtcBCSel;
+   bcWrap.innerHTML=`<div style="position:relative;display:inline-block">
+    <button id="gbc0btn" style="display:flex;align-items:center;gap:6px;padding:5px 12px;border:1px solid var(--border);border-radius:6px;font-size:12px;background:#fff;cursor:pointer;font-family:inherit">🏪 <span id="gbc0lbl">${sel.size===0?'Tất cả':sel.size+' BC'}</span> <span style="color:#9CA3AF;font-size:10px">▾</span></button>
+    <div id="gbc0dd" style="display:none;position:absolute;top:calc(100% + 4px);right:0;width:270px;background:#fff;border:1px solid var(--border);border-radius:8px;box-shadow:0 6px 20px rgba(0,0,0,0.15);z-index:9999">
+     <div style="padding:6px 8px;border-bottom:1px solid #F1F5F9;display:flex;gap:4px">
+      <button id="gbc0all" style="font-size:11px;padding:2px 8px;border:1px solid #E5E7EB;border-radius:4px;cursor:pointer;background:#F9FAFB">Tất cả</button>
+      <button id="gbc0none" style="font-size:11px;padding:2px 8px;border:1px solid #E5E7EB;border-radius:4px;cursor:pointer;background:#F9FAFB">Bỏ hết</button>
+      <input id="gbc0srch" placeholder="Tìm..." style="flex:1;font-size:11px;padding:2px 6px;border:1px solid #E5E7EB;border-radius:4px;outline:none">
+     </div>
+     <div id="gbc0list" style="max-height:280px;overflow-y:auto;padding:4px 0">
+      ${bcList.map(b=>{const v=b.bc.replace(/"/g,'&quot;');return`<label style="display:flex;align-items:center;gap:8px;padding:5px 14px;cursor:pointer;font-size:12px"><input type="checkbox" value="${v}"${sel.has(b.bc)?' checked':''} style="accent-color:var(--orange)"> ${b.bc}</label>`;}).join('')}
+     </div>
+    </div>
+   </div>`;
+   const applyFilter=()=>{
+    const tbl=tblEl?.querySelector('table');
+    if(!tbl)return;
+    tbl.querySelectorAll('tbody tr').forEach(r=>{
+     if(!sel.size){r.style.display='';return;}
+     const name=(r.cells[1]?.textContent||'').trim();
+     r.style.display=sel.has(name)?'':'none';
+    });
+    const lbl=document.getElementById('gbc0lbl');
+    if(lbl)lbl.textContent=sel.size===0?'Tất cả':sel.size===1?[...sel][0]:sel.size+' BC';
+   };
+   const btn=document.getElementById('gbc0btn'),dd=document.getElementById('gbc0dd');
+   const list=document.getElementById('gbc0list'),srch=document.getElementById('gbc0srch');
+   btn.onclick=e=>{e.stopPropagation();dd.style.display=dd.style.display==='none'?'block':'none';if(dd.style.display!=='none')srch.focus();};
+   dd.onclick=e=>e.stopPropagation();
+   list.onchange=e=>{const cb=e.target;if(cb.type!=='checkbox')return;cb.checked?sel.add(cb.value):sel.delete(cb.value);applyFilter();};
+   srch.oninput=()=>{const q=srch.value.toLowerCase();list.querySelectorAll('label').forEach(l=>{l.style.display=l.textContent.toLowerCase().includes(q)?'':'none';});};
+   document.getElementById('gbc0all').onclick=()=>{list.querySelectorAll('input').forEach(cb=>{if(cb.closest('label').style.display!=='none'){cb.checked=true;sel.add(cb.value);}});applyFilter();};
+   document.getElementById('gbc0none').onclick=()=>{list.querySelectorAll('input').forEach(cb=>{cb.checked=false;});sel.clear();applyFilter();};
+   document.addEventListener('click',function h(){dd.style.display='none';document.removeEventListener('click',h);},true);
+   applyFilter();
+  }
   const infoEl=document.getElementById('gtcbc-info');
   if(infoEl)infoEl.textContent=`${totalBC} bưu cục · ${fD(selDate)}${prevDate?' (so sánh vs '+fD(prevDate)+')':''}`;
  };
@@ -2851,8 +2891,9 @@ function buildGTCBCPage(csvText){
  </div>
  <div id="gtcbc-analysis"></div>
  <div class="card" style="margin-top:12px">
-  <div class="card-header">
+  <div class="card-header" style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
    <div class="card-title"><div class="card-icon">🏪</div>Chi tiết GTC theo Bưu Cục — Sắp xếp GTC Total thấp → cao</div>
+   <div id="gtcbc-bc-filter"></div>
   </div>
   <div class="table-wrap" style="max-height:68vh"><div id="gtcbc-table"></div></div>
  </div>`;
