@@ -3287,23 +3287,29 @@ async function buildNangSuatPage(){
   const rows=parseCSV(await res.text()).slice(1).filter(r=>r[0]&&r[2]&&r[3]);
   // cols: A(0)=BC, B(1)=NV, C(2)=Ngày(YYYY-MM-DD), D(3)=Gán, E(4)=GTC, F(5)=%GTC, G(6)=Tỉnh
 
-  // Tổng hợp Volume theo Tỉnh+Ngày từ GTC Total theo BC (đã load sẵn trong window._D)
-  // rowsBC cols: AM(0), Bưu Cục(1), Ngày(2="YYYY-MM-DD - Thứ X"), Volume(3), ...
+  // Lấy Volume theo Tỉnh+Ngày từ window._volD (Tổng Mới + Tổng Tồn = Vol cần giao)
+  // _volD.V structure: V[tinhKey][bc][loai][nhom][dateStr] = vol
+  // _volD.TINH_FULL: {XBG - Hải Phòng: Hải Phòng, ...}
   const volPD={};
-  if(window._D&&window._D.gtcTotalBC){
-   window._D.gtcTotalBC.slice(1).forEach(r=>{
-    const parts=(r[1]||'').split('-');
-    const prov=parts[parts.length-1].trim();
-    const dt=isoD(r[2]||'');
-    const vol=parseFloat(r[3])||0;
-    if(!prov||!dt)return;
-    volPD[prov+'|'+dt]=(volPD[prov+'|'+dt]||0)+vol;
-   });
+  if(window._volD&&window._volD.V){
+   const V=window._volD.V,TF=window._volD.TINH_FULL||{};
+   for(const tk of Object.keys(V)){
+    const ts=(TF[tk]||tk.replace('XBG - ','')).trim();
+    for(const bc of Object.keys(V[tk]))
+     for(const lo of Object.keys(V[tk][bc]))
+      for(const nh of Object.keys(V[tk][bc][lo]))
+       for(const [ds,vol] of Object.entries(V[tk][bc][lo][nh])){
+        const dt=(ds||'').match(/\d{4}-\d{2}-\d{2}/)?.[0]||'';
+        if(!dt)continue;
+        volPD[ts+'|'+dt]=(volPD[ts+'|'+dt]||0)+vol;
+       }
+   }
   }
 
   const dates=[...new Set(rows.map(r=>r[2]))].filter(Boolean).sort().reverse();
   const pctColor=p=>p>=80?'var(--green)':p>=60?'var(--yellow)':'var(--red)';
   const pctBg=p=>p>=80?'var(--green-bg)':p>=60?'var(--yellow-bg)':'var(--red-bg)';
+  const selStyle='border:1px solid var(--border);border-radius:6px;padding:5px 10px;font-size:12px;background:#FFF;cursor:pointer;color:var(--text-main)';
 
   function renderNS(selDates){
    const f=rows.filter(r=>selDates.includes(r[2]));
@@ -3329,19 +3335,24 @@ async function buildNangSuatPage(){
    });
    const tA=Object.entries(bT).sort((a,b)=>(b[1].gan>0?b[1].gtc/b[1].gan:0)-(a[1].gan>0?a[1].gtc/a[1].gan:0));
    const bA=Object.entries(bB).sort((a,b)=>(b[1].gan>0?b[1].gtc/b[1].gan:0)-(a[1].gan>0?a[1].gtc/a[1].gan:0));
-   const fHtml=dates.map(d=>`<label style="display:inline-flex;align-items:center;gap:4px;margin-right:12px;font-size:12px;cursor:pointer"><input type="checkbox" ${selDates.includes(d)?'checked':''} onchange="window._nsChg('${d}',this.checked)" style="cursor:pointer">${shortD(d)}</label>`).join('');
+   // Bộ lọc compact: 2 dropdown
+   const opts=dates.map(d=>`<option value="${d}">${shortD(d)}</option>`).join('');
+   const fHtml=`<span style="font-size:12px;font-weight:600;color:var(--text-sub)">Ngày 1:</span>
+    <select id="ns-d1" style="${selStyle}" onchange="window._nsChgDrop()">${dates.map(d=>`<option value="${d}" ${d===selDates[0]?'selected':''}>${shortD(d)}</option>`).join('')}</select>
+    <span style="font-size:12px;font-weight:600;color:var(--text-sub)">Ngày 2:</span>
+    <select id="ns-d2" style="${selStyle}" onchange="window._nsChgDrop()"><option value="">— Không —</option>${dates.map(d=>`<option value="${d}" ${d===(selDates[1]||'')?'selected':''}>${shortD(d)}</option>`).join('')}</select>`;
    const tbl1=`<div class="card" style="margin-bottom:20px"><div class="card-header" style="display:flex;align-items:center;justify-content:space-between"><span style="font-size:14px;font-weight:700;color:var(--text-main)">📍 Theo Tỉnh/TP</span><span style="font-size:11px;color:var(--text-sub)">${selDates.map(d=>shortD(d)).join(' + ')}</span></div><div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:13px"><thead><tr style="background:#F8F9FA;border-bottom:2px solid var(--border)"><th style="padding:10px 12px;text-align:left;font-weight:600;color:var(--text-sub);min-width:120px">Tỉnh/TP</th><th style="padding:10px 12px;text-align:center;font-weight:600;color:var(--text-sub)">Số NV</th><th style="padding:10px 12px;text-align:center;font-weight:600;color:var(--text-sub)">Vol BC</th><th style="padding:10px 12px;text-align:center;font-weight:600;color:var(--text-sub)">Đơn gán</th><th style="padding:10px 12px;text-align:center;font-weight:600;color:var(--text-sub)">Đơn GTC</th><th style="padding:10px 12px;text-align:center;font-weight:600;color:var(--text-sub)">%GTC/Gán</th><th style="padding:10px 12px;text-align:center;font-weight:600;color:var(--text-sub)">%GTC/Vol</th></tr></thead><tbody>${tA.map(([t,d],i)=>{const pG=d.gan>0?(d.gtc/d.gan*100):0;const pV=d.vol>0?(d.gtc/d.vol*100):0;const bg=i%2?'#FAFAFA':'#FFF';return`<tr style="background:${bg};border-bottom:1px solid var(--border)"><td style="padding:9px 12px;font-weight:600;color:var(--text-main)">${t}</td><td style="padding:9px 12px;text-align:center">${d.nvs.size}</td><td style="padding:9px 12px;text-align:center;font-weight:500">${d.vol>0?Math.round(d.vol).toLocaleString('vi-VN'):'—'}</td><td style="padding:9px 12px;text-align:center;font-weight:500">${d.gan.toLocaleString('vi-VN')}</td><td style="padding:9px 12px;text-align:center;font-weight:500">${d.gtc.toLocaleString('vi-VN')}</td><td style="padding:9px 12px;text-align:center"><span style="background:${pctBg(pG)};color:${pctColor(pG)};padding:3px 8px;border-radius:20px;font-weight:700;font-size:12px">${pG.toFixed(1)}%</span></td><td style="padding:9px 12px;text-align:center">${d.vol>0?`<span style="background:${pctBg(pV)};color:${pctColor(pV)};padding:3px 8px;border-radius:20px;font-weight:700;font-size:12px">${pV.toFixed(1)}%</span>`:'—'}</td></tr>`;}).join('')}</tbody></table></div></div>`;
    const tbl2=`<div class="card"><div class="card-header" style="display:flex;align-items:center;justify-content:space-between"><span style="font-size:14px;font-weight:700;color:var(--text-main)">🏢 Theo Bưu Cục</span><span style="font-size:11px;color:var(--text-sub)">${bA.length} bưu cục</span></div><div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="background:#F8F9FA;border-bottom:2px solid var(--border)"><th style="padding:9px 12px;text-align:left;font-weight:600;color:var(--text-sub)">Bưu Cục</th><th style="padding:9px 12px;text-align:left;font-weight:600;color:var(--text-sub)">Tỉnh</th><th style="padding:9px 12px;text-align:center;font-weight:600;color:var(--text-sub)">Số NV</th><th style="padding:9px 12px;text-align:center;font-weight:600;color:var(--text-sub)">Đơn gán</th><th style="padding:9px 12px;text-align:center;font-weight:600;color:var(--text-sub)">Đơn GTC</th><th style="padding:9px 12px;text-align:center;font-weight:600;color:var(--text-sub)">%GTC</th></tr></thead><tbody>${bA.map(([bc,d],i)=>{const p=d.gan>0?(d.gtc/d.gan*100):0;const bg=i%2?'#FAFAFA':'#FFF';return`<tr style="background:${bg};border-bottom:1px solid var(--border)"><td style="padding:8px 12px;font-weight:600;color:var(--text-main)">${bc}</td><td style="padding:8px 12px;color:var(--text-sub);font-size:11px">${d.t}</td><td style="padding:8px 12px;text-align:center">${d.nvs.size}</td><td style="padding:8px 12px;text-align:center;font-weight:500">${d.gan.toLocaleString('vi-VN')}</td><td style="padding:8px 12px;text-align:center;font-weight:500">${d.gtc.toLocaleString('vi-VN')}</td><td style="padding:8px 12px;text-align:center"><span style="background:${pctBg(p)};color:${pctColor(p)};padding:2px 7px;border-radius:20px;font-weight:700;font-size:11px">${p.toFixed(1)}%</span></td></tr>`;}).join('')}</tbody></table></div></div>`;
-   el.innerHTML=`<div style="margin-bottom:16px"><div style="margin-bottom:10px"><span style="font-size:16px;font-weight:700;color:var(--text-main)">👷 Năng Suất Nhân Viên</span></div><div style="background:#FFF;border:1px solid var(--border);border-radius:8px;padding:12px 16px;display:inline-flex;align-items:center;gap:4px;flex-wrap:wrap"><span style="font-size:12px;font-weight:600;color:var(--text-sub);margin-right:8px">Chọn ngày:</span>${fHtml}</div></div>${tbl1}${tbl2}`;
+   el.innerHTML=`<div style="margin-bottom:16px"><div style="margin-bottom:10px"><span style="font-size:16px;font-weight:700;color:var(--text-main)">👷 Năng Suất Nhân Viên</span></div><div style="background:#FFF;border:1px solid var(--border);border-radius:8px;padding:10px 16px;display:inline-flex;align-items:center;gap:10px;flex-wrap:nowrap">${fHtml}</div></div>${tbl1}${tbl2}`;
   }
 
-  window._nsChg=function(d,chk){
-   let s=[...(window._nsSel||dates.slice(0,2))];
-   if(chk&&!s.includes(d))s.push(d);else s=s.filter(x=>x!==d);
-   if(s.length===0)s=[d];
+  window._nsChgDrop=function(){
+   const d1=(document.getElementById('ns-d1')||{}).value||dates[0];
+   const d2=(document.getElementById('ns-d2')||{}).value||'';
+   const s=(d2&&d2!==d1)?[d1,d2]:[d1];
    window._nsSel=s;renderNS(s);
   };
-  window._nsSel=dates.slice(0,2);
+  window._nsSel=[dates[0],dates[1]].filter(Boolean);
   renderNS(window._nsSel);
  }catch(e){
   el.innerHTML=`<div class="card"><p style="color:red;padding:16px">Lỗi tải Năng suất NV: ${e.message}</p></div>`;
