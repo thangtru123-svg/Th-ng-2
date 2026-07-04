@@ -2746,78 +2746,89 @@ function buildGTCBCPage(csvText){
   const ca1Bad=cnt('Hàng Mới Ca 1',0.80,'lt',0.50,'lt');
   const ca2Good=cnt('Hàng Mới Ca 2',0.95,'ge',0.80,'ge');
   const ca2Bad=cnt('Hàng Mới Ca 2',0.80,'lt',0.50,'lt');
+  const totalBCCa1=Object.values(bcMap).filter(b=>b.rows['Hàng Mới Ca 1']).length;
+  const totalBCCa2=Object.values(bcMap).filter(b=>b.rows['Hàng Mới Ca 2']).length;
+  // GTC rate per ca (aggregate across all BCs)
+  const caRate=(loai,bm)=>{const tv=Object.values(bm).reduce((s,b)=>s+(b.rows[loai]?.vol||0),0);const tg=Object.values(bm).reduce((s,b)=>s+(b.rows[loai]?.soGTC||0),0);return tv>0?tg/tv:null;};
+  const prevBCMap=mkMap(prevRows);
+  const rCa1=caRate('Hàng Mới Ca 1',bcMap),rCa2=caRate('Hàng Mới Ca 2',bcMap);
+  const prCa1=prevRows.length?caRate('Hàng Mới Ca 1',prevBCMap):null;
+  const prCa2=prevRows.length?caRate('Hàng Mới Ca 2',prevBCMap):null;
   const avgGTC=bm=>{const vals=Object.values(bm);if(!vals.length)return 0;const tv=vals.reduce((s,b)=>s+LOAIS.reduce((ss,l)=>ss+(b.rows[l]?.vol||0),0),0);const tg=vals.reduce((s,b)=>s+LOAIS.reduce((ss,l)=>ss+(b.rows[l]?.soGTC||0),0),0);return tv>0?tg/tv:0;};
-  const curAvg=avgGTC(bcMap),prevAvg=prevRows.length?avgGTC(mkMap(prevRows)):null;
-  const diff=prevAvg!==null?curAvg-prevAvg:null;
+  const curAvg=avgGTC(bcMap),prevAvg=prevRows.length?avgGTC(prevBCMap):null;
   // Worst BCs for analysis
   const bcList=Object.values(bcMap).sort((a,b)=>a.totalGTCRate-b.totalGTCRate);
   const worst5=bcList.slice(0,5).map(b=>`<span style="background:var(--red-bg);color:var(--red);padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600">${b.bc} (${(b.totalGTCRate*100).toFixed(0)}%)</span>`).join(' ');
+  // Helper: diff badge vs prev day
+  const dBadge=(cur,prev)=>prev===null||cur===null?'':`<span style="font-size:11px;font-weight:700;color:${cur>=prev?'var(--green)':'var(--red)'}">${cur>=prev?'▲+':'▼'}${(Math.abs(cur-prev)*100).toFixed(1)}% vs ${fD(prevDate)}</span>`;
+  const mkKPI=(label,val,prev,col,bg,border)=>`
+   <div style="background:${bg};border-radius:10px;padding:14px 16px;border:1px solid ${border}">
+    <div style="font-size:10px;font-weight:700;color:${col};margin-bottom:4px">${label}</div>
+    <div style="font-size:28px;font-weight:800;color:${col}">${val===null?'—':(val*100).toFixed(1)+'%'}</div>
+    <div style="margin-top:4px">${dBadge(val,prev)}</div>
+   </div>`;
   // Ana HTML
   const anaEl=document.getElementById('gtcbc-analysis');
   if(anaEl)anaEl.innerHTML=`
-  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;padding:16px;background:var(--card-bg);border-radius:12px;border:1px solid var(--border);margin:16px 0 0">
-   <div style="background:var(--green-bg);border-radius:10px;padding:14px;border:1px solid var(--green)">
-    <div style="font-size:10px;font-weight:700;color:var(--green);margin-bottom:6px">🟢 CA 1 — GÁN ≥95% & GTC ≥80%</div>
-    <div style="font-size:30px;font-weight:800;color:var(--green)">${ca1Good}</div>
-    <div style="font-size:11px;color:var(--text-sub)">${totalBC} bưu cục có Ca 1</div>
+  <div style="display:flex;flex-direction:column;gap:10px;margin:16px 0 0">
+   <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px">
+    <div style="background:var(--green-bg);border-radius:10px;padding:14px;border:1px solid var(--green)">
+     <div style="font-size:10px;font-weight:700;color:var(--green);margin-bottom:4px">🟢 CA 1 — GÁN ≥95% & GTC ≥80%</div>
+     <div style="font-size:30px;font-weight:800;color:var(--green)">${ca1Good} <span style="font-size:13px;font-weight:500">/ ${totalBCCa1} BC</span></div>
+    </div>
+    <div style="background:var(--red-bg);border-radius:10px;padding:14px;border:1px solid var(--red)">
+     <div style="font-size:10px;font-weight:700;color:var(--red);margin-bottom:4px">🔴 CA 1 — GÁN &lt;80% & GTC &lt;50%</div>
+     <div style="font-size:30px;font-weight:800;color:var(--red)">${ca1Bad} <span style="font-size:13px;font-weight:500">/ ${totalBCCa1} BC</span></div>
+    </div>
+    <div style="background:var(--green-bg);border-radius:10px;padding:14px;border:1px solid var(--green)">
+     <div style="font-size:10px;font-weight:700;color:var(--green);margin-bottom:4px">🟢 CA 2 — GÁN ≥95% & GTC ≥80%</div>
+     <div style="font-size:30px;font-weight:800;color:var(--green)">${ca2Good} <span style="font-size:13px;font-weight:500">/ ${totalBCCa2} BC</span></div>
+    </div>
+    <div style="background:var(--red-bg);border-radius:10px;padding:14px;border:1px solid var(--red)">
+     <div style="font-size:10px;font-weight:700;color:var(--red);margin-bottom:4px">🔴 CA 2 — GÁN &lt;80% & GTC &lt;50%</div>
+     <div style="font-size:30px;font-weight:800;color:var(--red)">${ca2Bad} <span style="font-size:13px;font-weight:500">/ ${totalBCCa2} BC</span></div>
+    </div>
    </div>
-   <div style="background:var(--red-bg);border-radius:10px;padding:14px;border:1px solid var(--red)">
-    <div style="font-size:10px;font-weight:700;color:var(--red);margin-bottom:6px">🔴 CA 1 — GÁN &lt;80% & GTC &lt;50%</div>
-    <div style="font-size:30px;font-weight:800;color:var(--red)">${ca1Bad}</div>
-    <div style="font-size:11px;color:var(--text-sub)">bưu cục yếu Ca 1</div>
+   <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
+    ${mkKPI('📦 GTC Tổng Ca 1',rCa1,prCa1,'#16A34A','rgba(56,142,60,0.08)','rgba(56,142,60,0.35)')}
+    ${mkKPI('📦 GTC Tổng Ca 2',rCa2,prCa2,'#1565C0','rgba(21,101,192,0.08)','rgba(21,101,192,0.35)')}
+    ${mkKPI('🎯 GTC Total (Ca1+Ca2+Tồn)',curAvg,prevAvg,'var(--text)','var(--card-bg)','var(--border)')}
    </div>
-   <div style="background:var(--green-bg);border-radius:10px;padding:14px;border:1px solid var(--green)">
-    <div style="font-size:10px;font-weight:700;color:var(--green);margin-bottom:6px">🟢 CA 2 — GÁN ≥95% & GTC ≥80%</div>
-    <div style="font-size:30px;font-weight:800;color:var(--green)">${ca2Good}</div>
-    <div style="font-size:11px;color:var(--text-sub)">${totalBC} bưu cục có Ca 2</div>
-   </div>
-   <div style="background:var(--red-bg);border-radius:10px;padding:14px;border:1px solid var(--red)">
-    <div style="font-size:10px;font-weight:700;color:var(--red);margin-bottom:6px">🔴 CA 2 — GÁN &lt;80% & GTC &lt;50%</div>
-    <div style="font-size:30px;font-weight:800;color:var(--red)">${ca2Bad}</div>
-    <div style="font-size:11px;color:var(--text-sub)">bưu cục yếu Ca 2</div>
-   </div>
-   ${diff!==null?`<div style="background:var(--card-bg);border-radius:10px;padding:14px;border:1px solid var(--border)">
-    <div style="font-size:10px;font-weight:700;color:var(--text-sub);margin-bottom:6px">📈 GTC TB vs ${fD(prevDate)}</div>
-    <div style="font-size:24px;font-weight:800;color:${diff>=0?'var(--green)':'var(--red)'}">${diff>=0?'▲+':'▼'}${(Math.abs(diff)*100).toFixed(1)}%</div>
-    <div style="font-size:11px;color:var(--text-sub)">${(prevAvg*100).toFixed(1)}% → ${(curAvg*100).toFixed(1)}%</div>
-   </div>`:''}
-   <div style="grid-column:1/-1;padding:10px 0 2px;font-size:12px">
+   <div style="padding:8px 12px;background:var(--card-bg);border-radius:10px;border:1px solid var(--border);font-size:12px">
     <span style="font-weight:700;color:var(--text-sub)">⚠️ GTC thấp nhất: </span>${worst5}
    </div>
   </div>`;
   // Table
-  const mkCell=(r)=>r?
-   `<td style="text-align:right;padding:4px 6px">${(r.vol||0).toLocaleString('vi-VN')}</td>
-    <td style="text-align:center;background:${ganBg(r.gan)};color:${ganCol(r.gan)};font-weight:700;padding:4px 6px">${(r.gan*100).toFixed(1)}%</td>
-    <td style="text-align:center;background:${gBg(r.gtc)};color:${gCol(r.gtc)};font-weight:700;padding:4px 6px">${(r.gtc*100).toFixed(1)}%</td>
-    <td style="text-align:right;padding:4px 6px">${(r.soGTC||0).toLocaleString('vi-VN')}</td>`:
-   `<td colspan="4" style="text-align:center;color:var(--text-sub);font-size:11px">—</td>`;
-  let h=`<table style="min-width:1100px;font-size:12px"><thead>
+  const TH1='position:sticky;top:0;z-index:4;background:var(--card-bg);border-bottom:2px solid var(--border);';
+  const TH2BG=['rgba(56,142,60,0.15)','rgba(21,101,192,0.15)','rgba(198,40,40,0.15)'];
+  const TH2BDR=['rgba(56,142,60,0.4)','rgba(21,101,192,0.4)','rgba(198,40,40,0.4)'];
+  let h=`<table style="min-width:1100px;font-size:12px;border-collapse:collapse"><thead>
    <tr>
-    <th rowspan="2" style="min-width:30px;text-align:center">STT</th>
-    <th rowspan="2" style="min-width:170px;text-align:left;position:sticky;left:0;z-index:3;background:var(--card-bg)">Bưu Cục</th>
-    <th rowspan="2" style="min-width:120px;text-align:left">AM</th>
-    <th colspan="4" style="text-align:center;background:rgba(56,142,60,0.12);color:#16A34A;border-left:2px solid rgba(56,142,60,0.3)">📦 Hàng Mới Ca 1</th>
-    <th colspan="4" style="text-align:center;background:rgba(21,101,192,0.12);color:#1565C0;border-left:2px solid rgba(21,101,192,0.3)">📦 Hàng Mới Ca 2</th>
-    <th colspan="4" style="text-align:center;background:rgba(198,40,40,0.12);color:#C62828;border-left:2px solid rgba(198,40,40,0.3)">📋 Hàng Tồn</th>
-    <th rowspan="2" style="min-width:80px;text-align:center;border-left:2px solid var(--border)">GTC<br>Total</th>
+    <th rowspan="2" style="min-width:34px;text-align:center;${TH1}">STT</th>
+    <th rowspan="2" style="min-width:170px;text-align:left;position:sticky;top:0;left:0;z-index:5;background:var(--card-bg);border-bottom:2px solid var(--border)">Bưu Cục</th>
+    <th rowspan="2" style="min-width:110px;text-align:left;${TH1}">AM</th>
+    <th colspan="4" style="text-align:center;background:${TH2BG[0]};color:#16A34A;border-left:2px solid ${TH2BDR[0]};${TH1}">📦 Hàng Mới Ca 1</th>
+    <th colspan="4" style="text-align:center;background:${TH2BG[1]};color:#1565C0;border-left:2px solid ${TH2BDR[1]};${TH1}">📦 Hàng Mới Ca 2</th>
+    <th colspan="4" style="text-align:center;background:${TH2BG[2]};color:#C62828;border-left:2px solid ${TH2BDR[2]};${TH1}">📋 Hàng Tồn</th>
+    <th rowspan="2" style="min-width:80px;text-align:center;border-left:2px solid var(--border);position:sticky;top:0;z-index:4;background:var(--card-bg);border-bottom:2px solid var(--border)">GTC<br>Total</th>
    </tr><tr>
-    ${['rgba(56,142,60,0.12)','rgba(21,101,192,0.12)','rgba(198,40,40,0.12)'].map((bg,gi)=>
-     ['Vol','Gán%','GTC%','#GTC'].map((c,ci)=>
-      `<th style="text-align:center;background:${bg};font-weight:600;font-size:11px${ci===0?`;border-left:2px solid ${['rgba(56,142,60,0.3)','rgba(21,101,192,0.3)','rgba(198,40,40,0.3)'][gi]}`:''}">${c}</th>`
+    ${TH2BG.map((bg,gi)=>
+     ['Vol','Gán%','GTC%','Vol GTC'].map((c,ci)=>
+      `<th style="text-align:center;background:${bg};font-weight:600;font-size:11px;position:sticky;top:36px;z-index:3;border-bottom:1px solid var(--border)${ci===0?`;border-left:2px solid ${TH2BDR[gi]}`:''}">${c}</th>`
      ).join('')
     ).join('')}
    </tr></thead><tbody>`;
   bcList.forEach((b,idx)=>{
    const ca1=b.rows['Hàng Mới Ca 1'],ca2=b.rows['Hàng Mới Ca 2'],ton=b.rows['Hàng Tồn'];
-   h+=`<tr style="background:${idx%2===0?'var(--card-bg)':'#FAFAFA'}">
-    <td style="text-align:center;color:var(--text-sub)">${idx+1}</td>
-    <td style="font-weight:700;font-size:12px;position:sticky;left:0;z-index:1;background:${idx%2===0?'var(--card-bg)':'#FAFAFA'}">${b.bc}</td>
-    <td style="font-size:11px;color:var(--text-sub)">${b.am}</td>
-    ${ca1?`<td style="text-align:right;padding:4px 6px;border-left:2px solid rgba(56,142,60,0.3)">${(ca1.vol||0).toLocaleString('vi-VN')}</td><td style="text-align:center;background:${ganBg(ca1.gan)};color:${ganCol(ca1.gan)};font-weight:700">${(ca1.gan*100).toFixed(1)}%</td><td style="text-align:center;background:${gBg(ca1.gtc)};color:${gCol(ca1.gtc)};font-weight:700">${(ca1.gtc*100).toFixed(1)}%</td><td style="text-align:right;padding:4px 6px">${(ca1.soGTC||0).toLocaleString('vi-VN')}</td>`:`<td colspan="4" style="text-align:center;color:var(--text-sub);border-left:2px solid rgba(56,142,60,0.3)">—</td>`}
-    ${ca2?`<td style="text-align:right;padding:4px 6px;border-left:2px solid rgba(21,101,192,0.3)">${(ca2.vol||0).toLocaleString('vi-VN')}</td><td style="text-align:center;background:${ganBg(ca2.gan)};color:${ganCol(ca2.gan)};font-weight:700">${(ca2.gan*100).toFixed(1)}%</td><td style="text-align:center;background:${gBg(ca2.gtc)};color:${gCol(ca2.gtc)};font-weight:700">${(ca2.gtc*100).toFixed(1)}%</td><td style="text-align:right;padding:4px 6px">${(ca2.soGTC||0).toLocaleString('vi-VN')}</td>`:`<td colspan="4" style="text-align:center;color:var(--text-sub);border-left:2px solid rgba(21,101,192,0.3)">—</td>`}
-    ${ton?`<td style="text-align:right;padding:4px 6px;border-left:2px solid rgba(198,40,40,0.3)">${(ton.vol||0).toLocaleString('vi-VN')}</td><td style="text-align:center;background:${ganBg(ton.gan)};color:${ganCol(ton.gan)};font-weight:700">${(ton.gan*100).toFixed(1)}%</td><td style="text-align:center;background:${gBg(ton.gtc)};color:${gCol(ton.gtc)};font-weight:700">${(ton.gtc*100).toFixed(1)}%</td><td style="text-align:right;padding:4px 6px">${(ton.soGTC||0).toLocaleString('vi-VN')}</td>`:`<td colspan="4" style="text-align:center;color:var(--text-sub);border-left:2px solid rgba(198,40,40,0.3)">—</td>`}
-    <td style="text-align:center;font-weight:800;font-size:14px;background:${gBg(b.totalGTCRate)};color:${gCol(b.totalGTCRate)};border-left:2px solid var(--border)">${(b.totalGTCRate*100).toFixed(1)}%</td>
+   const bg=idx%2===0?'var(--card-bg)':'#FAFAFA';
+   h+=`<tr style="background:${bg}">
+    <td style="text-align:center;color:var(--text-sub);padding:5px 4px">${idx+1}</td>
+    <td style="font-weight:700;font-size:12px;padding:5px 6px;position:sticky;left:0;z-index:1;background:${bg}">${b.bc}</td>
+    <td style="font-size:11px;color:var(--text-sub);padding:5px 6px">${b.am}</td>
+    ${ca1?`<td style="text-align:right;padding:5px 6px;border-left:2px solid ${TH2BDR[0]}">${(ca1.vol||0).toLocaleString('vi-VN')}</td><td style="text-align:center;background:${ganBg(ca1.gan)};color:${ganCol(ca1.gan)};font-weight:700;padding:5px 6px">${(ca1.gan*100).toFixed(1)}%</td><td style="text-align:center;background:${gBg(ca1.gtc)};color:${gCol(ca1.gtc)};font-weight:700;padding:5px 6px">${(ca1.gtc*100).toFixed(1)}%</td><td style="text-align:right;padding:5px 6px">${(ca1.soGTC||0).toLocaleString('vi-VN')}</td>`:`<td colspan="4" style="text-align:center;color:var(--text-sub);border-left:2px solid ${TH2BDR[0]}">—</td>`}
+    ${ca2?`<td style="text-align:right;padding:5px 6px;border-left:2px solid ${TH2BDR[1]}">${(ca2.vol||0).toLocaleString('vi-VN')}</td><td style="text-align:center;background:${ganBg(ca2.gan)};color:${ganCol(ca2.gan)};font-weight:700;padding:5px 6px">${(ca2.gan*100).toFixed(1)}%</td><td style="text-align:center;background:${gBg(ca2.gtc)};color:${gCol(ca2.gtc)};font-weight:700;padding:5px 6px">${(ca2.gtc*100).toFixed(1)}%</td><td style="text-align:right;padding:5px 6px">${(ca2.soGTC||0).toLocaleString('vi-VN')}</td>`:`<td colspan="4" style="text-align:center;color:var(--text-sub);border-left:2px solid ${TH2BDR[1]}">—</td>`}
+    ${ton?`<td style="text-align:right;padding:5px 6px;border-left:2px solid ${TH2BDR[2]}">${(ton.vol||0).toLocaleString('vi-VN')}</td><td style="text-align:center;background:${ganBg(ton.gan)};color:${ganCol(ton.gan)};font-weight:700;padding:5px 6px">${(ton.gan*100).toFixed(1)}%</td><td style="text-align:center;background:${gBg(ton.gtc)};color:${gCol(ton.gtc)};font-weight:700;padding:5px 6px">${(ton.gtc*100).toFixed(1)}%</td><td style="text-align:right;padding:5px 6px">${(ton.soGTC||0).toLocaleString('vi-VN')}</td>`:`<td colspan="4" style="text-align:center;color:var(--text-sub);border-left:2px solid ${TH2BDR[2]}">—</td>`}
+    <td style="text-align:center;font-weight:800;font-size:14px;background:${gBg(b.totalGTCRate)};color:${gCol(b.totalGTCRate)};border-left:2px solid var(--border);padding:5px 8px">${(b.totalGTCRate*100).toFixed(1)}%</td>
    </tr>`;
   });
   if(!bcList.length)h+=`<tr><td colspan="16" style="text-align:center;padding:24px;color:var(--text-sub)">Không có dữ liệu cho ngày này</td></tr>`;
