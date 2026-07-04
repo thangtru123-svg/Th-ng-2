@@ -259,6 +259,7 @@ const TG_AGING_THREAD = 4; // topic "Aging/ Backlog"
 const TG_VH_THREAD   = 5; // topic "Vận hành chung"
 const TG_FD_THREAD   = 8250; // topic "FD - Mục tiêu toàn vùng 8%"
 const TG_PICKUP_THREAD = 7; // topic "Pickup / Luân chuyển"
+const TG_TTS_THREAD   = 3; // topic "TTS - Vận hành"
 
 /* ===== AUTH LOGIC ===== */
 function _decodeJWT(t){try{const b=t.split('.')[1].replace(/-/g,'+').replace(/_/g,'/');return JSON.parse(decodeURIComponent(atob(b).split('').map(c=>'%'+('00'+c.charCodeAt(0).toString(16)).slice(-2)).join('')));}catch{return{};}}
@@ -1794,6 +1795,31 @@ async function sendAllToTelegram(){
    await sendPhoto('OPR BC Alert','p6-card-alert',TG_AGING_CHAT,TG_PICKUP_THREAD,capOPR('bc'));
   }
 
+  /* --- P19: GTC TTS Ca 1,2 theo BC → TTS - Vận hành thread --- */
+  await navTo('p19');
+  await new Promise(r=>setTimeout(r,600));
+  for(const [eid,cap,w] of [['gtcbc-bc-card',`🎯 <b>GTC TTS CA 1,2 — THEO BƯU CỤC</b>`,1800],['gtcbc-am-card',`👤 <b>GTC TTS CA 1,2 — THEO AM</b>`,1800]]){
+   if(btn)btn.innerHTML=`⏳ Đang gửi: ${cap.replace(/<[^>]+>/g,'')}...`;
+   const cardEl=document.getElementById(eid);
+   if(cardEl){
+    const cl=cardEl.cloneNode(true);
+    cl.querySelectorAll('thead,th').forEach(el=>{el.style.position='';el.style.top='';el.style.zIndex='';});
+    cl.querySelectorAll('.table-wrap').forEach(tw=>{tw.style.maxHeight='none';tw.style.overflow='visible';});
+    const tmp=document.createElement('div');
+    tmp.id='tg-'+eid;
+    tmp.style.cssText=`position:fixed;top:-9999px;left:0;z-index:-1;width:${w}px;padding:0`;
+    tmp.appendChild(cl);
+    document.body.appendChild(tmp);
+    await new Promise(r=>setTimeout(r,400));
+    try{
+     const img=await _captureEl('tg-'+eid);
+     const res=await _tgSendPhoto(TG_AGING_CHAT,TG_TTS_THREAD,img,cap);
+     if(!res.ok)throw new Error(`[${eid}] TG lỗi: ${res.description||JSON.stringify(res)}`);
+    }finally{tmp.remove();}
+    await new Promise(r=>setTimeout(r,700));
+   }
+  }
+
   /* --- P7: Aging → Aging thread (dùng sendAgingToTelegram logic) --- */
   await navTo('p7');
   await new Promise(r=>setTimeout(r,400));
@@ -2869,13 +2895,13 @@ function buildGTCBCPage(csvText){
   </select>
  </div>
  <div id="gtcbc-analysis"></div>
- <div class="card" style="margin-top:12px;overflow:visible">
+ <div id="gtcbc-bc-card" class="card" style="margin-top:12px;overflow:visible">
   <div class="card-header" style="border-radius:var(--radius) var(--radius) 0 0;overflow:hidden">
    <div class="card-title"><div class="card-icon">🏪</div>Chi tiết GTC theo Bưu Cục — Sắp xếp GTC Total thấp → cao</div>
   </div>
   <div class="table-wrap" id="gtcbc-table-wrap" style="max-height:68vh"></div>
  </div>
- <div class="card" style="margin-top:12px;overflow:visible">
+ <div id="gtcbc-am-card" class="card" style="margin-top:12px;overflow:visible">
   <div class="card-header" style="border-radius:var(--radius) var(--radius) 0 0;overflow:hidden">
    <div class="card-title"><div class="card-icon">👤</div>Chi tiết GTC theo AM — Sắp xếp GTC Total thấp → cao</div>
   </div>
