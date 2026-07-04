@@ -2772,29 +2772,6 @@ function buildGTCBCPage(csvText){
   const anaEl=document.getElementById('gtcbc-analysis');
   if(anaEl)anaEl.innerHTML=`
   <div style="display:flex;flex-direction:column;gap:10px;margin:16px 0 0">
-   <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px">
-    <div style="background:var(--green-bg);border-radius:10px;padding:14px;border:1px solid var(--green)">
-     <div style="font-size:10px;font-weight:700;color:var(--green);margin-bottom:4px">🟢 CA 1 — GÁN ≥95% & GTC ≥80%</div>
-     <div style="font-size:30px;font-weight:800;color:var(--green)">${ca1Good} <span style="font-size:13px;font-weight:500">/ ${totalBCCa1} BC</span></div>
-    </div>
-    <div style="background:var(--red-bg);border-radius:10px;padding:14px;border:1px solid var(--red)">
-     <div style="font-size:10px;font-weight:700;color:var(--red);margin-bottom:4px">🔴 CA 1 — GÁN &lt;80% & GTC &lt;50%</div>
-     <div style="font-size:30px;font-weight:800;color:var(--red)">${ca1Bad} <span style="font-size:13px;font-weight:500">/ ${totalBCCa1} BC</span></div>
-    </div>
-    <div style="background:var(--green-bg);border-radius:10px;padding:14px;border:1px solid var(--green)">
-     <div style="font-size:10px;font-weight:700;color:var(--green);margin-bottom:4px">🟢 CA 2 — GÁN ≥95% & GTC ≥80%</div>
-     <div style="font-size:30px;font-weight:800;color:var(--green)">${ca2Good} <span style="font-size:13px;font-weight:500">/ ${totalBCCa2} BC</span></div>
-    </div>
-    <div style="background:var(--red-bg);border-radius:10px;padding:14px;border:1px solid var(--red)">
-     <div style="font-size:10px;font-weight:700;color:var(--red);margin-bottom:4px">🔴 CA 2 — GÁN &lt;80% & GTC &lt;50%</div>
-     <div style="font-size:30px;font-weight:800;color:var(--red)">${ca2Bad} <span style="font-size:13px;font-weight:500">/ ${totalBCCa2} BC</span></div>
-    </div>
-   </div>
-   <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
-    ${mkKPI('📦 GTC Tổng Ca 1',rCa1,prCa1,'#16A34A','rgba(56,142,60,0.08)','rgba(56,142,60,0.35)')}
-    ${mkKPI('📦 GTC Tổng Ca 2',rCa2,prCa2,'#1565C0','rgba(21,101,192,0.08)','rgba(21,101,192,0.35)')}
-    ${mkKPI('🎯 GTC Total (Ca1+Ca2+Tồn)',curAvg,prevAvg,'var(--text)','var(--card-bg)','var(--border)')}
-   </div>
    <div style="padding:8px 12px;background:var(--card-bg);border-radius:10px;border:1px solid var(--border);font-size:12px">
     <span style="font-weight:700;color:var(--text-sub)">⚠️ GTC thấp nhất: </span>${worst5}
    </div>
