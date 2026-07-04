@@ -1844,8 +1844,8 @@ async function sendAllToTelegram(){
    const cardEl=document.getElementById(eid);
    if(cardEl){
     const cl=cardEl.cloneNode(true);
-    cl.querySelectorAll('thead,th').forEach(el=>{el.style.position='';el.style.top='';el.style.zIndex='';});
-    cl.querySelectorAll('.table-wrap').forEach(tw=>{tw.style.maxHeight='none';tw.style.overflow='visible';});
+    cl.querySelectorAll('thead,th').forEach(el=>{el.style.position='static';el.style.top='auto';el.style.zIndex='auto';});
+    cl.querySelectorAll('.table-wrap').forEach(tw=>{tw.style.maxHeight='none';tw.style.overflow='visible';tw.scrollTop=0;});
     const tmp=document.createElement('div');
     tmp.id='tg-'+eid;
     tmp.style.cssText=`position:fixed;top:-9999px;left:0;z-index:-1;width:${w}px;padding:0`;
