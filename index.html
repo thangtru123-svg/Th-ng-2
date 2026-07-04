@@ -3335,7 +3335,7 @@ async function buildNangSuatPage(){
    });
    selDates.forEach(d=>{Object.keys(bB).forEach(bc=>{bB[bc].vol+=(volBCPD[bc+'|'+d]||0);});});
    const tA=Object.entries(bT).sort((a,b)=>(b[1].gan>0?b[1].gtc/b[1].gan:0)-(a[1].gan>0?a[1].gtc/a[1].gan:0));
-   const bA=Object.entries(bB).sort((a,b)=>(b[1].gan>0?b[1].gtc/b[1].gan:0)-(a[1].gan>0?a[1].gtc/a[1].gan:0));
+   const bA=Object.entries(bB).sort((a,b)=>(a[1].vol>0?a[1].gtc/a[1].vol:0)-(b[1].vol>0?b[1].gtc/b[1].vol:0));
    // Bộ lọc compact: 2 dropdown
    const fHtml=`<span style="font-size:12px;font-weight:600;color:var(--text-sub)">Ngày 1:</span>
     <select id="ns-d1" style="${selStyle}" onchange="window._nsChgDrop()">${dates.map(d=>`<option value="${d}" ${d===selDates[0]?'selected':''}>${shortD(d)}</option>`).join('')}</select>
