@@ -359,17 +359,17 @@ function renderGTCAmTable(rows,dates){
    ${dates.map(d=>`<th colspan="4" style="${cs}text-align:center;border-left:2px solid #E5E7EB"><strong>${shortDDow(d)}</strong></th>`).join('')}
   </tr>
   <tr>
-   ${dates.map(()=>`<th style="${cs}text-align:right;border-left:2px solid #E5E7EB">Vol</th><th style="${cs}text-align:center">%Gán</th><th style="${cs}text-align:center">%GTC</th><th style="${cs}text-align:right">GTC</th>`).join('')}
+   ${dates.map(()=>`<th style="${cs}text-align:center;border-left:2px solid #E5E7EB">Vol</th><th style="${cs}text-align:center">%Gán</th><th style="${cs}text-align:center">%GTC</th><th style="${cs}text-align:center">GTC</th>`).join('')}
   </tr>
  </thead><tbody>`;
  names.forEach((name,i)=>{
   h+=`<tr><td style="${cs}text-align:center;color:var(--text-sub);font-size:10px;position:sticky;left:0;background:#fff;z-index:2">${i+1}</td><td style="${cs}font-weight:700;position:sticky;left:28px;background:#fff;z-index:2;min-width:160px;max-width:200px;word-break:break-word">${name.split(',').map(s=>s.trim()).join('<br>')}</td>`;
-  dates.forEach(d=>{const c=pivot[name]?.[d];if(c){const gc=c.gtc>=65?'g':c.gtc>=50?'m':'b';h+=`<td style="${cs}text-align:right;border-left:2px solid #F3F4F6">${fmt(c.vol)}</td><td style="${cs}text-align:center">${c.gan.toFixed(1)}%</td><td style="${cs}text-align:center"><span class="pct ${gc}">${c.gtc.toFixed(1)}%</span></td><td style="${cs}text-align:right;color:var(--green);font-weight:600">${fmt(c.nGTC)}</td>`;}else{h+=`<td colspan="4" style="${cs}text-align:center;border-left:2px solid #F3F4F6;color:var(--text-sub)">—</td>`;}});
+  dates.forEach(d=>{const c=pivot[name]?.[d];if(c){const gc=c.gtc>=65?'g':c.gtc>=50?'m':'b';h+=`<td style="${cs}text-align:center;border-left:2px solid #F3F4F6">${fmt(c.vol)}</td><td style="${cs}text-align:center">${c.gan.toFixed(1)}%</td><td style="${cs}text-align:center"><span class="pct ${gc}">${c.gtc.toFixed(1)}%</span></td><td style="${cs}text-align:center;color:var(--green);font-weight:600">${fmt(c.nGTC)}</td>`;}else{h+=`<td colspan="4" style="${cs}text-align:center;border-left:2px solid #F3F4F6;color:var(--text-sub)">—</td>`;}});
   h+='</tr>';
  });
  if(Object.keys(gPivot).length){
   h+=`<tr class="tot"><td style="${cs}position:sticky;left:0;background:#F8F9FA;z-index:2"></td><td style="${cs}position:sticky;left:28px;background:#F8F9FA;z-index:2">Grand Total</td>`;
-  dates.forEach(d=>{const c=gPivot[d];if(c){const gc=c.gtc>=65?'g':c.gtc>=50?'m':'b';h+=`<td style="${cs}text-align:right;border-left:2px solid #F3F4F6">${fmt(c.vol)}</td><td style="${cs}text-align:center">${c.gan.toFixed(1)}%</td><td style="${cs}text-align:center"><span class="pct ${gc}">${c.gtc.toFixed(1)}%</span></td><td style="${cs}text-align:right;color:var(--green);font-weight:600">${fmt(c.nGTC)}</td>`;}else{h+=`<td colspan="4" style="${cs}text-align:center;border-left:2px solid #F3F4F6">—</td>`;}});
+  dates.forEach(d=>{const c=gPivot[d];if(c){const gc=c.gtc>=65?'g':c.gtc>=50?'m':'b';h+=`<td style="${cs}text-align:center;border-left:2px solid #F3F4F6">${fmt(c.vol)}</td><td style="${cs}text-align:center">${c.gan.toFixed(1)}%</td><td style="${cs}text-align:center"><span class="pct ${gc}">${c.gtc.toFixed(1)}%</span></td><td style="${cs}text-align:center;color:var(--green);font-weight:600">${fmt(c.nGTC)}</td>`;}else{h+=`<td colspan="4" style="${cs}text-align:center;border-left:2px solid #F3F4F6">—</td>`;}});
   h+='</tr>';
  }
  h+='</tbody></table></div>';
@@ -414,18 +414,18 @@ function renderGTCBcTable(rows,dates,last5D){
    ${dates.map(d=>`<th colspan="4" style="${cs}text-align:center;border-left:2px solid #E5E7EB"><strong>${shortDDow(d)}</strong></th>`).join('')}
   </tr>
   <tr>
-   ${dates.map(()=>`<th style="${cs}text-align:right;border-left:2px solid #E5E7EB">Vol</th><th style="${cs}text-align:center">%Gán</th><th style="${cs}text-align:center">%GTC</th><th style="${cs}text-align:right">GTC</th>`).join('')}
+   ${dates.map(()=>`<th style="${cs}text-align:center;border-left:2px solid #E5E7EB">Vol</th><th style="${cs}text-align:center">%Gán</th><th style="${cs}text-align:center">%GTC</th><th style="${cs}text-align:center">GTC</th>`).join('')}
   </tr>
  </thead><tbody>`;
  displayNames.forEach((name,i)=>{
   const row=pivot[name];
   h+=`<tr><td style="${cs}text-align:center;color:var(--text-sub);font-size:11px;position:sticky;left:0;background:#fff;z-index:2">${i+1}</td><td style="${cs}font-weight:700;white-space:nowrap;position:sticky;left:30px;background:#fff;z-index:2">${name}</td><td style="${cs}color:var(--text-sub);font-size:11px;position:sticky;left:170px;background:#fff;z-index:2">${row.am||''}</td>`;
-  dates.forEach(d=>{const c=row[d];if(c){const gc=c.gtc>=65?'g':c.gtc>=50?'m':'b';h+=`<td style="${cs}text-align:right;border-left:2px solid #F3F4F6">${fmt(c.vol)}</td><td style="${cs}text-align:center">${c.gan.toFixed(1)}%</td><td style="${cs}text-align:center"><span class="pct ${gc}">${c.gtc.toFixed(1)}%</span></td><td style="${cs}text-align:right;color:var(--green);font-weight:600">${fmt(c.nGTC)}</td>`;}else{h+=`<td colspan="4" style="${cs}text-align:center;border-left:2px solid #F3F4F6;color:var(--text-sub)">—</td>`;}});
+  dates.forEach(d=>{const c=row[d];if(c){const gc=c.gtc>=65?'g':c.gtc>=50?'m':'b';h+=`<td style="${cs}text-align:center;border-left:2px solid #F3F4F6">${fmt(c.vol)}</td><td style="${cs}text-align:center">${c.gan.toFixed(1)}%</td><td style="${cs}text-align:center"><span class="pct ${gc}">${c.gtc.toFixed(1)}%</span></td><td style="${cs}text-align:center;color:var(--green);font-weight:600">${fmt(c.nGTC)}</td>`;}else{h+=`<td colspan="4" style="${cs}text-align:center;border-left:2px solid #F3F4F6;color:var(--text-sub)">—</td>`;}});
   h+='</tr>';
  });
  if(Object.keys(gPivot).length){
   h+=`<tr class="tot" style="position:sticky;bottom:0;z-index:3"><td style="${cs}position:sticky;left:0;background:#F8F9FA;z-index:4"></td><td colspan="2" style="${cs}position:sticky;left:30px;background:#F8F9FA;z-index:4">Grand Total</td>`;
-  dates.forEach(d=>{const c=gPivot[d];if(c){const gc=c.gtc>=65?'g':c.gtc>=50?'m':'b';h+=`<td style="${cs}text-align:right;border-left:2px solid #F3F4F6;background:#F8F9FA">${fmt(c.vol)}</td><td style="${cs}text-align:center;background:#F8F9FA">${c.gan.toFixed(1)}%</td><td style="${cs}text-align:center;background:#F8F9FA"><span class="pct ${gc}">${c.gtc.toFixed(1)}%</span></td><td style="${cs}text-align:right;color:var(--green);font-weight:600;background:#F8F9FA">${fmt(c.nGTC)}</td>`;}else{h+=`<td colspan="4" style="${cs}text-align:center;border-left:2px solid #F3F4F6;background:#F8F9FA">—</td>`;}});
+  dates.forEach(d=>{const c=gPivot[d];if(c){const gc=c.gtc>=65?'g':c.gtc>=50?'m':'b';h+=`<td style="${cs}text-align:center;border-left:2px solid #F3F4F6;background:#F8F9FA">${fmt(c.vol)}</td><td style="${cs}text-align:center;background:#F8F9FA">${c.gan.toFixed(1)}%</td><td style="${cs}text-align:center;background:#F8F9FA"><span class="pct ${gc}">${c.gtc.toFixed(1)}%</span></td><td style="${cs}text-align:center;color:var(--green);font-weight:600;background:#F8F9FA">${fmt(c.nGTC)}</td>`;}else{h+=`<td colspan="4" style="${cs}text-align:center;border-left:2px solid #F3F4F6;background:#F8F9FA">—</td>`;}});
   h+='</tr>';
  }
  h+='</tbody></table></div>';
@@ -670,7 +670,7 @@ function buildFDDayTable(sheetArr,labels,dates,nameLabel,gtcMap){
   const bg=DC[di%DC.length];
   labels.forEach((l,li)=>{
    h+=`<th style="${cs}text-align:center;border-left:${li===0?'3px solid #D1D5DB':'1px solid #E5E7EB'};background:${bg}">%FD<br><small style="font-weight:400;font-size:10px">${l}</small></th>`;
-   if(li===0&&hasGTC)h+=`<th style="${cs}text-align:right;border-left:1px solid #E5E7EB;background:${bg}">Số trả<br><small style="font-weight:400;font-size:10px">Total</small></th>`;
+   if(li===0&&hasGTC)h+=`<th style="${cs}text-align:center;border-left:1px solid #E5E7EB;background:${bg}">Số trả<br><small style="font-weight:400;font-size:10px">Total</small></th>`;
   });
  });
  h+='</tr></thead><tbody>';
@@ -684,7 +684,7 @@ function buildFDDayTable(sheetArr,labels,dates,nameLabel,gtcMap){
     h+=`<td style="${cs}text-align:center;border-left:${si===0?'3px solid #D1D5DB':'1px solid #E5E7EB'};background:${red?'#FEE2E2':bg};color:${red?'#DC2626':'inherit'};font-weight:${red?700:'inherit'}">${fd!==null?fd.toFixed(2)+'%':'—'}</td>`;
     if(si===0&&hasGTC){
      const soTra=calcSoTra(name,d,fd);
-     h+=`<td style="${cs}text-align:right;border-left:1px solid #E5E7EB;background:${bg};font-weight:${soTra!==null?600:'inherit'}">${soTra!==null?fmt(soTra):'—'}</td>`;
+     h+=`<td style="${cs}text-align:center;border-left:1px solid #E5E7EB;background:${bg};font-weight:${soTra!==null?600:'inherit'}">${soTra!==null?fmt(soTra):'—'}</td>`;
     }
    });
   });
@@ -705,7 +705,7 @@ function buildFDDayTable(sheetArr,labels,dates,nameLabel,gtcMap){
    if(si===0&&hasGTC){
     // Tổng số đơn trả = sum từng AM
     const gtSoTra=Object.entries(dayData).filter(([n])=>!isGrand(n)).reduce((s,[n,v])=>{const st=calcSoTra(n,d,v.fd??null);return s+(st??0);},0);
-    h+=`<td style="${cs}text-align:right;border-left:1px solid #E5E7EB;background:${bg};font-weight:700">${gtSoTra>0?fmt(gtSoTra):'—'}</td>`;
+    h+=`<td style="${cs}text-align:center;border-left:1px solid #E5E7EB;background:${bg};font-weight:700">${gtSoTra>0?fmt(gtSoTra):'—'}</td>`;
    }
   });
  });
@@ -882,16 +882,16 @@ function buildOntimePage(rowsAM,rowsBC,title,volLabel,countLabel,greenThr,yellow
     <th rowspan="2" style="${cs}width:200px">AM</th>
     ${dates.map(d=>`<th colspan="2" style="${cs}text-align:center;border-left:2px solid #E5E7EB"><strong>${shortD(d)}</strong></th>`).join('')}
    </tr>
-   <tr>${dates.map(()=>`<th style="${cs}text-align:right;border-left:2px solid #E5E7EB">${volLabel}</th><th style="${cs}text-align:center">%Ontime</th>`).join('')}</tr>
+   <tr>${dates.map(()=>`<th style="${cs}text-align:center;border-left:2px solid #E5E7EB">${volLabel}</th><th style="${cs}text-align:center">%Ontime</th>`).join('')}</tr>
   </thead><tbody>`;
   names.forEach((name,i)=>{
    h+=`<tr><td style="${cs}text-align:center;color:var(--text-sub);font-size:11px">${i+1}</td><td style="${cs}font-weight:700;white-space:nowrap">${name}</td>`;
-   dates.forEach(d=>{const c=pivot[name]?.[d];if(c){const gc=c.pct>=greenThr?'g':c.pct>=yellowThr?'m':'b';h+=`<td style="${cs}text-align:right;border-left:2px solid #F3F4F6">${fmt(c.vol)}</td><td style="${cs}text-align:center"><span class="pct ${gc}">${c.pct.toFixed(1)}%</span></td>`;}else{h+=`<td style="${cs}text-align:right;border-left:2px solid #F3F4F6;color:var(--text-sub)">—</td><td>—</td>`;}});
+   dates.forEach(d=>{const c=pivot[name]?.[d];if(c){const gc=c.pct>=greenThr?'g':c.pct>=yellowThr?'m':'b';h+=`<td style="${cs}text-align:center;border-left:2px solid #F3F4F6">${fmt(c.vol)}</td><td style="${cs}text-align:center"><span class="pct ${gc}">${c.pct.toFixed(1)}%</span></td>`;}else{h+=`<td style="${cs}text-align:center;border-left:2px solid #F3F4F6;color:var(--text-sub)">—</td><td>—</td>`;}});
    h+='</tr>';
   });
   if(Object.keys(gPivot).length){
    h+=`<tr class="tot"><td colspan="2" style="${cs}">Grand Total</td>`;
-   dates.forEach(d=>{const c=gPivot[d];if(c){const gc=c.pct>=greenThr?'g':c.pct>=yellowThr?'m':'b';h+=`<td style="${cs}text-align:right;border-left:2px solid #F3F4F6">${fmt(c.vol)}</td><td style="${cs}text-align:center"><span class="pct ${gc}">${c.pct.toFixed(1)}%</span></td>`;}else{h+=`<td style="${cs}border-left:2px solid #F3F4F6">—</td><td>—</td>`;}});
+   dates.forEach(d=>{const c=gPivot[d];if(c){const gc=c.pct>=greenThr?'g':c.pct>=yellowThr?'m':'b';h+=`<td style="${cs}text-align:center;border-left:2px solid #F3F4F6">${fmt(c.vol)}</td><td style="${cs}text-align:center"><span class="pct ${gc}">${c.pct.toFixed(1)}%</span></td>`;}else{h+=`<td style="${cs}border-left:2px solid #F3F4F6">—</td><td>—</td>`;}});
    h+='</tr>';
   }
   h+='</tbody></table></div>';
@@ -932,17 +932,17 @@ function buildOntimePage(rowsAM,rowsBC,title,volLabel,countLabel,greenThr,yellow
     <th rowspan="2" style="${cs}min-width:80px;position:sticky;left:170px;z-index:5;background:#FEEDE4">AM</th>
     ${dates.map(d=>`<th colspan="2" style="${cs}text-align:center;border-left:2px solid #E5E7EB"><strong>${shortD(d)}</strong></th>`).join('')}
    </tr>
-   <tr>${dates.map(()=>`<th style="${cs}text-align:right;border-left:2px solid #E5E7EB">${volLabel}</th><th style="${cs}text-align:center">%Ontime</th>`).join('')}</tr>
+   <tr>${dates.map(()=>`<th style="${cs}text-align:center;border-left:2px solid #E5E7EB">${volLabel}</th><th style="${cs}text-align:center">%Ontime</th>`).join('')}</tr>
   </thead><tbody>`;
   names.forEach((name,i)=>{
    const row=pivot[name];
    h+=`<tr><td style="${cs}text-align:center;color:var(--text-sub);font-size:11px;position:sticky;left:0;background:#fff;z-index:2">${i+1}</td><td style="${cs}font-weight:700;white-space:nowrap;position:sticky;left:30px;background:#fff;z-index:2">${name}</td><td style="${cs}color:var(--text-sub);font-size:11px;position:sticky;left:170px;background:#fff;z-index:2">${row.am||''}</td>`;
-   dates.forEach(d=>{const c=row[d];if(c){const gc=c.pct>=greenThr?'g':c.pct>=yellowThr?'m':'b';h+=`<td style="${cs}text-align:right;border-left:2px solid #F3F4F6">${fmt(c.vol)}</td><td style="${cs}text-align:center"><span class="pct ${gc}">${c.pct.toFixed(1)}%</span></td>`;}else{h+=`<td style="${cs}text-align:right;border-left:2px solid #F3F4F6;color:var(--text-sub)">—</td><td>—</td>`;}});
+   dates.forEach(d=>{const c=row[d];if(c){const gc=c.pct>=greenThr?'g':c.pct>=yellowThr?'m':'b';h+=`<td style="${cs}text-align:center;border-left:2px solid #F3F4F6">${fmt(c.vol)}</td><td style="${cs}text-align:center"><span class="pct ${gc}">${c.pct.toFixed(1)}%</span></td>`;}else{h+=`<td style="${cs}text-align:center;border-left:2px solid #F3F4F6;color:var(--text-sub)">—</td><td>—</td>`;}});
    h+='</tr>';
   });
   if(Object.keys(gPivot).length){
    h+=`<tr class="tot"><td style="${cs}position:sticky;left:0;background:#F8F9FA;z-index:2"></td><td colspan="2" style="${cs}position:sticky;left:30px;background:#F8F9FA;z-index:2">Grand Total</td>`;
-   dates.forEach(d=>{const c=gPivot[d];if(c){const gc=c.pct>=greenThr?'g':c.pct>=yellowThr?'m':'b';h+=`<td style="${cs}text-align:right;border-left:2px solid #F3F4F6">${fmt(c.vol)}</td><td style="${cs}text-align:center"><span class="pct ${gc}">${c.pct.toFixed(1)}%</span></td>`;}else{h+=`<td style="${cs}border-left:2px solid #F3F4F6">—</td><td>—</td>`;}});
+   dates.forEach(d=>{const c=gPivot[d];if(c){const gc=c.pct>=greenThr?'g':c.pct>=yellowThr?'m':'b';h+=`<td style="${cs}text-align:center;border-left:2px solid #F3F4F6">${fmt(c.vol)}</td><td style="${cs}text-align:center"><span class="pct ${gc}">${c.pct.toFixed(1)}%</span></td>`;}else{h+=`<td style="${cs}border-left:2px solid #F3F4F6">—</td><td>—</td>`;}});
    h+='</tr>';
   }
   h+='</tbody></table></div>';
@@ -979,7 +979,7 @@ function buildOntimePage(rowsAM,rowsBC,title,volLabel,countLabel,greenThr,yellow
     ${dates.map(d=>`<th colspan="2" style="${cs}text-align:center;border-left:2px solid #E5E7EB"><strong>${shortD(d)}</strong></th>`).join('')}
     <th rowspan="2" style="${cs}text-align:center;background:#FEF2F2;white-space:nowrap">TB %Ontime</th>
    </tr>
-   <tr>${dates.map(()=>`<th style="${cs}text-align:right;border-left:2px solid #E5E7EB">${volLabel}</th><th style="${cs}text-align:center">%Ontime</th>`).join('')}</tr>
+   <tr>${dates.map(()=>`<th style="${cs}text-align:center;border-left:2px solid #E5E7EB">${volLabel}</th><th style="${cs}text-align:center">%Ontime</th>`).join('')}</tr>
   </thead><tbody>`;
   alertBC.forEach((bc,i)=>{
    const row=pivot[bc];
@@ -987,7 +987,7 @@ function buildOntimePage(rowsAM,rowsBC,title,volLabel,countLabel,greenThr,yellow
    const avgPct=validD.length?validD.reduce((s,d)=>s+row[d].pct,0)/validD.length:0;
    const countBelow=dates.filter(d=>row[d]&&row[d].pct<80).length;
    h+=`<tr><td style="${cs}text-align:center;color:var(--text-sub);font-size:11px;position:sticky;left:0;background:#fff;z-index:2">${i+1}</td><td style="${cs}font-weight:700;white-space:nowrap;position:sticky;left:30px;background:#fff;z-index:2">${bc}</td><td style="${cs}color:var(--text-sub);font-size:11px;position:sticky;left:170px;background:#fff;z-index:2">${row.am||''}</td>`;
-   dates.forEach(d=>{const c=row[d];if(c){const gc=c.pct>=greenThr?'g':c.pct>=yellowThr?'m':'b';const bgBad=c.pct<yellowThr?'background:#FFF1F2':'';h+=`<td style="${cs}text-align:right;border-left:2px solid #F3F4F6;${bgBad}">${fmt(c.vol)}</td><td style="${cs}text-align:center;${bgBad}"><span class="pct ${gc}">${c.pct.toFixed(1)}%</span></td>`;}else{h+=`<td style="${cs}text-align:right;border-left:2px solid #F3F4F6;color:var(--text-sub)">—</td><td>—</td>`;}});
+   dates.forEach(d=>{const c=row[d];if(c){const gc=c.pct>=greenThr?'g':c.pct>=yellowThr?'m':'b';const bgBad=c.pct<yellowThr?'background:#FFF1F2':'';h+=`<td style="${cs}text-align:center;border-left:2px solid #F3F4F6;${bgBad}">${fmt(c.vol)}</td><td style="${cs}text-align:center;${bgBad}"><span class="pct ${gc}">${c.pct.toFixed(1)}%</span></td>`;}else{h+=`<td style="${cs}text-align:center;border-left:2px solid #F3F4F6;color:var(--text-sub)">—</td><td>—</td>`;}});
    const ac=avgPct>=greenThr?'var(--green)':avgPct>=yellowThr?'var(--yellow)':'var(--red)';
    h+=`<td style="${cs}text-align:center;font-weight:800;color:${ac};white-space:nowrap">${avgPct.toFixed(1)}% <span style="font-size:10px;color:var(--text-sub)">(${countBelow}/7 ngày)</span></td></tr>`;
   });
@@ -1250,21 +1250,21 @@ function buildAgingHTML(rows){
  {const stableNow=latestTotal-unstableLatest;const unstablePrvTmp=rows.filter(r=>r[11]===prev&&(r[12]||'').includes('bất ổn')).length;const stablePrvTmp=(byDate[prev]||0)-unstablePrvTmp;const dStable=stableNow-stablePrvTmp;const dUnstable=unstableLatest-unstablePrvTmp;const sTxt=`<span style="color:${delta<0?'var(--green)':delta>0?'var(--red)':'var(--text-sub)'};font-weight:700">${delta>0?'▲ tăng':'▼ giảm'} ${Math.abs(delta).toLocaleString()} đơn</span>`;h+=`<div class="analysis-box" style="margin-bottom:20px">📦 <strong>Tổng Aging ngày ${agingFmtDate(latest)}:</strong> <strong style="color:var(--orange)">${latestTotal.toLocaleString()} đơn</strong> · Ngày ${agingFmtDate(prev)}: <strong>${prevTotal.toLocaleString()} đơn</strong> · ${delta!==0?sTxt:'Không đổi'}<br>BC bất ổn: <strong style="color:var(--red)">${unstableLatest.toLocaleString()} đơn</strong> ${dUnstable!==0?`<span style="color:${dUnstable<0?'var(--green)':'var(--red)'};font-size:11px">(${dUnstable>0?'+':''}${dUnstable})</span>`:''} · BC ổn định: <strong style="color:var(--green)">${stableNow.toLocaleString()} đơn</strong> ${dStable!==0?`<span style="color:${dStable<0?'var(--green)':'var(--red)'};font-size:11px">(${dStable>0?'+':''}${dStable})</span>`:''}</div>`;}
  function buildTable(arr,keyField,title,icon,badge,maxHeight='none',ana=''){
   const maxV=Math.max(...arr.map(r=>r[latest]||0),1);
-  let t=`<div style="background:var(--card);border-radius:12px;box-shadow:var(--shadow-sm);margin-bottom:20px;overflow:hidden"><div style="padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap"><div style="display:flex;align-items:center;gap:8px;flex-shrink:0"><span style="font-size:18px">${icon}</span><span style="font-weight:700;font-size:14px">${title}</span><span style="background:var(--orange);color:#fff;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px">${badge}</span></div>${ana?`<div style="font-size:12px;color:var(--text-main);line-height:1.6;text-align:right">${ana}</div>`:''}</div><div class="table-wrap" style="overflow-x:auto;overflow-y:auto;max-height:${maxHeight}"><table style="width:100%;border-collapse:collapse;font-size:13px"><thead><tr style="background:var(--bg);position:sticky;top:0;z-index:2"><th style="padding:10px 14px;text-align:left;font-weight:700;font-size:11px;color:var(--text-sub);text-transform:uppercase;letter-spacing:.5px;border-bottom:2px solid var(--border);white-space:nowrap;background:var(--bg)">#</th><th style="padding:10px 14px;text-align:left;font-weight:700;font-size:11px;color:var(--text-sub);text-transform:uppercase;letter-spacing:.5px;border-bottom:2px solid var(--border);white-space:nowrap;background:var(--bg)">${keyField==='am'?'AM':'Bưu Cục'}</th>`;
-  last7.forEach((d,i)=>{const isLast=i===last7.length-1;const bg=isLast?'background:#FFF0EB;color:var(--orange-dark,#C8461A);font-size:12px':'color:var(--text-sub);background:var(--bg)';t+=`<th style="padding:10px 14px;text-align:right;font-weight:800;font-size:11px;text-transform:uppercase;letter-spacing:.3px;border-bottom:2px solid var(--border);white-space:nowrap;${bg}">${agingFmtDate(d)}</th>`;});
-  t+=`<th style="padding:10px 14px;text-align:right;font-weight:700;font-size:11px;color:var(--text-sub);text-transform:uppercase;border-bottom:2px solid var(--border);background:var(--bg)">Trend</th></tr></thead><tbody>`;
+  let t=`<div style="background:var(--card);border-radius:12px;box-shadow:var(--shadow-sm);margin-bottom:20px;overflow:hidden"><div style="padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap"><div style="display:flex;align-items:center;gap:8px;flex-shrink:0"><span style="font-size:18px">${icon}</span><span style="font-weight:700;font-size:14px">${title}</span><span style="background:var(--orange);color:#fff;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px">${badge}</span></div>${ana?`<div style="font-size:12px;color:var(--text-main);line-height:1.6;text-align:center">${ana}</div>`:''}</div><div class="table-wrap" style="overflow-x:auto;overflow-y:auto;max-height:${maxHeight}"><table style="width:100%;border-collapse:collapse;font-size:13px"><thead><tr style="background:var(--bg);position:sticky;top:0;z-index:2"><th style="padding:10px 14px;text-align:left;font-weight:700;font-size:11px;color:var(--text-sub);text-transform:uppercase;letter-spacing:.5px;border-bottom:2px solid var(--border);white-space:nowrap;background:var(--bg)">#</th><th style="padding:10px 14px;text-align:left;font-weight:700;font-size:11px;color:var(--text-sub);text-transform:uppercase;letter-spacing:.5px;border-bottom:2px solid var(--border);white-space:nowrap;background:var(--bg)">${keyField==='am'?'AM':'Bưu Cục'}</th>`;
+  last7.forEach((d,i)=>{const isLast=i===last7.length-1;const bg=isLast?'background:#FFF0EB;color:var(--orange-dark,#C8461A);font-size:12px':'color:var(--text-sub);background:var(--bg)';t+=`<th style="padding:10px 14px;text-align:center;font-weight:800;font-size:11px;text-transform:uppercase;letter-spacing:.3px;border-bottom:2px solid var(--border);white-space:nowrap;${bg}">${agingFmtDate(d)}</th>`;});
+  t+=`<th style="padding:10px 14px;text-align:center;font-weight:700;font-size:11px;color:var(--text-sub);text-transform:uppercase;border-bottom:2px solid var(--border);background:var(--bg)">Trend</th></tr></thead><tbody>`;
   arr.forEach((row,idx)=>{
    const name=row[keyField]||'—';const isUnstable=unstableBCSet.has(name);
    const rankColor=idx<3?'color:var(--orange);font-weight:800;font-size:14px':'color:var(--text-sub);font-weight:600';
    t+=`<tr style="border-bottom:1px solid var(--border)"><td style="padding:9px 14px;${rankColor}">${idx+1}</td><td style="padding:9px 14px;font-weight:600;font-size:13px;white-space:nowrap">${name}${isUnstable?'<span style="display:inline-block;background:#FEE2E2;color:var(--red);border:1px solid #FECACA;border-radius:4px;font-size:9px;font-weight:700;padding:1px 5px;margin-left:5px">⚠ bất ổn</span>':''}</td>`;
-   last7.forEach((d,i)=>{const v=row[d]||0;const isLatest=i===last7.length-1;const barW=isLatest&&maxV>0?Math.round((v/maxV)*50):0;if(isLatest){t+=`<td style="padding:9px 14px;text-align:right;background:#FFF0EB"><div style="display:flex;align-items:center;justify-content:flex-end;gap:5px"><div style="height:5px;border-radius:3px;background:var(--orange);width:${barW}px;min-width:${v>0?2:0}px"></div><span style="font-weight:800;font-size:14px;color:var(--orange-dark,#C8461A)">${v>0?v.toLocaleString('vi-VN'):'—'}</span></div></td>`;}else{t+=`<td style="padding:9px 14px;text-align:right;font-weight:500;color:${v>0?'var(--text-main)':'var(--border)'}">${v>0?v.toLocaleString('vi-VN'):'—'}</td>`;}});
+   last7.forEach((d,i)=>{const v=row[d]||0;const isLatest=i===last7.length-1;const barW=isLatest&&maxV>0?Math.round((v/maxV)*50):0;if(isLatest){t+=`<td style="padding:9px 14px;text-align:center;background:#FFF0EB"><div style="display:flex;align-items:center;justify-content:flex-end;gap:5px"><div style="height:5px;border-radius:3px;background:var(--orange);width:${barW}px;min-width:${v>0?2:0}px"></div><span style="font-weight:800;font-size:14px;color:var(--orange-dark,#C8461A)">${v>0?v.toLocaleString('vi-VN'):'—'}</span></div></td>`;}else{t+=`<td style="padding:9px 14px;text-align:center;font-weight:500;color:${v>0?'var(--text-main)':'var(--border)'}">${v>0?v.toLocaleString('vi-VN'):'—'}</td>`;}});
    const curr=row[latest]||0,prevRow=row[prev]||0;const trendColor=curr<prevRow?'var(--green)':curr>prevRow?'var(--red)':'var(--text-sub)';const trendTxt=curr<prevRow?`▼ ${prevRow-curr}`:curr>prevRow?`▲ ${curr-prevRow}`:'—';
-   t+=`<td style="padding:9px 14px;text-align:right;color:${trendColor};font-weight:700;font-size:13px;white-space:nowrap">${trendTxt}</td></tr>`;
+   t+=`<td style="padding:9px 14px;text-align:center;color:${trendColor};font-weight:700;font-size:13px;white-space:nowrap">${trendTxt}</td></tr>`;
   });
   t+=`<tfoot><tr style="background:var(--orange-light,#FFF0EB);border-top:2px solid var(--orange);position:sticky;bottom:0;z-index:2"><td style="padding:9px 12px;font-weight:800;color:var(--orange)"></td><td style="padding:9px 12px;font-weight:800;color:var(--orange)">TỔNG CỘNG</td>`;
-  last7.forEach((d,i)=>{const sum=arr.reduce((s,r)=>s+(r[d]||0),0);const isLatest=i===last7.length-1;t+=`<td style="padding:9px 12px;text-align:right;font-weight:800;${isLatest?'color:var(--orange-dark,#C8461A);background:#FFE0CC':'color:var(--text-main)'}">${sum.toLocaleString()}</td>`;});
+  last7.forEach((d,i)=>{const sum=arr.reduce((s,r)=>s+(r[d]||0),0);const isLatest=i===last7.length-1;t+=`<td style="padding:9px 12px;text-align:center;font-weight:800;${isLatest?'color:var(--orange-dark,#C8461A);background:#FFE0CC':'color:var(--text-main)'}">${sum.toLocaleString()}</td>`;});
   const sC=arr.reduce((s,r)=>s+(r[latest]||0),0),sP=arr.reduce((s,r)=>s+(r[prev]||0),0),sD=sC-sP;
-  t+=`<td style="padding:9px 12px;text-align:right;color:${sD<0?'var(--green)':sD>0?'var(--red)':'var(--text-sub)'};font-weight:800;white-space:nowrap">${sD<0?`▼ ${sP-sC}`:sD>0?`▲ ${sC-sP}`:'—'}</td></tr></tfoot></table></div></div>`;
+  t+=`<td style="padding:9px 12px;text-align:center;color:${sD<0?'var(--green)':sD>0?'var(--red)':'var(--text-sub)'};font-weight:800;white-space:nowrap">${sD<0?`▼ ${sP-sC}`:sD>0?`▲ ${sC-sP}`:'—'}</td></tr></tfoot></table></div></div>`;
   return t;
  }
  function fmtD(iso){return agingFmtDate(iso);}
@@ -1970,19 +1970,19 @@ function buildWeeklyReport(){
    <th colspan="3" style="${cs}text-align:center;border-left:2px solid #E5E7EB">${wBLabel}</th>
    <th style="${cs}text-align:center;border-left:2px solid #E5E7EB">Δ %GTC</th>
   </tr><tr><th></th>
-   <th style="${cs}text-align:right;border-left:2px solid #E5E7EB">Vol</th><th style="${cs}text-align:right">nGTC</th><th style="${cs}text-align:center">%GTC</th>
-   <th style="${cs}text-align:right;border-left:2px solid #E5E7EB">Vol</th><th style="${cs}text-align:right">nGTC</th><th style="${cs}text-align:center">%GTC</th>
+   <th style="${cs}text-align:center;border-left:2px solid #E5E7EB">Vol</th><th style="${cs}text-align:center">nGTC</th><th style="${cs}text-align:center">%GTC</th>
+   <th style="${cs}text-align:center;border-left:2px solid #E5E7EB">Vol</th><th style="${cs}text-align:center">nGTC</th><th style="${cs}text-align:center">%GTC</th>
    <th style="${cs}text-align:center;border-left:2px solid #E5E7EB">${wBLabel}−${wALabel}</th>
   </tr></thead><tbody>`;
   loais.forEach(l=>{const av=a[l]||{v:0,n:0,g:0},bv=b[l]||{v:0,n:0,g:0};tA.v+=av.v;tA.n+=av.n;tB.v+=bv.v;tB.n+=bv.n;const dv=bv.g-av.g,dcolor=dv>=0?'var(--green)':'var(--red)';
    h+=`<tr><td style="${cs}font-weight:600">${l}</td>
-    <td style="${cs}text-align:right;border-left:2px solid #F3F4F6">${num(av.v)}</td><td style="${cs}text-align:right">${num(av.n)}</td><td style="${cs}text-align:center"><span class="pct ${gc(av.g)}">${av.g.toFixed(1)}%</span></td>
-    <td style="${cs}text-align:right;border-left:2px solid #F3F4F6">${num(bv.v)}</td><td style="${cs}text-align:right">${num(bv.n)}</td><td style="${cs}text-align:center"><span class="pct ${gc(bv.g)}">${bv.g.toFixed(1)}%</span></td>
+    <td style="${cs}text-align:center;border-left:2px solid #F3F4F6">${num(av.v)}</td><td style="${cs}text-align:center">${num(av.n)}</td><td style="${cs}text-align:center"><span class="pct ${gc(av.g)}">${av.g.toFixed(1)}%</span></td>
+    <td style="${cs}text-align:center;border-left:2px solid #F3F4F6">${num(bv.v)}</td><td style="${cs}text-align:center">${num(bv.n)}</td><td style="${cs}text-align:center"><span class="pct ${gc(bv.g)}">${bv.g.toFixed(1)}%</span></td>
     <td style="${cs}text-align:center;font-weight:700;color:${dcolor};border-left:2px solid #F3F4F6">${dv>=0?'+':''}${dv.toFixed(1)}%</td></tr>`;});
   const tAg=p0(tA.v,tA.n),tBg=p0(tB.v,tB.n),td=tBg-tAg,tdc=td>=0?'var(--green)':'var(--red)';
   h+=`<tr class="tot"><td style="${cs}">Tổng</td>
-   <td style="${cs}text-align:right;border-left:2px solid #F3F4F6">${num(tA.v)}</td><td style="${cs}text-align:right">${num(tA.n)}</td><td style="${cs}text-align:center"><span class="pct ${gc(tAg)}">${tAg.toFixed(1)}%</span></td>
-   <td style="${cs}text-align:right;border-left:2px solid #F3F4F6">${num(tB.v)}</td><td style="${cs}text-align:right">${num(tB.n)}</td><td style="${cs}text-align:center"><span class="pct ${gc(tBg)}">${tBg.toFixed(1)}%</span></td>
+   <td style="${cs}text-align:center;border-left:2px solid #F3F4F6">${num(tA.v)}</td><td style="${cs}text-align:center">${num(tA.n)}</td><td style="${cs}text-align:center"><span class="pct ${gc(tAg)}">${tAg.toFixed(1)}%</span></td>
+   <td style="${cs}text-align:center;border-left:2px solid #F3F4F6">${num(tB.v)}</td><td style="${cs}text-align:center">${num(tB.n)}</td><td style="${cs}text-align:center"><span class="pct ${gc(tBg)}">${tBg.toFixed(1)}%</span></td>
    <td style="${cs}text-align:center;font-weight:700;color:${tdc};border-left:2px solid #F3F4F6">${td>=0?'+':''}${td.toFixed(1)}%</td></tr>`;
   h+='</tbody></table></div>';
   // Analysis
@@ -2009,14 +2009,14 @@ function buildWeeklyReport(){
    <th colspan="3" style="${cs}text-align:center;border-left:2px solid #E5E7EB">${wBLabel}</th>
    <th style="${cs}text-align:center;border-left:2px solid #E5E7EB">Δ %GTC</th>
   </tr><tr><th></th><th></th>
-   <th style="${cs}text-align:right;border-left:2px solid #E5E7EB">Vol</th><th style="${cs}text-align:right">nGTC</th><th style="${cs}text-align:center">%GTC</th>
-   <th style="${cs}text-align:right;border-left:2px solid #E5E7EB">Vol</th><th style="${cs}text-align:right">nGTC</th><th style="${cs}text-align:center">%GTC</th>
+   <th style="${cs}text-align:center;border-left:2px solid #E5E7EB">Vol</th><th style="${cs}text-align:center">nGTC</th><th style="${cs}text-align:center">%GTC</th>
+   <th style="${cs}text-align:center;border-left:2px solid #E5E7EB">Vol</th><th style="${cs}text-align:center">nGTC</th><th style="${cs}text-align:center">%GTC</th>
    <th style="${cs}text-align:center;border-left:2px solid #E5E7EB">${wBLabel}−${wALabel}</th>
   </tr></thead><tbody>`;
   names.forEach((n,i)=>{const av=a[n]||{v:0,nG:0,g:0},bv=b[n]||{v:0,nG:0,g:0};const dv=bv.g-av.g,dcolor=dv>=0?'var(--green)':'var(--red)';
    h+=`<tr><td style="${cs}text-align:center;color:var(--text-sub);font-size:11px">${i+1}</td><td style="${cs}font-weight:700">${n}</td>
-    <td style="${cs}text-align:right;border-left:2px solid #F3F4F6">${num(av.v)}</td><td style="${cs}text-align:right">${num(av.nG)}</td><td style="${cs}text-align:center"><span class="pct ${gc(av.g)}">${av.g.toFixed(1)}%</span></td>
-    <td style="${cs}text-align:right;border-left:2px solid #F3F4F6">${num(bv.v)}</td><td style="${cs}text-align:right">${num(bv.nG)}</td><td style="${cs}text-align:center"><span class="pct ${gc(bv.g)}">${bv.g.toFixed(1)}%</span></td>
+    <td style="${cs}text-align:center;border-left:2px solid #F3F4F6">${num(av.v)}</td><td style="${cs}text-align:center">${num(av.nG)}</td><td style="${cs}text-align:center"><span class="pct ${gc(av.g)}">${av.g.toFixed(1)}%</span></td>
+    <td style="${cs}text-align:center;border-left:2px solid #F3F4F6">${num(bv.v)}</td><td style="${cs}text-align:center">${num(bv.nG)}</td><td style="${cs}text-align:center"><span class="pct ${gc(bv.g)}">${bv.g.toFixed(1)}%</span></td>
     <td style="${cs}text-align:center;font-weight:700;color:${dcolor};border-left:2px solid #F3F4F6">${dv>=0?'+':''}${dv.toFixed(1)}%</td></tr>`;});
   h+='</tbody></table></div>';
   // Analysis
@@ -2046,14 +2046,14 @@ function buildWeeklyReport(){
    <th colspan="3" style="${cs}text-align:center;border-left:2px solid #E5E7EB">${wBLabel}</th>
    <th style="${cs}text-align:center;border-left:2px solid #E5E7EB">Δ %GTC</th>
   </tr><tr><th></th><th></th><th></th>
-   <th style="${cs}text-align:right;border-left:2px solid #E5E7EB">Vol</th><th style="${cs}text-align:right">nGTC</th><th style="${cs}text-align:center">%GTC</th>
-   <th style="${cs}text-align:right;border-left:2px solid #E5E7EB">Vol</th><th style="${cs}text-align:right">nGTC</th><th style="${cs}text-align:center">%GTC</th>
+   <th style="${cs}text-align:center;border-left:2px solid #E5E7EB">Vol</th><th style="${cs}text-align:center">nGTC</th><th style="${cs}text-align:center">%GTC</th>
+   <th style="${cs}text-align:center;border-left:2px solid #E5E7EB">Vol</th><th style="${cs}text-align:center">nGTC</th><th style="${cs}text-align:center">%GTC</th>
    <th style="${cs}text-align:center;border-left:2px solid #E5E7EB">${wBLabel}−${wALabel}</th>
   </tr></thead><tbody>`;
   top20.forEach((bc,i)=>{const av=a[bc]||{v:0,nG:0,g:0},bv=b[bc]||{v:0,nG:0,g:0};const amN=bv.am||av.am||'';const dv=bv.g-av.g,dcolor=dv>=0?'var(--green)':'var(--red)';
    h+=`<tr><td style="${cs}text-align:center;color:var(--text-sub);font-size:11px">${i+1}</td><td style="${cs}font-weight:700">${bc}</td><td style="${cs}color:var(--text-sub);font-size:11px">${amN}</td>
-    <td style="${cs}text-align:right;border-left:2px solid #F3F4F6">${num(av.v)}</td><td style="${cs}text-align:right">${num(av.nG)}</td><td style="${cs}text-align:center">${av.v>0?`<span class="pct ${gc(av.g)}">${av.g.toFixed(1)}%</span>`:'—'}</td>
-    <td style="${cs}text-align:right;border-left:2px solid #F3F4F6">${num(bv.v)}</td><td style="${cs}text-align:right">${num(bv.nG)}</td><td style="${cs}text-align:center"><span class="pct ${gc(bv.g)}">${bv.g.toFixed(1)}%</span></td>
+    <td style="${cs}text-align:center;border-left:2px solid #F3F4F6">${num(av.v)}</td><td style="${cs}text-align:center">${num(av.nG)}</td><td style="${cs}text-align:center">${av.v>0?`<span class="pct ${gc(av.g)}">${av.g.toFixed(1)}%</span>`:'—'}</td>
+    <td style="${cs}text-align:center;border-left:2px solid #F3F4F6">${num(bv.v)}</td><td style="${cs}text-align:center">${num(bv.nG)}</td><td style="${cs}text-align:center"><span class="pct ${gc(bv.g)}">${bv.g.toFixed(1)}%</span></td>
     <td style="${cs}text-align:center;font-weight:700;color:${dcolor};border-left:2px solid #F3F4F6">${dv>=0?'+':''}${dv.toFixed(1)}%</td></tr>`;});
   h+='</tbody></table></div>';
   // Analysis
@@ -2155,14 +2155,14 @@ function buildWeeklyReport(){
    <th colspan="3" style="${cs}text-align:center;border-left:2px solid #E5E7EB">${wBLabel}</th>
    <th style="${cs}text-align:center;border-left:2px solid #E5E7EB">Δ %Ontime</th>
   </tr><tr><th></th><th></th>
-   <th style="${cs}text-align:right;border-left:2px solid #E5E7EB">Vol</th><th style="${cs}text-align:right">Count</th><th style="${cs}text-align:center">%Ontime</th>
-   <th style="${cs}text-align:right;border-left:2px solid #E5E7EB">Vol</th><th style="${cs}text-align:right">Count</th><th style="${cs}text-align:center">%Ontime</th>
+   <th style="${cs}text-align:center;border-left:2px solid #E5E7EB">Vol</th><th style="${cs}text-align:center">Count</th><th style="${cs}text-align:center">%Ontime</th>
+   <th style="${cs}text-align:center;border-left:2px solid #E5E7EB">Vol</th><th style="${cs}text-align:center">Count</th><th style="${cs}text-align:center">%Ontime</th>
    <th style="${cs}text-align:center;border-left:2px solid #E5E7EB"></th>
   </tr></thead><tbody>`;
   names.forEach((n,i)=>{const av=a[n]||{v:0,c:0,pct:0},bv=b[n]||{v:0,c:0,pct:0};const dv=bv.pct-av.pct,dcolor=dv>=0?'var(--green)':'var(--red)';
    h+=`<tr><td style="${cs}text-align:center;color:var(--text-sub);font-size:11px">${i+1}</td><td style="${cs}font-weight:700">${n}</td>
-    <td style="${cs}text-align:right;border-left:2px solid #F3F4F6">${num(av.v)}</td><td style="${cs}text-align:right">${num(av.c)}</td><td style="${cs}text-align:center"><span class="pct ${gco(av.pct)}">${av.pct.toFixed(1)}%</span></td>
-    <td style="${cs}text-align:right;border-left:2px solid #F3F4F6">${num(bv.v)}</td><td style="${cs}text-align:right">${num(bv.c)}</td><td style="${cs}text-align:center"><span class="pct ${gco(bv.pct)}">${bv.pct.toFixed(1)}%</span></td>
+    <td style="${cs}text-align:center;border-left:2px solid #F3F4F6">${num(av.v)}</td><td style="${cs}text-align:center">${num(av.c)}</td><td style="${cs}text-align:center"><span class="pct ${gco(av.pct)}">${av.pct.toFixed(1)}%</span></td>
+    <td style="${cs}text-align:center;border-left:2px solid #F3F4F6">${num(bv.v)}</td><td style="${cs}text-align:center">${num(bv.c)}</td><td style="${cs}text-align:center"><span class="pct ${gco(bv.pct)}">${bv.pct.toFixed(1)}%</span></td>
     <td style="${cs}text-align:center;font-weight:700;color:${dcolor};border-left:2px solid #F3F4F6">${dv>=0?'+':''}${dv.toFixed(1)}%</td></tr>`;});
   h+='</tbody></table></div>';
   // Analysis
@@ -2201,14 +2201,14 @@ function buildWeeklyReport(){
    <th colspan="3" style="${cs}text-align:center;border-left:2px solid #E5E7EB">${wBLabel}</th>
    <th style="${cs}text-align:center;border-left:2px solid #E5E7EB">Δ %Ontime</th>
   </tr><tr><th></th><th></th><th></th>
-   <th style="${cs}text-align:right;border-left:2px solid #E5E7EB">Vol</th><th style="${cs}text-align:right">Count</th><th style="${cs}text-align:center">%Ontime</th>
-   <th style="${cs}text-align:right;border-left:2px solid #E5E7EB">Vol</th><th style="${cs}text-align:right">Count</th><th style="${cs}text-align:center">%Ontime</th>
+   <th style="${cs}text-align:center;border-left:2px solid #E5E7EB">Vol</th><th style="${cs}text-align:center">Count</th><th style="${cs}text-align:center">%Ontime</th>
+   <th style="${cs}text-align:center;border-left:2px solid #E5E7EB">Vol</th><th style="${cs}text-align:center">Count</th><th style="${cs}text-align:center">%Ontime</th>
    <th style="${cs}text-align:center;border-left:2px solid #E5E7EB"></th>
   </tr></thead><tbody>`;
   names.forEach((bc,i)=>{const av=a[bc]||{v:0,c:0,pct:0,am:''},bv=b[bc]||{v:0,c:0,pct:0,am:''};const amN=bv.am||av.am||'';const dv=bv.pct-av.pct,dcolor=dv>=0?'var(--green)':'var(--red)';
    h+=`<tr><td style="${cs}text-align:center;color:var(--text-sub);font-size:11px">${i+1}</td><td style="${cs}font-weight:700">${bc}</td><td style="${cs}color:var(--text-sub);font-size:11px">${amN}</td>
-    <td style="${cs}text-align:right;border-left:2px solid #F3F4F6">${num(av.v)}</td><td style="${cs}text-align:right">${num(av.c)}</td><td style="${cs}text-align:center">${av.v>0?`<span class="pct ${gco(av.pct)}">${av.pct.toFixed(1)}%</span>`:'—'}</td>
-    <td style="${cs}text-align:right;border-left:2px solid #F3F4F6">${num(bv.v)}</td><td style="${cs}text-align:right">${num(bv.c)}</td><td style="${cs}text-align:center">${bv.v>0?`<span class="pct ${gco(bv.pct)}">${bv.pct.toFixed(1)}%</span>`:'—'}</td>
+    <td style="${cs}text-align:center;border-left:2px solid #F3F4F6">${num(av.v)}</td><td style="${cs}text-align:center">${num(av.c)}</td><td style="${cs}text-align:center">${av.v>0?`<span class="pct ${gco(av.pct)}">${av.pct.toFixed(1)}%</span>`:'—'}</td>
+    <td style="${cs}text-align:center;border-left:2px solid #F3F4F6">${num(bv.v)}</td><td style="${cs}text-align:center">${num(bv.c)}</td><td style="${cs}text-align:center">${bv.v>0?`<span class="pct ${gco(bv.pct)}">${bv.pct.toFixed(1)}%</span>`:'—'}</td>
     <td style="${cs}text-align:center;font-weight:700;color:${dcolor};border-left:2px solid #F3F4F6">${dv>=0?'+':''}${dv.toFixed(1)}%</td></tr>`;});
   h+='</tbody></table></div>';
   // Analysis
@@ -2273,7 +2273,7 @@ function buildWeeklyReport(){
 // LTC - AM:   col[0]=AM (' '=Grand Total), col[1]=Ngày, col[2]=Vol, col[3]=%Gán, col[4]=Số đơn LTC
 // ODR TTS-AM: col[0]=AM, col[1]=Ngày, col[2]=Vol GTC, col[3]=% Ontime, col[4]=GTC đúng Ontime
 function buildDailyReportPage(rowsCa12,rowsLTC,rowsCa12TTS,rowsODR,rowsOPR,selDate){
- const cs='padding:5px 9px;';const cs2='padding:5px 9px;text-align:right;';const cs3='padding:5px 9px;text-align:center;';
+ const cs='padding:5px 9px;';const cs2='padding:5px 9px;text-align:center;';const cs3='padding:5px 9px;text-align:center;';
  // Parse helper: group by AM and Loại hàng for latest date
  function parseCa12(rows,forceDate){
   if(!rows||rows.length<2)return null;
@@ -2371,11 +2371,11 @@ function buildDailyReportPage(rowsCa12,rowsLTC,rowsCa12TTS,rowsODR,rowsOPR,selDa
    <th colspan="3" style="${cs}text-align:center;border-left:3px solid #99F6E4;background:#F0FDFA">LẤY</th>
   </tr>
   <tr>
-   <th style="${cs}text-align:right;border-left:3px solid #BFDBFE;background:#EFF6FF">Vol</th><th style="${cs}text-align:center;background:#EFF6FF">%Gán</th>
-   <th style="${cs}text-align:right;border-left:3px solid #BBF7D0;background:#F0FDF4">Vol</th><th style="${cs}text-align:center;background:#F0FDF4">%Gán</th>
-   <th style="${cs}text-align:right;border-left:3px solid #FED7AA;background:#FFF7ED">Vol</th><th style="${cs}text-align:center;background:#FFF7ED">%Gán</th>
-   <th style="${cs}text-align:right;border-left:3px solid #FDBA74;background:#FEEDE4">Vol</th><th style="${cs}text-align:center;background:#FEEDE4">%Gán</th><th style="${cs}text-align:center;background:#FEEDE4">%GTC</th><th style="${cs}text-align:right;background:#FEEDE4">Số GTC</th>
-   <th style="${cs}text-align:right;border-left:3px solid #99F6E4;background:#F0FDFA">Vol</th><th style="${cs}text-align:center;background:#F0FDFA">%Gán</th><th style="${cs}text-align:center;background:#F0FDFA">%LTC</th>
+   <th style="${cs}text-align:center;border-left:3px solid #BFDBFE;background:#EFF6FF">Vol</th><th style="${cs}text-align:center;background:#EFF6FF">%Gán</th>
+   <th style="${cs}text-align:center;border-left:3px solid #BBF7D0;background:#F0FDF4">Vol</th><th style="${cs}text-align:center;background:#F0FDF4">%Gán</th>
+   <th style="${cs}text-align:center;border-left:3px solid #FED7AA;background:#FFF7ED">Vol</th><th style="${cs}text-align:center;background:#FFF7ED">%Gán</th>
+   <th style="${cs}text-align:center;border-left:3px solid #FDBA74;background:#FEEDE4">Vol</th><th style="${cs}text-align:center;background:#FEEDE4">%Gán</th><th style="${cs}text-align:center;background:#FEEDE4">%GTC</th><th style="${cs}text-align:center;background:#FEEDE4">Số GTC</th>
+   <th style="${cs}text-align:center;border-left:3px solid #99F6E4;background:#F0FDFA">Vol</th><th style="${cs}text-align:center;background:#F0FDFA">%Gán</th><th style="${cs}text-align:center;background:#F0FDFA">%LTC</th>
   </tr>
  </thead><tbody>`;
  amNames.forEach((am,i)=>{
@@ -2434,10 +2434,10 @@ function buildDailyReportPage(rowsCa12,rowsLTC,rowsCa12TTS,rowsODR,rowsOPR,selDa
    <th rowspan="2" style="${cs}text-align:center;border-left:3px solid #6EE7B7;background:#ECFDF5;min-width:60px">OPR</th>
   </tr>
   <tr>
-   <th style="${cs}text-align:right;border-left:3px solid #BFDBFE;background:#EFF6FF">Vol</th><th style="${cs}text-align:center;background:#EFF6FF">%Gán</th><th style="${cs}text-align:center;background:#EFF6FF">%GTC</th>
-   <th style="${cs}text-align:right;border-left:3px solid #BBF7D0;background:#F0FDF4">Vol</th><th style="${cs}text-align:center;background:#F0FDF4">%Gán</th><th style="${cs}text-align:center;background:#F0FDF4">%GTC</th>
-   <th style="${cs}text-align:right;border-left:3px solid #FED7AA;background:#FFF7ED">Vol</th><th style="${cs}text-align:center;background:#FFF7ED">%Gán</th><th style="${cs}text-align:center;background:#FFF7ED">%GTC</th>
-   <th style="${cs}text-align:right;border-left:3px solid #FDBA74;background:#FEEDE4">Vol</th><th style="${cs}text-align:center;background:#FEEDE4">%Gán</th><th style="${cs}text-align:center;background:#FEEDE4">%GTC</th>
+   <th style="${cs}text-align:center;border-left:3px solid #BFDBFE;background:#EFF6FF">Vol</th><th style="${cs}text-align:center;background:#EFF6FF">%Gán</th><th style="${cs}text-align:center;background:#EFF6FF">%GTC</th>
+   <th style="${cs}text-align:center;border-left:3px solid #BBF7D0;background:#F0FDF4">Vol</th><th style="${cs}text-align:center;background:#F0FDF4">%Gán</th><th style="${cs}text-align:center;background:#F0FDF4">%GTC</th>
+   <th style="${cs}text-align:center;border-left:3px solid #FED7AA;background:#FFF7ED">Vol</th><th style="${cs}text-align:center;background:#FFF7ED">%Gán</th><th style="${cs}text-align:center;background:#FFF7ED">%GTC</th>
+   <th style="${cs}text-align:center;border-left:3px solid #FDBA74;background:#FEEDE4">Vol</th><th style="${cs}text-align:center;background:#FEEDE4">%Gán</th><th style="${cs}text-align:center;background:#FEEDE4">%GTC</th>
   </tr>
  </thead><tbody>`;
   amNames2.forEach((am,i)=>{
@@ -2839,9 +2839,9 @@ function buildGTCBCPage(csvText){
     <td style="text-align:center;color:var(--text-sub);padding:5px 4px">${idx+1}</td>
     <td style="font-weight:700;font-size:12px;padding:5px 6px;position:sticky;left:0;z-index:1;background:${bg}">${b.bc}</td>
     <td style="font-size:11px;color:var(--text-sub);padding:5px 6px">${b.am}</td>
-    ${ca1?`<td style="text-align:right;padding:5px 6px;border-left:2px solid ${GBDR[0]}">${(ca1.vol||0).toLocaleString('vi-VN')}</td><td style="text-align:center;background:${ganBg(ca1.gan)};color:${ganCol(ca1.gan)};font-weight:700;padding:5px 6px">${(ca1.gan*100).toFixed(1)}%</td><td style="text-align:center;background:${gBg(ca1.gtc)};color:${gCol(ca1.gtc)};font-weight:700;padding:5px 6px">${(ca1.gtc*100).toFixed(1)}%</td><td style="text-align:right;padding:5px 6px">${(ca1.soGTC||0).toLocaleString('vi-VN')}</td>`:`<td colspan="4" style="text-align:center;color:var(--text-sub);border-left:2px solid ${GBDR[0]}">—</td>`}
-    ${ca2?`<td style="text-align:right;padding:5px 6px;border-left:2px solid ${GBDR[1]}">${(ca2.vol||0).toLocaleString('vi-VN')}</td><td style="text-align:center;background:${ganBg(ca2.gan)};color:${ganCol(ca2.gan)};font-weight:700;padding:5px 6px">${(ca2.gan*100).toFixed(1)}%</td><td style="text-align:center;background:${gBg(ca2.gtc)};color:${gCol(ca2.gtc)};font-weight:700;padding:5px 6px">${(ca2.gtc*100).toFixed(1)}%</td><td style="text-align:right;padding:5px 6px">${(ca2.soGTC||0).toLocaleString('vi-VN')}</td>`:`<td colspan="4" style="text-align:center;color:var(--text-sub);border-left:2px solid ${GBDR[1]}">—</td>`}
-    ${ton?`<td style="text-align:right;padding:5px 6px;border-left:2px solid ${GBDR[2]}">${(ton.vol||0).toLocaleString('vi-VN')}</td><td style="text-align:center;background:${ganBg(ton.gan)};color:${ganCol(ton.gan)};font-weight:700;padding:5px 6px">${(ton.gan*100).toFixed(1)}%</td><td style="text-align:center;background:${gBg(ton.gtc)};color:${gCol(ton.gtc)};font-weight:700;padding:5px 6px">${(ton.gtc*100).toFixed(1)}%</td><td style="text-align:right;padding:5px 6px">${(ton.soGTC||0).toLocaleString('vi-VN')}</td>`:`<td colspan="4" style="text-align:center;color:var(--text-sub);border-left:2px solid ${GBDR[2]}">—</td>`}
+    ${ca1?`<td style="text-align:center;padding:5px 6px;border-left:2px solid ${GBDR[0]}">${(ca1.vol||0).toLocaleString('vi-VN')}</td><td style="text-align:center;background:${ganBg(ca1.gan)};color:${ganCol(ca1.gan)};font-weight:700;padding:5px 6px">${(ca1.gan*100).toFixed(1)}%</td><td style="text-align:center;background:${gBg(ca1.gtc)};color:${gCol(ca1.gtc)};font-weight:700;padding:5px 6px">${(ca1.gtc*100).toFixed(1)}%</td><td style="text-align:center;padding:5px 6px">${(ca1.soGTC||0).toLocaleString('vi-VN')}</td>`:`<td colspan="4" style="text-align:center;color:var(--text-sub);border-left:2px solid ${GBDR[0]}">—</td>`}
+    ${ca2?`<td style="text-align:center;padding:5px 6px;border-left:2px solid ${GBDR[1]}">${(ca2.vol||0).toLocaleString('vi-VN')}</td><td style="text-align:center;background:${ganBg(ca2.gan)};color:${ganCol(ca2.gan)};font-weight:700;padding:5px 6px">${(ca2.gan*100).toFixed(1)}%</td><td style="text-align:center;background:${gBg(ca2.gtc)};color:${gCol(ca2.gtc)};font-weight:700;padding:5px 6px">${(ca2.gtc*100).toFixed(1)}%</td><td style="text-align:center;padding:5px 6px">${(ca2.soGTC||0).toLocaleString('vi-VN')}</td>`:`<td colspan="4" style="text-align:center;color:var(--text-sub);border-left:2px solid ${GBDR[1]}">—</td>`}
+    ${ton?`<td style="text-align:center;padding:5px 6px;border-left:2px solid ${GBDR[2]}">${(ton.vol||0).toLocaleString('vi-VN')}</td><td style="text-align:center;background:${ganBg(ton.gan)};color:${ganCol(ton.gan)};font-weight:700;padding:5px 6px">${(ton.gan*100).toFixed(1)}%</td><td style="text-align:center;background:${gBg(ton.gtc)};color:${gCol(ton.gtc)};font-weight:700;padding:5px 6px">${(ton.gtc*100).toFixed(1)}%</td><td style="text-align:center;padding:5px 6px">${(ton.soGTC||0).toLocaleString('vi-VN')}</td>`:`<td colspan="4" style="text-align:center;color:var(--text-sub);border-left:2px solid ${GBDR[2]}">—</td>`}
     <td style="text-align:center;font-weight:800;font-size:14px;background:${gBg(b.totalGTCRate)};color:${gCol(b.totalGTCRate)};border-left:2px solid var(--border);padding:5px 8px">${(b.totalGTCRate*100).toFixed(1)}%</td>
    </tr>`;
   });
@@ -3243,10 +3243,10 @@ window._volRender=function(){
     <th colspan="3" style="text-align:center;border-left:2px solid #E5E7EB;background:#FEE2E2;color:#DC2626">📋 Hàng Tồn</th>
    </tr>
    <tr>
-    <th style="text-align:right;border-left:2px solid #E5E7EB">Vol N-1</th>
+    <th style="text-align:center;border-left:2px solid #E5E7EB">Vol N-1</th>
     <th>Δ vs ${compLabel}</th>
     <th style="text-align:center">GTC Mới</th>
-    <th style="text-align:right;border-left:2px solid #E5E7EB">Vol N-1</th>
+    <th style="text-align:center;border-left:2px solid #E5E7EB">Vol N-1</th>
     <th>Δ vs ${compLabel}</th>
     <th style="text-align:center">GTC Tồn</th>
    </tr>
@@ -3257,10 +3257,10 @@ window._volRender=function(){
    const st=tinhGtcMap[t]||{};
    return `<tr>
     <td style="font-weight:600">${TINH_FULL[t]||t}</td>
-    <td style="text-align:right;font-weight:700;border-left:2px solid #F3F4F6">${fN(mN)}</td>
+    <td style="text-align:center;font-weight:700;border-left:2px solid #F3F4F6">${fN(mN)}</td>
     <td>${fs(mN-mC,mC?(mN-mC)/mC*100:0,false)}</td>
     <td style="text-align:center">${gtcBadge(st['Hàng Mới'])}</td>
-    <td style="text-align:right;font-weight:700;border-left:2px solid #F3F4F6">${fN(tN)}</td>
+    <td style="text-align:center;font-weight:700;border-left:2px solid #F3F4F6">${fN(tN)}</td>
     <td>${fs(tN-tC,tC?(tN-tC)/tC*100:0,true)}</td>
     <td style="text-align:center">${gtcBadge(st['Hàng Tồn'])}</td>
    </tr>`;
@@ -3272,8 +3272,8 @@ window._volRender=function(){
   <div class="table-wrap" style="max-height:500px"><table>
   <thead><tr>
    <th style="min-width:160px">Bưu Cục</th>
-   <th style="text-align:right">Vol Mới N-1</th><th>Mới Δ</th>
-   <th style="text-align:right">Vol Tồn N-1</th><th>Tồn Δ</th>
+   <th style="text-align:center">Vol Mới N-1</th><th>Mới Δ</th>
+   <th style="text-align:center">Vol Tồn N-1</th><th>Tồn Δ</th>
    <th style="text-align:center">Tồn/Mới</th>
    <th style="text-align:center">GTC Mới</th>
    <th style="text-align:center">GTC Tồn</th>
@@ -3281,9 +3281,9 @@ window._volRender=function(){
   </tr></thead>
   <tbody>${bcAll.map(b=>`<tr>
    <td><div style="font-weight:600;font-size:12px">${b.bc}</div><div style="font-size:11px;color:var(--text-sub)">${TINH_FULL[b.t]||b.t}</div></td>
-   <td style="text-align:right;font-weight:700">${fN(b.mN)}</td>
+   <td style="text-align:center;font-weight:700">${fN(b.mN)}</td>
    <td>${fs(b.mD,b.mP,false)}</td>
-   <td style="text-align:right;font-weight:700">${fN(b.tN)}</td>
+   <td style="text-align:center;font-weight:700">${fN(b.tN)}</td>
    <td>${fs(b.tD,b.tP,true)}</td>
    <td style="text-align:center;font-weight:700;color:${b.ratioColor}">${b.tonMoiPct}</td>
    <td style="text-align:center">${gtcBadge(b.gtcMoi)}</td>
