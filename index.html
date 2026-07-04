@@ -2833,8 +2833,15 @@ function buildGTCBCPage(csvText){
   });
   if(!bcList.length)h+=`<tr><td colspan="16" style="text-align:center;padding:24px;color:var(--text-sub)">Không có dữ liệu cho ngày này</td></tr>`;
   h+=`</tbody></table>`;
-  const tblEl=document.getElementById('gtcbc-table');
-  if(tblEl)tblEl.innerHTML=h;
+  const tblEl=document.getElementById('gtcbc-table-wrap');
+  if(tblEl){
+   tblEl.innerHTML=h;
+   // Sau khi render, fix top row 2 header (CSS gán top:0 cho mọi th, row 2 cần top=row1Height)
+   requestAnimationFrame(()=>{
+    const rows=[...tblEl.querySelectorAll('thead tr')];
+    if(rows.length>=2){const h1=rows[0].offsetHeight||38;rows[1].querySelectorAll('th').forEach(th=>{th.style.top=h1+'px';});}
+   });
+  }
   // BC filter ngoài scroll container — rebuild mỗi lần render
   const bcWrap=document.getElementById('gtcbc-bc-filter');
   if(bcWrap){
@@ -2854,7 +2861,7 @@ function buildGTCBCPage(csvText){
     </div>
    </div>`;
    const applyFilter=()=>{
-    const tbl=tblEl?.querySelector('table');
+    const tbl=document.querySelector('#gtcbc-table-wrap table');
     if(!tbl)return;
     tbl.querySelectorAll('tbody tr').forEach(r=>{
      if(!sel.size){r.style.display='';return;}
@@ -2895,7 +2902,7 @@ function buildGTCBCPage(csvText){
    <div class="card-title"><div class="card-icon">🏪</div>Chi tiết GTC theo Bưu Cục — Sắp xếp GTC Total thấp → cao</div>
    <div id="gtcbc-bc-filter"></div>
   </div>
-  <div class="table-wrap" style="max-height:68vh"><div id="gtcbc-table"></div></div>
+  <div class="table-wrap" id="gtcbc-table-wrap" style="max-height:68vh"></div>
  </div>`;
 }
 
