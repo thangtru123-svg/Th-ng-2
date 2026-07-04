@@ -2799,26 +2799,25 @@ function buildGTCBCPage(csvText){
    </div>
   </div>`;
   // Table — single-row header (giống pattern tất cả bảng khác, CSS tự sticky)
-  const GCOL=['#fff','#fff','#fff'];
-  const GBDR=['#388E3C','#1565C0','#C62828'];
-  const GCBG=['#388E3C','#1565C0','#C62828'];
+  const GBDR=['rgba(56,142,60,0.4)','rgba(21,101,192,0.4)','rgba(198,40,40,0.4)'];
+  const TH='background:#C62828;color:#fff;font-weight:700';
   let h=`<table style="min-width:1100px;font-size:12px"><thead><tr>
-   <th style="min-width:34px;text-align:center;background:#455A64;color:#fff">STT</th>
-   <th style="min-width:160px;text-align:left;background:#455A64;color:#fff">Bưu Cục</th>
-   <th style="min-width:100px;text-align:left;background:#455A64;color:#fff">AM</th>
-   <th style="text-align:center;color:${GCOL[0]};background:${GCBG[0]};border-left:3px solid #2E7D32">Ca1 Vol</th>
-   <th style="text-align:center;color:${GCOL[0]};background:${GCBG[0]}">Ca1 Gán%</th>
-   <th style="text-align:center;color:${GCOL[0]};background:${GCBG[0]}">Ca1 GTC%</th>
-   <th style="text-align:center;color:${GCOL[0]};background:${GCBG[0]}">Ca1 VolGTC</th>
-   <th style="text-align:center;color:${GCOL[1]};background:${GCBG[1]};border-left:3px solid #0D47A1">Ca2 Vol</th>
-   <th style="text-align:center;color:${GCOL[1]};background:${GCBG[1]}">Ca2 Gán%</th>
-   <th style="text-align:center;color:${GCOL[1]};background:${GCBG[1]}">Ca2 GTC%</th>
-   <th style="text-align:center;color:${GCOL[1]};background:${GCBG[1]}">Ca2 VolGTC</th>
-   <th style="text-align:center;color:${GCOL[2]};background:${GCBG[2]};border-left:3px solid #B71C1C">Tồn Vol</th>
-   <th style="text-align:center;color:${GCOL[2]};background:${GCBG[2]}">Tồn Gán%</th>
-   <th style="text-align:center;color:${GCOL[2]};background:${GCBG[2]}">Tồn GTC%</th>
-   <th style="text-align:center;color:${GCOL[2]};background:${GCBG[2]}">Tồn VolGTC</th>
-   <th style="text-align:center;border-left:2px solid var(--border);background:#37474F;color:#fff">GTC Total</th>
+   <th style="min-width:34px;text-align:center;${TH}">STT</th>
+   <th style="min-width:160px;text-align:left;${TH}">Bưu Cục</th>
+   <th style="min-width:100px;text-align:left;${TH}">AM</th>
+   <th style="text-align:center;${TH};border-left:3px solid #fff">Ca1 Vol</th>
+   <th style="text-align:center;${TH}">Ca1 Gán%</th>
+   <th style="text-align:center;${TH}">Ca1 GTC%</th>
+   <th style="text-align:center;${TH}">Ca1 VolGTC</th>
+   <th style="text-align:center;${TH};border-left:3px solid #fff">Ca2 Vol</th>
+   <th style="text-align:center;${TH}">Ca2 Gán%</th>
+   <th style="text-align:center;${TH}">Ca2 GTC%</th>
+   <th style="text-align:center;${TH}">Ca2 VolGTC</th>
+   <th style="text-align:center;${TH};border-left:3px solid #fff">Tồn Vol</th>
+   <th style="text-align:center;${TH}">Tồn Gán%</th>
+   <th style="text-align:center;${TH}">Tồn GTC%</th>
+   <th style="text-align:center;${TH}">Tồn VolGTC</th>
+   <th style="text-align:center;${TH};border-left:3px solid #fff">GTC Total</th>
   </tr></thead><tbody>`;
   bcList.forEach((b,idx)=>{
    const ca1=b.rows['Hàng Mới Ca 1'],ca2=b.rows['Hàng Mới Ca 2'],ton=b.rows['Hàng Tồn'];
