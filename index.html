@@ -1650,6 +1650,47 @@ async function sendAllToTelegram(){
   return trimCap(cap);
  }
 
+ /* ── Caption: P19 GTC TTS Theo AM ── */
+ function capGTCTTSAM(){
+  const rows=window._gtcBCRows,dates=window._gtcBCDates;
+  if(!rows||!dates||!dates.length)return`👤 <b>GTC TTS CA 1,2 — THEO AM</b>`;
+  const latest=dates[0],prev=dates[1]||null;
+  const calc=(d,loai)=>{const f=rows.filter(r=>r.ngay===d&&r.loai===loai);const v=f.reduce((s,r)=>s+r.vol,0),g=f.reduce((s,r)=>s+r.soGTC,0);return{v,g,rate:v>0?g/v:0};};
+  const calcAll=d=>{const f=rows.filter(r=>r.ngay===d);const v=f.reduce((s,r)=>s+r.vol,0),g=f.reduce((s,r)=>s+r.soGTC,0);return{v,g,rate:v>0?g/v:0};};
+  const ca1L=calc(latest,'Hàng Mới Ca 1'),ca1P=prev?calc(prev,'Hàng Mới Ca 1'):null;
+  const ca2L=calc(latest,'Hàng Mới Ca 2'),ca2P=prev?calc(prev,'Hàng Mới Ca 2'):null;
+  const totL=calcAll(latest),totP=prev?calcAll(prev):null;
+  const diff=(cur,p)=>{if(!p)return'';const d=(cur-p.rate)*100;return d>=0?` ▲+${d.toFixed(1)}% vs ${fD(prev)}`:(` ▼${Math.abs(d).toFixed(1)}% vs ${fD(prev)}`);};
+  let cap=`👤 <b>GTC TTS CA 1,2 THEO AM — ${fD(latest)}</b>\n\n`;
+  cap+=`📦 GTC Tổng Ca 1: <b>${(ca1L.rate*100).toFixed(1)}%</b>${diff(ca1L.rate,ca1P)}\n`;
+  cap+=`📦 GTC Tổng Ca 2: <b>${(ca2L.rate*100).toFixed(1)}%</b>${diff(ca2L.rate,ca2P)}\n`;
+  cap+=`🎯 GTC Total (Ca1+Ca2+Tồn): <b>${(totL.rate*100).toFixed(1)}%</b>${diff(totL.rate,totP)}`;
+  return trimCap(cap);
+ }
+
+ /* ── Caption: P19 GTC TTS Theo BC ── */
+ function capGTCTTSBC(){
+  const rows=window._gtcBCRows,dates=window._gtcBCDates;
+  if(!rows||!dates||!dates.length)return`🏪 <b>GTC TTS CA 1,2 — THEO BƯU CỤC</b>`;
+  const latest=dates[0];
+  const bcMap={};
+  rows.filter(r=>r.ngay===latest).forEach(r=>{if(!bcMap[r.bc])bcMap[r.bc]={bc:r.bc,rows:{}};bcMap[r.bc].rows[r.loai]=r;});
+  const bcList=Object.values(bcMap);
+  const ca1L=bcList.filter(b=>b.rows['Hàng Mới Ca 1']);
+  const ca2L=bcList.filter(b=>b.rows['Hàng Mới Ca 2']);
+  const ca1Good=ca1L.filter(b=>b.rows['Hàng Mới Ca 1'].gan>=0.95&&b.rows['Hàng Mới Ca 1'].gtc>=0.80).length;
+  const ca1Weak=ca1L.filter(b=>b.rows['Hàng Mới Ca 1'].gan<0.80&&b.rows['Hàng Mới Ca 1'].gtc<0.50);
+  const ca2Good=ca2L.filter(b=>b.rows['Hàng Mới Ca 2'].gan>=0.95&&b.rows['Hàng Mới Ca 2'].gtc>=0.80).length;
+  const ca2Weak=ca2L.filter(b=>b.rows['Hàng Mới Ca 2'].gan<0.80&&b.rows['Hàng Mới Ca 2'].gtc<0.50).length;
+  let cap=`🏪 <b>GTC TTS CA 1,2 THEO BƯU CỤC — ${fD(latest)}</b>\n\n`;
+  cap+=`🟢 CA 1 tốt: Có <b>${ca1Good}/${ca1L.length}</b> Bưu Cục đạt Gán ≥95% và GTC ≥80%\n`;
+  cap+=`🔴 CA 1 yếu: Có <b>${ca1Weak.length}/${ca1L.length}</b> Bưu Cục có Gán &lt;80% và GTC &lt;50%\n`;
+  ca1Weak.slice(0,5).forEach(b=>{const r=b.rows['Hàng Mới Ca 1'];cap+=`— ${b.bc} (Gán: ${(r.gan*100).toFixed(1)}%, GTC: ${(r.gtc*100).toFixed(1)}%)\n`;});
+  cap+=`🟢 CA 2 tốt: Có <b>${ca2Good}/${ca2L.length}</b> Bưu Cục đạt Gán ≥95% và GTC ≥80%\n`;
+  cap+=`🔴 CA 2 yếu: Có <b>${ca2Weak}/${ca2L.length}</b> Bưu Cục có Gán &lt;80% và GTC &lt;50%`;
+  return trimCap(cap);
+ }
+
  try{
   /* --- P16: Vận Hành Ngày → VH thread (clone card, an search bar) --- */
   await navTo('p16');
@@ -1798,7 +1839,7 @@ async function sendAllToTelegram(){
   /* --- P19: GTC TTS Ca 1,2 theo BC → TTS - Vận hành thread --- */
   await navTo('p19');
   await new Promise(r=>setTimeout(r,600));
-  for(const [eid,cap,w] of [['gtcbc-bc-card',`🎯 <b>GTC TTS CA 1,2 — THEO BƯU CỤC</b>`,1800],['gtcbc-am-card',`👤 <b>GTC TTS CA 1,2 — THEO AM</b>`,1800]]){
+  for(const [eid,capFn,w] of [['gtcbc-am-card',capGTCTTSAM,1800],['gtcbc-bc-card',capGTCTTSBC,1800]]){const cap=capFn();
    if(btn)btn.innerHTML=`⏳ Đang gửi: ${cap.replace(/<[^>]+>/g,'')}...`;
    const cardEl=document.getElementById(eid);
    if(cardEl){
