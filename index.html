@@ -218,6 +218,7 @@ tr.tot td{background:#FFF0EB!important;font-weight:800!important;border-top:2px 
  <div class="nav-section">Volume</div>
  <button class="nav-item" onclick="show('p18',this)"><span class="icon">📊</span>Tổng quan Volume</button>
  <button class="nav-item" onclick="show('p19',this)"><span class="icon">🎯</span>GTC TTS Ca 1,2 theo BC</button>
+ <button class="nav-item" onclick="show('p20',this)"><span class="icon">👷</span>Năng suất nhân viên</button>
  <div class="nav-section">AI</div>
  <button class="nav-item" onclick="show('p12',this)" style="background:linear-gradient(135deg,rgba(124,58,237,0.18),rgba(91,33,182,0.1));border:1px solid rgba(124,58,237,0.3);color:#A78BFA;font-weight:700"><span class="icon">✨</span>AI - Phân tích tổng quan</button>
  <button class="refresh-btn" id="refreshBtn" onclick="loadAll()">
@@ -243,6 +244,7 @@ tr.tot td{background:#FFF0EB!important;font-weight:800!important;border-top:2px 
 <div class="page" id="p17"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
 <div class="page" id="p18"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
 <div class="page" id="p19"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
+<div class="page" id="p20"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
 </main>
 
 <script>
@@ -2686,6 +2688,8 @@ async function init(){
  await buildVolumeReport();
  // p19 — GTC TTS Ca 1,2 theo Bưu Cục
  await buildGTCBCReport();
+ // p20 — Năng suất nhân viên
+ await buildNangSuatPage();
  // p0 — Tổng quan (sau khi có đủ data)
  buildOverviewPage();
  btn.classList.remove('spinning');btn.disabled=false;
@@ -3273,9 +3277,80 @@ window._volRender=function(){
 function fmtDD(d){return d?d.replace(/(\d{4})-(\d{2})-(\d{2}) - .*/,'$3/$2'):'?';}
 setTimeout(()=>{if(window._volD)_volRender();},100);
 
+/* ===== DASHBOARD 13: NĂNG SUẤT NHÂN VIÊN (p20) ===== */
+async function buildNangSuatPage(){
+ const el=document.getElementById('p20');if(!el)return;
+ el.innerHTML='<div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải năng suất NV...</div></div>';
+ try{
+  const res=await fetch(`https://docs.google.com/spreadsheets/d/${SID}/gviz/tq?tqx=out:csv&gid=1723871284`);
+  if(!res.ok)throw new Error('HTTP '+res.status);
+  const rows=parseCSV(await res.text()).slice(1).filter(r=>r[0]&&r[2]&&r[3]);
+  // cols: A(0)=BC, B(1)=NV, C(2)=Ngày(YYYY-MM-DD), D(3)=Gán, E(4)=GTC, F(5)=%GTC, G(6)=Tỉnh
+
+  // Tổng hợp Volume theo Tỉnh+Ngày từ GTC Total theo BC (đã load sẵn trong window._D)
+  // rowsBC cols: AM(0), Bưu Cục(1), Ngày(2="YYYY-MM-DD - Thứ X"), Volume(3), ...
+  const volPD={};
+  if(window._D&&window._D.gtcTotalBC){
+   window._D.gtcTotalBC.slice(1).forEach(r=>{
+    const parts=(r[1]||'').split('-');
+    const prov=parts[parts.length-1].trim();
+    const dt=isoD(r[2]||'');
+    const vol=parseFloat(r[3])||0;
+    if(!prov||!dt)return;
+    volPD[prov+'|'+dt]=(volPD[prov+'|'+dt]||0)+vol;
+   });
+  }
+
+  const dates=[...new Set(rows.map(r=>r[2]))].filter(Boolean).sort().reverse();
+  const pctColor=p=>p>=80?'var(--green)':p>=60?'var(--yellow)':'var(--red)';
+  const pctBg=p=>p>=80?'var(--green-bg)':p>=60?'var(--yellow-bg)':'var(--red-bg)';
+
+  function renderNS(selDates){
+   const f=rows.filter(r=>selDates.includes(r[2]));
+   // Tổng hợp theo Tỉnh
+   const bT={};
+   f.forEach(r=>{
+    const t=(r[6]||'Khác').trim();
+    const gan=parseFloat(r[3])||0,gtc=parseFloat(r[4])||0;
+    if(!bT[t])bT[t]={nvs:new Set(),gan:0,gtc:0,vol:0};
+    bT[t].nvs.add((r[1]||'').trim());
+    bT[t].gan+=gan;bT[t].gtc+=gtc;
+   });
+   selDates.forEach(d=>{Object.keys(bT).forEach(t=>{bT[t].vol+=(volPD[t+'|'+d]||0);});});
+   // Tổng hợp theo Bưu Cục
+   const bB={};
+   f.forEach(r=>{
+    const bc=(r[0]||'').trim(),t=(r[6]||'Khác').trim();
+    const gan=parseFloat(r[3])||0,gtc=parseFloat(r[4])||0;
+    if(!bc)return;
+    if(!bB[bc])bB[bc]={t,nvs:new Set(),gan:0,gtc:0};
+    bB[bc].nvs.add((r[1]||'').trim());
+    bB[bc].gan+=gan;bB[bc].gtc+=gtc;
+   });
+   const tA=Object.entries(bT).sort((a,b)=>(b[1].gan>0?b[1].gtc/b[1].gan:0)-(a[1].gan>0?a[1].gtc/a[1].gan:0));
+   const bA=Object.entries(bB).sort((a,b)=>(b[1].gan>0?b[1].gtc/b[1].gan:0)-(a[1].gan>0?a[1].gtc/a[1].gan:0));
+   const fHtml=dates.map(d=>`<label style="display:inline-flex;align-items:center;gap:4px;margin-right:12px;font-size:12px;cursor:pointer"><input type="checkbox" ${selDates.includes(d)?'checked':''} onchange="window._nsChg('${d}',this.checked)" style="cursor:pointer">${shortD(d)}</label>`).join('');
+   const tbl1=`<div class="card" style="margin-bottom:20px"><div class="card-header" style="display:flex;align-items:center;justify-content:space-between"><span style="font-size:14px;font-weight:700;color:var(--text-main)">📍 Theo Tỉnh/TP</span><span style="font-size:11px;color:var(--text-sub)">${selDates.map(d=>shortD(d)).join(' + ')}</span></div><div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:13px"><thead><tr style="background:#F8F9FA;border-bottom:2px solid var(--border)"><th style="padding:10px 12px;text-align:left;font-weight:600;color:var(--text-sub);min-width:120px">Tỉnh/TP</th><th style="padding:10px 12px;text-align:center;font-weight:600;color:var(--text-sub)">Số NV</th><th style="padding:10px 12px;text-align:center;font-weight:600;color:var(--text-sub)">Vol BC</th><th style="padding:10px 12px;text-align:center;font-weight:600;color:var(--text-sub)">Đơn gán</th><th style="padding:10px 12px;text-align:center;font-weight:600;color:var(--text-sub)">Đơn GTC</th><th style="padding:10px 12px;text-align:center;font-weight:600;color:var(--text-sub)">%GTC/Gán</th><th style="padding:10px 12px;text-align:center;font-weight:600;color:var(--text-sub)">%GTC/Vol</th></tr></thead><tbody>${tA.map(([t,d],i)=>{const pG=d.gan>0?(d.gtc/d.gan*100):0;const pV=d.vol>0?(d.gtc/d.vol*100):0;const bg=i%2?'#FAFAFA':'#FFF';return`<tr style="background:${bg};border-bottom:1px solid var(--border)"><td style="padding:9px 12px;font-weight:600;color:var(--text-main)">${t}</td><td style="padding:9px 12px;text-align:center">${d.nvs.size}</td><td style="padding:9px 12px;text-align:center;font-weight:500">${d.vol>0?Math.round(d.vol).toLocaleString('vi-VN'):'—'}</td><td style="padding:9px 12px;text-align:center;font-weight:500">${d.gan.toLocaleString('vi-VN')}</td><td style="padding:9px 12px;text-align:center;font-weight:500">${d.gtc.toLocaleString('vi-VN')}</td><td style="padding:9px 12px;text-align:center"><span style="background:${pctBg(pG)};color:${pctColor(pG)};padding:3px 8px;border-radius:20px;font-weight:700;font-size:12px">${pG.toFixed(1)}%</span></td><td style="padding:9px 12px;text-align:center">${d.vol>0?`<span style="background:${pctBg(pV)};color:${pctColor(pV)};padding:3px 8px;border-radius:20px;font-weight:700;font-size:12px">${pV.toFixed(1)}%</span>`:'—'}</td></tr>`;}).join('')}</tbody></table></div></div>`;
+   const tbl2=`<div class="card"><div class="card-header" style="display:flex;align-items:center;justify-content:space-between"><span style="font-size:14px;font-weight:700;color:var(--text-main)">🏢 Theo Bưu Cục</span><span style="font-size:11px;color:var(--text-sub)">${bA.length} bưu cục</span></div><div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="background:#F8F9FA;border-bottom:2px solid var(--border)"><th style="padding:9px 12px;text-align:left;font-weight:600;color:var(--text-sub)">Bưu Cục</th><th style="padding:9px 12px;text-align:left;font-weight:600;color:var(--text-sub)">Tỉnh</th><th style="padding:9px 12px;text-align:center;font-weight:600;color:var(--text-sub)">Số NV</th><th style="padding:9px 12px;text-align:center;font-weight:600;color:var(--text-sub)">Đơn gán</th><th style="padding:9px 12px;text-align:center;font-weight:600;color:var(--text-sub)">Đơn GTC</th><th style="padding:9px 12px;text-align:center;font-weight:600;color:var(--text-sub)">%GTC</th></tr></thead><tbody>${bA.map(([bc,d],i)=>{const p=d.gan>0?(d.gtc/d.gan*100):0;const bg=i%2?'#FAFAFA':'#FFF';return`<tr style="background:${bg};border-bottom:1px solid var(--border)"><td style="padding:8px 12px;font-weight:600;color:var(--text-main)">${bc}</td><td style="padding:8px 12px;color:var(--text-sub);font-size:11px">${d.t}</td><td style="padding:8px 12px;text-align:center">${d.nvs.size}</td><td style="padding:8px 12px;text-align:center;font-weight:500">${d.gan.toLocaleString('vi-VN')}</td><td style="padding:8px 12px;text-align:center;font-weight:500">${d.gtc.toLocaleString('vi-VN')}</td><td style="padding:8px 12px;text-align:center"><span style="background:${pctBg(p)};color:${pctColor(p)};padding:2px 7px;border-radius:20px;font-weight:700;font-size:11px">${p.toFixed(1)}%</span></td></tr>`;}).join('')}</tbody></table></div></div>`;
+   el.innerHTML=`<div style="margin-bottom:16px"><div style="margin-bottom:10px"><span style="font-size:16px;font-weight:700;color:var(--text-main)">👷 Năng Suất Nhân Viên</span></div><div style="background:#FFF;border:1px solid var(--border);border-radius:8px;padding:12px 16px;display:inline-flex;align-items:center;gap:4px;flex-wrap:wrap"><span style="font-size:12px;font-weight:600;color:var(--text-sub);margin-right:8px">Chọn ngày:</span>${fHtml}</div></div>${tbl1}${tbl2}`;
+  }
+
+  window._nsChg=function(d,chk){
+   let s=[...(window._nsSel||dates.slice(0,2))];
+   if(chk&&!s.includes(d))s.push(d);else s=s.filter(x=>x!==d);
+   if(s.length===0)s=[d];
+   window._nsSel=s;renderNS(s);
+  };
+  window._nsSel=dates.slice(0,2);
+  renderNS(window._nsSel);
+ }catch(e){
+  el.innerHTML=`<div class="card"><p style="color:red;padding:16px">Lỗi tải Năng suất NV: ${e.message}</p></div>`;
+ }
+}
+
 loadAll=async function(){
  const btn=document.getElementById('refreshBtn');btn.classList.add('spinning');btn.disabled=true;
- ['p0','p1','p2','p3','p4','p5','p6','p7','p16','p17','p18','p19'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML='<div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu mới...</div></div>';});
+ ['p0','p1','p2','p3','p4','p5','p6','p7','p16','p17','p18','p19','p20'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML='<div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu mới...</div></div>';});
  ['gtc','aging','ontime'].forEach(id=>destroyChart(id));
  await init();
 };
