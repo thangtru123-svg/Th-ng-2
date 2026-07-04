@@ -2738,7 +2738,7 @@ function buildGTCBCPage(csvText){
   Object.values(bcMap).forEach(b=>{
    const tv=LOAIS.reduce((s,l)=>s+(b.rows[l]?.vol||0),0);
    const tg=LOAIS.reduce((s,l)=>s+(b.rows[l]?.soGTC||0),0);
-   b.totalVol=tv;b.totalGTC=tg;b.totalGTCRate=tv>0?tg/tv:0;
+   b.totalVol=tv;b.totalGTC=tg;b.totalGTCRate=tv>0?tg/tv:0;b.totalGanRate=tv>0?LOAIS.reduce((s,l)=>s+(b.rows[l]?.vol||0)*(b.rows[l]?.gan||0),0)/tv:0;
   });
   // Analysis
   const totalBC=Object.keys(bcMap).length;
@@ -2799,19 +2799,22 @@ function buildGTCBCPage(csvText){
    <th style="min-width:34px;text-align:center;${TH}">STT</th>
    <th style="min-width:160px;text-align:left;${TH}">Bưu Cục</th>
    <th style="min-width:100px;text-align:left;${TH}">AM</th>
-   <th style="text-align:center;${TH};border-left:3px solid #fff">Ca1 Vol</th>
-   <th style="text-align:center;${TH}">Ca1 Gán%</th>
-   <th style="text-align:center;${TH}">Ca1 GTC%</th>
-   <th style="text-align:center;${TH}">Ca1 VolGTC</th>
-   <th style="text-align:center;${TH};border-left:3px solid #fff">Ca2 Vol</th>
-   <th style="text-align:center;${TH}">Ca2 Gán%</th>
-   <th style="text-align:center;${TH}">Ca2 GTC%</th>
-   <th style="text-align:center;${TH}">Ca2 VolGTC</th>
-   <th style="text-align:center;${TH};border-left:3px solid #fff">Tồn Vol</th>
-   <th style="text-align:center;${TH}">Tồn Gán%</th>
-   <th style="text-align:center;${TH}">Tồn GTC%</th>
-   <th style="text-align:center;${TH}">Tồn VolGTC</th>
-   <th style="text-align:center;${TH};border-left:3px solid #fff">GTC Total</th>
+   <th style="text-align:center;${TH};border-left:3px solid #fff">Vol Ca 1</th>
+   <th style="text-align:center;${TH}">% Gán Ca 1</th>
+   <th style="text-align:center;${TH}">% GTC Ca 1</th>
+   <th style="text-align:center;${TH}">Vol GTC Ca 1</th>
+   <th style="text-align:center;${TH};border-left:3px solid #fff">Vol Ca 2</th>
+   <th style="text-align:center;${TH}">% Gán Ca 2</th>
+   <th style="text-align:center;${TH}">% GTC Ca 2</th>
+   <th style="text-align:center;${TH}">Vol GTC Ca 2</th>
+   <th style="text-align:center;${TH};border-left:3px solid #fff">Vol Tồn</th>
+   <th style="text-align:center;${TH}">% Gán Tồn</th>
+   <th style="text-align:center;${TH}">% GTC Tồn</th>
+   <th style="text-align:center;${TH}">Vol GTC Tồn</th>
+   <th style="text-align:center;${TH};border-left:3px solid #fff">Vol Total</th>
+   <th style="text-align:center;${TH}">% Gán Total</th>
+   <th style="text-align:center;${TH}">% GTC Total</th>
+   <th style="text-align:center;${TH}">Vol GTC Total</th>
   </tr></thead><tbody>`;
   bcList.forEach((b,idx)=>{
    const ca1=b.rows['Hàng Mới Ca 1'],ca2=b.rows['Hàng Mới Ca 2'],ton=b.rows['Hàng Tồn'];
@@ -2823,10 +2826,10 @@ function buildGTCBCPage(csvText){
     ${ca1?`<td style="text-align:center;padding:5px 6px;border-left:2px solid ${GBDR[0]}">${(ca1.vol||0).toLocaleString('vi-VN')}</td><td style="text-align:center;background:${ganBg(ca1.gan)};color:${ganCol(ca1.gan)};font-weight:700;padding:5px 6px">${(ca1.gan*100).toFixed(1)}%</td><td style="text-align:center;background:${gBg(ca1.gtc)};color:${gCol(ca1.gtc)};font-weight:700;padding:5px 6px">${(ca1.gtc*100).toFixed(1)}%</td><td style="text-align:center;padding:5px 6px">${(ca1.soGTC||0).toLocaleString('vi-VN')}</td>`:`<td colspan="4" style="text-align:center;color:var(--text-sub);border-left:2px solid ${GBDR[0]}">—</td>`}
     ${ca2?`<td style="text-align:center;padding:5px 6px;border-left:2px solid ${GBDR[1]}">${(ca2.vol||0).toLocaleString('vi-VN')}</td><td style="text-align:center;background:${ganBg(ca2.gan)};color:${ganCol(ca2.gan)};font-weight:700;padding:5px 6px">${(ca2.gan*100).toFixed(1)}%</td><td style="text-align:center;background:${gBg(ca2.gtc)};color:${gCol(ca2.gtc)};font-weight:700;padding:5px 6px">${(ca2.gtc*100).toFixed(1)}%</td><td style="text-align:center;padding:5px 6px">${(ca2.soGTC||0).toLocaleString('vi-VN')}</td>`:`<td colspan="4" style="text-align:center;color:var(--text-sub);border-left:2px solid ${GBDR[1]}">—</td>`}
     ${ton?`<td style="text-align:center;padding:5px 6px;border-left:2px solid ${GBDR[2]}">${(ton.vol||0).toLocaleString('vi-VN')}</td><td style="text-align:center;background:${ganBg(ton.gan)};color:${ganCol(ton.gan)};font-weight:700;padding:5px 6px">${(ton.gan*100).toFixed(1)}%</td><td style="text-align:center;background:${gBg(ton.gtc)};color:${gCol(ton.gtc)};font-weight:700;padding:5px 6px">${(ton.gtc*100).toFixed(1)}%</td><td style="text-align:center;padding:5px 6px">${(ton.soGTC||0).toLocaleString('vi-VN')}</td>`:`<td colspan="4" style="text-align:center;color:var(--text-sub);border-left:2px solid ${GBDR[2]}">—</td>`}
-    <td style="text-align:center;font-weight:800;font-size:14px;background:${gBg(b.totalGTCRate)};color:${gCol(b.totalGTCRate)};border-left:2px solid var(--border);padding:5px 8px">${(b.totalGTCRate*100).toFixed(1)}%</td>
+    <td style="text-align:center;font-weight:700;padding:5px 6px;border-left:2px solid var(--border)">${b.totalVol>0?b.totalVol.toLocaleString('vi-VN'):'—'}</td><td style="text-align:center;background:${ganBg(b.totalGanRate)};color:${ganCol(b.totalGanRate)};font-weight:700;padding:5px 6px">${(b.totalGanRate*100).toFixed(1)}%</td><td style="text-align:center;font-weight:800;font-size:14px;background:${gBg(b.totalGTCRate)};color:${gCol(b.totalGTCRate)};padding:5px 6px">${(b.totalGTCRate*100).toFixed(1)}%</td><td style="text-align:center;font-weight:700;padding:5px 6px">${b.totalGTC>0?b.totalGTC.toLocaleString('vi-VN'):'—'}</td>
    </tr>`;
   });
-  if(!bcList.length)h+=`<tr><td colspan="16" style="text-align:center;padding:24px;color:var(--text-sub)">Không có dữ liệu cho ngày này</td></tr>`;
+  if(!bcList.length)h+=`<tr><td colspan="19" style="text-align:center;padding:24px;color:var(--text-sub)">Không có dữ liệu cho ngày này</td></tr>`;
   h+=`</tbody></table>`;
   const tblEl=document.getElementById('gtcbc-table-wrap');
   if(tblEl){
