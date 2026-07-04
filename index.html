@@ -2799,22 +2799,22 @@ function buildGTCBCPage(csvText){
    </div>
   </div>`;
   // Table
-  const TH1='position:sticky;top:0;z-index:4;background:var(--card-bg);border-bottom:2px solid var(--border);';
-  const TH2BG=['rgba(56,142,60,0.15)','rgba(21,101,192,0.15)','rgba(198,40,40,0.15)'];
-  const TH2BDR=['rgba(56,142,60,0.4)','rgba(21,101,192,0.4)','rgba(198,40,40,0.4)'];
+  const STK='position:sticky;top:0;z-index:4;background:var(--card-bg);border-bottom:2px solid var(--border);';
+  const STK2='position:sticky;top:38px;z-index:3;background:var(--card-bg);border-bottom:2px solid var(--border);';
+  const GCOL=['#16A34A','#1565C0','#C62828'];
+  const GBDR=['rgba(56,142,60,0.4)','rgba(21,101,192,0.4)','rgba(198,40,40,0.4)'];
+  const GLBL=['📦 Hàng Mới Ca 1','📦 Hàng Mới Ca 2','📋 Hàng Tồn'];
   let h=`<table style="min-width:1100px;font-size:12px;border-collapse:separate;border-spacing:0"><thead>
    <tr>
-    <th rowspan="2" style="min-width:34px;text-align:center;${TH1}padding:6px 4px">STT</th>
+    <th rowspan="2" style="${STK}min-width:34px;text-align:center;padding:6px 4px">STT</th>
     <th rowspan="2" style="min-width:170px;text-align:left;position:sticky;top:0;left:0;z-index:5;background:var(--card-bg);border-bottom:2px solid var(--border);padding:6px 8px">Bưu Cục</th>
-    <th rowspan="2" style="min-width:110px;text-align:left;${TH1}padding:6px 8px">AM</th>
-    <th colspan="4" style="text-align:center;background:${TH2BG[0]};color:#16A34A;border-left:2px solid ${TH2BDR[0]};${TH1}padding:6px 4px">📦 Hàng Mới Ca 1</th>
-    <th colspan="4" style="text-align:center;background:${TH2BG[1]};color:#1565C0;border-left:2px solid ${TH2BDR[1]};${TH1}padding:6px 4px">📦 Hàng Mới Ca 2</th>
-    <th colspan="4" style="text-align:center;background:${TH2BG[2]};color:#C62828;border-left:2px solid ${TH2BDR[2]};${TH1}padding:6px 4px">📋 Hàng Tồn</th>
-    <th rowspan="2" style="min-width:80px;text-align:center;border-left:2px solid var(--border);position:sticky;top:0;z-index:4;background:var(--card-bg);border-bottom:2px solid var(--border);padding:6px 4px">GTC<br>Total</th>
+    <th rowspan="2" style="${STK}min-width:110px;text-align:left;padding:6px 8px">AM</th>
+    ${GCOL.map((col,gi)=>`<th colspan="4" style="${STK}text-align:center;font-weight:700;color:${col};border-left:2px solid ${GBDR[gi]};padding:6px 4px">${GLBL[gi]}</th>`).join('')}
+    <th rowspan="2" style="${STK}min-width:80px;text-align:center;border-left:2px solid var(--border);padding:6px 4px">GTC<br>Total</th>
    </tr><tr>
-    ${TH2BG.map((bg,gi)=>
+    ${GCOL.map((col,gi)=>
      ['Vol','Gán%','GTC%','Vol GTC'].map((c,ci)=>
-      `<th style="text-align:center;background:${bg};font-weight:600;font-size:11px;position:sticky;top:38px;z-index:3;border-bottom:2px solid var(--border);padding:5px 4px${ci===0?`;border-left:2px solid ${TH2BDR[gi]}`:''}">${c}</th>`
+      `<th style="${STK2}text-align:center;font-weight:700;font-size:11px;color:${col};padding:5px 4px${ci===0?`;border-left:2px solid ${GBDR[gi]}`:''}">${c}</th>`
      ).join('')
     ).join('')}
    </tr></thead><tbody>`;
