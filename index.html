@@ -2801,10 +2801,10 @@ function buildGTCBCPage(csvText){
    <div style="background:#FFF8F5;border-radius:10px;border:1px solid #F5D0BE;padding:14px 18px;font-size:12.5px">
     <div style="font-weight:800;font-size:13px;color:var(--orange-dark);margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid #F5D0BE">📋 Phân tích tổng quan ngày ${fD(selDate)}</div>
     <div style="display:flex;flex-direction:column;gap:8px">
-     <div style="padding:7px 12px;background:#fff;border-radius:7px;border-left:3px solid var(--green)">🟢 <b>Ô 1 — CA 1 tốt:</b> Có <b>${ca1Good}/${totalBCCa1}</b> Bưu Cục đạt Gán ≥95% và GTC ≥80%</div>
-     <div style="padding:7px 12px;background:#fff;border-radius:7px;border-left:3px solid var(--red)">🔴 <b>Ô 2 — CA 1 yếu:</b> Có <b>${ca1Bad}/${totalBCCa1}</b> Bưu Cục có Gán &lt;80% và GTC &lt;50%${ca1Bad>0?`<div style="margin-top:4px;margin-left:4px;color:var(--red)">${ca1BadList}</div>`:''}</div>
-     <div style="padding:7px 12px;background:#fff;border-radius:7px;border-left:3px solid var(--green)">🟢 <b>Ô 3 — CA 2 tốt:</b> Có <b>${ca2Good}/${totalBCCa2}</b> Bưu Cục đạt Gán ≥95% và GTC ≥80%</div>
-     <div style="padding:7px 12px;background:#fff;border-radius:7px;border-left:3px solid var(--red)">🔴 <b>Ô 4 — CA 2 yếu:</b> Có <b>${ca2Bad}/${totalBCCa2}</b> Bưu Cục có Gán &lt;80% và GTC &lt;50%</div>
+     <div style="padding:7px 12px;background:#fff;border-radius:7px;border-left:3px solid var(--green)">🟢 <b>CA 1 tốt:</b> Có <b>${ca1Good}/${totalBCCa1}</b> Bưu Cục đạt Gán ≥95% và GTC ≥80%</div>
+     <div style="padding:7px 12px;background:#fff;border-radius:7px;border-left:3px solid var(--red)">🔴 <b>CA 1 yếu:</b> Có <b>${ca1Bad}/${totalBCCa1}</b> Bưu Cục có Gán &lt;80% và GTC &lt;50%${ca1Bad>0?`<div style="margin-top:4px;margin-left:4px;color:var(--red)">${ca1BadList}</div>`:''}</div>
+     <div style="padding:7px 12px;background:#fff;border-radius:7px;border-left:3px solid var(--green)">🟢 <b>CA 2 tốt:</b> Có <b>${ca2Good}/${totalBCCa2}</b> Bưu Cục đạt Gán ≥95% và GTC ≥80%</div>
+     <div style="padding:7px 12px;background:#fff;border-radius:7px;border-left:3px solid var(--red)">🔴 <b>CA 2 yếu:</b> Có <b>${ca2Bad}/${totalBCCa2}</b> Bưu Cục có Gán &lt;80% và GTC &lt;50%</div>
      <div style="padding:7px 12px;background:#fff;border-radius:7px;border-left:3px solid #388E3C">📦 <b>GTC Tổng Ca 1:</b> ${rCa1!==null?(rCa1*100).toFixed(1)+'%':'—'} &nbsp;${dBadge(rCa1,prCa1)}</div>
      <div style="padding:7px 12px;background:#fff;border-radius:7px;border-left:3px solid #1565C0">📦 <b>GTC Tổng Ca 2:</b> ${rCa2!==null?(rCa2*100).toFixed(1)+'%':'—'} &nbsp;${dBadge(rCa2,prCa2)}</div>
      <div style="padding:7px 12px;background:#fff;border-radius:7px;border-left:3px solid var(--border)">🎯 <b>GTC Total (Ca1+Ca2+Tồn):</b> ${(curAvg*100).toFixed(1)}% &nbsp;${dBadge(curAvg,prevAvg)}</div>
