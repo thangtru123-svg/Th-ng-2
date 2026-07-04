@@ -2835,7 +2835,17 @@ function buildGTCBCPage(csvText){
   if(!bcList.length)h+=`<tr><td colspan="16" style="text-align:center;padding:24px;color:var(--text-sub)">Không có dữ liệu cho ngày này</td></tr>`;
   h+=`</tbody></table>`;
   const tblEl=document.getElementById('gtcbc-table-wrap');
-  if(tblEl){tblEl.innerHTML=h;addBCSearch(tblEl,1);}
+  if(tblEl){
+   tblEl.innerHTML=h;
+   const tbl=tblEl.querySelector('table');
+   if(tbl){
+    tbl.dataset.bcSrch='1';
+    const bar=document.createElement('div');
+    bar.style.cssText='position:sticky;top:0;z-index:10;height:0;padding:0;overflow:hidden';
+    tblEl.insertBefore(bar,tbl);
+    requestAnimationFrame(()=>{tbl.querySelectorAll('thead th').forEach(th=>{th.style.position='sticky';th.style.top='0px';});});
+   }
+  }
   const infoEl=document.getElementById('gtcbc-info');
   if(infoEl)infoEl.textContent=`${totalBC} bưu cục · ${fD(selDate)}${prevDate?' (so sánh vs '+fD(prevDate)+')':''}`;
  };
