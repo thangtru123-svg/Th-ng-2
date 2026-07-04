@@ -1839,13 +1839,14 @@ async function sendAllToTelegram(){
   /* --- P19: GTC TTS Ca 1,2 theo BC → TTS - Vận hành thread --- */
   await navTo('p19');
   await new Promise(r=>setTimeout(r,600));
-  for(const [eid,capFn,w] of [['gtcbc-am-card',capGTCTTSAM,1800],['gtcbc-bc-card',capGTCTTSBC,1800]]){const cap=capFn();
+  for(const [eid,capFn,w,maxRows] of [['gtcbc-am-card',capGTCTTSAM,1800,0],['gtcbc-bc-card',capGTCTTSBC,1800,26]]){const cap=capFn();
    if(btn)btn.innerHTML=`⏳ Đang gửi: ${cap.replace(/<[^>]+>/g,'')}...`;
    const cardEl=document.getElementById(eid);
    if(cardEl){
     const cl=cardEl.cloneNode(true);
     cl.querySelectorAll('thead,th').forEach(el=>{el.style.position='static';el.style.top='auto';el.style.zIndex='auto';});
     cl.querySelectorAll('.table-wrap').forEach(tw=>{tw.style.maxHeight='none';tw.style.overflow='visible';tw.scrollTop=0;});
+    if(maxRows>0){const tb=cl.querySelector('tbody');if(tb){const trs=[...tb.querySelectorAll('tr')];const tot=trs[trs.length-1];trs.slice(maxRows,-1).forEach(r=>r.remove());if(tot&&!tb.contains(tot))tb.appendChild(tot);}}
     const tmp=document.createElement('div');
     tmp.id='tg-'+eid;
     tmp.style.cssText=`position:fixed;top:-9999px;left:0;z-index:-1;width:${w}px;padding:0`;
