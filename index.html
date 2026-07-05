@@ -219,6 +219,7 @@ tr.tot td{background:#FFF0EB!important;font-weight:800!important;border-top:2px 
  <button class="nav-item" onclick="show('p18',this)"><span class="icon">📊</span>Tổng quan Volume</button>
  <button class="nav-item" onclick="show('p19',this)"><span class="icon">🎯</span>GTC TTS Ca 1,2 theo BC</button>
  <button class="nav-item" onclick="show('p20',this)"><span class="icon">👷</span>Năng suất nhân viên</button>
+ <button class="nav-item" onclick="show('p21',this)"><span class="icon">💰</span>Tỉ lệ NVPTTT nộp COD</button>
  <div class="nav-section">AI</div>
  <button class="nav-item" onclick="show('p12',this)" style="background:linear-gradient(135deg,rgba(124,58,237,0.18),rgba(91,33,182,0.1));border:1px solid rgba(124,58,237,0.3);color:#A78BFA;font-weight:700"><span class="icon">✨</span>AI - Phân tích tổng quan</button>
  <button class="refresh-btn" id="refreshBtn" onclick="loadAll()">
@@ -245,6 +246,7 @@ tr.tot td{background:#FFF0EB!important;font-weight:800!important;border-top:2px 
 <div class="page" id="p18"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
 <div class="page" id="p19"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
 <div class="page" id="p20"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
+<div class="page" id="p21"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
 </main>
 
 <script>
@@ -315,6 +317,9 @@ function errPage(msg){return`<div class="error-box">⚠️ Không thể tải d�
 /* ===== GTC BC SHEET ===== */
 const SHEET_GTC_BC_ID='1Ec4qUpehq5ruroCTmw20cRDzkQiGmj9GLpS5f18UFE8';
 const SHEET_GTC_BC_GID='201703493';
+/* ===== COD SHEET ===== */
+const SHEET_COD_ID='1Ec4qUpehq5ruroCTmw20cRDzkQiGmj9GLpS5f18UFE8';
+const SHEET_COD_GID='1639392945';
 /* ===== VOL SHEET ===== */
 const SHEET_VOL_ID='1BsqjKaWRHSq8RaiQ0AD-cGBU3jsF-fu0fEwqHmt6gu4';
 const SHEET_VOL_GID='375236641';
@@ -2758,6 +2763,8 @@ async function init(){
  await buildGTCBCReport();
  // p20 — Năng suất nhân viên
  await buildNangSuatPage();
+ // p21 — Tỉ lệ NVPTTT nộp COD
+ await buildCODPage();
  // p0 — Tổng quan (sau khi có đủ data)
  buildOverviewPage();
  btn.classList.remove('spinning');btn.disabled=false;
@@ -3457,6 +3464,250 @@ async function buildNangSuatPage(){
   renderNS(window._nsSel);
  }catch(e){
   el.innerHTML=`<div class="card"><p style="color:red;padding:16px">Lỗi tải Năng suất NV: ${e.message}</p></div>`;
+ }
+}
+
+/* ========== P21: TỈ LỆ NVPTTT NỘP COD ========== */
+async function buildCODPage(){
+ const el=document.getElementById('p21');
+ if(!el)return;
+ try{
+  const csvUrl=`https://docs.google.com/spreadsheets/d/${SHEET_COD_ID}/export?format=csv&gid=${SHEET_COD_GID}`;
+  const resp=await fetch(csvUrl);
+  const raw=await resp.text();
+  const parseCSV=t=>{const res=[];for(const line of t.split('\n')){if(!line.trim())continue;const cols=[];let cur='',inQ=false;for(const c of line){if(c==='"')inQ=!inQ;else if(c===','&&!inQ){cols.push(cur.trim());cur='';}else cur+=c;}cols.push(cur.trim());res.push(cols);}return res;};
+  const allRows=parseCSV(raw);
+  const header=allRows[0];
+  const dataRows=allRows.slice(1).filter(r=>r[0]&&r[0]!=='Loading...'&&(r[0]==='CK'||r[0]==='Tiền mặt'));
+
+  // Lấy danh sách ngày unique, sort desc
+  const allDates=[...new Set(dataRows.map(r=>r[1]))].filter(Boolean).sort((a,b)=>b.localeCompare(a));
+  if(!allDates.length){el.innerHTML=`<div class="card"><p style="color:var(--text-sub);padding:16px">Chưa có dữ liệu COD.</p></div>`;return;}
+
+  // Lưu raw data toàn cục để dropdown dùng lại
+  window._codAllRows=dataRows;
+  window._codAllDates=allDates;
+
+  // Helper format tiền
+  const fMoney=v=>v>=1e9?(v/1e9).toFixed(1)+'B':v>=1e6?(v/1e6).toFixed(1)+'M':Math.round(v).toLocaleString('vi-VN');
+
+  // Màu % CK (NVPTTT tự nộp): cao = xanh, thấp = đỏ
+  const ckBg=p=>p>=90?'#D1FAE5':p>=70?'#FEF9C3':'#FEE2E2';
+  const ckCol=p=>p>=90?'#065F46':p>=70?'#854D0E':'#991B1B';
+
+  function renderCOD(selDate){
+   const rows=window._codAllRows.filter(r=>r[1]===selDate);
+
+   // Gom theo BC (col 7) & hình thức (col 0)
+   const bcMap={};
+   rows.forEach(r=>{
+    const bc=r[7]||r[2]||'—', am=r[9]||r[8]||'—', httt=r[0], tien=parseFloat((r[5]||'0').replace(/[^0-9.]/g,''))||0;
+    if(!bcMap[bc])bcMap[bc]={bc,am,ck:0,tm:0};
+    if(httt==='CK')bcMap[bc].ck+=tien;
+    else bcMap[bc].tm+=tien;
+   });
+
+   // Gom theo AM
+   const amMap={};
+   Object.values(bcMap).forEach(b=>{
+    if(!amMap[b.am])amMap[b.am]={am:b.am,ck:0,tm:0,bcCount:0};
+    amMap[b.am].ck+=b.ck;amMap[b.am].tm+=b.tm;amMap[b.am].bcCount++;
+   });
+
+   // Sort % CK thấp → cao
+   const amList=Object.values(amMap).sort((a,b)=>{const pa=a.ck+a.tm>0?a.ck/(a.ck+a.tm):0,pb=b.ck+b.tm>0?b.ck/(b.ck+b.tm):0;return pa-pb;});
+   const bcList=Object.values(bcMap).sort((a,b)=>{const pa=a.ck+a.tm>0?a.ck/(a.ck+a.tm):0,pb=b.ck+b.tm>0?b.ck/(b.ck+b.tm):0;return pa-pb;});
+
+   // Tổng toàn vùng
+   const totCK=amList.reduce((s,a)=>s+a.ck,0),totTM=amList.reduce((s,a)=>s+a.tm,0),totAll=totCK+totTM;
+   const totCKpct=totAll>0?totCK/totAll*100:0,totTMpct=totAll>0?totTM/totAll*100:0;
+
+   // Phân tích AM < 70%
+   const amWeak=amList.filter(a=>{const t=a.ck+a.tm;return t>0&&a.ck/t*100<70;});
+   const bcWeak=bcList.filter(b=>{const t=b.ck+b.tm;return t>0&&b.ck/t*100<70;});
+
+   // --- Bảng 1: Theo AM ---
+   const amRows=amList.map((a,i)=>{
+    const tot=a.ck+a.tm,pCK=tot>0?a.ck/tot*100:0,pTM=tot>0?a.tm/tot*100:0;
+    const bg=i%2?'#FAFAFA':'#FFF';
+    return`<tr style="background:${bg};border-bottom:1px solid var(--border)">
+     <td style="padding:9px 12px;font-weight:600;color:var(--text-main)">${i+1}</td>
+     <td style="padding:9px 12px;font-weight:600;color:var(--text-main)">${a.am}</td>
+     <td style="padding:9px 12px;text-align:center">${a.bcCount}</td>
+     <td style="padding:9px 12px;text-align:right;font-weight:500">${fMoney(a.ck)}</td>
+     <td style="padding:9px 12px;text-align:right;font-weight:500">${fMoney(a.tm)}</td>
+     <td style="padding:9px 12px;text-align:right;font-weight:600">${fMoney(tot)}</td>
+     <td style="padding:9px 12px;text-align:center"><span style="background:${ckBg(pCK)};color:${ckCol(pCK)};padding:3px 10px;border-radius:20px;font-weight:700;font-size:12px">${pCK.toFixed(1)}%</span></td>
+     <td style="padding:9px 12px;text-align:center"><span style="padding:3px 10px;border-radius:20px;font-weight:700;font-size:12px;background:#F1F5F9;color:#475569">${pTM.toFixed(1)}%</span></td>
+    </tr>`;
+   }).join('');
+   const amTotRow=`<tr style="background:#EEF2FF;border-top:2px solid #6366F1">
+    <td colspan="2" style="padding:9px 12px;font-weight:700;color:var(--text-main)">🔢 Tổng cộng</td>
+    <td style="padding:9px 12px;text-align:center;font-weight:700">${amList.length} AM</td>
+    <td style="padding:9px 12px;text-align:right;font-weight:700">${fMoney(totCK)}</td>
+    <td style="padding:9px 12px;text-align:right;font-weight:700">${fMoney(totTM)}</td>
+    <td style="padding:9px 12px;text-align:right;font-weight:700">${fMoney(totAll)}</td>
+    <td style="padding:9px 12px;text-align:center"><span style="background:${ckBg(totCKpct)};color:${ckCol(totCKpct)};padding:3px 10px;border-radius:20px;font-weight:700;font-size:12px">${totCKpct.toFixed(1)}%</span></td>
+    <td style="padding:9px 12px;text-align:center"><span style="padding:3px 10px;border-radius:20px;font-weight:700;font-size:12px;background:#F1F5F9;color:#475569">${totTMpct.toFixed(1)}%</span></td>
+   </tr>`;
+
+   // --- Bảng 2: Theo BC ---
+   const bcRows=bcList.map((b,i)=>{
+    const tot=b.ck+b.tm,pCK=tot>0?b.ck/tot*100:0,pTM=tot>0?b.tm/tot*100:0;
+    const bg=i%2?'#FAFAFA':'#FFF';
+    return`<tr style="background:${bg};border-bottom:1px solid var(--border)">
+     <td style="padding:8px 12px;font-weight:600;color:var(--text-main)">${i+1}</td>
+     <td style="padding:8px 12px;font-weight:600;color:var(--text-main)">${b.bc}</td>
+     <td style="padding:8px 12px;color:var(--text-sub);font-size:12px">${b.am}</td>
+     <td style="padding:8px 12px;text-align:right;font-weight:500">${fMoney(b.ck)}</td>
+     <td style="padding:8px 12px;text-align:right;font-weight:500">${fMoney(b.tm)}</td>
+     <td style="padding:8px 12px;text-align:right;font-weight:600">${fMoney(tot)}</td>
+     <td style="padding:8px 12px;text-align:center"><span style="background:${ckBg(pCK)};color:${ckCol(pCK)};padding:2px 8px;border-radius:20px;font-weight:700;font-size:11px">${pCK.toFixed(1)}%</span></td>
+     <td style="padding:8px 12px;text-align:center"><span style="padding:2px 8px;border-radius:20px;font-weight:700;font-size:11px;background:#F1F5F9;color:#475569">${pTM.toFixed(1)}%</span></td>
+    </tr>`;
+   }).join('');
+   const bcTotCK=bcList.reduce((s,b)=>s+b.ck,0),bcTotTM=bcList.reduce((s,b)=>s+b.tm,0),bcTotAll=bcTotCK+bcTotTM;
+   const bcTotCKpct=bcTotAll>0?bcTotCK/bcTotAll*100:0,bcTotTMpct=bcTotAll>0?bcTotTM/bcTotAll*100:0;
+   const bcTotRow=`<tr style="background:#EEF2FF;border-top:2px solid #6366F1">
+    <td colspan="2" style="padding:8px 12px;font-weight:700;color:var(--text-main)">🔢 Tổng cộng</td>
+    <td style="padding:8px 12px;color:var(--text-sub);font-size:12px">${bcList.length} BC</td>
+    <td style="padding:8px 12px;text-align:right;font-weight:700">${fMoney(bcTotCK)}</td>
+    <td style="padding:8px 12px;text-align:right;font-weight:700">${fMoney(bcTotTM)}</td>
+    <td style="padding:8px 12px;text-align:right;font-weight:700">${fMoney(bcTotAll)}</td>
+    <td style="padding:8px 12px;text-align:center"><span style="background:${ckBg(bcTotCKpct)};color:${ckCol(bcTotCKpct)};padding:2px 8px;border-radius:20px;font-weight:700;font-size:11px">${bcTotCKpct.toFixed(1)}%</span></td>
+    <td style="padding:8px 12px;text-align:center"><span style="padding:2px 8px;border-radius:20px;font-weight:700;font-size:11px;background:#F1F5F9;color:#475569">${bcTotTMpct.toFixed(1)}%</span></td>
+   </tr>`;
+
+   // Header màu sắc
+   const thStyle='padding:10px 12px;font-weight:600;color:var(--text-sub);white-space:nowrap';
+   const html=`
+   <div style="margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
+    <span style="font-size:16px;font-weight:700;color:var(--text-main)">💰 Tỉ lệ NVPTTT nộp COD</span>
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+     <div style="display:flex;align-items:center;gap:8px;background:#FFF;border:1px solid var(--border);border-radius:8px;padding:6px 12px">
+      <span style="font-size:12px;font-weight:600;color:var(--text-sub)">📅 Ngày:</span>
+      <select id="cod-date-sel" style="border:none;outline:none;font-size:13px;font-weight:600;color:var(--text-main);background:transparent;cursor:pointer" onchange="window._codChgDate(this.value)">
+       ${window._codAllDates.map(d=>`<option value="${d}" ${d===selDate?'selected':''}>${d}</option>`).join('')}
+      </select>
+     </div>
+     <button id="cod-tg-btn" onclick="window._codSendTG()" style="background:linear-gradient(135deg,#2AABEE,#1A8FD1);color:#FFF;border:none;border-radius:8px;padding:8px 16px;font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px">
+      ✈️ Bắn Telegram
+     </button>
+    </div>
+   </div>
+
+   <!-- Phân tích tổng quan -->
+   <div style="display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap">
+    <div style="background:#FFF;border:1px solid var(--border);border-radius:10px;padding:12px 18px;flex:1;min-width:200px">
+     <div style="font-size:11px;color:var(--text-sub);margin-bottom:4px">NVPTTT tự nộp COD (CK) toàn vùng</div>
+     <div style="font-size:22px;font-weight:800;color:${ckCol(totCKpct)}">${totCKpct.toFixed(1)}%</div>
+     <div style="font-size:11px;color:var(--text-sub);margin-top:2px">Tổng tiền: ${fMoney(totCK)}</div>
+    </div>
+    <div style="background:#FFF;border:1px solid var(--border);border-radius:10px;padding:12px 18px;flex:1;min-width:200px">
+     <div style="font-size:11px;color:var(--text-sub);margin-bottom:4px">⚠️ AM có tỉ lệ NVPTTT tự nộp COD &lt;70%</div>
+     <div style="font-size:22px;font-weight:800;color:${amWeak.length>0?'#991B1B':'#065F46'}">${amWeak.length}/${amList.length} AM</div>
+     <div style="font-size:11px;color:var(--text-sub);margin-top:2px">${amWeak.length>0?amWeak.map(a=>`${a.am} (${(a.ck/(a.ck+a.tm)*100).toFixed(0)}%)`).join(', '):'Tất cả đạt ≥70%'}</div>
+    </div>
+    <div style="background:#FFF;border:1px solid var(--border);border-radius:10px;padding:12px 18px;flex:1;min-width:200px">
+     <div style="font-size:11px;color:var(--text-sub);margin-bottom:4px">⚠️ BC có tỉ lệ NVPTTT tự nộp COD &lt;70%</div>
+     <div style="font-size:22px;font-weight:800;color:${bcWeak.length>0?'#991B1B':'#065F46'}">${bcWeak.length}/${bcList.length} BC</div>
+     <div style="font-size:11px;color:var(--text-sub);margin-top:2px">${bcWeak.length>0?'Xem bảng bên dưới':'Tất cả đạt ≥70%'}</div>
+    </div>
+   </div>
+
+   <!-- Bảng 1: Theo AM -->
+   <div class="card" style="margin-bottom:20px">
+    <div class="card-header"><span style="font-size:14px;font-weight:700;color:var(--text-main)">👤 Tỉ lệ nộp COD theo AM quản lý — Sắp xếp NVPTTT tự nộp COD thấp → cao</span></div>
+    <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:13px">
+     <thead><tr style="background:#F8F9FA;border-bottom:2px solid var(--border)">
+      <th style="${thStyle};text-align:center">STT</th>
+      <th style="${thStyle};text-align:left">AM quản lý</th>
+      <th style="${thStyle};text-align:center">Số BC</th>
+      <th style="${thStyle};text-align:right">Tiền CK</th>
+      <th style="${thStyle};text-align:right">Tiền mặt</th>
+      <th style="${thStyle};text-align:right">Tổng tiền</th>
+      <th style="${thStyle};text-align:center">NVPTTT tự nộp COD</th>
+      <th style="${thStyle};text-align:center">NVXL nộp COD</th>
+     </tr></thead>
+     <tbody>${amRows}${amTotRow}</tbody>
+    </table></div>
+   </div>
+
+   <!-- Bảng 2: Theo BC -->
+   <div class="card" id="cod-bc-card">
+    <div class="card-header" style="display:flex;align-items:center;justify-content:space-between;gap:10px">
+     <span style="font-size:14px;font-weight:700;color:var(--text-main)">🏪 Tỉ lệ nộp COD theo Bưu Cục — Sắp xếp NVPTTT tự nộp COD thấp → cao</span>
+     <input id="cod-bc-srch" type="text" placeholder="🔍 Tìm bưu cục / AM..." oninput="window._codBCFilter(this.value)" style="border:1px solid var(--border);border-radius:6px;padding:5px 10px;font-size:12px;width:200px;outline:none">
+    </div>
+    <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px">
+     <thead><tr style="background:#F8F9FA;border-bottom:2px solid var(--border)">
+      <th style="${thStyle};text-align:center">STT</th>
+      <th style="${thStyle};text-align:left">Bưu Cục</th>
+      <th style="${thStyle};text-align:left">AM quản lý</th>
+      <th style="${thStyle};text-align:right">Tiền CK</th>
+      <th style="${thStyle};text-align:right">Tiền mặt</th>
+      <th style="${thStyle};text-align:right">Tổng tiền</th>
+      <th style="${thStyle};text-align:center">NVPTTT tự nộp COD</th>
+      <th style="${thStyle};text-align:center">NVXL nộp COD</th>
+     </tr></thead>
+     <tbody id="cod-bc-tbody">${bcRows}${bcTotRow}</tbody>
+    </table></div>
+   </div>`;
+
+   el.innerHTML=html;
+   window._codCurDate=selDate;
+  }
+
+  // Dropdown đổi ngày
+  window._codChgDate=function(d){renderCOD(d);};
+
+  // Filter BC
+  window._codBCFilter=function(q){
+   const q2=(q||'').toLowerCase();
+   const tb=document.getElementById('cod-bc-tbody');if(!tb)return;
+   tb.querySelectorAll('tr').forEach(tr=>{tr.style.display=tr.textContent.toLowerCase().includes(q2)?'':'none';});
+  };
+
+  // Nút bắn Telegram riêng lẻ
+  window._codSendTG=async function(){
+   const btn=document.getElementById('cod-tg-btn');
+   if(btn){btn.disabled=true;btn.innerHTML='⏳ Đang gửi...';}
+   try{
+    const selDate=window._codCurDate||window._codAllDates[0];
+    const rows2=window._codAllRows.filter(r=>r[1]===selDate);
+    // Tính lại để làm caption
+    const bcM={};rows2.forEach(r=>{const bc=r[7]||r[2]||'—',am=r[9]||r[8]||'—',httt=r[0],tien=parseFloat((r[5]||'0').replace(/[^0-9.]/g,''))||0;if(!bcM[bc])bcM[bc]={bc,am,ck:0,tm:0};if(httt==='CK')bcM[bc].ck+=tien;else bcM[bc].tm+=tien;});
+    const amM={};Object.values(bcM).forEach(b=>{if(!amM[b.am])amM[b.am]={am:b.am,ck:0,tm:0};amM[b.am].ck+=b.ck;amM[b.am].tm+=b.tm;});
+    const totCK2=Object.values(amM).reduce((s,a)=>s+a.ck,0),totTM2=Object.values(amM).reduce((s,a)=>s+a.tm,0),totAll2=totCK2+totTM2;
+    const pCKtot=totAll2>0?totCK2/totAll2*100:0;
+    const amW2=Object.values(amM).filter(a=>{const t=a.ck+a.tm;return t>0&&a.ck/t*100<70;});
+    const bcW2=Object.values(bcM).filter(b=>{const t=b.ck+b.tm;return t>0&&b.ck/t*100<70;});
+    const trimCap2=s=>s.length>1020?s.slice(0,1017)+'...':s;
+    let cap=`💰 <b>TỈ LỆ NVPTTT NỘP COD — ${selDate}</b>\n\n`;
+    cap+=`📊 NVPTTT tự nộp COD (CK) toàn vùng: <b>${pCKtot.toFixed(1)}%</b>\n`;
+    cap+=`⚠️ AM có tỉ lệ CK &lt;70%: <b>${amW2.length}/${Object.keys(amM).length} AM</b>\n`;
+    if(amW2.length>0)amW2.sort((a,b)=>(a.ck/(a.ck+a.tm))-(b.ck/(b.ck+b.tm))).forEach(a=>{cap+=`— ${a.am}: ${(a.ck/(a.ck+a.tm)*100).toFixed(1)}%\n`;});
+    cap+=`⚠️ BC có tỉ lệ CK &lt;70%: <b>${bcW2.length}/${Object.keys(bcM).length} BC</b>`;
+    cap=trimCap2(cap);
+    // Chụp bảng AM
+    const amCardEl=document.querySelector('#p21 .card');
+    if(amCardEl){
+     const cl=amCardEl.cloneNode(true);
+     cl.querySelectorAll('thead,th').forEach(e=>{e.style.position='static';e.style.top='auto';e.style.zIndex='auto';});
+     const tmp=document.createElement('div');tmp.id='tg-cod-am';tmp.style.cssText='position:fixed;top:-9999px;left:0;z-index:-1;width:1400px;padding:0';
+     tmp.appendChild(cl);document.body.appendChild(tmp);
+     await new Promise(r=>setTimeout(r,400));
+     try{const img=await _captureEl('tg-cod-am');const res=await _tgSendPhoto(TG_AGING_CHAT,TG_VH_THREAD,img,cap);if(!res.ok)throw new Error(res.description||JSON.stringify(res));}
+     finally{tmp.remove();}
+    }
+    if(btn){btn.disabled=false;btn.innerHTML='✅ Đã gửi!';}
+    setTimeout(()=>{if(btn)btn.innerHTML='✈️ Bắn Telegram';},3000);
+   }catch(e){if(btn){btn.disabled=false;btn.innerHTML='❌ Lỗi: '+e.message;}setTimeout(()=>{if(btn)btn.innerHTML='✈️ Bắn Telegram';},4000);}
+  };
+
+  renderCOD(allDates[0]);
+ }catch(e){
+  el.innerHTML=`<div class="card"><p style="color:red;padding:16px">Lỗi tải COD: ${e.message}</p></div>`;
  }
 }
 
