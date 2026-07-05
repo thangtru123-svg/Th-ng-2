@@ -1346,17 +1346,21 @@ async function _captureEl(id){
  }
  const el=document.getElementById(id);
  if(!el)throw new Error('Element not found: '+id);
- // Clone + wrap inline-block để ảnh vừa khít nội dung, không có khoảng trắng dư
  const cl=el.cloneNode(true);
  cl.querySelectorAll('thead,th').forEach(e=>{e.style.position='static';e.style.top='auto';e.style.zIndex='auto';});
  cl.querySelectorAll('.table-wrap').forEach(tw=>{tw.style.maxHeight='none';tw.style.overflow='visible';});
+ // Tính width vừa khít: ưu tiên table scrollWidth, fallback element offsetWidth
+ const tbl=el.querySelector('table');
+ const contentW=tbl?Math.min(tbl.scrollWidth+40,el.offsetWidth):el.offsetWidth;
  const wrap=document.createElement('div');
- wrap.style.cssText='position:fixed;top:-9999px;left:0;z-index:-1;width:auto;display:inline-block;padding:0;background:#ffffff';
+ wrap.style.cssText=`position:fixed;top:-9999px;left:0;z-index:-1;width:${contentW}px;padding:0;background:#ffffff`;
  wrap.appendChild(cl);document.body.appendChild(wrap);
  await new Promise(r=>setTimeout(r,300));
  try{
   const canvas=await html2canvas(wrap,{scale:2,useCORS:true,allowTaint:true,logging:false,backgroundColor:'#ffffff'});
-  return await new Promise(res=>canvas.toBlob(res,'image/png'));
+  const blob=await new Promise(res=>canvas.toBlob(res,'image/png'));
+  if(!blob)throw new Error('Chụp ảnh thất bại (canvas tainted hoặc rỗng)');
+  return blob;
  }finally{wrap.remove();}
 }
 
