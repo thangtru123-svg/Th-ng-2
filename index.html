@@ -1901,7 +1901,15 @@ async function sendAllToTelegram(){
   await sendPhoto('Aging Tổng Quan','aging-cards',TG_AGING_CHAT,TG_AGING_THREAD,`📊 <b>TỔNG QUAN AGING</b>`);
   await sendPhoto('Aging Theo AM','aging-tbl-am',TG_AGING_CHAT,TG_AGING_THREAD,`👤 <b>AGING THEO AM — 7 NGÀY GẦN NHẤT</b>`);
   await sendPhoto('BC Bất Ổn','aging-tbl-batOn',TG_AGING_CHAT,TG_AGING_THREAD,`⚠️ <b>BƯU CỤC BẤT ỔN</b>`);
-  await sendPhoto('Aging Theo BC','aging-tbl-bc',TG_AGING_CHAT,TG_AGING_THREAD,`🏪 <b>AGING THEO BƯU CỤC — 7 NGÀY GẦN NHẤT</b>`);
+  {// Trim BC ổn định còn 20 rows trước khi chụp
+   const bcDT=document.querySelector('#aging-tbl-bc .table-wrap>table')||[...document.querySelectorAll('#aging-tbl-bc table')].find(t=>t.offsetWidth>0);
+   const bcTb=bcDT?bcDT.querySelector('tbody'):null;
+   const bcTrs=bcTb?[...bcTb.querySelectorAll('tr')]:[];
+   const bcHid=bcTrs.slice(20,-1);
+   bcHid.forEach(tr=>tr.style.display='none');
+   await sendPhoto('Aging Theo BC','aging-tbl-bc',TG_AGING_CHAT,TG_AGING_THREAD,`🏪 <b>AGING THEO BƯU CỤC — 7 NGÀY GẦN NHẤT</b>`);
+   bcHid.forEach(tr=>tr.style.display='');
+  }
 
   if(btn){btn.innerHTML='✅ Đã gửi xong!';setTimeout(()=>{btn.innerHTML='<span id="tgSidebarIcon">📤</span> Bắn dữ liệu lên Telegram';btn.disabled=false;},3000);}
  }catch(e){
