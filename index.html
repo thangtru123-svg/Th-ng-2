@@ -1468,8 +1468,9 @@ async function sendAgingToTelegram(){
   const img3=await _captureEl('aging-tbl-batOn');
   await _tgSendPhoto(TG_AGING_CHAT,TG_AGING_THREAD,img3,cap3);
   await new Promise(r=>setTimeout(r,600));
-  // Trim BC table còn 20 rows trước khi chụp
-  const bcTblEl=document.querySelector('#aging-tbl-bc tbody');
+  // Trim BC table còn 20 rows trước khi chụp — phải lấy đúng data table (không phải dropdown)
+  const bcDataTbl=document.querySelector('#aging-tbl-bc .table-wrap>table')||[...document.querySelectorAll('#aging-tbl-bc table')].find(t=>t.offsetWidth>0);
+  const bcTblEl=bcDataTbl?bcDataTbl.querySelector('tbody'):null;
   const bcTrs=bcTblEl?[...bcTblEl.querySelectorAll('tr')]:[];
   const bcTotTr=bcTrs[bcTrs.length-1];
   const bcHidden=bcTrs.slice(20,-1);
