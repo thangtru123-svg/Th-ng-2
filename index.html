@@ -3720,7 +3720,7 @@ async function buildCODPage(){
     if(amCardEl){
      const cl=amCardEl.cloneNode(true);
      cl.querySelectorAll('thead,th').forEach(e=>{e.style.position='static';e.style.top='auto';e.style.zIndex='auto';});
-     const tmp=document.createElement('div');tmp.id='tg-cod-am';tmp.style.cssText='position:fixed;top:-9999px;left:0;z-index:-1;width:1600px;padding:0';
+     const tmp=document.createElement('div');tmp.id='tg-cod-am';tmp.style.cssText='position:fixed;top:-9999px;left:0;z-index:-1;width:auto;display:inline-block;padding:0';
      tmp.appendChild(cl);document.body.appendChild(tmp);
      await new Promise(r=>setTimeout(r,400));
      try{const img=await _captureEl('tg-cod-am');const res=await _tgSendPhoto(TG_AGING_CHAT,TG_VH_THREAD,img,capAM);if(!res.ok)throw new Error(res.description||JSON.stringify(res));}
@@ -3747,7 +3747,7 @@ async function buildCODPage(){
       // Thêm lại dòng Tổng: thay thành số BC yếu
       if(totTr)tbody2.appendChild(totTr);
      }
-     const tmp2=document.createElement('div');tmp2.id='tg-cod-bc';tmp2.style.cssText='position:fixed;top:-9999px;left:0;z-index:-1;width:1600px;padding:0';
+     const tmp2=document.createElement('div');tmp2.id='tg-cod-bc';tmp2.style.cssText='position:fixed;top:-9999px;left:0;z-index:-1;width:auto;display:inline-block;padding:0';
      tmp2.appendChild(cl2);document.body.appendChild(tmp2);
      await new Promise(r=>setTimeout(r,400));
      try{const img2=await _captureEl('tg-cod-bc');const res2=await _tgSendPhoto(TG_AGING_CHAT,TG_VH_THREAD,img2,capBC2);if(!res2.ok)throw new Error(res2.description||JSON.stringify(res2));}
