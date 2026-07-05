@@ -3674,35 +3674,89 @@ async function buildCODPage(){
    if(btn){btn.disabled=true;btn.innerHTML='⏳ Đang gửi...';}
    try{
     const selDate=window._codCurDate||window._codAllDates[0];
+    const allDates2=window._codAllDates;
+    const prevDate=allDates2[allDates2.indexOf(selDate)+1]||null;
+    const trimCap2=s=>s.length>1020?s.slice(0,1017)+'...':s;
+    const fShortDate=d=>{if(!d)return'';const m=d.match(/(\d{4})-(\d{2})-(\d{2})/);return m?`${m[3]}/${m[2]}/${m[1]}`:d;};
+
+    // Hàm tính % CK cho 1 ngày
+    const calcCKPct=d=>{
+     const rws=window._codAllRows.filter(r=>r[1]===d);
+     let ck=0,tm=0;
+     rws.forEach(r=>{const tien=parseFloat((r[5]||'0').replace(/[^0-9.]/g,''))||0;if(r[0]==='CK')ck+=tien;else tm+=tien;});
+     return ck+tm>0?ck/(ck+tm)*100:0;
+    };
+
+    // Tính data ngày hiện tại
     const rows2=window._codAllRows.filter(r=>r[1]===selDate);
-    // Tính lại để làm caption
-    const bcM={};rows2.forEach(r=>{const bc=r[7]||r[2]||'—',am=r[9]||r[8]||'—',httt=r[0],tien=parseFloat((r[5]||'0').replace(/[^0-9.]/g,''))||0;if(!bcM[bc])bcM[bc]={bc,am,ck:0,tm:0};if(httt==='CK')bcM[bc].ck+=tien;else bcM[bc].tm+=tien;});
-    const amM={};Object.values(bcM).forEach(b=>{if(!amM[b.am])amM[b.am]={am:b.am,ck:0,tm:0};amM[b.am].ck+=b.ck;amM[b.am].tm+=b.tm;});
+    const bcM={};
+    rows2.forEach(r=>{const bc=r[7]||r[2]||'—',am=r[9]||r[8]||'—',httt=r[0],tien=parseFloat((r[5]||'0').replace(/[^0-9.]/g,''))||0;if(!bcM[bc])bcM[bc]={bc,am,ck:0,tm:0};if(httt==='CK')bcM[bc].ck+=tien;else bcM[bc].tm+=tien;});
+    const amM={};
+    Object.values(bcM).forEach(b=>{if(!amM[b.am])amM[b.am]={am:b.am,ck:0,tm:0};amM[b.am].ck+=b.ck;amM[b.am].tm+=b.tm;});
     const totCK2=Object.values(amM).reduce((s,a)=>s+a.ck,0),totTM2=Object.values(amM).reduce((s,a)=>s+a.tm,0),totAll2=totCK2+totTM2;
     const pCKtot=totAll2>0?totCK2/totAll2*100:0;
-    const amW2=Object.values(amM).filter(a=>{const t=a.ck+a.tm;return t>0&&a.ck/t*100<70;});
-    const bcW2=Object.values(bcM).filter(b=>{const t=b.ck+b.tm;return t>0&&b.ck/t*100<70;});
-    const trimCap2=s=>s.length>1020?s.slice(0,1017)+'...':s;
-    let cap=`💰 <b>TỈ LỆ NVPTTT NỘP COD — ${selDate}</b>\n\n`;
-    cap+=`📊 NVPTTT tự nộp COD (CK) toàn vùng: <b>${pCKtot.toFixed(1)}%</b>\n`;
-    cap+=`⚠️ AM có tỉ lệ CK &lt;70%: <b>${amW2.length}/${Object.keys(amM).length} AM</b>\n`;
-    if(amW2.length>0)amW2.sort((a,b)=>(a.ck/(a.ck+a.tm))-(b.ck/(b.ck+b.tm))).forEach(a=>{cap+=`— ${a.am}: ${(a.ck/(a.ck+a.tm)*100).toFixed(1)}%\n`;});
-    cap+=`⚠️ BC có tỉ lệ CK &lt;70%: <b>${bcW2.length}/${Object.keys(bcM).length} BC</b>`;
-    cap=trimCap2(cap);
-    // Chụp bảng AM
+    const amW2=Object.values(amM).filter(a=>{const t=a.ck+a.tm;return t>0&&a.ck/t*100<70;}).sort((a,b)=>a.ck/(a.ck+a.tm)-b.ck/(b.ck+b.tm));
+    const bcW2=Object.values(bcM).filter(b=>{const t=b.ck+b.tm;return t>0&&b.ck/t*100<70;}).sort((a,b)=>a.ck/(a.ck+a.tm)-b.ck/(b.ck+b.tm));
+
+    // So sánh ngày trước
+    const pCKprev=prevDate?calcCKPct(prevDate):null;
+    const diff=pCKprev!==null?pCKtot-pCKprev:null;
+    const diffStr=diff!==null?(diff>=0?`▲+${diff.toFixed(1)}%`:`▼${Math.abs(diff).toFixed(1)}%`):null;
+
+    // Caption ảnh 1: Theo AM
+    let capAM=`👤 <b>Tỉ lệ nộp COD theo AM quản lý — ${fShortDate(selDate)}</b>\n\n`;
+    capAM+=`📊 Tỉ lệ NVPTTT tự nộp COD Vùng XBG: <b>${pCKtot.toFixed(1)}%</b>\n`;
+    if(diffStr&&prevDate)capAM+=`${diff>=0?'📈':'📉'} ${diffStr} so với ${fShortDate(prevDate)}\n`;
+    capAM+=`⚠️ Có <b>${amW2.length}/${Object.keys(amM).length} AM</b> có tỉ lệ NVPTTT tự nộp COD dưới 70%`;
+    capAM=trimCap2(capAM);
+
+    // Caption ảnh 2: Theo BC
+    let capBC2=`🏪 <b>Tỉ lệ nộp COD theo Bưu Cục — ${fShortDate(selDate)}</b>\n\n`;
+    capBC2+=`⚠️ Có <b>${bcW2.length}/${Object.keys(bcM).length} BC</b> có tỉ lệ NVPTTT tự nộp COD dưới 70%`;
+    capBC2=trimCap2(capBC2);
+
+    // === Ảnh 1: Bảng AM (toàn bộ) ===
     const amCardEl=document.querySelector('#p21 .card');
     if(amCardEl){
      const cl=amCardEl.cloneNode(true);
      cl.querySelectorAll('thead,th').forEach(e=>{e.style.position='static';e.style.top='auto';e.style.zIndex='auto';});
-     const tmp=document.createElement('div');tmp.id='tg-cod-am';tmp.style.cssText='position:fixed;top:-9999px;left:0;z-index:-1;width:1400px;padding:0';
+     const tmp=document.createElement('div');tmp.id='tg-cod-am';tmp.style.cssText='position:fixed;top:-9999px;left:0;z-index:-1;width:1600px;padding:0';
      tmp.appendChild(cl);document.body.appendChild(tmp);
      await new Promise(r=>setTimeout(r,400));
-     try{const img=await _captureEl('tg-cod-am');const res=await _tgSendPhoto(TG_AGING_CHAT,TG_VH_THREAD,img,cap);if(!res.ok)throw new Error(res.description||JSON.stringify(res));}
+     try{const img=await _captureEl('tg-cod-am');const res=await _tgSendPhoto(TG_AGING_CHAT,TG_VH_THREAD,img,capAM);if(!res.ok)throw new Error(res.description||JSON.stringify(res));}
      finally{tmp.remove();}
+     await new Promise(r=>setTimeout(r,700));
     }
+
+    // === Ảnh 2: Bảng BC chỉ gồm rows < 70% ===
+    const bcCardEl=document.getElementById('cod-bc-card');
+    if(bcCardEl&&bcW2.length>0){
+     const cl2=bcCardEl.cloneNode(true);
+     cl2.querySelectorAll('thead,th').forEach(e=>{e.style.position='static';e.style.top='auto';e.style.zIndex='auto';});
+     // Lọc chỉ giữ rows < 70% trong tbody
+     const tbody2=cl2.querySelector('tbody');
+     if(tbody2){
+      const trs2=[...tbody2.querySelectorAll('tr')];
+      const totTr=trs2[trs2.length-1]; // dòng Tổng cộng
+      // Xóa hết, chỉ giữ rows có text % < 70% (dựa vào span style màu đỏ)
+      trs2.slice(0,-1).forEach(tr=>{
+       const spans=tr.querySelectorAll('span');
+       const ckSpan=[...spans].find(s=>s.style.color&&s.style.color.includes('153'));// #991B1B = red
+       if(!ckSpan)tr.remove();
+      });
+      // Thêm lại dòng Tổng: thay thành số BC yếu
+      if(totTr)tbody2.appendChild(totTr);
+     }
+     const tmp2=document.createElement('div');tmp2.id='tg-cod-bc';tmp2.style.cssText='position:fixed;top:-9999px;left:0;z-index:-1;width:1600px;padding:0';
+     tmp2.appendChild(cl2);document.body.appendChild(tmp2);
+     await new Promise(r=>setTimeout(r,400));
+     try{const img2=await _captureEl('tg-cod-bc');const res2=await _tgSendPhoto(TG_AGING_CHAT,TG_VH_THREAD,img2,capBC2);if(!res2.ok)throw new Error(res2.description||JSON.stringify(res2));}
+     finally{tmp2.remove();}
+    }
+
     if(btn){btn.disabled=false;btn.innerHTML='✅ Đã gửi!';}
     setTimeout(()=>{if(btn)btn.innerHTML='✈️ Bắn Telegram';},3000);
-   }catch(e){if(btn){btn.disabled=false;btn.innerHTML='❌ Lỗi: '+e.message;}setTimeout(()=>{if(btn)btn.innerHTML='✈️ Bắn Telegram';},4000);}
+   }catch(e){if(btn){btn.disabled=false;btn.innerHTML='❌ '+e.message;}setTimeout(()=>{if(btn)btn.innerHTML='✈️ Bắn Telegram';},4000);}
   };
 
   renderCOD(allDates[0]);
@@ -3713,7 +3767,7 @@ async function buildCODPage(){
 
 loadAll=async function(){
  const btn=document.getElementById('refreshBtn');btn.classList.add('spinning');btn.disabled=true;
- ['p0','p1','p2','p3','p4','p5','p6','p7','p16','p17','p18','p19','p20'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML='<div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu mới...</div></div>';});
+ ['p0','p1','p2','p3','p4','p5','p6','p7','p16','p17','p18','p19','p20','p21'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML='<div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu mới...</div></div>';});
  ['gtc','aging','ontime'].forEach(id=>destroyChart(id));
  await init();
 };
