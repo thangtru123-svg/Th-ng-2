@@ -2081,8 +2081,8 @@ function buildWeeklyReport(){
    <th colspan="3" style="${cs}text-align:center;border-left:2px solid #E5E7EB">${wBLabel}</th>
    <th style="${cs}text-align:center;border-left:2px solid #E5E7EB">Δ %GTC</th>
   </tr><tr><th></th>
-   <th style="${cs}text-align:center;border-left:2px solid #E5E7EB">Vol</th><th style="${cs}text-align:center">nGTC</th><th style="${cs}text-align:center">%GTC</th>
-   <th style="${cs}text-align:center;border-left:2px solid #E5E7EB">Vol</th><th style="${cs}text-align:center">nGTC</th><th style="${cs}text-align:center">%GTC</th>
+   <th style="${cs}text-align:center;border-left:2px solid #E5E7EB">Volume</th><th style="${cs}text-align:center">Vol GTC</th><th style="${cs}text-align:center">%GTC</th>
+   <th style="${cs}text-align:center;border-left:2px solid #E5E7EB">Volume</th><th style="${cs}text-align:center">Vol GTC</th><th style="${cs}text-align:center">%GTC</th>
    <th style="${cs}text-align:center;border-left:2px solid #E5E7EB">${wBLabel}−${wALabel}</th>
   </tr></thead><tbody>`;
   loais.forEach(l=>{const av=a[l]||{v:0,n:0,g:0},bv=b[l]||{v:0,n:0,g:0};tA.v+=av.v;tA.n+=av.n;tB.v+=bv.v;tB.n+=bv.n;const dv=bv.g-av.g,dcolor=dv>=0?'var(--green)':'var(--red)';
@@ -2120,8 +2120,8 @@ function buildWeeklyReport(){
    <th colspan="3" style="${cs}text-align:center;border-left:2px solid #E5E7EB">${wBLabel}</th>
    <th style="${cs}text-align:center;border-left:2px solid #E5E7EB">Δ %GTC</th>
   </tr><tr><th></th><th></th>
-   <th style="${cs}text-align:center;border-left:2px solid #E5E7EB">Vol</th><th style="${cs}text-align:center">nGTC</th><th style="${cs}text-align:center">%GTC</th>
-   <th style="${cs}text-align:center;border-left:2px solid #E5E7EB">Vol</th><th style="${cs}text-align:center">nGTC</th><th style="${cs}text-align:center">%GTC</th>
+   <th style="${cs}text-align:center;border-left:2px solid #E5E7EB">Volume</th><th style="${cs}text-align:center">Vol GTC</th><th style="${cs}text-align:center">%GTC</th>
+   <th style="${cs}text-align:center;border-left:2px solid #E5E7EB">Volume</th><th style="${cs}text-align:center">Vol GTC</th><th style="${cs}text-align:center">%GTC</th>
    <th style="${cs}text-align:center;border-left:2px solid #E5E7EB">${wBLabel}−${wALabel}</th>
   </tr></thead><tbody>`;
   names.forEach((n,i)=>{const av=a[n]||{v:0,nG:0,g:0},bv=b[n]||{v:0,nG:0,g:0};const dv=bv.g-av.g,dcolor=dv>=0?'var(--green)':'var(--red)';
@@ -2157,8 +2157,8 @@ function buildWeeklyReport(){
    <th colspan="3" style="${cs}text-align:center;border-left:2px solid #E5E7EB">${wBLabel}</th>
    <th style="${cs}text-align:center;border-left:2px solid #E5E7EB">Δ %GTC</th>
   </tr><tr><th></th><th></th><th></th>
-   <th style="${cs}text-align:center;border-left:2px solid #E5E7EB">Vol</th><th style="${cs}text-align:center">nGTC</th><th style="${cs}text-align:center">%GTC</th>
-   <th style="${cs}text-align:center;border-left:2px solid #E5E7EB">Vol</th><th style="${cs}text-align:center">nGTC</th><th style="${cs}text-align:center">%GTC</th>
+   <th style="${cs}text-align:center;border-left:2px solid #E5E7EB">Volume</th><th style="${cs}text-align:center">Vol GTC</th><th style="${cs}text-align:center">%GTC</th>
+   <th style="${cs}text-align:center;border-left:2px solid #E5E7EB">Volume</th><th style="${cs}text-align:center">Vol GTC</th><th style="${cs}text-align:center">%GTC</th>
    <th style="${cs}text-align:center;border-left:2px solid #E5E7EB">${wBLabel}−${wALabel}</th>
   </tr></thead><tbody>`;
   top20.forEach((bc,i)=>{const av=a[bc]||{v:0,nG:0,g:0},bv=b[bc]||{v:0,nG:0,g:0};const amN=bv.am||av.am||'';const dv=bv.g-av.g,dcolor=dv>=0?'var(--green)':'var(--red)';
@@ -2199,6 +2199,16 @@ function buildWeeklyReport(){
     <td style="${cs}text-align:center;border-left:2px solid #F3F4F6">${av!==null?`<span class="pct ${gcfd(av)}">${av.toFixed(1)}%</span>`:'—'}</td>
     <td style="${cs}text-align:center;border-left:2px solid #F3F4F6">${bv!==null?`<span class="pct ${gcfd(bv)}">${bv.toFixed(1)}%</span>`:'—'}</td>
     <td style="${cs}text-align:center;font-weight:700;color:${dcolor};border-left:2px solid #F3F4F6">${dv!==null?((dv<=0?'':'+')+(dv.toFixed(1))+'%'):'—'}</td></tr>`;});
+  // Hàng tổng cộng
+  {const withAn=names.filter(n=>a[n]!==undefined),withBn=names.filter(n=>b[n]!==undefined);
+  const totA=withAn.length?withAn.reduce((s,n)=>s+a[n],0)/withAn.length:null;
+  const totB=withBn.length?withBn.reduce((s,n)=>s+b[n],0)/withBn.length:null;
+  const totD=(totA!==null&&totB!==null)?totB-totA:null;
+  const totDC=totD!==null?(totD<=0?'var(--green)':'var(--red)'):'var(--text-sub)';
+  h+=`<tr class="tot"><td style="${cs}"></td><td style="${cs}font-weight:700">Tổng cộng (TB)</td>
+   <td style="${cs}text-align:center;border-left:2px solid #F3F4F6">${totA!==null?`<span class="pct ${gcfd(totA)}">${totA.toFixed(1)}%</span>`:'—'}</td>
+   <td style="${cs}text-align:center;border-left:2px solid #F3F4F6">${totB!==null?`<span class="pct ${gcfd(totB)}">${totB.toFixed(1)}%</span>`:'—'}</td>
+   <td style="${cs}text-align:center;font-weight:700;color:${totDC};border-left:2px solid #F3F4F6">${totD!==null?((totD<=0?'':'+')+(totD.toFixed(1))+'%'):'—'}</td></tr>`;}
   h+='</tbody></table></div>';
   // Analysis
   const withB=names.filter(n=>b[n]!==undefined);
@@ -2228,18 +2238,26 @@ function buildWeeklyReport(){
   const dates=allDts.slice(0,7);if(!dates.length)return '<p style="padding:16px;color:var(--text-sub)">Không có dữ liệu</p>';
   const pivot={};
   rows.forEach(r=>{const am=(r[10]||'').trim();const d=(r[11]||'').toString().match(/\d{4}-\d{2}-\d{2}/)?.[0]||'';if(!am||!dates.includes(d))return;if(!pivot[am])pivot[am]={};pivot[am][d]=(pivot[am][d]||0)+1;});
-  const latest=dates[0],prev=dates[1];const names=Object.keys(pivot).sort((a,b)=>(pivot[b][latest]||0)-(pivot[a][latest]||0));
+  const latest=dates[0],oldest=dates[dates.length-1],prev=dates[1];
+  const names=Object.keys(pivot).sort((a,b)=>(pivot[b][latest]||0)-(pivot[a][latest]||0));
   let h=`<div class="table-wrap" style="overflow-x:auto"><table><thead><tr>
    <th style="${cs}">STT</th><th style="${cs}">AM</th>
    ${dates.map(d=>`<th style="${cs}text-align:center;border-left:2px solid #E5E7EB"><strong>${shortD(d)}</strong></th>`).join('')}
+   <th style="${cs}text-align:center;border-left:2px solid #E5E7EB;white-space:nowrap">Δ (${shortD(latest)}−${shortD(oldest)})</th>
   </tr></thead><tbody>`;
   names.forEach((am,i)=>{
    h+=`<tr><td style="${cs}text-align:center;color:var(--text-sub);font-size:11px">${i+1}</td><td style="${cs}font-weight:700">${am}</td>`;
    dates.forEach(d=>{const v=pivot[am]?.[d];h+=`<td style="${cs}text-align:center;border-left:2px solid #F3F4F6;font-weight:600;color:${v?'var(--red)':'var(--text-sub)'}">${v||0}</td>`;});
+   const vNew=pivot[am]?.[latest]||0,vOld=pivot[am]?.[oldest]||0,diff=vNew-vOld;
+   const dC=diff<0?'var(--green)':diff>0?'var(--red)':'var(--text-sub)';
+   h+=`<td style="${cs}text-align:center;border-left:2px solid #F3F4F6;font-weight:700;color:${dC}">${diff>0?'+':''}${diff}</td>`;
    h+='</tr>';});
   h+=`<tr class="tot"><td colspan="2" style="${cs}">Tổng</td>`;
   const totByDate={};
   dates.forEach(d=>{const t=Object.values(pivot).reduce((s,r)=>s+(r[d]||0),0);totByDate[d]=t;h+=`<td style="${cs}text-align:center;border-left:2px solid #F3F4F6;font-weight:700;color:var(--orange)">${t}</td>`;});
+  const totDiff=(totByDate[latest]||0)-(totByDate[oldest]||0);
+  const totDC=totDiff<0?'var(--green)':totDiff>0?'var(--red)':'var(--text-sub)';
+  h+=`<td style="${cs}text-align:center;border-left:2px solid #F3F4F6;font-weight:700;color:${totDC}">${totDiff>0?'+':''}${totDiff}</td>`;
   h+='</tr></tbody></table></div>';
   // Analysis
   const totLatest=totByDate[latest]||0,totPrev=totByDate[prev]||0,delta=totLatest-totPrev;
