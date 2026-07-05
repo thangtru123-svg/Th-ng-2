@@ -1346,22 +1346,27 @@ async function _captureEl(id){
  }
  const el=document.getElementById(id);
  if(!el)throw new Error('Element not found: '+id);
- const cl=el.cloneNode(true);
- cl.querySelectorAll('thead,th').forEach(e=>{e.style.position='static';e.style.top='auto';e.style.zIndex='auto';});
- cl.querySelectorAll('.table-wrap').forEach(tw=>{tw.style.maxHeight='none';tw.style.overflow='visible';});
- // Tính width vừa khít: ưu tiên table scrollWidth, fallback element offsetWidth
+ // Fix sticky header
+ const stickyEls=[...el.querySelectorAll('thead,th')];
+ const origSt=stickyEls.map(e=>({p:e.style.position,t:e.style.top,z:e.style.zIndex}));
+ stickyEls.forEach(e=>{e.style.position='static';e.style.top='auto';e.style.zIndex='auto';});
+ // Fix table-wrap overflow
+ const wrapEls=[...el.querySelectorAll('.table-wrap')];
+ const origWr=wrapEls.map(w=>({m:w.style.maxHeight,o:w.style.overflow}));
+ wrapEls.forEach(w=>{w.style.maxHeight='none';w.style.overflow='visible';});
+ // Set width vừa khít theo table (chụp trực tiếp element gốc — không clone — để giữ CSS context)
  const tbl=el.querySelector('table');
- const contentW=tbl?Math.min(tbl.scrollWidth+40,el.offsetWidth):el.offsetWidth;
- const wrap=document.createElement('div');
- wrap.style.cssText=`position:fixed;top:-9999px;left:0;z-index:-1;width:${contentW}px;padding:0;background:#ffffff`;
- wrap.appendChild(cl);document.body.appendChild(wrap);
- await new Promise(r=>setTimeout(r,300));
+ const origW=el.style.width;
+ if(tbl&&tbl.scrollWidth>0)el.style.width=(tbl.scrollWidth+40)+'px';
+ await new Promise(r=>setTimeout(r,150));
  try{
-  const canvas=await html2canvas(wrap,{scale:2,useCORS:true,allowTaint:true,logging:false,backgroundColor:'#ffffff'});
-  const blob=await new Promise(res=>canvas.toBlob(res,'image/png'));
-  if(!blob)throw new Error('Chụp ảnh thất bại (canvas tainted hoặc rỗng)');
-  return blob;
- }finally{wrap.remove();}
+  const canvas=await html2canvas(el,{scale:2,useCORS:true,allowTaint:true,logging:false,backgroundColor:'#ffffff'});
+  return await new Promise(res=>canvas.toBlob(res,'image/png'));
+ }finally{
+  stickyEls.forEach((e,i)=>{e.style.position=origSt[i].p;e.style.top=origSt[i].t;e.style.zIndex=origSt[i].z;});
+  wrapEls.forEach((w,i)=>{w.style.maxHeight=origWr[i].m;w.style.overflow=origWr[i].o;});
+  el.style.width=origW;
+ }
 }
 
 async function sendAgingToTelegram(){
