@@ -1355,7 +1355,8 @@ async function _captureEl(id){
  const origWr=wrapEls.map(w=>({m:w.style.maxHeight,o:w.style.overflow}));
  wrapEls.forEach(w=>{w.style.maxHeight='none';w.style.overflow='visible';});
  // Set width vừa khít theo table (chụp trực tiếp element gốc — không clone — để giữ CSS context)
- const tbl=el.querySelector('table');
+ // Ưu tiên .table-wrap>table (data table), tránh lấy nhầm table dropdown search
+ const tbl=el.querySelector('.table-wrap>table')||[...el.querySelectorAll('table')].find(t=>t.offsetWidth>0)||el.querySelector('table');
  const origW=el.style.width;
  if(tbl&&tbl.scrollWidth>0)el.style.width=(tbl.scrollWidth+40)+'px';
  await new Promise(r=>setTimeout(r,150));
