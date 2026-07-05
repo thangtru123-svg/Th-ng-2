@@ -6,6 +6,7 @@
 - **Push qua GitHub Desktop** (bash git push lỗi 403 proxy)
 - **Không bao giờ dùng aging-dashboard.html riêng lẻ** — đã tích hợp vào index.html
 - **Hosting: VERCEL** (Netlify hết credit — KHÔNG dùng nữa)
+- **Trước khi bắn Telegram**: LUÔN hard reload tab trước (`location.reload(true)`) rồi navigate sang đúng page, chờ data load xong mới chụp — tránh dùng data cache cũ trong memory
 
 ---
 
