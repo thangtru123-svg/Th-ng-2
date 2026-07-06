@@ -1340,6 +1340,16 @@ async function _tgSendPhoto(chatId,threadId,blob,caption){
  const r=await fetch(`https://api.telegram.org/bot${TG_TOKEN}/sendPhoto`,{method:'POST',body:form});
  return r.json();
 }
+async function _tgSendDoc(chatId,threadId,blob,caption){
+ // Dùng sendDocument khi ảnh quá rộng (PHOTO_INVALID_DIMENSIONS)
+ const form=new FormData();
+ form.append('chat_id',chatId);
+ form.append('message_thread_id',threadId);
+ form.append('document',blob,'dashboard.png');
+ if(caption){form.append('caption',caption);form.append('parse_mode','HTML');}
+ const r=await fetch(`https://api.telegram.org/bot${TG_TOKEN}/sendDocument`,{method:'POST',body:form});
+ return r.json();
+}
 async function _captureEl(id){
  if(!window.html2canvas){
   await new Promise((res,rej)=>{const s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';s.onload=res;s.onerror=rej;document.head.appendChild(s);});
@@ -1790,7 +1800,8 @@ async function sendAllToTelegram(){
     await new Promise(r=>setTimeout(r,300));
     try{
      const img=await _captureEl('tg-p1-bc');
-     const res=await _tgSendPhoto(TG_AGING_CHAT,TG_VH_THREAD,img,capGTCBc());
+     // Dùng sendDocument vì table BC nhiều cột → ảnh quá rộng → PHOTO_INVALID_DIMENSIONS
+     const res=await _tgSendDoc(TG_AGING_CHAT,TG_VH_THREAD,img,capGTCBc());
      if(!res.ok)throw new Error('P1 BC loi: '+(res.description||JSON.stringify(res)));
     }finally{tmp.remove();}
     await new Promise(r=>setTimeout(r,600));
