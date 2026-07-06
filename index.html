@@ -1792,6 +1792,9 @@ async function sendAllToTelegram(){
     const cl=p1bc.cloneNode(true);
     cl.querySelectorAll('.table-wrap>div').forEach(e=>e.remove());
     cl.querySelectorAll('thead,th').forEach(el=>{el.style.position='';el.style.top='';el.style.zIndex='';});
+    // Trim còn 20 BC tệ nhất (đã sort %GTC thấp→cao), giữ Grand Total ở cuối
+    const bcDT=cl.querySelector('.table-wrap>table')||[...cl.querySelectorAll('table')].find(t=>t.offsetWidth>0||t.rows.length>0);
+    if(bcDT){const bcTb=bcDT.querySelector('tbody');if(bcTb){const bcTrs=[...bcTb.querySelectorAll('tr')];const totR=bcTrs[bcTrs.length-1];bcTrs.slice(20,-1).forEach(tr=>tr.remove());}}
     const tmp=document.createElement('div');
     tmp.id='tg-p1-bc';
     tmp.style.cssText='position:fixed;top:-9999px;left:0;z-index:-1;width:1400px;padding:0';
@@ -1800,8 +1803,7 @@ async function sendAllToTelegram(){
     await new Promise(r=>setTimeout(r,300));
     try{
      const img=await _captureEl('tg-p1-bc');
-     // Dùng sendDocument vì table BC nhiều cột → ảnh quá rộng → PHOTO_INVALID_DIMENSIONS
-     const res=await _tgSendDoc(TG_AGING_CHAT,TG_VH_THREAD,img,capGTCBc());
+     const res=await _tgSendPhoto(TG_AGING_CHAT,TG_VH_THREAD,img,capGTCBc());
      if(!res.ok)throw new Error('P1 BC loi: '+(res.description||JSON.stringify(res)));
     }finally{tmp.remove();}
     await new Promise(r=>setTimeout(r,600));
