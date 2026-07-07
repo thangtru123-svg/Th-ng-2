@@ -1376,8 +1376,8 @@ async function _captureEl(id){
  }
  const el=document.getElementById(id);
  if(!el)throw new Error('Element not found: '+id);
- // Fix sticky header
- const stickyEls=[...el.querySelectorAll('thead,th')];
+ // Fix sticky: thead, th VÀ cả bar div từ addBCSearch (position:sticky)
+ const stickyEls=[...el.querySelectorAll('thead,th,[style*="position:sticky"]')];
  const origSt=stickyEls.map(e=>({p:e.style.position,t:e.style.top,z:e.style.zIndex}));
  stickyEls.forEach(e=>{e.style.position='static';e.style.top='auto';e.style.zIndex='auto';});
  // Fix table-wrap overflow
@@ -1389,10 +1389,12 @@ async function _captureEl(id){
  const tbl=el.querySelector('.table-wrap>table')||[...el.querySelectorAll('table')].find(t=>t.offsetWidth>0)||el.querySelector('table');
  const origW=el.style.width;
  if(tbl&&tbl.scrollWidth>0)el.style.width=(tbl.scrollWidth+40)+'px';
- await new Promise(r=>setTimeout(r,150));
+ await new Promise(r=>setTimeout(r,200));
  try{
   const canvas=await html2canvas(el,{scale:2,useCORS:true,allowTaint:true,logging:false,backgroundColor:'#ffffff'});
-  return await new Promise(res=>canvas.toBlob(res,'image/png'));
+  const blob=await new Promise(res=>canvas.toBlob(res,'image/png'));
+  if(!blob)throw new Error('canvas.toBlob trả về null — element quá lớn hoặc bị taint: '+id);
+  return blob;
  }finally{
   stickyEls.forEach((e,i)=>{e.style.position=origSt[i].p;e.style.top=origSt[i].t;e.style.zIndex=origSt[i].z;});
   wrapEls.forEach((w,i)=>{w.style.maxHeight=origWr[i].m;w.style.overflow=origWr[i].o;});
@@ -1487,27 +1489,29 @@ async function sendAgingToTelegram(){
   cap4+=bcArr.slice(0,3).map(r=>`• ${r.bc} ${num(r[latest]||0)} đơn.`).join('\n');
   cap4=trimCap(cap4);
 
-  // ── Chụp và gửi từng section ──
+  // ── Chụp và gửi từng section (mỗi ảnh có try-catch riêng — 1 fail không phá cả 4) ──
   // Thứ tự: Tổng quan → Theo AM → BC Bất Ổn → Theo BC
-  const img1=await _captureEl('aging-cards');
-  await _tgSendPhoto(TG_AGING_CHAT,TG_AGING_THREAD,img1,cap1);
-  await new Promise(r=>setTimeout(r,600));
-  const img2=await _captureEl('aging-tbl-am');
-  await _tgSendPhoto(TG_AGING_CHAT,TG_AGING_THREAD,img2,cap2);
-  await new Promise(r=>setTimeout(r,600));
-  const img3=await _captureEl('aging-tbl-batOn');
-  await _tgSendPhoto(TG_AGING_CHAT,TG_AGING_THREAD,img3,cap3);
-  await new Promise(r=>setTimeout(r,600));
+  let sentCount=0;
+  const _sendOne=async(elId,cap,extraFn)=>{
+   try{
+    if(extraFn)extraFn(true);
+    const img=await _captureEl(elId);
+    const res=await _tgSendPhoto(TG_AGING_CHAT,TG_AGING_THREAD,img,cap);
+    if(!res.ok)throw new Error(`TG lỗi: ${res.description||JSON.stringify(res)}`);
+    sentCount++;
+    await new Promise(r=>setTimeout(r,700));
+   }catch(e){console.error('[TG Aging] Lỗi ảnh',elId,':',e.message);}
+   finally{if(extraFn)extraFn(false);}
+  };
+  await _sendOne('aging-cards',cap1);
+  await _sendOne('aging-tbl-am',cap2);
+  await _sendOne('aging-tbl-batOn',cap3);
   // Trim BC table còn 20 rows trước khi chụp — phải lấy đúng data table (không phải dropdown)
   const bcDataTbl=document.querySelector('#aging-tbl-bc .table-wrap>table')||[...document.querySelectorAll('#aging-tbl-bc table')].find(t=>t.offsetWidth>0);
   const bcTblEl=bcDataTbl?bcDataTbl.querySelector('tbody'):null;
   const bcTrs=bcTblEl?[...bcTblEl.querySelectorAll('tr')]:[];
-  const bcTotTr=bcTrs[bcTrs.length-1];
   const bcHidden=bcTrs.slice(20,-1);
-  bcHidden.forEach(tr=>tr.style.display='none');
-  const img4=await _captureEl('aging-tbl-bc');
-  bcHidden.forEach(tr=>tr.style.display='');
-  await _tgSendPhoto(TG_AGING_CHAT,TG_AGING_THREAD,img4,cap4);
+  await _sendOne('aging-tbl-bc',cap4,show=>{bcHidden.forEach(tr=>tr.style.display=show?'none':'');});
 
   if(btn){btn.textContent='✅ Đã gửi!';btn.style.background='#22C55E';}
   if(btnSb){btnSb.innerHTML='<span>✅</span> Đã gửi Telegram!';btnSb.style.background='rgba(34,197,94,0.2)';btnSb.style.borderColor='rgba(34,197,94,0.4)';btnSb.style.color='#4ade80';}
