@@ -236,6 +236,8 @@ tr.tot td{background:#FFF0EB!important;font-weight:800!important;border-top:2px 
  <button class="nav-item" onclick="show('p19',this)"><span class="icon">🎯</span>GTC TTS Ca 1,2 theo BC</button>
  <button class="nav-item" onclick="show('p20',this)"><span class="icon">👷</span>Năng suất nhân viên</button>
  <button class="nav-item" onclick="show('p21',this)"><span class="icon">💰</span>Tỉ lệ NVPTTT nộp COD</button>
+ <div class="nav-section">Kinh Doanh</div>
+ <button class="nav-item" onclick="show('p22',this)"><span class="icon">💼</span>Kinh Doanh XBG</button>
  <div class="nav-section">AI</div>
  <button class="nav-item" onclick="show('p12',this)" style="background:linear-gradient(135deg,rgba(124,58,237,0.18),rgba(91,33,182,0.1));border:1px solid rgba(124,58,237,0.3);color:#A78BFA;font-weight:700"><span class="icon">✨</span>AI - Phân tích tổng quan</button>
  <button class="refresh-btn" id="refreshBtn" onclick="loadAll()">
@@ -263,6 +265,7 @@ tr.tot td{background:#FFF0EB!important;font-weight:800!important;border-top:2px 
 <div class="page" id="p19"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
 <div class="page" id="p20"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
 <div class="page" id="p21"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
+<div class="page" id="p22"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
 </main>
 
 <script>
@@ -2957,6 +2960,8 @@ async function init(){
  await buildNangSuatPage();
  // p21 — Tỉ lệ NVPTTT nộp COD
  await buildCODPage();
+ // p22 — Kinh Doanh XBG
+ await buildKinhDoanhPage();
  // p0 — Tổng quan (sau khi có đủ data)
  buildOverviewPage();
  // Inject nút TG vào tất cả trang
@@ -3675,6 +3680,66 @@ async function buildNangSuatPage(){
 }
 
 /* ========== P21: TỈ LỆ NVPTTT NỘP COD ========== */
+async function buildKinhDoanhPage(){
+ const el=document.getElementById('p22'); if(!el)return;
+ try{
+  const res=await fetch(`https://docs.google.com/spreadsheets/d/${SID}/gviz/tq?tqx=out:csv&gid=1600175918`);
+  const txt=await res.text();
+  const parse=s=>{const rs=[];let row=[],cur='',q=false;for(let i=0;i<s.length;i++){const c=s[i];if(q){if(c==='"'){if(s[i+1]==='"'){cur+='"';i++;}else q=false;}else cur+=c;}else{if(c==='"')q=true;else if(c===','){row.push(cur);cur='';}else if(c==='\n'){row.push(cur);rs.push(row);row=[];cur='';}else if(c==='\r'){}else cur+=c;}}if(cur!==''||row.length){row.push(cur);rs.push(row);}return rs;};
+  const rows=parse(txt); window._KD_RAW=rows;
+  const oprRows=window._D?.oprAM||[]; const activeAM=new Set();
+  for(let i=1;i<oprRows.length;i++){const n=(oprRows[i][0]||'').trim();if(n&&!n.toLowerCase().includes('grand total'))activeAM.add(n);}
+  const GROUPS=['A','BCD','EF','G'], GLBL={A:'KH A',BCD:'KH BCD',EF:'KH mới (EF)',G:'KH G'};
+  const gRec=[],aRec=[];
+  for(let i=1;i<rows.length;i++){
+   const g=(rows[i][1]||'').trim();
+   if(GROUPS.includes(g))gRec.push({grp:g,week:+(rows[i][9]||0),month:+(rows[i][8]||0),slkh:+(rows[i][3]||0),rev:parseFloat(rows[i][6]||0)||0});
+   const q=(rows[i][16]||'').trim();
+   if(q)aRec.push({am:(rows[i][23]||'').trim(),week:+(rows[i][21]||0),month:+(rows[i][20]||0),rev:parseFloat(rows[i][18]||0)||0,vol:+(rows[i][19]||0)});
+  }
+  const weeks=[...new Set(gRec.map(r=>r.week))].filter(Boolean).sort((a,b)=>a-b);
+  const months=[...new Set(gRec.map(r=>r.month))].filter(Boolean).sort((a,b)=>a-b);
+  if(!weeks.length||!months.length){el.innerHTML=`<div class="card"><p style="padding:16px;color:var(--text-sub)">Chưa có dữ liệu Kinh Doanh.</p></div>`;return;}
+  let _mt=0,maxLabel='';for(let i=1;i<rows.length;i++){if(!GROUPS.includes((rows[i][1]||'').trim()))continue;const d=new Date(rows[i][2]);if(!isNaN(d)&&d.getTime()>_mt){_mt=d.getTime();maxLabel=(rows[i][10]||rows[i][2]||'').trim();}}
+  const MN=m=>'Tháng '+m;
+  const tr=v=>Math.round((v||0)/1e6).toLocaleString('vi-VN');
+  const ty=v=>((v||0)/1e9).toFixed(2);
+  const dPct=(a,b)=>b?(a-b)/b*100:0;
+  const arw=d=>!isFinite(d)||d===0?'<span style="color:var(--text-sub)">—</span>':d>0.05?`<span style="color:var(--green);font-weight:700">▲ +${d.toFixed(1)}%</span>`:d<-0.05?`<span style="color:var(--red);font-weight:700">▼ ${d.toFixed(1)}%</span>`:'<span style="color:var(--text-sub)">≈0%</span>';
+  const revW={},revM={};
+  gRec.forEach(r=>{revW[r.week]=(revW[r.week]||0)+r.rev;revM[r.month]=(revM[r.month]||0)+r.rev;});
+  const gW={},gM={},sW={},sM={}; GROUPS.forEach(g=>{gW[g]={};gM[g]={};sW[g]={};sM[g]={};});
+  gRec.forEach(r=>{gW[r.grp][r.week]=(gW[r.grp][r.week]||0)+r.rev;gM[r.grp][r.month]=(gM[r.grp][r.month]||0)+r.rev;sW[r.grp][r.week]=(sW[r.grp][r.week]||0)+r.slkh;sM[r.grp][r.month]=(sM[r.grp][r.month]||0)+r.slkh;});
+  const amM={},amW={},amVol={},amTot={};
+  aRec.forEach(r=>{if(!activeAM.has(r.am)||!r.am)return;amM[r.am]=amM[r.am]||{};amW[r.am]=amW[r.am]||{};amM[r.am][r.month]=(amM[r.am][r.month]||0)+r.rev;amW[r.am][r.week]=(amW[r.am][r.week]||0)+r.rev;amVol[r.am]=(amVol[r.am]||0)+r.vol;amTot[r.am]=(amTot[r.am]||0)+r.rev;});
+  const sMtot={}; months.forEach(m=>{sMtot[m]=GROUPS.reduce((s,g)=>s+(sM[g][m]||0),0);});
+  const lastM=months[months.length-1],prevM=months[months.length-2];
+  const lastW=weeks[weeks.length-1],prevW=weeks[weeks.length-2];
+  const totalAll=months.reduce((s,m)=>s+(revM[m]||0),0);
+  const bestW=weeks.reduce((a,b)=>(revW[b]||0)>(revW[a]||0)?b:a,weeks[0]);
+  const cs='padding:7px 10px;';
+  // KPI
+  const tile=(lbl,val,sub)=>`<div style="flex:1;min-width:190px;background:linear-gradient(135deg,#FFF7ED,#FFEDE0);border:1px solid #FBD9C7;border-radius:12px;padding:14px 16px"><div style="font-size:12px;color:var(--text-sub);font-weight:600">${lbl}</div><div style="font-size:24px;font-weight:800;color:var(--orange-dark)">${val}</div><div style="font-size:12px;margin-top:2px">${sub}</div></div>`;
+  const kpi=`<div style="display:flex;gap:14px;flex-wrap:wrap;padding:16px">${tile('Doanh thu '+MN(lastM),ty(revM[lastM])+' tỷ','so '+MN(prevM)+': '+arw(dPct(revM[lastM],revM[prevM])))}${tile('Doanh thu Tuần '+lastW,ty(revW[lastW])+' tỷ','so Tuần '+prevW+': '+arw(dPct(revW[lastW],revW[prevW])))}${tile('Tổng DT (T'+months[0]+'–T'+lastM+')',ty(totalAll)+' tỷ','<span style="color:var(--text-sub)">'+weeks.length+' tuần · '+months.length+' tháng</span>')}</div>`;
+  const mTbl=`<div class="table-wrap"><table style="min-width:auto"><thead><tr><th style="${cs}">Tháng</th>${months.map(m=>`<th style="${cs}text-align:center">${MN(m)}</th>`).join('')}</tr></thead><tbody><tr><td style="${cs}font-weight:700">Doanh thu (triệu đồng)</td>${months.map(m=>`<td style="${cs}text-align:center;font-weight:700">${tr(revM[m])}</td>`).join('')}</tr><tr><td style="${cs}color:var(--text-sub)">So tháng trước</td>${months.map((m,i)=>`<td style="${cs}text-align:center">${i===0?'—':arw(dPct(revM[m],revM[months[i-1]]))}</td>`).join('')}</tr></tbody></table></div>`;
+  const wTbl=`<div class="table-wrap"><table><thead><tr><th style="${cs}white-space:nowrap">Tuần</th>${weeks.map(w=>`<th style="${cs}text-align:center">W${w}</th>`).join('')}</tr></thead><tbody><tr><td style="${cs}font-weight:700;white-space:nowrap">Doanh thu (triệu)</td>${weeks.map(w=>`<td style="${cs}text-align:center">${tr(revW[w])}</td>`).join('')}</tr><tr><td style="${cs}color:var(--text-sub);white-space:nowrap">So tuần trước</td>${weeks.map((w,i)=>`<td style="${cs}text-align:center;font-size:11px">${i===0?'—':arw(dPct(revW[w],revW[weeks[i-1]]))}</td>`).join('')}</tr></tbody></table></div>`;
+  const ovNote=`<div class="analysis-box">📊 Tổng doanh thu <b>${ty(totalAll)} tỷ</b> (T${months[0]}–T${lastM}). ${MN(lastM)}: <b>${ty(revM[lastM])} tỷ</b> (${arw(dPct(revM[lastM],revM[prevM]))} so tháng trước). Tuần cao nhất: <b>W${bestW}</b> — ${tr(revW[bestW])} tr.<br><span style="color:var(--red)">⚠️ Tháng ${lastM} mới có số liệu đến ${maxLabel} (chưa đủ tháng) — chỉ số MoM tháng ${lastM} chỉ mang tính tham khảo.</span></div>`;
+  // Groups
+  const gTbl=`<div class="table-wrap"><table><thead><tr><th style="${cs}">Nhóm KH</th>${months.map(m=>`<th style="${cs}text-align:center">${MN(m)} (tr)</th>`).join('')}<th style="${cs}text-align:center">MoM (T${lastM})</th></tr></thead><tbody>${GROUPS.map(g=>`<tr><td style="${cs}font-weight:700">${GLBL[g]}</td>${months.map(m=>`<td style="${cs}text-align:center">${tr(gM[g][m])}</td>`).join('')}<td style="${cs}text-align:center">${arw(dPct(gM[g][lastM],gM[g][prevM]))}</td></tr>`).join('')}<tr class="tot"><td style="${cs}">Tổng</td>${months.map(m=>`<td style="${cs}text-align:center">${tr(revM[m])}</td>`).join('')}<td style="${cs}text-align:center">${arw(dPct(revM[lastM],revM[prevM]))}</td></tr></tbody></table></div>`;
+  const gwTbl=`<div style="font-size:12px;color:var(--text-sub);margin:8px 10px 4px">Theo tuần (triệu đồng):</div><div class="table-wrap"><table><thead><tr><th style="${cs}position:sticky;left:0;background:#FEEDE4;z-index:2">Nhóm KH</th>${weeks.map(w=>`<th style="${cs}text-align:center">W${w}</th>`).join('')}</tr></thead><tbody>${GROUPS.map(g=>`<tr><td style="${cs}font-weight:700;position:sticky;left:0;background:#fff;z-index:2">${GLBL[g]}</td>${weeks.map(w=>`<td style="${cs}text-align:center">${tr(gW[g][w])}</td>`).join('')}</tr>`).join('')}<tr class="tot"><td style="${cs}position:sticky;left:0;background:#FFF0EB;z-index:2">Tổng</td>${weeks.map(w=>`<td style="${cs}text-align:center">${tr(revW[w])}</td>`).join('')}</tr></tbody></table></div>`;
+  const efRs=revM[lastM]?gM.EF[lastM]/revM[lastM]*100:0, efSs=sMtot[lastM]?(sM.EF[lastM]||0)/sMtot[lastM]*100:0, efWoW=dPct(gW.EF[lastW],gW.EF[prevW]);
+  const efTbl=`<div class="table-wrap"><table style="min-width:auto"><thead><tr><th style="${cs}">Tháng</th><th style="${cs}text-align:center">DT EF (tr)</th><th style="${cs}text-align:center">% DT toàn vùng</th><th style="${cs}text-align:center">Lượt KH EF</th><th style="${cs}text-align:center">% lượt toàn vùng</th></tr></thead><tbody>${months.map(m=>{const rs=revM[m]?(gM.EF[m]||0)/revM[m]*100:0,ss=sMtot[m]?(sM.EF[m]||0)/sMtot[m]*100:0;return `<tr><td style="${cs}font-weight:600">${MN(m)}</td><td style="${cs}text-align:center">${tr(gM.EF[m])}</td><td style="${cs}text-align:center"><span class="pct ${rs>=20?'g':rs>=10?'m':'b'}">${rs.toFixed(1)}%</span></td><td style="${cs}text-align:center">${(sM.EF[m]||0).toLocaleString('vi-VN')}</td><td style="${cs}text-align:center">${ss.toFixed(1)}%</td></tr>`;}).join('')}</tbody></table></div>`;
+  const efNote=`<div class="analysis-box">📌 <b>Tỉ lệ bán mới — nhóm EF (KH mới)</b>, ${MN(lastM)}: doanh thu EF <b>${tr(gM.EF[lastM])} tr</b>, chiếm <b>${efRs.toFixed(1)}%</b> doanh thu toàn vùng; lượt KH EF chiếm <b>${efSs.toFixed(1)}%</b>. DT EF tuần ${lastW} so tuần ${prevW}: ${arw(efWoW)}.<br><span style="color:var(--text-sub);font-size:11px">*Tỉ lệ bán mới = tỉ trọng nhóm EF trên toàn vùng · Lượt KH = cộng dồn SLKH theo ngày.</span></div>`;
+  // AM
+  const amNames=Object.keys(amTot).sort((a,b)=>amTot[b]-amTot[a]);
+  const amMTbl=`<div class="table-wrap"><table><thead><tr><th style="${cs}text-align:center;position:sticky;left:0;background:#FEEDE4;z-index:3">STT</th><th style="${cs}position:sticky;left:40px;background:#FEEDE4;z-index:3">AM</th>${months.map(m=>`<th style="${cs}text-align:center">${MN(m)} (tr)</th>`).join('')}<th style="${cs}text-align:center">Tổng (tr)</th><th style="${cs}text-align:center">Volume</th><th style="${cs}text-align:center">MoM (T${lastM})</th></tr></thead><tbody>${amNames.map((nm,i)=>`<tr><td style="${cs}text-align:center;color:var(--text-sub);position:sticky;left:0;background:#fff;z-index:2">${i+1}</td><td style="${cs}font-weight:700;white-space:nowrap;position:sticky;left:40px;background:#fff;z-index:2">${nm}</td>${months.map(m=>`<td style="${cs}text-align:center">${tr(amM[nm][m])}</td>`).join('')}<td style="${cs}text-align:center;font-weight:700;color:var(--orange-dark)">${tr(amTot[nm])}</td><td style="${cs}text-align:center">${(amVol[nm]||0).toLocaleString('vi-VN')}</td><td style="${cs}text-align:center">${arw(dPct(amM[nm][lastM],amM[nm][prevM]))}</td></tr>`).join('')}</tbody></table></div>`;
+  const amWTbl=`<div style="font-size:12px;color:var(--text-sub);margin:8px 10px 4px">Theo tuần (triệu đồng):</div><div class="table-wrap"><table><thead><tr><th style="${cs}position:sticky;left:0;background:#FEEDE4;z-index:2">AM</th>${weeks.map(w=>`<th style="${cs}text-align:center">W${w}</th>`).join('')}</tr></thead><tbody>${amNames.map(nm=>`<tr><td style="${cs}font-weight:700;white-space:nowrap;position:sticky;left:0;background:#fff;z-index:2">${nm}</td>${weeks.map(w=>`<td style="${cs}text-align:center">${amW[nm][w]?tr(amW[nm][w]):'—'}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
+  el.innerHTML=`<div class="page-header"><div class="page-title">Kinh Doanh XBG</div><div class="page-meta"><span class="tag tag-orange">💼 Doanh thu · Nguồn: sheet "Kinh doanh Vùng -AM"</span><span>Đơn vị bảng: triệu đồng · W${weeks[0]}–W${lastW} · số liệu đến ${maxLabel}</span></div></div>
+   <div class="card"><div class="card-header"><div class="card-title"><div class="card-icon">📈</div>A. Tổng quan doanh thu</div><div class="card-info">KPI tháng/tuần · so sánh</div></div>${kpi}${mTbl}${wTbl}${ovNote}</div>
+   <div class="card"><div class="card-header"><div class="card-title"><div class="card-icon">👥</div>B. Chi tiết theo nhóm khách hàng</div><div class="card-info">A · BCD · EF (mới) · G · so sánh tuần/tháng</div></div>${gTbl}${gwTbl}${efNote}${efTbl}</div>
+   <div class="card"><div class="card-header"><div class="card-title"><div class="card-icon">🧑‍💼</div>C. Doanh thu theo AM (còn đang làm việc)</div><div class="card-info">${amNames.length} AM active (đối chiếu OPR) · sắp theo tổng DT</div></div>${amMTbl}${amWTbl}</div>`;
+ }catch(e){ el.innerHTML=`<div class="card"><p style="color:var(--red);padding:16px">Lỗi tải Kinh Doanh XBG: ${e.message}</p></div>`; }
+}
 async function buildCODPage(){
  const el=document.getElementById('p21');
  if(!el)return;
