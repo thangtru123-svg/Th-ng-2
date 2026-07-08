@@ -1010,8 +1010,8 @@ function buildOntimePage(rowsAM,rowsBC,title,volLabel,countLabel,greenThr,yellow
   const pivot={};
   dRows.forEach(r=>{const am=(r[0]||'').trim(),bc=(r[1]||'').trim(),d=isoD(r[2]);if(!bc||!dates.includes(d))return;if(!pivot[bc])pivot[bc]={am};pivot[bc][d]={vol:Math.round(parseFloat(r[3])||0),pct:(parseFloat(r[4])||0)*100,cnt:Math.round(parseFloat(r[5])||0)};});
   const latest=dates[0];
-  const alertBC=Object.keys(pivot).filter(bc=>(pivot[bc][latest]?.pct??100)<80&&(pivot[bc][latest]?.vol??0)>0);
-  if(!alertBC.length)return'<p style="padding:16px;color:var(--green)">✅ Không có Bưu Cục nào có %Ontime &lt; 80% hôm nay.</p>';
+  const alertBC=Object.keys(pivot).filter(bc=>(pivot[bc][latest]?.pct??100)<80&&(pivot[bc][latest]?.vol??0)>100);
+  if(!alertBC.length)return'<p style="padding:16px;color:var(--green)">✅ Không có Bưu Cục nào có Vol LTC &gt; 100 đơn &amp; %Ontime &lt; 80% hôm nay.</p>';
   alertBC.sort((a,b)=>(pivot[b][latest]?.vol??0)-(pivot[a][latest]?.vol??0));
   const cs='padding:5px 8px;';
   let h=`<div class="table-wrap" style="overflow-x:auto"><table><thead style="position:sticky;top:0;z-index:4;background:#FEF2F2">
@@ -1035,7 +1035,7 @@ function buildOntimePage(rowsAM,rowsBC,title,volLabel,countLabel,greenThr,yellow
    h+=`<td style="${cs}text-align:center;font-weight:800;color:${ac};white-space:nowrap">${avgPct.toFixed(1)}% <span style="font-size:10px;color:var(--text-sub)">(${countBelow}/7 ngày)</span></td></tr>`;
   });
   h+='</tbody></table></div>';
-  h+=`<div class="analysis-box" style="margin-top:0">🚨 <strong>${alertBC.length} Bưu Cục</strong> có Vol LTC cao nhưng %Ontime &lt; 80% ngày ${shortD(latest)}. Sắp xếp theo Vol LTC cao nhất.</div>`;
+  h+=`<div class="analysis-box" style="margin-top:0">🚨 <strong>${alertBC.length} Bưu Cục</strong> có Vol LTC &gt; 100 đơn nhưng %Ontime &lt; 80% ngày ${shortD(latest)}. Sắp xếp theo Vol LTC cao nhất.</div>`;
   return h;
  }
  return`<div class="page-header">
@@ -1044,7 +1044,7 @@ function buildOntimePage(rowsAM,rowsBC,title,volLabel,countLabel,greenThr,yellow
  </div>
  <div class="card"${pid?` id="${pid}-card-am"`:''}><div class="card-header"><div class="card-title"><div class="card-icon">👤</div>A. Theo AM</div><div class="card-info">Sắp xếp: %Ontime thấp → cao</div></div>${amTbl(rowsAM)}</div>
  <div class="card"><div class="card-header"><div class="card-title"><div class="card-icon">🏪</div>B. Theo Bưu Cục</div><div class="card-info">Sắp xếp: %Ontime thấp → cao</div></div>${bcTbl(rowsBC)}</div>
- ${yellowThr===80?`<div class="card" style="border-top:3px solid var(--red)"${pid?` id="${pid}-card-alert"`:''}><div class="card-header"><div class="card-title"><div class="card-icon">🚨</div>C. BC Vol LTC cao & %Ontime OPR &lt; 80%</div><div class="card-info">7 ngày gần nhất · Sắp xếp: Vol LTC ngày gần nhất cao nhất</div></div>${alertBCTbl(rowsBC)}</div>`:''}`;
+ ${yellowThr===80?`<div class="card" style="border-top:3px solid var(--red)"${pid?` id="${pid}-card-alert"`:''}><div class="card-header"><div class="card-title"><div class="card-icon">🚨</div>C. BC Vol LTC cao & %Ontime OPR &lt; 80%</div><div class="card-info">Lọc: Vol LTC &gt; 100 đơn & Ontime &lt; 80% (ngày gần nhất) · 7 ngày · Sắp xếp: Vol LTC cao nhất</div></div>${alertBCTbl(rowsBC)}</div>`:''}`;
 
 }
 
@@ -1755,8 +1755,9 @@ async function sendAllToTelegram(){
   cap+=`\n📝 ${lbl} tệ nhất:\n`;
   cap+=sorted.slice(0,3).map(n=>`• ${n}: ${agg[n].pct.toFixed(1)}% (Vol: ${agg[n].v.toLocaleString('vi-VN')})`).join('\n');
   if(type==='bc'){
-   cap+=`\n\n⛔ BC Vol LTC cao &lt; 80%:\n`;
-   cap+=below80.sort((a,b)=>agg[b].v-agg[a].v).slice(0,5).map(n=>`• ${n}: ${agg[n].pct.toFixed(1)}% (Vol: ${agg[n].v.toLocaleString('vi-VN')})`).join('\n');
+   const bcAlert=below80.filter(n=>agg[n].v>100).sort((a,b)=>agg[b].v-agg[a].v);
+   cap+=`\n\n⛔ BC Vol LTC &gt;100 &amp; Ontime &lt;80%:\n`;
+   cap+=bcAlert.length?bcAlert.slice(0,5).map(n=>`• ${n}: ${agg[n].pct.toFixed(1)}% (Vol: ${agg[n].v.toLocaleString('vi-VN')})`).join('\n'):'✅ Không có';
   }
   return trimCap(cap);
  }
