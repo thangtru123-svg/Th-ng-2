@@ -90,6 +90,9 @@ tr.tot td{background:#FFF0EB!important;font-weight:800!important;border-top:2px 
 .g{background:var(--green-bg);color:var(--green)}.m{background:var(--yellow-bg);color:var(--yellow)}.b{background:var(--red-bg);color:var(--red)}
 .red-cell{background:#FEE2E2!important;color:#DC2626!important;font-weight:700}
 .analysis-box{margin:10px 16px 4px;padding:11px 15px;background:#FFF7ED;border-radius:8px;font-size:12.5px;line-height:1.65;border-left:3px solid var(--orange)}
+.tg-inpage-btn{display:inline-flex;align-items:center;gap:5px;padding:5px 12px;background:rgba(33,150,243,0.1);border:1px solid rgba(33,150,243,0.3);color:#42a5f5;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;transition:all .15s;white-space:nowrap;flex-shrink:0}
+.tg-inpage-btn:hover{background:rgba(33,150,243,0.22);border-color:rgba(33,150,243,0.5)}
+.tg-inpage-btn:disabled{opacity:.45;cursor:not-allowed}
 .date-filter-bar{display:flex;align-items:center;gap:10px;padding:10px 16px;background:#F9FAFB;border-bottom:1px solid var(--border)}
 .date-filter-bar label{font-size:12px;font-weight:600;color:var(--text-sub)}
 .date-filter-bar select{padding:5px 10px;border-radius:6px;border:1px solid var(--border);font-size:12px;font-family:inherit;background:#fff;color:var(--text-main);cursor:pointer}
@@ -320,6 +323,34 @@ window.onGoogleLibraryLoad=function(){
 /* ===== HELPERS ===== */
 function fixStickyBar(el){requestAnimationFrame(()=>{el.querySelectorAll('.table-wrap').forEach(tw=>{const bar=[...tw.children].find(c=>c.tagName==='DIV'&&c.style.position==='sticky');const tbl=tw.querySelector('table[data-bc-srch]');if(!bar||!tbl)return;const barH=bar.offsetHeight;if(!barH)return;let sTop=barH;tbl.querySelectorAll('thead tr').forEach(tr=>{tr.querySelectorAll('th').forEach(th=>{th.style.position='sticky';th.style.top=sTop+'px';});sTop+=tr.offsetHeight||22;});});});}
 function show(id,btn){document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));document.querySelectorAll('.nav-item').forEach(b=>b.classList.remove('active'));const el=document.getElementById(id);el.classList.add('active');el.style.animation='none';el.offsetHeight;el.style.animation='';btn.classList.add('active');window.scrollTo(0,0);fixStickyBar(el);}
+
+/* ===== NÚT BẮN TELEGRAM IN-PAGE ===== */
+function injectTgBtn(pageId,fn,label){
+ const el=document.getElementById(pageId);
+ if(!el||el.querySelector('.tg-inpage-btn'))return;
+ const meta=el.querySelector('.page-meta');
+ if(!meta)return;
+ const b=document.createElement('button');
+ b.className='tg-inpage-btn';b.id='tgInpage_'+pageId;
+ b.innerHTML='📤 '+(label||'Bắn Telegram');
+ b.onclick=fn;
+ meta.appendChild(b);
+}
+function injectAllTgBtns(){
+ injectTgBtn('p1',()=>sendGTCTotalToTelegram(),'Bắn GTC Total TG');
+ injectTgBtn('p2',()=>sendAllToTelegram(),'Bắn GTC TTS TG');
+ injectTgBtn('p3',()=>sendAllToTelegram(),'Bắn TLT Ngày TG');
+ injectTgBtn('p4',()=>sendAllToTelegram(),'Bắn TLT Tuần TG');
+ injectTgBtn('p5',()=>sendAllToTelegram(),'Bắn ODR TTS TG');
+ injectTgBtn('p6',()=>sendAllToTelegram(),'Bắn OPR TTS TG');
+ injectTgBtn('p7',()=>sendAgingToTelegram(),'Bắn Aging TG');
+ injectTgBtn('p16',()=>sendP16ToTelegram(),'Bắn VH Ngày TG');
+ injectTgBtn('p17',()=>sendAllToTelegram(),'Bắn VH Tuần TG');
+ injectTgBtn('p18',()=>sendAllToTelegram(),'Bắn Volume TG');
+ injectTgBtn('p19',()=>sendAllToTelegram(),'Bắn GTC BC TG');
+ injectTgBtn('p20',()=>sendAllToTelegram(),'Bắn NS NV TG');
+ injectTgBtn('p21',()=>sendAllToTelegram(),'Bắn COD TG');
+}
 function fmt(n){return(+n||0).toLocaleString('vi-VN');}
 function isoD(d){return(d||'').match(/\d{4}-\d{2}-\d{2}/)?.[0]||'';}
 function shortD(iso){const p=(iso||'').split('-');return p.length===3?`${p[2]}/${p[1]}/${p[0]}`:iso;}
@@ -2846,7 +2877,7 @@ async function init(){
  const p16el=document.getElementById('p16');
  if(R['GTC ca 1,2 theo AM']){
   window._DAILY_RAW={ca12:R['GTC ca 1,2 theo AM'],ltc:R['LTC - AM'],ca12tts:R['GTC ca 1,2 TTS theo AM'],odr:R['ODR TTS - AM'],opr:R['OPR TTS - AM']};
-  window._rerenderDaily=function(date){const d=window._DAILY_RAW;const el=document.getElementById('p16');el.innerHTML=buildDailyReportPage(d.ca12,d.ltc,d.ca12tts,d.odr,d.opr,date);addBCSearch(el);};
+  window._rerenderDaily=function(date){const d=window._DAILY_RAW;const el=document.getElementById('p16');el.innerHTML=buildDailyReportPage(d.ca12,d.ltc,d.ca12tts,d.odr,d.opr,date);addBCSearch(el);injectTgBtn('p16',()=>sendP16ToTelegram(),'Bắn VH Ngày TG');};
   p16el.innerHTML=buildDailyReportPage(R['GTC ca 1,2 theo AM'],R['LTC - AM'],R['GTC ca 1,2 TTS theo AM'],R['ODR TTS - AM'],R['OPR TTS - AM'],null);
   addBCSearch(p16el);
  }else p16el.innerHTML=errPage('Không thể tải dữ liệu GTC ca 1,2 theo AM');
@@ -2862,6 +2893,8 @@ async function init(){
  await buildCODPage();
  // p0 — Tổng quan (sau khi có đủ data)
  buildOverviewPage();
+ // Inject nút TG vào tất cả trang
+ setTimeout(injectAllTgBtns,200);
  btn.classList.remove('spinning');btn.disabled=false;
  const now=new Date();document.getElementById('lastUpdate').textContent=`Cập nhật: ${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`;
 }
