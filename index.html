@@ -338,18 +338,8 @@ function injectTgBtn(pageId,fn,label){
 }
 function injectAllTgBtns(){
  injectTgBtn('p1',()=>sendGTCTotalToTelegram(),'Bắn GTC Total TG');
- injectTgBtn('p2',()=>sendAllToTelegram(),'Bắn GTC TTS TG');
- injectTgBtn('p3',()=>sendAllToTelegram(),'Bắn TLT Ngày TG');
- injectTgBtn('p4',()=>sendAllToTelegram(),'Bắn TLT Tuần TG');
- injectTgBtn('p5',()=>sendAllToTelegram(),'Bắn ODR TTS TG');
- injectTgBtn('p6',()=>sendAllToTelegram(),'Bắn OPR TTS TG');
  injectTgBtn('p7',()=>sendAgingToTelegram(),'Bắn Aging TG');
  injectTgBtn('p16',()=>sendP16ToTelegram(),'Bắn VH Ngày TG');
- injectTgBtn('p17',()=>sendAllToTelegram(),'Bắn VH Tuần TG');
- injectTgBtn('p18',()=>sendAllToTelegram(),'Bắn Volume TG');
- injectTgBtn('p19',()=>sendAllToTelegram(),'Bắn GTC BC TG');
- injectTgBtn('p20',()=>sendAllToTelegram(),'Bắn NS NV TG');
- injectTgBtn('p21',()=>sendAllToTelegram(),'Bắn COD TG');
 }
 function fmt(n){return(+n||0).toLocaleString('vi-VN');}
 function isoD(d){return(d||'').match(/\d{4}-\d{2}-\d{2}/)?.[0]||'';}
