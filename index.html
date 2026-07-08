@@ -1513,6 +1513,34 @@ async function sendAgingToTelegram(){
   const bcHidden=bcTrs.slice(20,-1);
   await _sendOne('aging-tbl-bc',cap4,show=>{bcHidden.forEach(tr=>tr.style.display=show?'none':'');});
 
+  // ── Gửi tin nhắn PHÂN TÍCH TEXT riêng sau 4 ảnh ──
+  try{
+   const bcUnstableArrSorted=unstableArr.slice(0,5);
+   const amTop3=amArr.slice(0,3);
+   const bcArr2=Object.values((()=>{const m={};recent.forEach(r=>{const bc=(r[2]||'').trim(),d=r[11];if(!bc||new Set(unstableArr.map(x=>x.bc)).has(bc)||bc.startsWith('Kho Giao Hàng Nặng'))return;if(!m[bc])m[bc]={bc};m[bc][d]=(m[bc][d]||0)+1;});return m;})()).sort((a,b)=>(b[latest]||0)-(a[latest]||0)).slice(0,3);
+   let analysis=`📋 <b>PHÂN TÍCH AGING — ${fmt(latest)}</b>\n`;
+   analysis+=`${'─'.repeat(30)}\n\n`;
+   analysis+=`<b>1. Tổng quan</b>\n`;
+   analysis+=`• Tổng aging hôm nay: <b>${num(latestTotal)} đơn</b> (hôm qua: ${num(prevTotal)})\n`;
+   analysis+=`• Biến động: <b>${d2}</b>\n`;
+   analysis+=`• BC Bất Ổn: <b>${num(unstableCur)} đơn</b> (${unstableArr.length} BC) — chiếm <b>${pctBatOn}%</b> tổng aging\n`;
+   analysis+=`• BC Ổn Định: <b>${num(latestTotal-unstableCur)} đơn</b> — chiếm <b>${pctOk}%</b>\n\n`;
+   analysis+=`<b>2. Theo AM (top 3 cao nhất)</b>\n`;
+   amTop3.forEach((r,i)=>{const d=(r[latest]||0)-(r[prev]||0);analysis+=`${i+1}. ${r.am}: <b>${num(r[latest]||0)} đơn</b> (${d>0?'▲+'+num(d):d<0?'▼'+num(d):'Không đổi'})\n`;});
+   analysis+=`\n<b>3. BC Bất Ổn (top 5)</b>\n`;
+   bcUnstableArrSorted.forEach((r,i)=>{const d=(r[latest]||0)-(r[prev]||0);analysis+=`${i+1}. ${r.bc}: <b>${num(r[latest]||0)} đơn</b> ${d>0?'▲+'+num(d):d<0?'▼'+num(d):''}\n`;});
+   analysis+=`\n<b>4. BC Ổn Định — Top 3 nhiều nhất</b>\n`;
+   bcArr2.forEach((r,i)=>{const d=(r[latest]||0)-(r[prev]||0);analysis+=`${i+1}. ${r.bc}: <b>${num(r[latest]||0)} đơn</b> ${d>0?'▲+'+num(d):d<0?'▼'+num(d):''}\n`;});
+   analysis+=`\n<b>5. Nhận định</b>\n`;
+   analysis+=delta<0?`✅ Tổng aging giảm ${num(Math.abs(delta))} đơn — tín hiệu tích cực, vận hành đang cải thiện.\n`
+    :delta>0?`⚠️ Tổng aging tăng ${num(delta)} đơn — cần đẩy mạnh xử lý, theo dõi sát BC bất ổn.\n`
+    :`➡️ Tổng aging không thay đổi so với hôm qua.\n`;
+   if(unstableCur>latestTotal*0.4)analysis+=`🔴 BC Bất Ổn chiếm trên 40% tổng aging — cần ưu tiên xử lý nhóm này trước.\n`;
+   if(amArr[0]&&(amArr[0][latest]||0)>(latestTotal*0.25))analysis+=`⚠️ AM ${amArr[0].am} chiếm ${((amArr[0][latest]||0)/latestTotal*100).toFixed(0)}% tổng aging vùng — cần hỗ trợ trực tiếp.\n`;
+   await new Promise(r=>setTimeout(r,700));
+   await _tgSend(TG_AGING_CHAT,TG_AGING_THREAD,analysis);
+  }catch(e){console.error('[TG Aging] Lỗi gửi phân tích text:',e.message);}
+
   if(btn){btn.textContent='✅ Đã gửi!';btn.style.background='#22C55E';}
   if(btnSb){btnSb.innerHTML='<span>✅</span> Đã gửi Telegram!';btnSb.style.background='rgba(34,197,94,0.2)';btnSb.style.borderColor='rgba(34,197,94,0.4)';btnSb.style.color='#4ade80';}
   setTimeout(()=>{
