@@ -9,6 +9,18 @@
 - **Hosting: VERCEL** — https://th-ng-2.vercel.app (Netlify hết credit, KHÔNG dùng)
 - **Không bao giờ dùng aging-dashboard.html riêng lẻ** — đã tích hợp vào index.html
 - **Trước khi bắn Telegram**: LUÔN hard reload tab trước rồi navigate đúng page, chờ data load xong mới chụp
+- **NGHIÊM CẤM BỊA DỮ LIỆU** — không tự tạo/ước đoán bất kỳ dữ liệu nào. Không có nguồn thật thì ghi rõ "không có dữ liệu".
+- **BACKEND TRƯỚC, FRONTEND SAU** — luôn làm backend API (có dữ liệu thật) xong rồi mới làm Frontend, để không có dữ liệu ảo.
+- **KHÔNG DÙNG Fable 5** — tuyệt đối không dùng model `claude-fable-5`.
+
+### Quy tắc chọn model theo loại việc
+| Loại việc | Model | Model ID |
+|-----------|-------|----------|
+| Đọc (đọc file, tra cứu, tóm tắt đơn giản) | Haiku 4.5 | `claude-haiku-4-5-20251001` |
+| Suy luận, tính toán, viết code, việc cần tư duy cao | Opus 4.8 | `claude-opus-4-8` |
+| Viết (soạn văn bản, nội dung) | Sonnet 5 | `claude-sonnet-5` |
+
+> ⚠️ **Lưu ý cơ chế**: Trong 1 phiên chat, con KHÔNG tự đổi được model chính giữa chừng — model chính do đại nhân chọn qua `/model`. Con chỉ áp được quy tắc này khi giao việc phụ cho **subagent** (Agent tool): chỉ định `model` tương ứng theo loại việc.
 
 ---
 
