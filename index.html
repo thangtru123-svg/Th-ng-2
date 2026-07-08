@@ -338,6 +338,7 @@ function injectTgBtn(pageId,fn,label){
 }
 function injectAllTgBtns(){
  injectTgBtn('p1',()=>sendGTCTotalToTelegram(),'Bắn GTC Total TG');
+ injectTgBtn('p3',()=>sendTLTToTelegram(),'Bắn TLT Ngày TG');
  injectTgBtn('p7',()=>sendAgingToTelegram(),'Bắn Aging TG');
  injectTgBtn('p16',()=>sendP16ToTelegram(),'Bắn VH Ngày TG');
 }
@@ -1587,6 +1588,57 @@ async function sendGTCTotalToTelegram(){
   const img=await _captureEl('p1_amCard');
   await _tgSendPhoto(TG_AGING_CHAT,TG_VH_THREAD,img,`📦 <b>TỔNG QUAN GTC TOTAL — THEO AM</b>`);
  }catch(e){console.error('TG GTC Error:',e);alert('Lỗi gửi Telegram: '+e.message);}
+}
+
+/* ===== TELEGRAM: TLT NGÀY (P3) ===== */
+async function sendTLTToTelegram(){
+ const fd=window._FD;
+ if(!fd?.totalAM||fd.totalAM.length<2){alert('Chưa có dữ liệu TLT! Vui lòng chờ trang tải xong.');return;}
+ const btn=document.getElementById('tgInpage_p3');
+ const btnSb=document.getElementById('tgSidebarBtn');
+ if(btn){btn.disabled=true;btn.textContent='⏳ Đang gửi...';}
+ if(btnSb){btnSb.disabled=true;}
+ // Đảm bảo p3 đang hiển thị
+ const p3=document.getElementById('p3');
+ if(p3&&getComputedStyle(p3).display==='none'){const nav=document.querySelector("[onclick=\"show('p3',this)\"]");if(nav)nav.click();await new Promise(r=>setTimeout(r,700));}
+ try{
+  const trimCap=s=>s.length>1020?s.slice(0,1017)+'...':s;
+  const fD=d=>{if(!d)return'';const p=d.split('-');return p.length===3?`${p[2]}/${p[1]}/${p[0]}`:d;};
+  function capFD(type){
+   const rows=type==='am'?fd?.totalAM:fd?.totalBC;const lbl=type==='am'?'AM':'Bưu Cục';
+   if(!rows||rows.length<2)return`📊 <b>TỈ LỆ TRẢ NGÀY — THEO ${type==='am'?'AM':'BƯU CỤC'}</b>`;
+   const isGrand=n=>n.toLowerCase().includes('grand total')||!n;
+   const allD=[...new Set(rows.slice(1).map(r=>isoD(r[1])).filter(d=>d))].sort((a,b)=>b.localeCompare(a));
+   const latest=allD[0],prev=allD[1];if(!latest)return`📊 <b>TỈ LỆ TRẢ NGÀY</b>`;
+   const data={},dataPrev={};
+   rows.slice(1).forEach(r=>{const name=(r[0]||'').trim(),d=isoD(r[1]),v=parsePct(r[3]);if(!name)return;if(d===latest&&!isGrand(name))data[name]=v;if(d===prev&&!isGrand(name))dataPrev[name]=v;});
+   const gL=rows.slice(1).find(r=>isoD(r[1])===latest&&isGrand((r[0]||'').trim()));
+   const gP=rows.slice(1).find(r=>isoD(r[1])===prev&&isGrand((r[0]||'').trim()));
+   const names=Object.keys(data);const sorted=[...names].sort((a,b)=>(data[b]||0)-(data[a]||0));
+   const high15=names.filter(n=>(data[n]||0)>=15).length;
+   let cap=`📊 <b>TỈ LỆ TRẢ NGÀY — THEO ${type==='am'?'AM':'BƯU CỤC'}</b>\n`;
+   if(gL){const fdG=parsePct(gL[3]);cap+=`Ngày ${fD(latest)}: %FD Total <b>${fdG.toFixed(1)}%</b>\n`;if(gP){const fdG2=parsePct(gP[3]);const d=fdG-fdG2;cap+=`So với hôm qua: ${d>0?'▲ tăng':'▼ giảm'} <b>${Math.abs(d).toFixed(1)}%</b>\n`;}}
+   cap+=`${lbl} vượt 15%: <b>${high15} ${lbl}</b>\n\n`;
+   cap+=`📝 Top 3 FD cao nhất:\n`;
+   cap+=sorted.slice(0,3).map(n=>`• ${n}: ${(data[n]||0).toFixed(1)}%`).join('\n');
+   cap+=`\nTop 3 FD thấp nhất:\n`;
+   cap+=sorted.slice(-3).reverse().map(n=>`• ${n}: ${(data[n]||0).toFixed(1)}%`).join('\n');
+   return trimCap(cap);
+  }
+  // Gửi ảnh AM
+  {const amCard=document.getElementById('p3-card-am');
+   if(amCard){const cl=amCard.cloneNode(true);cl.querySelectorAll('.table-wrap>div').forEach(e=>e.remove());cl.querySelectorAll('thead,th').forEach(el=>{el.style.position='';el.style.top='';el.style.zIndex='';});const tmp=document.createElement('div');tmp.id='tg-am-fd';tmp.style.cssText='position:fixed;top:-9999px;left:0;z-index:-1;width:960px;padding:0';tmp.appendChild(cl);document.body.appendChild(tmp);await new Promise(r=>setTimeout(r,300));try{const img=await _captureEl('tg-am-fd');const res=await _tgSendPhoto(TG_AGING_CHAT,TG_FD_THREAD,img,capFD('am'));if(!res.ok)throw new Error('TLT AM: '+(res.description||JSON.stringify(res)));}finally{tmp.remove();}await new Promise(r=>setTimeout(r,600));}}
+  // Gửi ảnh BC top 15
+  {const bcCard=document.getElementById('p3-card-bc');const bcTbl=document.querySelector('#fdDayBCTable table[data-bc-srch]');
+   if(bcCard&&bcTbl){const cl=bcCard.cloneNode(true);cl.querySelectorAll('.table-wrap>div:not(.analysis-box)').forEach(e=>e.remove());cl.querySelectorAll('thead,th').forEach(el=>{el.style.position='';el.style.top='';el.style.zIndex='';});const mainTbl=cl.querySelector('table[data-bc-srch]');if(mainTbl){const tb=mainTbl.querySelector('tbody');if(tb){let k=0;[...tb.querySelectorAll('tr')].forEach(tr=>{const isTot=tr.classList.contains('tot');if(!isTot){if(k>=15)tr.remove();else k++;}});}}const titleEl=cl.querySelector('.card-title');if(titleEl)titleEl.innerHTML='<div class="card-icon">🏪</div>B. Theo Bưu Cục — Top 15 FD Total cao nhất';const tmp=document.createElement('div');tmp.id='tg-bc-top15';tmp.style.cssText='position:fixed;top:-9999px;left:0;z-index:-1;width:1200px;padding:0';tmp.appendChild(cl);document.body.appendChild(tmp);await new Promise(r=>setTimeout(r,300));try{const img=await _captureEl('tg-bc-top15');const res=await _tgSendPhoto(TG_AGING_CHAT,TG_FD_THREAD,img,capFD('bc'));if(!res.ok)throw new Error('TLT BC: '+(res.description||JSON.stringify(res)));}finally{tmp.remove();}await new Promise(r=>setTimeout(r,600));}}
+  if(btn){btn.disabled=false;btn.textContent='✅ Đã gửi!';btn.style.background='rgba(34,197,94,0.15)';btn.style.borderColor='rgba(34,197,94,0.4)';btn.style.color='#4ade80';setTimeout(()=>{btn.textContent='📤 Bắn TLT Ngày TG';btn.style.background='';btn.style.borderColor='';btn.style.color='';},3000);}
+ }catch(e){
+  console.error('TG TLT Error:',e);
+  if(btn){btn.disabled=false;btn.textContent='❌ Lỗi — Thử lại';}
+  alert('Lỗi gửi Telegram: '+e.message);
+ }finally{
+  if(btnSb)btnSb.disabled=false;
+ }
 }
 
 /* ===== TELEGRAM: BẮN TẤT CẢ ===== */
