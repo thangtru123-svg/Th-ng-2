@@ -1446,47 +1446,51 @@ async function sendAgingToTelegram(){
   const topAM=amArr[0];
   const amUp=amArr.length?amArr.reduce((a,b)=>((b[latest]||0)-(b[prev]||0))>((a[latest]||0)-(a[prev]||0))?b:a):null;
   const amDn=amArr.length?amArr.reduce((a,b)=>((b[latest]||0)-(b[prev]||0))<((a[latest]||0)-(a[prev]||0))?b:a):null;
-  let cap1=`📊 <b>TỔNG QUAN AGING — ${fmt(latest)}</b>\n`;
-  cap1+=`Tổng: <b>${num(latestTotal)} đơn</b> · N-1: ${num(prevTotal)} đơn · <b>${d2}</b>\n`;
-  cap1+=`BC Bất Ổn: <b>${num(unstableCur)} đơn</b> (${unstableArr.length} BC) · BC Ổn Định: <b>${num(latestTotal-unstableCur)} đơn</b>\n\n`;
-  cap1+=`📝 ${delta<0?`Tổng aging giảm ${num(Math.abs(delta))} đơn so với hôm qua — tín hiệu tích cực.`:delta>0?`Tổng aging tăng ${num(delta)} đơn so với hôm qua — cần theo dõi sát.`:`Tổng aging không đổi so với hôm qua.`}\n`;
-  cap1+=`BC bất ổn chiếm ${pctBatOn}%, BC ổn định chiếm ${pctOk}% tổng aging.\n`;
-  if(topAM)cap1+=`AM có aging cao nhất: ${topAM.am} (${num(topAM[latest]||0)} đơn).`;
-  cap1=trimCap(cap1);
-
   const bcUnstableSet=new Set(unstableArr.map(r=>r.bc));
   const bcMap={};recent.forEach(r=>{const bc=r[2],d=r[11];if(!bcMap[bc])bcMap[bc]={bc};bcMap[bc][d]=(bcMap[bc][d]||0)+1;});
   const bcArr=Object.values(bcMap).filter(r=>!bcUnstableSet.has(r.bc)&&!(r.bc||'').startsWith('Kho Giao Hàng Nặng')).sort((a,b)=>(b[latest]||0)-(a[latest]||0));
   const stableCur=bcArr.reduce((s,r)=>s+(r[latest]||0),0),stablePrv=bcArr.reduce((s,r)=>s+(r[prev]||0),0);
 
-  let cap2=`👤 <b>THEO AM — 7 NGÀY GẦN NHẤT</b> (${amArr.length} AM)\n`;
+  // ── CAP 1: Tổng quan + phân tích tổng ──
+  let cap1=`📊 <b>TỔNG QUAN AGING — ${fmt(latest)}</b>\n`;
+  cap1+=`Tổng: <b>${num(latestTotal)} đơn</b> · N-1: ${num(prevTotal)} · <b>${d2}</b>\n`;
+  cap1+=`BC Bất Ổn: <b>${num(unstableCur)} đơn</b> (${unstableArr.length} BC) · chiếm <b>${pctBatOn}%</b>\n`;
+  cap1+=`BC Ổn Định: <b>${num(latestTotal-unstableCur)} đơn</b> · chiếm <b>${pctOk}%</b>\n\n`;
+  cap1+=`📝 <b>Nhận định:</b>\n`;
+  cap1+=delta<0?`✅ Aging giảm ${num(Math.abs(delta))} đơn — tín hiệu tích cực.\n`:delta>0?`⚠️ Aging tăng ${num(delta)} đơn — cần theo dõi sát.\n`:`➡️ Aging không đổi so với hôm qua.\n`;
+  if(unstableCur>latestTotal*0.4)cap1+=`🔴 BC Bất Ổn chiếm trên 40% — ưu tiên xử lý nhóm này.\n`;
+  if(topAM)cap1+=`⚠️ AM cao nhất: ${topAM.am} (${num(topAM[latest]||0)} đơn`;
+  if(topAM&&latestTotal>0)cap1+=` — chiếm ${((topAM[latest]||0)/latestTotal*100).toFixed(0)}%`;
+  if(topAM)cap1+=`).`;
+  cap1=trimCap(cap1);
+
+  // ── CAP 2: Theo AM + phân tích từng AM ──
+  const uUp=unstableArr.length>1?unstableArr.reduce((a,b)=>((b[latest]||0)-(b[prev]||0))>((a[latest]||0)-(a[prev]||0))?b:a):null;
+  let cap2=`👤 <b>THEO AM — ${fmt(latest)}</b> (${amArr.length} AM)\n`;
   cap2+=`Tổng: <b>${num(amCur)} đơn</b> · N-1: ${num(amPrv)} · <b>${amCur<amPrv?`▼ giảm ${num(amPrv-amCur)} đơn`:amCur>amPrv?`▲ tăng ${num(amCur-amPrv)} đơn`:'Không đổi'}</b>\n\n`;
-  cap2+=`📝 `;
-  if(amUp){const d=(amUp[latest]||0)-(amUp[prev]||0);if(d>0)cap2+=`AM tăng mạnh nhất: ${amUp.am} (+${num(d)} đơn).\n`;}
-  if(amDn){const d=(amDn[latest]||0)-(amDn[prev]||0);if(d<0)cap2+=`AM giảm mạnh nhất: ${amDn.am} (${num(d)} đơn).\n`;}
-  cap2+=`Top 3 nhiều aging nhất:\n`;
-  cap2+=amArr.slice(0,3).map(r=>`• ${r.am} ${num(r[latest]||0)} đơn.`).join('\n');
+  cap2+=`📝 <b>Phân tích:</b>\n`;
+  amArr.slice(0,5).forEach((r,i)=>{const dv=(r[latest]||0)-(r[prev]||0);cap2+=`${i+1}. ${r.am}: <b>${num(r[latest]||0)}</b> đơn ${dv>0?`▲+${num(dv)}`:dv<0?`▼${num(dv)}`:'–'}\n`;});
+  if(amUp){const dv=(amUp[latest]||0)-(amUp[prev]||0);if(dv>0)cap2+=`⚠️ Tăng mạnh nhất: ${amUp.am} (+${num(dv)}).\n`;}
+  if(amDn){const dv=(amDn[latest]||0)-(amDn[prev]||0);if(dv<0)cap2+=`✅ Giảm mạnh nhất: ${amDn.am} (${num(dv)}).\n`;}
   cap2=trimCap(cap2);
 
+  // ── CAP 3: BC Bất Ổn + phân tích từng BC ──
   let cap3=`⚠️ <b>BC BẤT ỔN — ${fmt(latest)}</b> (${unstableArr.length} BC)\n`;
   cap3+=`Tổng: <b>${num(unstableCur)} đơn</b> · N-1: ${num(unstablePrv)} · <b>${unstableCur<unstablePrv?`▼ giảm ${num(unstablePrv-unstableCur)} đơn`:unstableCur>unstablePrv?`▲ tăng ${num(unstableCur-unstablePrv)} đơn`:'Không đổi'}</b>\n\n`;
-  cap3+=`📝 `;
-  if(unstableArr[0])cap3+=`BC bất ổn nặng nhất: ${unstableArr[0].bc} (${num(unstableArr[0][latest]||0)} đơn).\n`;
-  const uUp=unstableArr.length>1?unstableArr.reduce((a,b)=>((b[latest]||0)-(b[prev]||0))>((a[latest]||0)-(a[prev]||0))?b:a):null;
-  if(uUp){const d=(uUp[latest]||0)-(uUp[prev]||0);if(d>0)cap3+=`BC tăng mạnh nhất: ${uUp.bc} (+${num(d)} đơn).\n`;}
-  cap3+=unstableCur<unstablePrv?`Tổng bất ổn giảm ${num(unstablePrv-unstableCur)} đơn so với hôm qua.\n`:unstableCur>unstablePrv?`Tổng bất ổn tăng ${num(unstableCur-unstablePrv)} đơn — cần theo dõi.\n`:`Tổng bất ổn không đổi.\n`;
-  cap3+=`Top 3 BC bất ổn nhiều nhất:\n`;
-  cap3+=unstableArr.slice(0,3).map(r=>`• ${r.bc} ${num(r[latest]||0)} đơn.`).join('\n');
+  cap3+=`📝 <b>Phân tích:</b>\n`;
+  unstableArr.slice(0,5).forEach((r,i)=>{const dv=(r[latest]||0)-(r[prev]||0);cap3+=`${i+1}. ${r.bc}: <b>${num(r[latest]||0)}</b> đơn ${dv>0?`▲+${num(dv)}`:dv<0?`▼${num(dv)}`:'–'}\n`;});
+  if(uUp){const dv=(uUp[latest]||0)-(uUp[prev]||0);if(dv>0)cap3+=`🔴 Tăng mạnh nhất: ${uUp.bc} (+${num(dv)} đơn).\n`;}
+  cap3+=unstableCur<unstablePrv?`✅ Bất ổn giảm ${num(unstablePrv-unstableCur)} đơn — đang được cải thiện.\n`:unstableCur>unstablePrv?`🔴 Bất ổn tăng ${num(unstableCur-unstablePrv)} đơn — cần can thiệp ngay.\n`:`➡️ Bất ổn không đổi so với hôm qua.\n`;
   cap3=trimCap(cap3);
 
-  let cap4=`🏪 <b>THEO BC ỔN ĐỊNH — 7 NGÀY GẦN NHẤT</b> (${bcArr.length} BC)\n`;
-  cap4+=`Tổng: <b>${num(stableCur)} đơn</b> · N-1: ${num(stablePrv)} · <b>${stableCur<stablePrv?`▼ giảm ${num(stablePrv-stableCur)} đơn`:stableCur>stablePrv?`▲ tăng ${num(stableCur-stablePrv)} đơn`:'Không đổi'}</b>\n\n`;
-  cap4+=`📝 `;
-  if(bcArr[0])cap4+=`BC ổn định có aging cao nhất: ${bcArr[0].bc} (${num(bcArr[0][latest]||0)} đơn).\n`;
+  // ── CAP 4: BC Ổn Định + phân tích từng BC ──
   const bcUp=bcArr.length>1?bcArr.reduce((a,b)=>((b[latest]||0)-(b[prev]||0))>((a[latest]||0)-(a[prev]||0))?b:a):null;
-  if(bcUp){const d=(bcUp[latest]||0)-(bcUp[prev]||0);if(d>0)cap4+=`BC tăng mạnh nhất: ${bcUp.bc} (+${num(d)} đơn).\n`;}
-  cap4+=`Top 3 BC nhiều aging nhất:\n`;
-  cap4+=bcArr.slice(0,3).map(r=>`• ${r.bc} ${num(r[latest]||0)} đơn.`).join('\n');
+  let cap4=`🏪 <b>BC ỔN ĐỊNH — ${fmt(latest)}</b> (${bcArr.length} BC)\n`;
+  cap4+=`Tổng: <b>${num(stableCur)} đơn</b> · N-1: ${num(stablePrv)} · <b>${stableCur<stablePrv?`▼ giảm ${num(stablePrv-stableCur)} đơn`:stableCur>stablePrv?`▲ tăng ${num(stableCur-stablePrv)} đơn`:'Không đổi'}</b>\n\n`;
+  cap4+=`📝 <b>Phân tích:</b>\n`;
+  bcArr.slice(0,5).forEach((r,i)=>{const dv=(r[latest]||0)-(r[prev]||0);cap4+=`${i+1}. ${r.bc}: <b>${num(r[latest]||0)}</b> đơn ${dv>0?`▲+${num(dv)}`:dv<0?`▼${num(dv)}`:'–'}\n`;});
+  if(bcUp){const dv=(bcUp[latest]||0)-(bcUp[prev]||0);if(dv>0)cap4+=`⚠️ Tăng mạnh nhất (ổn định): ${bcUp.bc} (+${num(dv)} đơn).\n`;}
+  cap4+=stableCur<stablePrv?`✅ BC ổn định giảm ${num(stablePrv-stableCur)} đơn — tốt.\n`:stableCur>stablePrv?`⚠️ BC ổn định tăng ${num(stableCur-stablePrv)} đơn — cần chú ý.\n`:`➡️ BC ổn định không đổi.\n`;
   cap4=trimCap(cap4);
 
   // ── Chụp và gửi từng section (mỗi ảnh có try-catch riêng — 1 fail không phá cả 4) ──
@@ -1512,34 +1516,6 @@ async function sendAgingToTelegram(){
   const bcTrs=bcTblEl?[...bcTblEl.querySelectorAll('tr')]:[];
   const bcHidden=bcTrs.slice(20,-1);
   await _sendOne('aging-tbl-bc',cap4,show=>{bcHidden.forEach(tr=>tr.style.display=show?'none':'');});
-
-  // ── Gửi tin nhắn PHÂN TÍCH TEXT riêng sau 4 ảnh ──
-  try{
-   const bcUnstableArrSorted=unstableArr.slice(0,5);
-   const amTop3=amArr.slice(0,3);
-   const bcArr2=Object.values((()=>{const m={};recent.forEach(r=>{const bc=(r[2]||'').trim(),d=r[11];if(!bc||new Set(unstableArr.map(x=>x.bc)).has(bc)||bc.startsWith('Kho Giao Hàng Nặng'))return;if(!m[bc])m[bc]={bc};m[bc][d]=(m[bc][d]||0)+1;});return m;})()).sort((a,b)=>(b[latest]||0)-(a[latest]||0)).slice(0,3);
-   let analysis=`📋 <b>PHÂN TÍCH AGING — ${fmt(latest)}</b>\n`;
-   analysis+=`${'─'.repeat(30)}\n\n`;
-   analysis+=`<b>1. Tổng quan</b>\n`;
-   analysis+=`• Tổng aging hôm nay: <b>${num(latestTotal)} đơn</b> (hôm qua: ${num(prevTotal)})\n`;
-   analysis+=`• Biến động: <b>${d2}</b>\n`;
-   analysis+=`• BC Bất Ổn: <b>${num(unstableCur)} đơn</b> (${unstableArr.length} BC) — chiếm <b>${pctBatOn}%</b> tổng aging\n`;
-   analysis+=`• BC Ổn Định: <b>${num(latestTotal-unstableCur)} đơn</b> — chiếm <b>${pctOk}%</b>\n\n`;
-   analysis+=`<b>2. Theo AM (top 3 cao nhất)</b>\n`;
-   amTop3.forEach((r,i)=>{const d=(r[latest]||0)-(r[prev]||0);analysis+=`${i+1}. ${r.am}: <b>${num(r[latest]||0)} đơn</b> (${d>0?'▲+'+num(d):d<0?'▼'+num(d):'Không đổi'})\n`;});
-   analysis+=`\n<b>3. BC Bất Ổn (top 5)</b>\n`;
-   bcUnstableArrSorted.forEach((r,i)=>{const d=(r[latest]||0)-(r[prev]||0);analysis+=`${i+1}. ${r.bc}: <b>${num(r[latest]||0)} đơn</b> ${d>0?'▲+'+num(d):d<0?'▼'+num(d):''}\n`;});
-   analysis+=`\n<b>4. BC Ổn Định — Top 3 nhiều nhất</b>\n`;
-   bcArr2.forEach((r,i)=>{const d=(r[latest]||0)-(r[prev]||0);analysis+=`${i+1}. ${r.bc}: <b>${num(r[latest]||0)} đơn</b> ${d>0?'▲+'+num(d):d<0?'▼'+num(d):''}\n`;});
-   analysis+=`\n<b>5. Nhận định</b>\n`;
-   analysis+=delta<0?`✅ Tổng aging giảm ${num(Math.abs(delta))} đơn — tín hiệu tích cực, vận hành đang cải thiện.\n`
-    :delta>0?`⚠️ Tổng aging tăng ${num(delta)} đơn — cần đẩy mạnh xử lý, theo dõi sát BC bất ổn.\n`
-    :`➡️ Tổng aging không thay đổi so với hôm qua.\n`;
-   if(unstableCur>latestTotal*0.4)analysis+=`🔴 BC Bất Ổn chiếm trên 40% tổng aging — cần ưu tiên xử lý nhóm này trước.\n`;
-   if(amArr[0]&&(amArr[0][latest]||0)>(latestTotal*0.25))analysis+=`⚠️ AM ${amArr[0].am} chiếm ${((amArr[0][latest]||0)/latestTotal*100).toFixed(0)}% tổng aging vùng — cần hỗ trợ trực tiếp.\n`;
-   await new Promise(r=>setTimeout(r,700));
-   await _tgSend(TG_AGING_CHAT,TG_AGING_THREAD,analysis);
-  }catch(e){console.error('[TG Aging] Lỗi gửi phân tích text:',e.message);}
 
   if(btn){btn.textContent='✅ Đã gửi!';btn.style.background='#22C55E';}
   if(btnSb){btnSb.innerHTML='<span>✅</span> Đã gửi Telegram!';btnSb.style.background='rgba(34,197,94,0.2)';btnSb.style.borderColor='rgba(34,197,94,0.4)';btnSb.style.color='#4ade80';}
