@@ -1,0 +1,18 @@
+# Secrets
+.env
+.env.local
+.env.*.local
+.env.production
+
+# OS / editor
+.DS_Store
+
+# Claude local settings (giữ lại agents + memory, chỉ bỏ settings máy cá nhân)
+.claude/settings.local.json
+
+# Báo cáo tạm (file Office xuất ra, không cần commit)
+*.docx
+*.xlsx
+
+# Claude memory (optional - bỏ comment nếu KHÔNG muốn commit lịch sử bài học)
+# .claude/memory/

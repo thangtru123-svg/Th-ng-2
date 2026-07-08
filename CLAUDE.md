@@ -321,3 +321,73 @@ git commit -m "feat/fix: mô tả"
 - Frontend gọi `fetch('/api/aging?from=...&to=...')` thay vì fetch CSV
 - Package cần: `@neondatabase/serverless` (npm install)
 - Chưa implement — chỉ là kế hoạch
+
+---
+
+# ========== KIẾN TRÚC LÀM VIỆC (setup 2026-07-08) ==========
+
+## THÔNG TIN DỰ ÁN (tóm tắt kiến trúc)
+
+| Mục | Giá trị thật |
+|-----|--------------|
+| Tên dự án | Dashboard Báo Cáo Vận Hành XBG (thư mục `Th-ng`, repo `Th-ng-2`) |
+| Mục tiêu | Tổng hợp & báo cáo vận hành (GTC/FD/ODR/OPR/Aging...), bắn Telegram tự động |
+| Tech stack | **Static site — 1 file `index.html`**, vanilla JS, KHÔNG build system / KHÔNG npm |
+| Database | Không có — Google Sheets làm nguồn (Neon Postgres mới là kế hoạch, xem trên) |
+| Deploy platform | **Vercel** (auto-deploy khi push `main`) |
+| Repo | https://github.com/thangtru123-svg/Th-ng-2.git |
+
+## QUY TẮC BẮT BUỘC (R1–R9)
+
+- **R1 — Bám sát yêu cầu.** Làm đúng việc đại nhân giao, không tự ý mở rộng.
+- **R2 — Không fake / mock khi chưa xong.** Trùng với rule "NGHIÊM CẤM BỊA DỮ LIỆU".
+- **R3 — KHÔNG hardcode secret mới.** ⚠️ Lưu ý thực tế: site client-only, không có server/`.env` → `TG_TOKEN`, `AUTH_CLIENT_ID`... đang buộc phải nằm trong `index.html`. KHÔNG thêm secret mới; khi có backend (Neon/Vercel Functions) thì chuyển sang env.
+- **R4 — Phát hiện bug → phải fix hoặc báo.** Không im lặng bỏ qua.
+- **R5 — Verify trước khi báo "done".** Không có build → verify = mở `index.html` (hoặc `python3 -m http.server`), console sạch, trang render đúng.
+- **R6 — Nhất quán design system.** Dùng đúng CSS class hiện có (`.page-header`, `.analysis-box`, `.tg-inpage-btn`, `.table-wrap`), biến màu `var(--orange)`...
+- **R7 — KHÔNG commit `.env` / thông tin nhạy cảm mới.** Đã có `.gitignore` chặn `.env*`.
+- **R8 — Hỏi trước khi xóa data / drop table / đổi kiến trúc lớn.**
+- **R9 — Ghi bài học vào `.claude/memory/lessons.md` sau mỗi incident.**
+
+## DEPLOY PIPELINE
+
+1. Sửa `index.html` → verify (mở trình duyệt, console sạch).
+2. `git add index.html && git commit -m "..."` (bash — chỉ add + commit).
+3. Push qua **GitHub Desktop** (`cmd+p`) — KHÔNG dùng `bash git push` (403 proxy).
+4. **Vercel tự deploy** `main` → verify https://th-ng-2.vercel.app.
+> `.github/workflows/deploy.yml` (GitHub Pages) còn tồn tại nhưng ĐÃ BỎ.
+
+## ENV VARIABLES
+
+- Không có file `.env` / `.env.example` — site client-only.
+- Cấu hình (Sheet IDs, TG token, OAuth client) nằm trực tiếp trong `index.html` (~line 260–365).
+
+## CẤU TRÚC DỰ ÁN (tree thật)
+
+```
+Th-ng/
+├── index.html                 # Toàn bộ frontend (HTML/CSS/JS) — file chính
+├── bg.jpg                     # Ảnh nền
+├── .nojekyll                  # (di sản GitHub Pages)
+├── CLAUDE.md                  # File này
+├── .gitignore
+├── .github/workflows/deploy.yml   # GitHub Pages — ĐÃ BỎ
+└── .claude/
+    ├── settings.local.json    # (gitignored)
+    ├── memory/
+    │   ├── lessons.md         # Bài học (append-only)
+    │   └── decisions.md       # Quyết định kiến trúc
+    └── agents/
+        ├── builder.md         # Viết code (model: opus-4-8)
+        ├── checker.md         # Review/verify (model: opus-4-8)
+        └── deployer.md        # Deploy Vercel (model: haiku-4-5)
+```
+
+## AGENTS
+
+- **builder** — implement feature/fix (Opus 4.8). Spawn khi cần build.
+- **checker** — review bug/security, verify (Opus 4.8). Spawn SAU builder, TRƯỚC deploy.
+- **deployer** — commit + push GitHub Desktop, verify Vercel (Haiku 4.5). Spawn khi checker PASS.
+
+## BÀI HỌC ĐÃ HỌC
+Xem [`.claude/memory/lessons.md`](.claude/memory/lessons.md) và bảng "Lỗi đã gặp & cách xử lý" ở trên.
