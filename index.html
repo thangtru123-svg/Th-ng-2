@@ -1746,13 +1746,13 @@ async function sendAllToTelegram(){
   const totV=names.reduce((s,n)=>s+agg[n].v,0),totC=names.reduce((s,n)=>s+agg[n].c,0);
   const totPct=totV>0?totC/totV*100:0;
   const below80=names.filter(n=>agg[n].pct<80);
-  const sorted=[...names].sort((a,b)=>agg[a].pct-agg[b].pct);
+  const minWorstVol=type==='bc'?100:0;const sorted=[...names].filter(n=>agg[n].v>minWorstVol).sort((a,b)=>agg[a].pct-agg[b].pct);
   const lbl=type==='am'?'AM':'Bưu Cục';
   const pctC=totPct>=90?'tốt':totPct>=80?'trung bình':'thấp';
   let cap=`🚀 <b>ONTIME LẤY TTS (OPR) — THEO ${type==='am'?'AM':'BƯU CỤC'}</b>\n`;
   cap+=`Ngày ${fD(latest)}: %Ontime tổng <b>${totPct.toFixed(1)}%</b> (${pctC})\n`;
   if(below80.length)cap+=`⚠️ ${below80.length} ${lbl} dưới 80%\n`;
-  cap+=`\n📝 ${lbl} tệ nhất:\n`;
+  cap+=`\n📝 ${lbl} tệ nhất${type==='bc'?' (Vol > 100)':''}:\n`;
   cap+=sorted.slice(0,3).map(n=>`• ${n}: ${agg[n].pct.toFixed(1)}% (Vol: ${agg[n].v.toLocaleString('vi-VN')})`).join('\n');
   if(type==='bc'){
    const bcAlert=below80.filter(n=>agg[n].v>100).sort((a,b)=>agg[b].v-agg[a].v);
