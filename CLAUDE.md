@@ -12,6 +12,7 @@
 - **NGHIÊM CẤM BỊA DỮ LIỆU** — không tự tạo/ước đoán bất kỳ dữ liệu nào. Không có nguồn thật thì ghi rõ "không có dữ liệu".
 - **BACKEND TRƯỚC, FRONTEND SAU** — luôn làm backend API (có dữ liệu thật) xong rồi mới làm Frontend, để không có dữ liệu ảo.
 - **KHÔNG DÙNG Fable 5** — tuyệt đối không dùng model `claude-fable-5`.
+- **PHÂN TÍCH PHẢI XUỐNG DÒNG TỪNG Ý** — mọi ô/box nhận định (analysis-box) dưới bảng phải chi tiết và **mỗi ý một dòng** (dùng `<br>`), KHÔNG gộp thành 1 dòng dài. Cấu trúc chuẩn: (1) nêu tổng thể (VD tổng doanh thu Vùng), (2) tăng/giảm so với kỳ liền trước, (3) so sánh cùng kỳ trước → xuống dòng 🟢 Tốt nhất … / 🔴 Tệ nhất …
 
 ### Quy tắc chọn model theo loại việc
 | Loại việc | Model | Model ID |
