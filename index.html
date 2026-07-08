@@ -378,6 +378,8 @@ async function fetchSheet(name,retry=2){
 // rowsAM cols: name(0), Ngày(1), Volume(2), Tỉ lệ gán(3), Tỉ lệ GTC(4), Số đơn GTC(5)
 // rowsBC cols: AM(0), Bưu Cục(1), Ngày(2), Volume(3), Tỉ lệ gán(4), Tỉ lệ GTC(5), Số đơn GTC(6)
 window._GTC={};
+window._ONT={};
+function renderOntime(pid){const o=window._ONT[pid];if(o)o.render();}
 function getDOW(iso){if(!iso)return'';const d=new Date(iso+'T00:00:00');return['CN','Thứ 2','Thứ 3','Thứ 4','Thứ 5','Thứ 6','Thứ 7'][d.getDay()]||'';}
 function shortDDow(iso){return iso?`${shortD(iso)} (${getDOW(iso)})`:'—';}
 function renderGTCAmTable(rows,dates){
@@ -900,15 +902,13 @@ function buildFDWeekPage(fd){
 // AM cols: AM(0), Ngày(1), Vol(2), %Ontime(3), Count(4)
 // BC cols: AM(0), Bưu Cục(1), Ngày(2), Vol(3), %Ontime(4), Count(5)
 function buildOntimePage(rowsAM,rowsBC,title,volLabel,countLabel,greenThr,yellowThr,pid=''){
- function amTbl(rows){
+ function amTbl(rows,dates){
   if(!rows||rows.length<2)return'<p style="padding:16px;color:var(--text-sub)">Không có dữ liệu</p>';
   const data=rows.slice(1).filter(r=>r.length>3&&(r[0]||'').trim());
   const isGrand=r=>(r[0]||'').toLowerCase().includes('grand total');
   const dRows=data.filter(r=>!isGrand(r));
   const gRows=data.filter(r=>isGrand(r));
-  const allD=[...new Set(dRows.map(r=>isoD(r[1])).filter(d=>d))].sort((a,b)=>b.localeCompare(a));
-  const dates=allD.slice(0,15);
-  if(!dates.length)return'<p style="padding:16px;color:var(--text-sub)">Không có dữ liệu</p>';
+  if(!dates||!dates.length)return'<p style="padding:16px;color:var(--text-sub)">Không có dữ liệu</p>';
   const pivot={};
   dRows.forEach(r=>{const name=(r[0]||'').trim(),d=isoD(r[1]);if(!name||!dates.includes(d))return;if(!pivot[name])pivot[name]={};pivot[name][d]={vol:Math.round(parseFloat(r[2])||0),pct:(parseFloat(r[3])||0)*100,cnt:Math.round(parseFloat(r[4])||0)};});
   const gPivot={};
@@ -953,14 +953,12 @@ function buildOntimePage(rowsAM,rowsBC,title,volLabel,countLabel,greenThr,yellow
   }
   return h;
  }
- function bcTbl(rows){
+ function bcTbl(rows,dates){
   if(!rows||rows.length<2)return'<p style="padding:16px;color:var(--text-sub)">Không có dữ liệu</p>';
   const data=rows.slice(1).filter(r=>r.length>4&&(r[1]||'').trim());
   const isGrand=r=>(r[1]||'').toLowerCase().includes('grand total')||(r[0]||'').toLowerCase().includes('grand total');
   const dRows=data.filter(r=>!isGrand(r));
-  const allD=[...new Set(dRows.map(r=>isoD(r[2])).filter(d=>d))].sort((a,b)=>b.localeCompare(a));
-  const dates=allD.slice(0,15);
-  if(!dates.length)return'<p style="padding:16px;color:var(--text-sub)">Không có dữ liệu</p>';
+  if(!dates||!dates.length)return'<p style="padding:16px;color:var(--text-sub)">Không có dữ liệu</p>';
   const pivot={};
   dRows.forEach(r=>{const am=(r[0]||'').trim(),bc=(r[1]||'').trim(),d=isoD(r[2]);if(!bc||!dates.includes(d))return;if(!pivot[bc])pivot[bc]={am};pivot[bc][d]={vol:Math.round(parseFloat(r[3])||0),pct:(parseFloat(r[4])||0)*100,cnt:Math.round(parseFloat(r[5])||0)};});
   const gPivot={};
@@ -1038,12 +1036,35 @@ function buildOntimePage(rowsAM,rowsBC,title,volLabel,countLabel,greenThr,yellow
   h+=`<div class="analysis-box" style="margin-top:0">🚨 <strong>${alertBC.length} Bưu Cục</strong> có Vol LTC &gt; 100 đơn nhưng %Ontime &lt; 80% ngày ${shortD(latest)}. Sắp xếp theo Vol LTC cao nhất.</div>`;
   return h;
  }
+ const dataAM=(rowsAM||[]).slice(1).filter(r=>r.length>3&&(r[0]||'').trim());
+ const allD=[...new Set(dataAM.map(r=>isoD(r[1])).filter(d=>d))].sort((a,b)=>b.localeCompare(a));
+ window._ONT[pid]={render(){
+  const from=document.getElementById(pid+'_dFrom')?.value||allD[Math.min(6,allD.length-1)]||'';
+  const to=document.getElementById(pid+'_dTo')?.value||allD[0]||'';
+  const lo=from<=to?from:to,hi=from<=to?to:from;
+  const dates=allD.filter(d=>d>=lo&&d<=hi);
+  const amEl=document.getElementById(pid+'_amTable'),bcEl=document.getElementById(pid+'_bcTable');
+  if(!amEl||!bcEl)return;
+  if(!dates.length){amEl.innerHTML='<p style="padding:16px;color:var(--text-sub)">Không có dữ liệu trong khoảng đã chọn</p>';bcEl.innerHTML='';return;}
+  amEl.innerHTML=amTbl(rowsAM,dates);
+  bcEl.innerHTML=bcTbl(rowsBC,dates);
+  addBCSearch(amEl);addBCSearch(bcEl);
+ }};
+ if(!allD.length)return errPage('Không có dữ liệu ODR/OPR');
+ const dTo=allD[0],dFrom=allD[Math.min(6,allD.length-1)];
+ const mkOpts=sv=>allD.map(d=>`<option value="${d}"${d===sv?' selected':''}>${shortDDow(d)}</option>`).join('');
  return`<div class="page-header">
   <div class="page-title">${title}</div>
-  <div class="page-meta"><span class="tag tag-orange">⏱️ 15 ngày gần nhất · ONTIME SLA TTS</span><span>%Ontime: Xanh ≥${greenThr}% · Vàng ≥${yellowThr}% · Đỏ &lt;${yellowThr}%</span></div>
+  <div class="page-meta"><span class="tag tag-orange">📅 Lọc theo ngày · ONTIME SLA TTS</span><span>%Ontime: Xanh ≥${greenThr}% · Vàng ≥${yellowThr}% · Đỏ &lt;${yellowThr}%</span></div>
  </div>
- <div class="card"${pid?` id="${pid}-card-am"`:''}><div class="card-header"><div class="card-title"><div class="card-icon">👤</div>A. Theo AM</div><div class="card-info">Sắp xếp: %Ontime thấp → cao</div></div>${amTbl(rowsAM)}</div>
- <div class="card"><div class="card-header"><div class="card-title"><div class="card-icon">🏪</div>B. Theo Bưu Cục</div><div class="card-info">Sắp xếp: %Ontime thấp → cao</div></div>${bcTbl(rowsBC)}</div>
+ <div class="date-filter-bar">
+  <label>Từ ngày:</label>
+  <select id="${pid}_dFrom" onchange="renderOntime('${pid}')">${mkOpts(dFrom)}</select>
+  <label>Đến ngày:</label>
+  <select id="${pid}_dTo" onchange="renderOntime('${pid}')">${mkOpts(dTo)}</select>
+ </div>
+ <div class="card"${pid?` id="${pid}-card-am"`:''}><div class="card-header"><div class="card-title"><div class="card-icon">👤</div>A. Theo AM</div><div class="card-info">Sắp xếp: %Ontime thấp → cao</div></div><div id="${pid}_amTable"></div></div>
+ <div class="card"><div class="card-header"><div class="card-title"><div class="card-icon">🏪</div>B. Theo Bưu Cục</div><div class="card-info">Sắp xếp: %Ontime thấp → cao</div></div><div id="${pid}_bcTable"></div></div>
  ${yellowThr===80?`<div class="card" style="border-top:3px solid var(--red)"${pid?` id="${pid}-card-alert"`:''}><div class="card-header"><div class="card-title"><div class="card-icon">🚨</div>C. BC Vol LTC cao & %Ontime OPR &lt; 80%</div><div class="card-info">Lọc: Vol LTC &gt; 100 đơn & Ontime &lt; 80% (ngày gần nhất) · 7 ngày · Sắp xếp: Vol LTC cao nhất</div></div>${alertBCTbl(rowsBC)}</div>`:''}`;
 
 }
@@ -2903,13 +2924,15 @@ async function init(){
  // p5 — ODR
  const p5el=document.getElementById('p5');
  if(R['ODR TTS - AM']&&R['ODR TTS - Bưu Cục']){
-  p5el.innerHTML=buildOntimePage(R['ODR TTS - AM'],R['ODR TTS - Bưu Cục'],'Tổng quan ODR TTS','Vol GTC','GTC đúng Ontime',98,96);
+  p5el.innerHTML=buildOntimePage(R['ODR TTS - AM'],R['ODR TTS - Bưu Cục'],'Tổng quan ODR TTS','Vol GTC','GTC đúng Ontime',98,96,'p5');
+  setTimeout(()=>renderOntime('p5'),0);
   addBCSearch(p5el);
  }else p5el.innerHTML=errPage('Không thể tải ODR TTS. Kiểm tra sheet "ODR TTS - AM" / "ODR TTS - Bưu Cục".');
  // p6 — OPR
  const p6el=document.getElementById('p6');
  if(R['OPR TTS - AM']&&R['OPR TTS - Bưu Cục']){
   p6el.innerHTML=buildOntimePage(R['OPR TTS - AM'],R['OPR TTS - Bưu Cục'],'Tổng quan OPR TTS','Vol LTC','LTC đúng Ontime',90,80,'p6');
+  setTimeout(()=>renderOntime('p6'),0);
   addBCSearch(p6el);
  }else p6el.innerHTML=errPage('Không thể tải OPR TTS. Kiểm tra sheet "OPR TTS - AM" / "OPR TTS - Bưu Cục".');
  // p7 — Aging (await để có data cho overview)
