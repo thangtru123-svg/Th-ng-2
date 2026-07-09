@@ -2075,6 +2075,23 @@ async function sendAllToTelegram(){
    bcHid.forEach(tr=>tr.style.display='');
   }
 
+  /* --- P23: Báo cáo vận hành khu vực Thắng → group riêng (6 bảng) --- */
+  await navTo('p23');
+  await new Promise(r=>setTimeout(r,700));
+  for(const it of (window._thangTG||[])){
+   if(btn)btn.innerHTML=`⏳ Đang gửi: ${it.id}...`;
+   const el=document.getElementById(it.id);
+   if(!el)continue;
+   try{
+    const img=await _captureEl(it.id);
+    const cap=trimCap(it.cap);
+    let res=await _tgSendPhoto(TG_THANG_CHAT,TG_THANG_THREAD,img,cap);
+    if(!res||!res.ok)res=await _tgSendDoc(TG_THANG_CHAT,TG_THANG_THREAD,img,cap);
+    if(!res||!res.ok)console.warn('[TG p23]',it.id,res&&res.description);
+   }catch(e){console.warn('[TG p23]',it.id,e.message);}
+   await new Promise(r=>setTimeout(r,700));
+  }
+
   if(btn){btn.innerHTML='✅ Đã gửi xong!';setTimeout(()=>{btn.innerHTML='<span id="tgSidebarIcon">📤</span> Bắn dữ liệu lên Telegram';btn.disabled=false;},3000);}
  }catch(e){
   console.error('sendAllToTelegram error:',e);
