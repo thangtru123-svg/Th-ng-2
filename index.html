@@ -1001,7 +1001,8 @@ function buildOntimePage(rowsAM,rowsBC,title,volLabel,countLabel,greenThr,yellow
   }
   return h;
  }
- function alertBCTbl(rows){
+ function alertBCTbl(rows,minVol,maxVol,rangeLabel){
+  minVol=minVol==null?100:minVol;maxVol=maxVol==null?Infinity:maxVol;rangeLabel=rangeLabel||'Vol LTC &gt; 100 đơn';
   if(!rows||rows.length<2)return'<p style="padding:16px;color:var(--text-sub)">Không có dữ liệu</p>';
   const data=rows.slice(1).filter(r=>r.length>4&&(r[1]||'').trim());
   const isGrand=r=>(r[1]||'').toLowerCase().includes('grand total')||(r[0]||'').toLowerCase().includes('grand total');
@@ -1012,8 +1013,8 @@ function buildOntimePage(rowsAM,rowsBC,title,volLabel,countLabel,greenThr,yellow
   const pivot={};
   dRows.forEach(r=>{const am=(r[0]||'').trim(),bc=(r[1]||'').trim(),d=isoD(r[2]);if(!bc||!dates.includes(d))return;if(!pivot[bc])pivot[bc]={am};pivot[bc][d]={vol:Math.round(parseFloat(r[3])||0),pct:(parseFloat(r[4])||0)*100,cnt:Math.round(parseFloat(r[5])||0)};});
   const latest=dates[0];
-  const alertBC=Object.keys(pivot).filter(bc=>(pivot[bc][latest]?.pct??100)<80&&(pivot[bc][latest]?.vol??0)>100);
-  if(!alertBC.length)return'<p style="padding:16px;color:var(--green)">✅ Không có Bưu Cục nào có Vol LTC &gt; 100 đơn &amp; %Ontime &lt; 80% hôm nay.</p>';
+  const alertBC=Object.keys(pivot).filter(bc=>{const v=pivot[bc][latest]?.vol??0;return (pivot[bc][latest]?.pct??100)<80&&v>minVol&&v<maxVol;});
+  if(!alertBC.length)return`<p style="padding:16px;color:var(--green)">✅ Không có Bưu Cục nào có ${rangeLabel} &amp; %Ontime &lt; 80% hôm nay.</p>`;
   alertBC.sort((a,b)=>(pivot[b][latest]?.vol??0)-(pivot[a][latest]?.vol??0));
   const cs='padding:5px 8px;';
   let h=`<div class="table-wrap" style="overflow-x:auto"><table><thead style="position:sticky;top:0;z-index:4;background:#FEF2F2">
@@ -1037,7 +1038,7 @@ function buildOntimePage(rowsAM,rowsBC,title,volLabel,countLabel,greenThr,yellow
    h+=`<td style="${cs}text-align:center;font-weight:800;color:${ac};white-space:nowrap">${avgPct.toFixed(1)}% <span style="font-size:10px;color:var(--text-sub)">(${countBelow}/7 ngày)</span></td></tr>`;
   });
   h+='</tbody></table></div>';
-  h+=`<div class="analysis-box" style="margin-top:0">🚨 <strong>${alertBC.length} Bưu Cục</strong> có Vol LTC &gt; 100 đơn nhưng %Ontime &lt; 80% ngày ${shortD(latest)}. Sắp xếp theo Vol LTC cao nhất.</div>`;
+  h+=`<div class="analysis-box" style="margin-top:0">🚨 <strong>${alertBC.length} Bưu Cục</strong> có ${rangeLabel} nhưng %Ontime &lt; 80% ngày ${shortD(latest)}. Sắp xếp theo Vol LTC cao nhất.</div>`;
   return h;
  }
  const dataAM=(rowsAM||[]).slice(1).filter(r=>r.length>3&&(r[0]||'').trim());
@@ -1069,7 +1070,7 @@ function buildOntimePage(rowsAM,rowsBC,title,volLabel,countLabel,greenThr,yellow
  </div>
  <div class="card"${pid?` id="${pid}-card-am"`:''}><div class="card-header"><div class="card-title"><div class="card-icon">👤</div>A. Theo AM</div><div class="card-info">Sắp xếp: %Ontime thấp → cao</div></div><div id="${pid}_amTable"></div></div>
  <div class="card"><div class="card-header"><div class="card-title"><div class="card-icon">🏪</div>B. Theo Bưu Cục</div><div class="card-info">Sắp xếp: %Ontime thấp → cao</div></div><div id="${pid}_bcTable"></div></div>
- ${yellowThr===80?`<div class="card" style="border-top:3px solid var(--red)"${pid?` id="${pid}-card-alert"`:''}><div class="card-header"><div class="card-title"><div class="card-icon">🚨</div>C. BC Vol LTC cao & %Ontime OPR &lt; 80%</div><div class="card-info">Lọc: Vol LTC &gt; 100 đơn & Ontime &lt; 80% (ngày gần nhất) · 7 ngày · Sắp xếp: Vol LTC cao nhất</div></div>${alertBCTbl(rowsBC)}</div>`:''}`;
+ ${yellowThr===80?`<div class="card" style="border-top:3px solid var(--red)"${pid?` id="${pid}-card-alert"`:''}><div class="card-header"><div class="card-title"><div class="card-icon">🚨</div>C. BC Vol LTC cao & %Ontime OPR &lt; 80%</div><div class="card-info">Lọc: Vol LTC &gt; 100 đơn & Ontime &lt; 80% (ngày gần nhất) · 7 ngày · Sắp xếp: Vol LTC cao nhất</div></div>${alertBCTbl(rowsBC)}</div><div class="card" style="border-top:3px solid var(--yellow)"${pid?` id="${pid}-card-alert2"`:''}><div class="card-header"><div class="card-title"><div class="card-icon">🟠</div>D. BC Vol LTC 30–100 & %Ontime OPR &lt; 80%</div><div class="card-info">Lọc: 30 &lt; Vol LTC &lt; 100 đơn & Ontime &lt; 80% (ngày gần nhất) · 7 ngày · Sắp xếp: Vol LTC cao nhất</div></div>${alertBCTbl(rowsBC,30,100,'Vol LTC 30–100 đơn')}</div>`:''}`;
 
 }
 
@@ -1788,6 +1789,20 @@ async function sendAllToTelegram(){
   }
   return trimCap(cap);
  }
+ /* Caption BC theo khoảng Vol (VD 30–100) & Ontime < 80%, sắp xếp Vol cao→thấp */
+ function capOPRBCRange(minVol,maxVol,rangeText){
+  const rows=window._D?.oprBC;
+  if(!rows||rows.length<2)return`⛔ <b>${rangeText}</b>`;
+  const isGrand=r=>(r[0]||'').toLowerCase().includes('grand total')||!(r[0]||'').trim();
+  const allD=[...new Set(rows.slice(1).map(r=>isoD(r[2])).filter(d=>d))].sort((a,b)=>b.localeCompare(a));
+  const latest=allD[0];if(!latest)return`⛔ <b>${rangeText}</b>`;
+  const agg={};rows.slice(1).filter(r=>!isGrand(r)&&isoD(r[2])===latest).forEach(r=>{const n=(r[1]||'').trim();if(!n)return;if(!agg[n])agg[n]={v:0,c:0};agg[n].v+=Math.round(parseFloat(r[3])||0);agg[n].c+=Math.round(parseFloat(r[5])||0);});
+  Object.values(agg).forEach(x=>x.pct=x.v>0?x.c/x.v*100:0);
+  const list=Object.keys(agg).filter(n=>agg[n].v>minVol&&agg[n].v<maxVol&&agg[n].pct<80).sort((a,b)=>agg[b].v-agg[a].v);
+  let cap=`⛔ <b>${rangeText}</b>\nNgày ${fD(latest)}: <b>${list.length} Bưu Cục</b>\n`;
+  cap+=list.length?list.slice(0,8).map((n,i)=>`${i+1}. ${n}: ${agg[n].pct.toFixed(1)}% (Vol: ${agg[n].v.toLocaleString('vi-VN')})`).join('\n'):'✅ Không có';
+  return trimCap(cap);
+ }
 
  /* ── Caption: P3 TLT Theo AM / BC ── */
  function capFD(type){
@@ -2009,6 +2024,10 @@ async function sendAllToTelegram(){
   const alertCard=document.getElementById('p6-card-alert');
   if(alertCard&&alertCard.innerText.trim()&&!alertCard.innerText.includes('Không có Bưu Cục')){
    await sendPhoto('OPR BC Alert','p6-card-alert',TG_AGING_CHAT,TG_PICKUP_THREAD,capOPR('bc'));
+  }
+  const alertCard2=document.getElementById('p6-card-alert2');
+  if(alertCard2&&alertCard2.innerText.trim()&&!alertCard2.innerText.includes('Không có Bưu Cục')){
+   await sendPhoto('OPR BC Alert 30-100','p6-card-alert2',TG_AGING_CHAT,TG_PICKUP_THREAD,capOPRBCRange(30,100,'BC Vol LTC 30–100 &amp; Ontime &lt;80%'));
   }
 
   /* --- P19: GTC TTS Ca 1,2 theo BC → TTS - Vận hành thread --- */
