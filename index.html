@@ -3696,12 +3696,13 @@ async function buildKinhDoanhPage(){
   const GROUPS=['A','BCD','EF','G'], GLBL={A:'KH A',BCD:'KH BCD',EF:'KH EF',G:'KH mới (G)'};
   const isoOf=ds=>{const d=new Date(ds);return isNaN(d)?'':d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');};
   const minus7=iso=>{const d=new Date(iso);d.setDate(d.getDate()-7);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');};
+  const N=v=>parseFloat(String(v==null?'':v).replace(/[^0-9.\-]/g,''))||0; // bỏ dấu phẩy ngăn cách nghìn trước khi parse
   const gRec=[],aRec=[];
   for(let i=1;i<rows.length;i++){
    const g=(rows[i][1]||'').trim();
-   if(GROUPS.includes(g)){const iso=isoOf(rows[i][2]);gRec.push({grp:g,week:+(rows[i][9]||0),month:+(rows[i][8]||0),slkh:+(rows[i][3]||0),rev:parseFloat(rows[i][6]||0)||0,iso});}
+   if(GROUPS.includes(g)){const iso=isoOf(rows[i][2]);gRec.push({grp:g,week:N(rows[i][9]),month:N(rows[i][8]),slkh:N(rows[i][3]),rev:N(rows[i][6]),iso});}
    const q=(rows[i][16]||'').trim();
-   if(q){const iso=isoOf(rows[i][17]);aRec.push({am:(rows[i][23]||'').trim(),week:+(rows[i][21]||0),month:+(rows[i][20]||0),rev:parseFloat(rows[i][18]||0)||0,vol:+(rows[i][19]||0),iso,dom:iso?+iso.slice(8,10):0});}
+   if(q){const iso=isoOf(rows[i][17]);aRec.push({am:(rows[i][23]||'').trim(),week:N(rows[i][21]),month:N(rows[i][20]),rev:N(rows[i][18]),vol:N(rows[i][19]),iso,dom:iso?+iso.slice(8,10):0});}
   }
   const weeks=[...new Set(gRec.map(r=>r.week))].filter(Boolean).sort((a,b)=>a-b);
   const months=[...new Set(gRec.map(r=>r.month))].filter(Boolean).sort((a,b)=>a-b);
