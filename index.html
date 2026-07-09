@@ -1449,6 +1449,74 @@ async function _captureEl(id){
  }
 }
 
+/* ── Tạo 4 caption phân tích Aging (dùng chung cho nút Aging riêng & Bắn tất cả) ── */
+function buildAgingCaps(){
+ const rows=window._agingRows;
+ if(!rows||!rows.length)return null;
+ const allDates=[...new Set(rows.map(r=>r[11]))].filter(d=>d&&d.startsWith('2026')).sort();
+ const last7=allDates.slice(-7);
+ const latest=last7[last7.length-1];
+ const prev=last7[last7.length-2];
+ const recent=rows.filter(r=>last7.includes(r[11]));
+ const fmt=d=>{if(!d)return'';const p=d.split('-');return p.length===3?`${p[2]}/${p[1]}/${p[0]}`:d;};
+ const num=n=>n.toLocaleString('vi-VN');
+ const byDate={};recent.forEach(r=>{const am=(r[10]||'').trim();if(am&&(am==='#N/A'||am.startsWith('#')))return;byDate[r[11]]=(byDate[r[11]]||0)+1;});
+ const latestTotal=byDate[latest]||0,prevTotal=byDate[prev]||0,delta=latestTotal-prevTotal;
+ const unstableRows=recent.filter(r=>r[12]&&r[12].includes('bất ổn'));
+ const unstableMap={};unstableRows.forEach(r=>{const bc=r[2],d=r[11];if(!unstableMap[bc])unstableMap[bc]={bc};unstableMap[bc][d]=(unstableMap[bc][d]||0)+1;});
+ const unstableArr=Object.values(unstableMap).sort((a,b)=>(b[latest]||0)-(a[latest]||0));
+ const unstableCur=unstableArr.reduce((s,r)=>s+(r[latest]||0),0);
+ const unstablePrv=unstableArr.reduce((s,r)=>s+(r[prev]||0),0);
+ const amMap={};recent.forEach(r=>{const am=(r[10]||'').trim(),d=r[11];if(!am||am==='#N/A'||am.startsWith('#'))return;if(!amMap[am])amMap[am]={am};amMap[am][d]=(amMap[am][d]||0)+1;});
+ const amArr=Object.values(amMap).sort((a,b)=>(b[latest]||0)-(a[latest]||0));
+ const amCur=amArr.reduce((s,r)=>s+(r[latest]||0),0),amPrv=amArr.reduce((s,r)=>s+(r[prev]||0),0);
+ const d2=delta<0?`▼ giảm ${num(Math.abs(delta))} đơn`:delta>0?`▲ tăng ${num(delta)} đơn`:'Không đổi';
+ const trimCap=s=>s.length>1020?s.slice(0,1017)+'...':s;
+ const pctBatOn=latestTotal>0?(unstableCur/latestTotal*100).toFixed(1):0;
+ const pctOk=latestTotal>0?((latestTotal-unstableCur)/latestTotal*100).toFixed(1):0;
+ const topAM=amArr[0];
+ const amUp=amArr.length?amArr.reduce((a,b)=>((b[latest]||0)-(b[prev]||0))>((a[latest]||0)-(a[prev]||0))?b:a):null;
+ const amDn=amArr.length?amArr.reduce((a,b)=>((b[latest]||0)-(b[prev]||0))<((a[latest]||0)-(a[prev]||0))?b:a):null;
+ const bcUnstableSet=new Set(unstableArr.map(r=>r.bc));
+ const bcMap={};recent.forEach(r=>{const bc=r[2],d=r[11];if(!bcMap[bc])bcMap[bc]={bc};bcMap[bc][d]=(bcMap[bc][d]||0)+1;});
+ const bcArr=Object.values(bcMap).filter(r=>!bcUnstableSet.has(r.bc)&&!(r.bc||'').startsWith('Kho Giao Hàng Nặng')).sort((a,b)=>(b[latest]||0)-(a[latest]||0));
+ const stableCur=bcArr.reduce((s,r)=>s+(r[latest]||0),0),stablePrv=bcArr.reduce((s,r)=>s+(r[prev]||0),0);
+ let cap1=`📊 <b>TỔNG QUAN AGING — ${fmt(latest)}</b>\n`;
+ cap1+=`Tổng: <b>${num(latestTotal)} đơn</b> · N-1: ${num(prevTotal)} · <b>${d2}</b>\n`;
+ cap1+=`BC Bất Ổn: <b>${num(unstableCur)} đơn</b> (${unstableArr.length} BC) · chiếm <b>${pctBatOn}%</b>\n`;
+ cap1+=`BC Ổn Định: <b>${num(latestTotal-unstableCur)} đơn</b> · chiếm <b>${pctOk}%</b>\n\n`;
+ cap1+=`📝 <b>Nhận định:</b>\n`;
+ cap1+=delta<0?`✅ Aging giảm ${num(Math.abs(delta))} đơn — tín hiệu tích cực.\n`:delta>0?`⚠️ Aging tăng ${num(delta)} đơn — cần theo dõi sát.\n`:`➡️ Aging không đổi so với hôm qua.\n`;
+ if(unstableCur>latestTotal*0.4)cap1+=`🔴 BC Bất Ổn chiếm trên 40% — ưu tiên xử lý nhóm này.\n`;
+ if(topAM)cap1+=`⚠️ AM cao nhất: ${topAM.am} (${num(topAM[latest]||0)} đơn`;
+ if(topAM&&latestTotal>0)cap1+=` — chiếm ${((topAM[latest]||0)/latestTotal*100).toFixed(0)}%`;
+ if(topAM)cap1+=`).`;
+ cap1=trimCap(cap1);
+ const uUp=unstableArr.length>1?unstableArr.reduce((a,b)=>((b[latest]||0)-(b[prev]||0))>((a[latest]||0)-(a[prev]||0))?b:a):null;
+ let cap2=`👤 <b>THEO AM — ${fmt(latest)}</b> (${amArr.length} AM)\n`;
+ cap2+=`Tổng: <b>${num(amCur)} đơn</b> · N-1: ${num(amPrv)} · <b>${amCur<amPrv?`▼ giảm ${num(amPrv-amCur)} đơn`:amCur>amPrv?`▲ tăng ${num(amCur-amPrv)} đơn`:'Không đổi'}</b>\n\n`;
+ cap2+=`📝 <b>Phân tích:</b>\n`;
+ amArr.slice(0,5).forEach((r,i)=>{const dv=(r[latest]||0)-(r[prev]||0);cap2+=`${i+1}. ${r.am}: <b>${num(r[latest]||0)}</b> đơn ${dv>0?`▲+${num(dv)}`:dv<0?`▼${num(dv)}`:'–'}\n`;});
+ if(amUp){const dv=(amUp[latest]||0)-(amUp[prev]||0);if(dv>0)cap2+=`⚠️ Tăng mạnh nhất: ${amUp.am} (+${num(dv)}).\n`;}
+ if(amDn){const dv=(amDn[latest]||0)-(amDn[prev]||0);if(dv<0)cap2+=`✅ Giảm mạnh nhất: ${amDn.am} (${num(dv)}).\n`;}
+ cap2=trimCap(cap2);
+ let cap3=`⚠️ <b>BC BẤT ỔN — ${fmt(latest)}</b> (${unstableArr.length} BC)\n`;
+ cap3+=`Tổng: <b>${num(unstableCur)} đơn</b> · N-1: ${num(unstablePrv)} · <b>${unstableCur<unstablePrv?`▼ giảm ${num(unstablePrv-unstableCur)} đơn`:unstableCur>unstablePrv?`▲ tăng ${num(unstableCur-unstablePrv)} đơn`:'Không đổi'}</b>\n\n`;
+ cap3+=`📝 <b>Phân tích:</b>\n`;
+ unstableArr.slice(0,5).forEach((r,i)=>{const dv=(r[latest]||0)-(r[prev]||0);cap3+=`${i+1}. ${r.bc}: <b>${num(r[latest]||0)}</b> đơn ${dv>0?`▲+${num(dv)}`:dv<0?`▼${num(dv)}`:'–'}\n`;});
+ if(uUp){const dv=(uUp[latest]||0)-(uUp[prev]||0);if(dv>0)cap3+=`🔴 Tăng mạnh nhất: ${uUp.bc} (+${num(dv)} đơn).\n`;}
+ cap3+=unstableCur<unstablePrv?`✅ Bất ổn giảm ${num(unstablePrv-unstableCur)} đơn — đang được cải thiện.\n`:unstableCur>unstablePrv?`🔴 Bất ổn tăng ${num(unstableCur-unstablePrv)} đơn — cần can thiệp ngay.\n`:`➡️ Bất ổn không đổi so với hôm qua.\n`;
+ cap3=trimCap(cap3);
+ const bcUp=bcArr.length>1?bcArr.reduce((a,b)=>((b[latest]||0)-(b[prev]||0))>((a[latest]||0)-(a[prev]||0))?b:a):null;
+ let cap4=`🏪 <b>BC ỔN ĐỊNH — ${fmt(latest)}</b> (${bcArr.length} BC)\n`;
+ cap4+=`Tổng: <b>${num(stableCur)} đơn</b> · N-1: ${num(stablePrv)} · <b>${stableCur<stablePrv?`▼ giảm ${num(stablePrv-stableCur)} đơn`:stableCur>stablePrv?`▲ tăng ${num(stableCur-stablePrv)} đơn`:'Không đổi'}</b>\n\n`;
+ cap4+=`📝 <b>Phân tích:</b>\n`;
+ bcArr.slice(0,5).forEach((r,i)=>{const dv=(r[latest]||0)-(r[prev]||0);cap4+=`${i+1}. ${r.bc}: <b>${num(r[latest]||0)}</b> đơn ${dv>0?`▲+${num(dv)}`:dv<0?`▼${num(dv)}`:'–'}\n`;});
+ if(bcUp){const dv=(bcUp[latest]||0)-(bcUp[prev]||0);if(dv>0)cap4+=`⚠️ Tăng mạnh nhất (ổn định): ${bcUp.bc} (+${num(dv)} đơn).\n`;}
+ cap4+=stableCur<stablePrv?`✅ BC ổn định giảm ${num(stablePrv-stableCur)} đơn — tốt.\n`:stableCur>stablePrv?`⚠️ BC ổn định tăng ${num(stableCur-stablePrv)} đơn — cần chú ý.\n`:`➡️ BC ổn định không đổi.\n`;
+ cap4=trimCap(cap4);
+ return {cap1,cap2,cap3,cap4};
+}
 async function sendAgingToTelegram(){
  const rows=window._agingRows;
  if(!rows||!rows.length){alert('Chưa có dữ liệu Aging! Vui lòng chờ trang tải xong.');return;}
@@ -1467,78 +1535,12 @@ async function sendAgingToTelegram(){
  }
 
  try{
-  // ── Tính caption cho từng ảnh ──
-  const allDates=[...new Set(rows.map(r=>r[11]))].filter(d=>d&&d.startsWith('2026')).sort();
-  const last7=allDates.slice(-7);
-  const latest=last7[last7.length-1];
-  const prev=last7[last7.length-2];
-  const recent=rows.filter(r=>last7.includes(r[11]));
-  const fmt=d=>{if(!d)return'';const p=d.split('-');return p.length===3?`${p[2]}/${p[1]}/${p[0]}`:d;};
-  const num=n=>n.toLocaleString('vi-VN');
-  const byDate={};recent.forEach(r=>{const am=(r[10]||'').trim();if(am&&(am==='#N/A'||am.startsWith('#')))return;byDate[r[11]]=(byDate[r[11]]||0)+1;});
-  const latestTotal=byDate[latest]||0,prevTotal=byDate[prev]||0,delta=latestTotal-prevTotal;
-  const unstableRows=recent.filter(r=>r[12]&&r[12].includes('bất ổn'));
-  const unstableMap={};unstableRows.forEach(r=>{const bc=r[2],d=r[11];if(!unstableMap[bc])unstableMap[bc]={bc};unstableMap[bc][d]=(unstableMap[bc][d]||0)+1;});
-  const unstableArr=Object.values(unstableMap).sort((a,b)=>(b[latest]||0)-(a[latest]||0));
-  const unstableCur=unstableArr.reduce((s,r)=>s+(r[latest]||0),0);
-  const unstablePrv=unstableArr.reduce((s,r)=>s+(r[prev]||0),0);
-  const amMap={};recent.forEach(r=>{const am=(r[10]||'').trim(),d=r[11];if(!am||am==='#N/A'||am.startsWith('#'))return;if(!amMap[am])amMap[am]={am};amMap[am][d]=(amMap[am][d]||0)+1;});
-  const amArr=Object.values(amMap).sort((a,b)=>(b[latest]||0)-(a[latest]||0));
-  const amCur=amArr.reduce((s,r)=>s+(r[latest]||0),0),amPrv=amArr.reduce((s,r)=>s+(r[prev]||0),0);
-  const d2=delta<0?`▼ giảm ${num(Math.abs(delta))} đơn`:delta>0?`▲ tăng ${num(delta)} đơn`:'Không đổi';
-
-  const trimCap=s=>s.length>1020?s.slice(0,1017)+'...':s;
-  const pctBatOn=latestTotal>0?(unstableCur/latestTotal*100).toFixed(1):0;
-  const pctOk=latestTotal>0?((latestTotal-unstableCur)/latestTotal*100).toFixed(1):0;
-  const topAM=amArr[0];
-  const amUp=amArr.length?amArr.reduce((a,b)=>((b[latest]||0)-(b[prev]||0))>((a[latest]||0)-(a[prev]||0))?b:a):null;
-  const amDn=amArr.length?amArr.reduce((a,b)=>((b[latest]||0)-(b[prev]||0))<((a[latest]||0)-(a[prev]||0))?b:a):null;
-  const bcUnstableSet=new Set(unstableArr.map(r=>r.bc));
-  const bcMap={};recent.forEach(r=>{const bc=r[2],d=r[11];if(!bcMap[bc])bcMap[bc]={bc};bcMap[bc][d]=(bcMap[bc][d]||0)+1;});
-  const bcArr=Object.values(bcMap).filter(r=>!bcUnstableSet.has(r.bc)&&!(r.bc||'').startsWith('Kho Giao Hàng Nặng')).sort((a,b)=>(b[latest]||0)-(a[latest]||0));
-  const stableCur=bcArr.reduce((s,r)=>s+(r[latest]||0),0),stablePrv=bcArr.reduce((s,r)=>s+(r[prev]||0),0);
-
-  // ── CAP 1: Tổng quan + phân tích tổng ──
-  let cap1=`📊 <b>TỔNG QUAN AGING — ${fmt(latest)}</b>\n`;
-  cap1+=`Tổng: <b>${num(latestTotal)} đơn</b> · N-1: ${num(prevTotal)} · <b>${d2}</b>\n`;
-  cap1+=`BC Bất Ổn: <b>${num(unstableCur)} đơn</b> (${unstableArr.length} BC) · chiếm <b>${pctBatOn}%</b>\n`;
-  cap1+=`BC Ổn Định: <b>${num(latestTotal-unstableCur)} đơn</b> · chiếm <b>${pctOk}%</b>\n\n`;
-  cap1+=`📝 <b>Nhận định:</b>\n`;
-  cap1+=delta<0?`✅ Aging giảm ${num(Math.abs(delta))} đơn — tín hiệu tích cực.\n`:delta>0?`⚠️ Aging tăng ${num(delta)} đơn — cần theo dõi sát.\n`:`➡️ Aging không đổi so với hôm qua.\n`;
-  if(unstableCur>latestTotal*0.4)cap1+=`🔴 BC Bất Ổn chiếm trên 40% — ưu tiên xử lý nhóm này.\n`;
-  if(topAM)cap1+=`⚠️ AM cao nhất: ${topAM.am} (${num(topAM[latest]||0)} đơn`;
-  if(topAM&&latestTotal>0)cap1+=` — chiếm ${((topAM[latest]||0)/latestTotal*100).toFixed(0)}%`;
-  if(topAM)cap1+=`).`;
-  cap1=trimCap(cap1);
-
-  // ── CAP 2: Theo AM + phân tích từng AM ──
-  const uUp=unstableArr.length>1?unstableArr.reduce((a,b)=>((b[latest]||0)-(b[prev]||0))>((a[latest]||0)-(a[prev]||0))?b:a):null;
-  let cap2=`👤 <b>THEO AM — ${fmt(latest)}</b> (${amArr.length} AM)\n`;
-  cap2+=`Tổng: <b>${num(amCur)} đơn</b> · N-1: ${num(amPrv)} · <b>${amCur<amPrv?`▼ giảm ${num(amPrv-amCur)} đơn`:amCur>amPrv?`▲ tăng ${num(amCur-amPrv)} đơn`:'Không đổi'}</b>\n\n`;
-  cap2+=`📝 <b>Phân tích:</b>\n`;
-  amArr.slice(0,5).forEach((r,i)=>{const dv=(r[latest]||0)-(r[prev]||0);cap2+=`${i+1}. ${r.am}: <b>${num(r[latest]||0)}</b> đơn ${dv>0?`▲+${num(dv)}`:dv<0?`▼${num(dv)}`:'–'}\n`;});
-  if(amUp){const dv=(amUp[latest]||0)-(amUp[prev]||0);if(dv>0)cap2+=`⚠️ Tăng mạnh nhất: ${amUp.am} (+${num(dv)}).\n`;}
-  if(amDn){const dv=(amDn[latest]||0)-(amDn[prev]||0);if(dv<0)cap2+=`✅ Giảm mạnh nhất: ${amDn.am} (${num(dv)}).\n`;}
-  cap2=trimCap(cap2);
-
-  // ── CAP 3: BC Bất Ổn + phân tích từng BC ──
-  let cap3=`⚠️ <b>BC BẤT ỔN — ${fmt(latest)}</b> (${unstableArr.length} BC)\n`;
-  cap3+=`Tổng: <b>${num(unstableCur)} đơn</b> · N-1: ${num(unstablePrv)} · <b>${unstableCur<unstablePrv?`▼ giảm ${num(unstablePrv-unstableCur)} đơn`:unstableCur>unstablePrv?`▲ tăng ${num(unstableCur-unstablePrv)} đơn`:'Không đổi'}</b>\n\n`;
-  cap3+=`📝 <b>Phân tích:</b>\n`;
-  unstableArr.slice(0,5).forEach((r,i)=>{const dv=(r[latest]||0)-(r[prev]||0);cap3+=`${i+1}. ${r.bc}: <b>${num(r[latest]||0)}</b> đơn ${dv>0?`▲+${num(dv)}`:dv<0?`▼${num(dv)}`:'–'}\n`;});
-  if(uUp){const dv=(uUp[latest]||0)-(uUp[prev]||0);if(dv>0)cap3+=`🔴 Tăng mạnh nhất: ${uUp.bc} (+${num(dv)} đơn).\n`;}
-  cap3+=unstableCur<unstablePrv?`✅ Bất ổn giảm ${num(unstablePrv-unstableCur)} đơn — đang được cải thiện.\n`:unstableCur>unstablePrv?`🔴 Bất ổn tăng ${num(unstableCur-unstablePrv)} đơn — cần can thiệp ngay.\n`:`➡️ Bất ổn không đổi so với hôm qua.\n`;
-  cap3=trimCap(cap3);
-
-  // ── CAP 4: BC Ổn Định + phân tích từng BC ──
-  const bcUp=bcArr.length>1?bcArr.reduce((a,b)=>((b[latest]||0)-(b[prev]||0))>((a[latest]||0)-(a[prev]||0))?b:a):null;
-  let cap4=`🏪 <b>BC ỔN ĐỊNH — ${fmt(latest)}</b> (${bcArr.length} BC)\n`;
-  cap4+=`Tổng: <b>${num(stableCur)} đơn</b> · N-1: ${num(stablePrv)} · <b>${stableCur<stablePrv?`▼ giảm ${num(stablePrv-stableCur)} đơn`:stableCur>stablePrv?`▲ tăng ${num(stableCur-stablePrv)} đơn`:'Không đổi'}</b>\n\n`;
-  cap4+=`📝 <b>Phân tích:</b>\n`;
-  bcArr.slice(0,5).forEach((r,i)=>{const dv=(r[latest]||0)-(r[prev]||0);cap4+=`${i+1}. ${r.bc}: <b>${num(r[latest]||0)}</b> đơn ${dv>0?`▲+${num(dv)}`:dv<0?`▼${num(dv)}`:'–'}\n`;});
-  if(bcUp){const dv=(bcUp[latest]||0)-(bcUp[prev]||0);if(dv>0)cap4+=`⚠️ Tăng mạnh nhất (ổn định): ${bcUp.bc} (+${num(dv)} đơn).\n`;}
-  cap4+=stableCur<stablePrv?`✅ BC ổn định giảm ${num(stablePrv-stableCur)} đơn — tốt.\n`:stableCur>stablePrv?`⚠️ BC ổn định tăng ${num(stableCur-stablePrv)} đơn — cần chú ý.\n`:`➡️ BC ổn định không đổi.\n`;
-  cap4=trimCap(cap4);
+  // ── Tính caption cho từng ảnh (dùng hàm chung buildAgingCaps) ──
+  const _ac=buildAgingCaps()||{};
+  const cap1=_ac.cap1||'📊 <b>TỔNG QUAN AGING</b>';
+  const cap2=_ac.cap2||'👤 <b>AGING THEO AM — 7 NGÀY GẦN NHẤT</b>';
+  const cap3=_ac.cap3||'⚠️ <b>BƯU CỤC BẤT ỔN</b>';
+  const cap4=_ac.cap4||'🏪 <b>AGING THEO BƯU CỤC — 7 NGÀY GẦN NHẤT</b>';
 
   // ── Chụp và gửi từng section (mỗi ảnh có try-catch riêng — 1 fail không phá cả 4) ──
   // Thứ tự: Tổng quan → Theo AM → BC Bất Ổn → Theo BC
@@ -2035,19 +2037,20 @@ async function sendAllToTelegram(){
    }
   }
 
-  /* --- P7: Aging → Aging thread (dùng sendAgingToTelegram logic) --- */
+  /* --- P7: Aging → Aging thread (kèm phân tích cap1-4 như nút Aging riêng) --- */
   await navTo('p7');
   await new Promise(r=>setTimeout(r,400));
-  await sendPhoto('Aging Tổng Quan','aging-cards',TG_AGING_CHAT,TG_AGING_THREAD,`📊 <b>TỔNG QUAN AGING</b>`);
-  await sendPhoto('Aging Theo AM','aging-tbl-am',TG_AGING_CHAT,TG_AGING_THREAD,`👤 <b>AGING THEO AM — 7 NGÀY GẦN NHẤT</b>`);
-  await sendPhoto('BC Bất Ổn','aging-tbl-batOn',TG_AGING_CHAT,TG_AGING_THREAD,`⚠️ <b>BƯU CỤC BẤT ỔN</b>`);
+  const _agc=buildAgingCaps()||{};
+  await sendPhoto('Aging Tổng Quan','aging-cards',TG_AGING_CHAT,TG_AGING_THREAD,_agc.cap1||`📊 <b>TỔNG QUAN AGING</b>`);
+  await sendPhoto('Aging Theo AM','aging-tbl-am',TG_AGING_CHAT,TG_AGING_THREAD,_agc.cap2||`👤 <b>AGING THEO AM — 7 NGÀY GẦN NHẤT</b>`);
+  await sendPhoto('BC Bất Ổn','aging-tbl-batOn',TG_AGING_CHAT,TG_AGING_THREAD,_agc.cap3||`⚠️ <b>BƯU CỤC BẤT ỔN</b>`);
   {// Trim BC ổn định còn 20 rows trước khi chụp
    const bcDT=document.querySelector('#aging-tbl-bc .table-wrap>table')||[...document.querySelectorAll('#aging-tbl-bc table')].find(t=>t.offsetWidth>0);
    const bcTb=bcDT?bcDT.querySelector('tbody'):null;
    const bcTrs=bcTb?[...bcTb.querySelectorAll('tr')]:[];
    const bcHid=bcTrs.slice(20,-1);
    bcHid.forEach(tr=>tr.style.display='none');
-   await sendPhoto('Aging Theo BC','aging-tbl-bc',TG_AGING_CHAT,TG_AGING_THREAD,`🏪 <b>AGING THEO BƯU CỤC — 7 NGÀY GẦN NHẤT</b>`);
+   await sendPhoto('Aging Theo BC','aging-tbl-bc',TG_AGING_CHAT,TG_AGING_THREAD,_agc.cap4||`🏪 <b>AGING THEO BƯU CỤC — 7 NGÀY GẦN NHẤT</b>`);
    bcHid.forEach(tr=>tr.style.display='');
   }
 
