@@ -2935,7 +2935,7 @@ function _thangCard(id,title,icon,badge,ana,inner){
  return `<div class="card" id="${id}" style="margin-bottom:18px">
   <div class="card-header"><div class="card-title"><div class="card-icon">${icon}</div>${title}</div><div class="card-info">${badge}</div></div>
   <div class="analysis-box" style="margin:10px 14px">${ana}</div>
-  <div class="table-wrap" style="overflow-x:auto;margin:0 14px 14px"><table style="border-collapse:collapse">${inner}</table></div>
+  <div class="table-wrap" style="overflow-x:auto;overflow-y:visible;max-height:none;margin:0 14px 14px"><table style="border-collapse:collapse">${inner}</table></div>
  </div>`;
 }
 // Gom sheet BC → core->date->{vol,cnt,rv}
