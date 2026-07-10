@@ -2964,7 +2964,7 @@ function _thangMulti(o){
  if(!mp)return {html:_thangEmptyCard(title,icon,'Không có dữ liệu nguồn hoặc không có BC khu vực Thắng.'),cap:`${title}: không có dữ liệu`};
  const {M,last7,latest,prev,grand,hasCnt}=mp;
  const rate=x=>x&&x.vol>0?(hasCnt?x.cnt/x.vol*100:x.rv/x.vol):null;
- const cs='padding:3px 8px;font-size:11px;';
+ const cs='padding:7px 10px;font-size:11.5px;';
  const th='background:var(--orange);color:#fff;font-weight:700;'+cs;
  let h1=`<tr><th rowspan="2" style="${th}text-align:center;position:sticky;left:0;z-index:3;width:34px">STT</th><th rowspan="2" style="${th}text-align:left;position:sticky;left:34px;z-index:3;min-width:120px">Bưu Cục</th>`;
  last7.forEach((d,i)=>{const isLast=i===last7.length-1;h1+=`<th colspan="${subCols.length}" style="${th}text-align:center;border-left:2px solid #fff;${isLast?'background:var(--orange-dark)':''}">${shortDDow(d)}</th>`;});
@@ -3017,7 +3017,7 @@ function _thangMulti(o){
 }
 // Bảng 6 — Aging (trend N-1 + nhóm ngày backlog, bỏ cột tổng 7 ngày)
 function _thangAging(id){
- const cs='padding:3px 8px;font-size:11px;';
+ const cs='padding:7px 10px;font-size:11.5px;';
  const th='background:var(--orange);color:#fff;font-weight:700;'+cs;
  const rows=window._agingRows;
  if(!rows||!rows.length)return {html:_thangEmptyCard('Bảng 6 — Aging &gt; 5 ngày','⏳','Chưa tải được dữ liệu Aging.'),cap:'Bảng 6 — Aging: không có dữ liệu'};
