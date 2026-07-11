@@ -3234,6 +3234,8 @@ function _lowCompute(){
  const plan=[];
  if(wmode==='rain'){
   plan.push({head:'ỨNG PHÓ MƯA (KHẨN)',k:'RAIN',detail:`Bảo đảm AN TOÀN nhân viên phát tuyến cụm Quảng Ninh + trung du Bắc Giang + Lạng Sơn; kiểm soát hàng hoá không để thất thoát; sau mưa dồn lực giải phóng hàng tồn.`});
+ }else if(wmode==='heat'){
+  plan.push({head:'ỨNG PHÓ NẮNG NÓNG (KHẨN)',k:'HEAT',detail:`Nắng nóng gay gắt ≥42°C, kéo dài đến chiều tối. Bảo đảm AN TOÀN nhân viên phát tuyến (chống sốc nhiệt, cấp nước và nghỉ hợp lý); giãn khung giao sang sáng sớm và chiều tối mát, hạn chế phơi nắng khung trưa–chiều; ưu tiên tuyến xa vào khung mát.`});
  }else{
   // Ưu tiên #1 = chỉ số cách mục tiêu XA NHẤT (biến thiên theo ngày)
   const gaps=[
@@ -3273,12 +3275,14 @@ function buildLowlightPage(){
   kpiH+=_lowLine(`<b>• ${k.label}:</b> <b style="color:${col}">${v||k.extra}</b>${v?extra:''}${k.target?` <span style="color:var(--text-sub)">(mục tiêu ${k.target})</span>`:''}${fdTag}`);
  });
  // BC lists
- const modeRain=R.wmode==='rain';
+ const modeRain=R.wmode==='rain',modeHeat=R.wmode==='heat';
  const wH=R.weatherBCs.length?R.weatherBCs.map(_lowBCLine).join(''):_lowLine('<span style="color:var(--text-sub)">Không có Bưu Cục lowlight thuộc cụm mưa.</span>');
  const rH=R.realBCs.length?R.realBCs.map(_lowBCLine).join(''):_lowLine('<span style="color:var(--text-sub)">Không có Bưu Cục lowlight.</span>');
- const sec3=modeRain?(_lowSect('3) BƯU CỤC LOWLIGHT DO THỜI TIẾT (hỗ trợ, không phạt nặng)')+wH):(_lowSect('3) YẾU TỐ THỜI TIẾT')+_lowLine('<span style="color:var(--text-sub)">☀️ Thời tiết bình thường — không tách yếu tố thời tiết. Toàn bộ Bưu Cục lowlight xem mục 4.</span>'));
+ const sec3=modeRain?(_lowSect('3) BƯU CỤC LOWLIGHT DO THỜI TIẾT (hỗ trợ, không phạt nặng)')+wH)
+  :modeHeat?(_lowSect('3) YẾU TỐ THỜI TIẾT — NẮNG NÓNG')+_lowLine('<span style="color:var(--text-sub)">🌡️ Nắng nóng gay gắt ≥42°C toàn vùng, kéo dài đến chiều tối — không tách cụm Bưu Cục. Toàn bộ Bưu Cục lowlight xem mục 4.</span>'))
+  :(_lowSect('3) YẾU TỐ THỜI TIẾT')+_lowLine('<span style="color:var(--text-sub)">☀️ Thời tiết bình thường — không tách yếu tố thời tiết. Toàn bộ Bưu Cục lowlight xem mục 4.</span>'));
  const sec4=modeRain?(_lowSect('4) BƯU CỤC VẬN HÀNH THẬT (nội tại — xử cứng)')+rH):(_lowSect('4) BƯU CỤC LOWLIGHT CẦN XỬ LÝ')+rH);
- const wmodeSel=`<div style="margin-bottom:8px"><label style="font-size:12px;font-weight:700;margin-right:8px">Chế độ thời tiết hôm nay:</label><select id="low-wmode" onchange="localStorage.setItem(LOW_WMODE_KEY,this.value);buildLowlightPage();" style="border:1px solid var(--border);border-radius:6px;padding:5px 10px;font-size:12px;background:#fff;cursor:pointer"><option value="normal"${!modeRain?' selected':''}>☀️ Bình thường</option><option value="rain"${modeRain?' selected':''}>🌧️ Mưa lớn (ảnh hưởng vận hành)</option></select></div>`;
+ const wmodeSel=`<div style="margin-bottom:8px"><label style="font-size:12px;font-weight:700;margin-right:8px">Chế độ thời tiết hôm nay:</label><select id="low-wmode" onchange="localStorage.setItem(LOW_WMODE_KEY,this.value);buildLowlightPage();" style="border:1px solid var(--border);border-radius:6px;padding:5px 10px;font-size:12px;background:#fff;cursor:pointer"><option value="normal"${!modeRain&&!modeHeat?' selected':''}>☀️ Bình thường</option><option value="rain"${modeRain?' selected':''}>🌧️ Mưa lớn (ảnh hưởng vận hành)</option><option value="heat"${modeHeat?' selected':''}>🌡️ Nắng nóng gay gắt (≥42°C)</option></select></div>`;
  const amH=R.ams.length?R.ams.map(a=>_lowLine(`<b>• ${a.am}</b> — ${a.reasons.join(' · ')}`)).join(''):_lowLine('<span style="color:var(--text-sub)">—</span>');
  let planH='';R.plan.forEach((p,i)=>{planH+=_lowLine(`<b>${i+1}. ${p.head}:</b>`);planH+=_lowLine(p.detail,true);});
  el.innerHTML=`<div class="page-header"><div class="page-title">🚨 Báo Cáo Vận Hành Lowlight — Vùng XBG</div>
@@ -3308,6 +3312,9 @@ function _lowTGChunks(){
   s+=`\n<b>3) BƯU CỤC LOWLIGHT DO THỜI TIẾT:</b>\n`;
   R.weatherBCs.forEach(b=>{s+=`• ${esc(b.name)}${b.am?` (${esc(b.am)})`:''} — ${esc(b.reasons.join(' · '))}\n`;});if(!R.weatherBCs.length)s+=`• —\n`;
   s+=`\n<b>4) BƯU CỤC VẬN HÀNH THẬT (xử cứng):</b>\n`;
+ }else if(R.wmode==='heat'){
+  s+=`\n<b>3) YẾU TỐ THỜI TIẾT — NẮNG NÓNG:</b>\n🌡️ Nắng nóng gay gắt ≥42°C toàn vùng, kéo dài đến chiều tối — không tách cụm Bưu Cục.\n`;
+  s+=`\n<b>4) BƯU CỤC LOWLIGHT CẦN XỬ LÝ:</b>\n`;
  }else{
   s+=`\n<b>3) YẾU TỐ THỜI TIẾT:</b>\n☀️ Thời tiết bình thường — không tách yếu tố thời tiết.\n`;
   s+=`\n<b>4) BƯU CỤC LOWLIGHT CẦN XỬ LÝ:</b>\n`;
