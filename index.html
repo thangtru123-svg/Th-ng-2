@@ -1297,6 +1297,16 @@ const AGING_SHEET_ID='1jCWPRvfGA7d2uHL6_xT8ZxU3tgpOdlBK1-c4QT961ew';
 const AGING_GID='1424919323';
 function parseCsvRaw(text){return text.trim().split('\n').slice(1).map(l=>{const cols=[];let cur='',inQ=false;for(const c of l){if(c==='"')inQ=!inQ;else if(c===','&&!inQ){cols.push(cur.trim());cur='';}else cur+=c;}cols.push(cur.trim());return cols;});}
 function agingFmtDate(d){if(!d)return'';const p=d.split('-');return p.length===3?`${p[2]}/${p[1]}/${p[0]}`:d;}
+/* Gom nhóm ngày aging theo cột "Nhóm BL" (col J) — bảng phân loại chuẩn của sheet:
+   (a)5-6 (b)6-7 (c)7-8 → g1(5-7) | (d)8-9 (e)9-10 (f)10-11 → g2(8-10) |
+   (g)11-12 (h)12-13 (i)13-14 (j)14-15 → g3(11-15) | (k)>15 → g4(>15).
+   KHÔNG dùng cột "Số ngày" (col G) vì col G làm tròn lên gây lệch số. Fallback col G nếu thiếu Nhóm BL. */
+function _agBLGroup(r){
+ const s=(r[9]||'').toLowerCase();
+ const m=s.match(/\(([a-z])\)/);
+ if(m){const c=m[1];if(c==='k'||s.includes('>15')||s.includes('> 15'))return 'g4';if(c<='c')return 'g1';if(c<='f')return 'g2';if(c<='j')return 'g3';return 'g4';}
+ const d=parseFloat(r[6])||0;return d>=16?'g4':d>=11?'g3':d>=8?'g2':'g1';
+}
 function buildAgingHTML(rows){
  const allDates=[...new Set(rows.map(r=>r[11]))].filter(d=>d&&d.startsWith('2026')).sort();
  const last7=allDates.slice(-7);
@@ -1307,7 +1317,7 @@ function buildAgingHTML(rows){
  const unstableBCSet=new Set(unstableRows.map(r=>r[2]));
  const byDate={};recent.forEach(r=>{const _am=(r[10]||'').trim();if(_am&&(_am==='#N/A'||_am.startsWith('#')))return;byDate[r[11]]=(byDate[r[11]]||0)+1;});
  // Nhóm ngày aging của ngày mới nhất (r[6]=Số ngày)
- const agingGroups={};rows.filter(r=>r[11]===latest).forEach(r=>{const bc=(r[2]||'').trim(),am=(r[10]||'').trim();const days=parseFloat(r[6])||0;const g=days>=16?'g4':days>=11?'g3':days>=8?'g2':'g1';if(bc){if(!agingGroups[bc])agingGroups[bc]={g1:0,g2:0,g3:0,g4:0};agingGroups[bc][g]++;}if(am&&!am.startsWith('#')){const k='am:'+am;if(!agingGroups[k])agingGroups[k]={g1:0,g2:0,g3:0,g4:0};agingGroups[k][g]++;}});
+ const agingGroups={};rows.filter(r=>r[11]===latest).forEach(r=>{const bc=(r[2]||'').trim(),am=(r[10]||'').trim();const g=_agBLGroup(r);if(bc){if(!agingGroups[bc])agingGroups[bc]={g1:0,g2:0,g3:0,g4:0};agingGroups[bc][g]++;}if(am&&!am.startsWith('#')){const k='am:'+am;if(!agingGroups[k])agingGroups[k]={g1:0,g2:0,g3:0,g4:0};agingGroups[k][g]++;}});
  const latestTotal=byDate[latest]||0;const prevTotal=byDate[prev]||0;const delta=latestTotal-prevTotal;
  const unstableLatest=unstableRows.filter(r=>r[11]===latest).length;
  const deltaSign=delta>0?'+':'';const deltaIcon=delta<0?'▼':delta>0?'▲':'—';const deltaColor=delta<0?'var(--green)':delta>0?'var(--red)':'var(--text-sub)';
@@ -3027,7 +3037,7 @@ function _thangAging(id){
  const allD=[...new Set(trows.map(r=>r[11]))].filter(d=>d&&d.startsWith('2026')).sort();
  const last7=allD.slice(-7);const latest=last7[last7.length-1],prev=last7[last7.length-2];
  const M={};trows.forEach(r=>{const d=r[11];if(!last7.includes(d))return;const core=_coreBC(r[2]);M[core]=M[core]||{};M[core][d]=(M[core][d]||0)+1;});
- const grp={};trows.filter(r=>r[11]===latest).forEach(r=>{const core=_coreBC(r[2]);const days=parseFloat(r[6])||0;const g=days>=16?'g4':days>=11?'g3':days>=8?'g2':'g1';grp[core]=grp[core]||{g1:0,g2:0,g3:0,g4:0};grp[core][g]++;});
+ const grp={};trows.filter(r=>r[11]===latest).forEach(r=>{const core=_coreBC(r[2]);const g=_agBLGroup(r);grp[core]=grp[core]||{g1:0,g2:0,g3:0,g4:0};grp[core][g]++;});
  let h=`<tr><th style="${th}text-align:center;position:sticky;left:0;z-index:3;width:34px">STT</th><th style="${th}text-align:left;position:sticky;left:34px;z-index:3;min-width:120px">Bưu Cục</th>`;
  last7.forEach((d,i)=>{const isLast=i===last7.length-1;h+=`<th style="${th}text-align:center;${isLast?'background:var(--orange-dark)':''}">${shortDDow(d)}</th>`;});
  h+=`<th style="${th}text-align:center;border-left:2px solid #fff">Trend N-1</th>`;
@@ -3131,7 +3141,7 @@ function _lowLatest(sheet,dateCol){if(!sheet||sheet.length<2)return'';const ds=[
 function _lowIsGrand(r,c){return (r[c]||'').toLowerCase().includes('grand total');}
 /* Aging ≥8 ngày tính theo cột "Nhóm BL" (col J) — bảng phân loại chuẩn của sheet,
    KHÔNG dùng cột "Số ngày" (col G) vì col G làm tròn lên gây lệch số. */
-function _lowAgGe8(r){const s=(r[9]||'').toLowerCase();if(s.includes('>15')||s.includes('> 15'))return true;const m=s.match(/(\d+)\s*-\s*(\d+)/);if(m)return parseInt(m[1],10)>=8;const d=parseFloat(r[6]);return !isNaN(d)&&d>=8;}
+function _lowAgGe8(r){return _agBLGroup(r)!=='g1';}
 
 function _lowCompute(){
  const D=window._D||{},FD=window._FD||{};
