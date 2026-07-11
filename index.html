@@ -3131,6 +3131,7 @@ async function sendThangToTelegram(btn){
 const TG_LOW_CHAT=-1003725776625;   // https://t.me/c/3725776625/6/691
 const TG_LOW_THREAD=6;
 const LOW_WEATHER_KEY='xbg_low_weather';
+const LOW_WMODE_KEY='xbg_low_wmode'; // 'rain' = mưa lớn ảnh hưởng | 'normal' = bình thường
 const LOW_WEATHER_DEFAULT='Bắc Bộ mưa rào và dông, cục bộ mưa to đến rất to; tâm mưa vùng núi, trung du Bắc Bộ và Quảng Ninh. Nguy cơ lũ quét, sạt lở, ngập úng. (Đại nhân cập nhật tình hình thời tiết mỗi ngày tại đây — nội dung được lưu tự động.)';
 const LOW_WEATHER_PROV=['QNI','LSO'];          // cụm tỉnh mưa (núi/ven biển)
 const LOW_WEATHER_CORE=['xuân cẩm'];           // BC trung du BG mặc định coi là mưa
@@ -3194,8 +3195,10 @@ function _lowCompute(){
   if(rs.length){const score=(b.aging||0)+(b.gtc!=null?Math.max(0,48-b.gtc)*6:0)+(b.fd!=null?Math.max(0,b.fd-15)*8:0)+(b.opr!=null?Math.max(0,60-b.opr)*3:0);flagged.push({name:b.name,am:b.am,prov:b.prov,core:b.core,reasons:rs.map(x=>x.t),score});}
  });
  flagged.sort((a,b)=>b.score-a.score);
- const weatherBCs=flagged.filter(b=>_lowIsWeather(b.name,b.core)).slice(0,12);
- const realBCs=flagged.filter(b=>!_lowIsWeather(b.name,b.core)).slice(0,12);
+ const wmode=(localStorage.getItem(LOW_WMODE_KEY)||'normal'); // mặc định: bình thường
+ let weatherBCs=[],realBCs;
+ if(wmode==='rain'){weatherBCs=flagged.filter(b=>_lowIsWeather(b.name,b.core)).slice(0,12);realBCs=flagged.filter(b=>!_lowIsWeather(b.name,b.core)).slice(0,12);}
+ else{realBCs=flagged.slice(0,16);} // bình thường: gộp hết vào "cần xử lý"
  // ----- AM cần quan tâm -----
  const amFlags={};const addAM=(am,r)=>{if(!am)return;(amFlags[am]=amFlags[am]||[]).push(r);};
  const ag8Sorted=Object.entries(ag8ByAM).sort((a,b)=>b[1]-a[1]);
@@ -3226,14 +3229,28 @@ function _lowCompute(){
  const topFD=[...Object.values(M)].filter(b=>b.fd!=null&&b.fd>=15).sort((a,b)=>b.fd-a.fd).slice(0,4).map(b=>`${b.name} ${b.fd.toFixed(1)}%`).join(' · ')||'—';
  const topOPR=[...Object.values(M)].filter(b=>b.opr!=null&&(b.oprVol||0)>=100&&b.opr<75).sort((a,b)=>a.opr-b.opr).slice(0,4).map(b=>`${b.name} ${b.opr.toFixed(1)}%`).join(' · ')||'—';
  const topGTCreal=realBCs.filter(b=>b.reasons.some(r=>r.startsWith('GTC'))).slice(0,4).map(b=>b.name).join(' · ')||'—';
- const plan=[
-  {head:'ỨNG PHÓ MƯA (KHẨN)',detail:`Bảo đảm AN TOÀN nhân viên phát tuyến cụm Quảng Ninh + trung du Bắc Giang + Lạng Sơn; kiểm soát hàng hoá không để thất thoát; sau mưa dồn lực giải phóng hàng tồn.`},
-  {head:`GIẢI PHÓNG AGING ≥8N (${fmt(ag8)} ĐƠN)`,detail:`Tập trung các AM tồn đọng nhiều nhất: ${topAg8}; ưu tiên đơn quá hạn >15 ngày.`},
-  {head:'XỬ LÝ TỈ LỆ TRẢ CAO',detail:`Rà soát các Bưu Cục trả hàng >15%: ${topFD}; phối hợp OE gọi khách xác nhận trước khi trả.`},
-  {head:'KÉO OPR (LẤY HÀNG) CỤM HẢI PHÒNG',detail:`Bổ sung lực lượng lấy hàng cho: ${topOPR}.`},
-  {head:'KÉO GTC CÁC BƯU CỤC KHÔNG DO MƯA',detail:`Ưu tiên xử cứng, có OE hỗ trợ: ${topGTCreal}.`}
- ];
- return {date,short,kpi,weatherBCs,realBCs,ams,plan};
+ const topGTCall=[...Object.values(M)].filter(b=>b.gtc!=null&&b.gtc<48).sort((a,b)=>a.gtc-b.gtc).slice(0,4).map(b=>`${b.name} ${b.gtc.toFixed(1)}%`).join(' · ')||'—';
+ const topODR=[...Object.values(M)].filter(b=>b.odr!=null&&(b.odrVol||0)>=30&&b.odr<85).sort((a,b)=>a.odr-b.odr).slice(0,4).map(b=>`${b.name} ${b.odr.toFixed(1)}%`).join(' · ')||'—';
+ const plan=[];
+ if(wmode==='rain'){
+  plan.push({head:'ỨNG PHÓ MƯA (KHẨN)',k:'RAIN',detail:`Bảo đảm AN TOÀN nhân viên phát tuyến cụm Quảng Ninh + trung du Bắc Giang + Lạng Sơn; kiểm soát hàng hoá không để thất thoát; sau mưa dồn lực giải phóng hàng tồn.`});
+ }else{
+  // Ưu tiên #1 = chỉ số cách mục tiêu XA NHẤT (biến thiên theo ngày)
+  const gaps=[
+   {k:'GTC',gap:70-(gtcAll||0),head:'KÉO GTC TOÀN VÙNG',detail:`GTC ${gtcAll!=null?gtcAll.toFixed(1):'—'}% còn xa mục tiêu ≥70%. Ưu tiên các Bưu Cục GTC thấp nhất: ${topGTCall}; đẩy tỉ lệ gán + giao trong ngày.`},
+   {k:'ODR',gap:96-(odrG?odrG.pct:0),head:'KÉO ODR (GIAO ĐÚNG HẠN)',detail:`ODR ${odrG?odrG.pct.toFixed(1):'—'}% dưới mục tiêu ≥96%. Siết giao đúng hạn các Bưu Cục: ${topODR}.`},
+   {k:'OPR',gap:80-(oprG?oprG.pct:0),head:'KÉO OPR (LẤY ĐÚNG HẠN)',detail:`OPR ${oprG?oprG.pct.toFixed(1):'—'}% dưới mục tiêu ≥80%. Bổ sung lực lượng lấy hàng: ${topOPR}.`},
+   {k:'FD',gap:(fdAll||0)-8,head:'GIẢM TỈ LỆ TRẢ',detail:`FD ${fdAll!=null?fdAll.toFixed(2):'—'}% vượt mục tiêu ≤8%. Rà soát Bưu Cục trả cao: ${topFD}.`}
+  ].filter(x=>x.gap>0.05).sort((a,b)=>b.gap-a.gap);
+  if(gaps.length)plan.push(gaps[0]);
+  else plan.push({head:'DUY TRÌ VẬN HÀNH',k:'OK',detail:`Các chỉ số chính đạt/gần mục tiêu — duy trì và xử các Bưu Cục lowlight bên dưới.`});
+ }
+ const p1k=plan[0].k;
+ plan.push({head:`GIẢI PHÓNG AGING ≥8N (${fmt(ag8)} ĐƠN)`,detail:`Tập trung các AM tồn đọng nhiều nhất: ${topAg8}; ưu tiên đơn quá hạn >15 ngày.`});
+ if(p1k!=='FD'&&topFD!=='—')plan.push({head:'XỬ LÝ TỈ LỆ TRẢ CAO',detail:`Rà soát các Bưu Cục trả hàng >15%: ${topFD}; phối hợp OE gọi khách xác nhận trước khi trả.`});
+ if(p1k!=='OPR'&&topOPR!=='—')plan.push({head:'KÉO OPR (LẤY HÀNG)',detail:`Bổ sung lực lượng lấy hàng cho: ${topOPR}.`});
+ if(p1k!=='GTC'){const gtcHead=wmode==='rain'?'KÉO GTC CÁC BƯU CỤC KHÔNG DO MƯA':'KÉO GTC CÁC BƯU CỤC LOWLIGHT';const gtcList=wmode==='rain'?topGTCreal:topGTCall;if(gtcList!=='—')plan.push({head:gtcHead,detail:`Ưu tiên xử cứng, có OE hỗ trợ: ${gtcList}.`});}
+ return {date,short,kpi,weatherBCs,realBCs,ams,plan,wmode};
 }
 
 function _lowSect(t){return `<div style="font-size:14px;font-weight:800;color:var(--orange-dark);text-transform:uppercase;letter-spacing:.3px;margin:18px 0 8px;padding-bottom:5px;border-bottom:2px solid var(--orange-mid)">${t}</div>`;}
@@ -3256,8 +3273,12 @@ function buildLowlightPage(){
   kpiH+=_lowLine(`<b>• ${k.label}:</b> <b style="color:${col}">${v||k.extra}</b>${v?extra:''}${k.target?` <span style="color:var(--text-sub)">(mục tiêu ${k.target})</span>`:''}${fdTag}`);
  });
  // BC lists
+ const modeRain=R.wmode==='rain';
  const wH=R.weatherBCs.length?R.weatherBCs.map(_lowBCLine).join(''):_lowLine('<span style="color:var(--text-sub)">Không có Bưu Cục lowlight thuộc cụm mưa.</span>');
- const rH=R.realBCs.length?R.realBCs.map(_lowBCLine).join(''):_lowLine('<span style="color:var(--text-sub)">Không có Bưu Cục lowlight nội tại.</span>');
+ const rH=R.realBCs.length?R.realBCs.map(_lowBCLine).join(''):_lowLine('<span style="color:var(--text-sub)">Không có Bưu Cục lowlight.</span>');
+ const sec3=modeRain?(_lowSect('3) BƯU CỤC LOWLIGHT DO THỜI TIẾT (hỗ trợ, không phạt nặng)')+wH):(_lowSect('3) YẾU TỐ THỜI TIẾT')+_lowLine('<span style="color:var(--text-sub)">☀️ Thời tiết bình thường — không tách yếu tố thời tiết. Toàn bộ Bưu Cục lowlight xem mục 4.</span>'));
+ const sec4=modeRain?(_lowSect('4) BƯU CỤC VẬN HÀNH THẬT (nội tại — xử cứng)')+rH):(_lowSect('4) BƯU CỤC LOWLIGHT CẦN XỬ LÝ')+rH);
+ const wmodeSel=`<div style="margin-bottom:8px"><label style="font-size:12px;font-weight:700;margin-right:8px">Chế độ thời tiết hôm nay:</label><select id="low-wmode" onchange="localStorage.setItem(LOW_WMODE_KEY,this.value);buildLowlightPage();" style="border:1px solid var(--border);border-radius:6px;padding:5px 10px;font-size:12px;background:#fff;cursor:pointer"><option value="normal"${!modeRain?' selected':''}>☀️ Bình thường</option><option value="rain"${modeRain?' selected':''}>🌧️ Mưa lớn (ảnh hưởng vận hành)</option></select></div>`;
  const amH=R.ams.length?R.ams.map(a=>_lowLine(`<b>• ${a.am}</b> — ${a.reasons.join(' · ')}`)).join(''):_lowLine('<span style="color:var(--text-sub)">—</span>');
  let planH='';R.plan.forEach((p,i)=>{planH+=_lowLine(`<b>${i+1}. ${p.head}:</b>`);planH+=_lowLine(p.detail,true);});
  el.innerHTML=`<div class="page-header"><div class="page-title">🚨 Báo Cáo Vận Hành Lowlight — Vùng XBG</div>
@@ -3265,10 +3286,11 @@ function buildLowlightPage(){
   <div class="card" id="low-card" style="padding:16px 18px">
    ${_lowSect('1) TOÀN VÙNG vs MỤC TIÊU')}${kpiH}
    ${_lowSect('2) YẾU TỐ KHÁCH QUAN — THỜI TIẾT')}
+   ${wmodeSel}
    <textarea id="low-weather" oninput="localStorage.setItem(LOW_WEATHER_KEY,this.value)" style="width:100%;min-height:78px;border:1px solid var(--border);border-radius:8px;padding:9px 11px;font-size:13px;line-height:1.55;font-family:inherit;resize:vertical;background:var(--orange-light)">${weather.replace(/</g,'&lt;')}</textarea>
    <div style="font-size:11px;color:var(--text-sub);margin-top:4px">✍️ Ô này nhập tay & lưu tự động (web tĩnh không tự lấy được thời tiết).</div>
-   ${_lowSect('3) BƯU CỤC LOWLIGHT DO THỜI TIẾT (hỗ trợ, không phạt nặng)')}${wH}
-   ${_lowSect('4) BƯU CỤC VẬN HÀNH THẬT (nội tại — xử cứng)')}${rH}
+   ${sec3}
+   ${sec4}
    ${_lowSect('5) AM PHẢI QUAN TÂM')}${amH}
    ${_lowSect('6) KẾ HOẠCH TRỌNG TÂM')}${planH}
   </div>`;
@@ -3282,9 +3304,14 @@ function _lowTGChunks(){
  s+=`<b>1) TOÀN VÙNG vs MỤC TIÊU:</b>\n`;
  R.kpi.forEach(k=>{let v=k.val==null?'':(k.unit==='%'?k.val.toFixed(1)+'%':fmt(Math.round(k.val))+' đơn');let tail=k.extra?` · ${esc(k.extra)}`:'';let tgt=k.target?` (mục tiêu ${k.target})`:'';let fd=k.label==='% Gán'&&k.fdOk!=null?(k.fdOk?' ✅ đạt':' ⚠️ vượt'):'';s+=`• ${esc(k.label)}: ${v||esc(k.extra)}${v?tail:''}${tgt}${fd}\n`;});
  s+=`\n<b>2) YẾU TỐ KHÁCH QUAN — THỜI TIẾT:</b>\n${esc(weather)}\n`;
- s+=`\n<b>3) BƯU CỤC LOWLIGHT DO THỜI TIẾT:</b>\n`;
- (R.weatherBCs.length?R.weatherBCs:[]).forEach(b=>{s+=`• ${esc(b.name)}${b.am?` (${esc(b.am)})`:''} — ${esc(b.reasons.join(' · '))}\n`;});if(!R.weatherBCs.length)s+=`• —\n`;
- s+=`\n<b>4) BƯU CỤC VẬN HÀNH THẬT (xử cứng):</b>\n`;
+ if(R.wmode==='rain'){
+  s+=`\n<b>3) BƯU CỤC LOWLIGHT DO THỜI TIẾT:</b>\n`;
+  R.weatherBCs.forEach(b=>{s+=`• ${esc(b.name)}${b.am?` (${esc(b.am)})`:''} — ${esc(b.reasons.join(' · '))}\n`;});if(!R.weatherBCs.length)s+=`• —\n`;
+  s+=`\n<b>4) BƯU CỤC VẬN HÀNH THẬT (xử cứng):</b>\n`;
+ }else{
+  s+=`\n<b>3) YẾU TỐ THỜI TIẾT:</b>\n☀️ Thời tiết bình thường — không tách yếu tố thời tiết.\n`;
+  s+=`\n<b>4) BƯU CỤC LOWLIGHT CẦN XỬ LÝ:</b>\n`;
+ }
  (R.realBCs.length?R.realBCs:[]).forEach(b=>{s+=`• ${esc(b.name)}${b.am?` (${esc(b.am)})`:''} — ${esc(b.reasons.join(' · '))}\n`;});if(!R.realBCs.length)s+=`• —\n`;
  s+=`\n<b>5) AM PHẢI QUAN TÂM:</b>\n`;
  R.ams.forEach(a=>{s+=`• ${esc(a.am)} — ${esc(a.reasons.join(' · '))}\n`;});if(!R.ams.length)s+=`• —\n`;
