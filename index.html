@@ -3129,6 +3129,9 @@ function _lowProv(name){const m=(name||'').match(/\(([^)]+)\)/);return m?m[1].tr
 function _lowIsWeather(name,core){return LOW_WEATHER_PROV.includes(_lowProv(name))||LOW_WEATHER_CORE.includes(core);}
 function _lowLatest(sheet,dateCol){if(!sheet||sheet.length<2)return'';const ds=[...new Set(sheet.slice(1).map(r=>isoD(r[dateCol])).filter(Boolean))].sort();return ds[ds.length-1]||'';}
 function _lowIsGrand(r,c){return (r[c]||'').toLowerCase().includes('grand total');}
+/* Aging ≥8 ngày tính theo cột "Nhóm BL" (col J) — bảng phân loại chuẩn của sheet,
+   KHÔNG dùng cột "Số ngày" (col G) vì col G làm tròn lên gây lệch số. */
+function _lowAgGe8(r){const s=(r[9]||'').toLowerCase();if(s.includes('>15')||s.includes('> 15'))return true;const m=s.match(/(\d+)\s*-\s*(\d+)/);if(m)return parseInt(m[1],10)>=8;const d=parseFloat(r[6]);return !isNaN(d)&&d>=8;}
 
 function _lowCompute(){
  const D=window._D||{},FD=window._FD||{};
@@ -3149,7 +3152,7 @@ function _lowCompute(){
  const agDate=agDates[agDates.length-1]||'';
  const agByCore={},ag8ByAM={},ag5ByAM={};
  ag.forEach(r=>{if(r[11]!==agDate)return;const core=_coreBC(r[2]||'');const days=+r[6]||0;const am=(r[10]||'').trim();if(core){agByCore[core]=(agByCore[core]||0)+1;if(M[core])M[core].aging=(M[core].aging||0)+1;}
-  if(am&&!am.startsWith('#')){ag5ByAM[am]=(ag5ByAM[am]||0)+1;if(days>=8)ag8ByAM[am]=(ag8ByAM[am]||0)+1;}});
+  if(am&&!am.startsWith('#')){ag5ByAM[am]=(ag5ByAM[am]||0)+1;if(_lowAgGe8(r))ag8ByAM[am]=(ag8ByAM[am]||0)+1;}});
  Object.keys(agByCore).forEach(core=>{if(M[core])M[core].aging=agByCore[core];});
  // ----- Toàn vùng -----
  let sVol=0,sNG=0,sGan=0;Object.values(M).forEach(b=>{if(b.gtc!=null){sVol+=b.vol;sNG+=b.nGTC;sGan+=b.vol*(b.gan||0);}});
@@ -3168,7 +3171,7 @@ function _lowCompute(){
  const odrUnder=Object.values(M).filter(b=>b.odr!=null&&(b.odrVol||0)>=30&&b.odr<96).length;
  const oprUnder=Object.values(M).filter(b=>b.opr!=null&&(b.oprVol||0)>=30&&b.opr<80).length;
  // Aging ≥5N/≥8N toàn vùng
- let ag5=0,ag8=0;ag.forEach(r=>{if(r[11]!==agDate)return;ag5++;if((+r[6]||0)>=8)ag8++;});
+ let ag5=0,ag8=0;ag.forEach(r=>{if(r[11]!==agDate)return;ag5++;if(_lowAgGe8(r))ag8++;});
  // ----- Lowlight BC -----
  const flagged=[];
  Object.values(M).forEach(b=>{
