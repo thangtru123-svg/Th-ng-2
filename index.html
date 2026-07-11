@@ -219,6 +219,7 @@ tr.tot td{background:#FFF0EB!important;font-weight:800!important;border-top:2px 
  <div class="nav-section">Tổng Quan</div>
  <button class="nav-item active" onclick="show('p0',this)"><span class="icon">📊</span>Dashboard Tổng Quan</button>
  <button class="nav-item" onclick="show('p23',this)" style="background:linear-gradient(135deg,rgba(241,93,41,0.18),rgba(255,138,61,0.1));border:1px solid rgba(241,93,41,0.35);font-weight:700"><span class="icon">🗺️</span>BC Vận Hành Khu Vực Thắng</button>
+ <button class="nav-item" onclick="show('p24',this)" style="background:linear-gradient(135deg,rgba(220,38,38,0.16),rgba(241,93,41,0.08));border:1px solid rgba(220,38,38,0.32);font-weight:700"><span class="icon">🚨</span>Báo Cáo Lowlight XBG</button>
  <div class="nav-section">GTC</div>
  <button class="nav-item" onclick="show('p1',this)"><span class="icon">📦</span>Tổng quan GTC Total</button>
  <button class="nav-item" onclick="show('p2',this)"><span class="icon">🎯</span>Tổng quan GTC TTS</button>
@@ -269,6 +270,7 @@ tr.tot td{background:#FFF0EB!important;font-weight:800!important;border-top:2px 
 <div class="page" id="p21"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
 <div class="page" id="p22"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
 <div class="page" id="p23"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
+<div class="page" id="p24"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
 </main>
 
 <script>
@@ -3115,6 +3117,186 @@ async function sendThangToTelegram(btn){
  if(btn){btn.textContent=`✅ Đã bắn ${okN}/${items.length}`;setTimeout(()=>{btn.textContent=old;btn.disabled=false;},4500);}
 }
 
+/* ===== P24: BÁO CÁO LOWLIGHT VÙNG XBG (tự tổng hợp) ===== */
+const TG_LOW_CHAT=-1003725776625;   // https://t.me/c/3725776625/6/691
+const TG_LOW_THREAD=6;
+const LOW_WEATHER_KEY='xbg_low_weather';
+const LOW_WEATHER_DEFAULT='Bắc Bộ mưa rào và dông, cục bộ mưa to đến rất to; tâm mưa vùng núi, trung du Bắc Bộ và Quảng Ninh. Nguy cơ lũ quét, sạt lở, ngập úng. (Đại nhân cập nhật tình hình thời tiết mỗi ngày tại đây — nội dung được lưu tự động.)';
+const LOW_WEATHER_PROV=['QNI','LSO'];          // cụm tỉnh mưa (núi/ven biển)
+const LOW_WEATHER_CORE=['xuân cẩm'];           // BC trung du BG mặc định coi là mưa
+
+function _lowProv(name){const m=(name||'').match(/\(([^)]+)\)/);return m?m[1].trim():'';}
+function _lowIsWeather(name,core){return LOW_WEATHER_PROV.includes(_lowProv(name))||LOW_WEATHER_CORE.includes(core);}
+function _lowLatest(sheet,dateCol){if(!sheet||sheet.length<2)return'';const ds=[...new Set(sheet.slice(1).map(r=>isoD(r[dateCol])).filter(Boolean))].sort();return ds[ds.length-1]||'';}
+function _lowIsGrand(r,c){return (r[c]||'').toLowerCase().includes('grand total');}
+
+function _lowCompute(){
+ const D=window._D||{},FD=window._FD||{};
+ const gBC=D.gtcTotalBC,odrBC=D.odrBC,oprBC=D.oprBC,fdBC=FD.totalBC,ag=window._agingRows||[];
+ if(!gBC||gBC.length<2)return null;
+ const date=_lowLatest(gBC,2);
+ const short=shortD(date);
+ // ----- BC unified map -----
+ const M={};
+ const bcAM={}; // core -> AM (mọi ngày)
+ gBC.slice(1).forEach(r=>{const nm=(r[1]||'').trim();if(!nm||_lowIsGrand(r,1))return;const core=_coreBC(nm);if((r[0]||'').trim())bcAM[core]=(r[0]||'').trim();});
+ gBC.slice(1).forEach(r=>{if(isoD(r[2])!==date)return;const nm=(r[1]||'').trim();if(!nm||_lowIsGrand(r,1))return;const core=_coreBC(nm);const vol=+r[3]||0,gan=(+r[4]||0)*100,ng=+r[6]||0;M[core]=M[core]||{core,name:nm,am:(r[0]||'').trim(),prov:_lowProv(nm)};Object.assign(M[core],{vol,gan,nGTC:ng,gtc:vol>0?ng/vol*100:null});});
+ if(odrBC)odrBC.slice(1).forEach(r=>{if(isoD(r[2])!==_lowLatest(odrBC,2))return;const nm=(r[1]||'').trim();if(!nm)return;const core=_coreBC(nm);const vol=+r[3]||0,cnt=+r[5]||0;if(!M[core])M[core]={core,name:nm,am:(r[0]||'').trim(),prov:_lowProv(nm),vol:0};M[core].odrVol=vol;M[core].odr=vol>0?cnt/vol*100:null;});
+ if(oprBC)oprBC.slice(1).forEach(r=>{if(isoD(r[2])!==_lowLatest(oprBC,2))return;const nm=(r[1]||'').trim();if(!nm)return;const core=_coreBC(nm);const vol=+r[3]||0,cnt=+r[5]||0;if(!M[core])M[core]={core,name:nm,am:(r[0]||'').trim(),prov:_lowProv(nm),vol:0};M[core].oprVol=vol;M[core].opr=vol>0?cnt/vol*100:null;});
+ if(fdBC)fdBC.slice(1).forEach(r=>{if(isoD(r[1])!==_lowLatest(fdBC,1))return;const nm=(r[0]||'').trim();if(!nm||_lowIsGrand(r,0))return;const core=_coreBC(nm);const fd=(+r[3]||0)*100;if(!M[core])M[core]={core,name:nm,am:bcAM[core]||'',prov:_lowProv(nm),vol:0};M[core].fd=fd;const ng=M[core].nGTC||0;M[core].fdRet=(fd>0&&fd<50&&ng>0)?Math.round(fd/100*ng/(1-fd/100)):null;});
+ // aging theo BC + AM (ngày mới nhất)
+ const agDates=[...new Set(ag.map(r=>r[11]).filter(d=>d&&d.startsWith('2026')))].sort();
+ const agDate=agDates[agDates.length-1]||'';
+ const agByCore={},ag8ByAM={},ag5ByAM={};
+ ag.forEach(r=>{if(r[11]!==agDate)return;const core=_coreBC(r[2]||'');const days=+r[6]||0;const am=(r[10]||'').trim();if(core){agByCore[core]=(agByCore[core]||0)+1;if(M[core])M[core].aging=(M[core].aging||0)+1;}
+  if(am&&!am.startsWith('#')){ag5ByAM[am]=(ag5ByAM[am]||0)+1;if(days>=8)ag8ByAM[am]=(ag8ByAM[am]||0)+1;}});
+ Object.keys(agByCore).forEach(core=>{if(M[core])M[core].aging=agByCore[core];});
+ // ----- Toàn vùng -----
+ let sVol=0,sNG=0,sGan=0;Object.values(M).forEach(b=>{if(b.gtc!=null){sVol+=b.vol;sNG+=b.nGTC;sGan+=b.vol*(b.gan||0);}});
+ let gAllVol=sVol,gAllNG=sNG,gtcAll=sVol>0?sNG/sVol*100:null,ganAll=sVol>0?sGan/sVol:null;
+ // Ưu tiên dòng Grand Total của sheet AM (khớp dashboard, không sót BC)
+ if(D.gtcTotalAM){const dd=_lowLatest(D.gtcTotalAM,1);const gr=D.gtcTotalAM.slice(1).find(r=>_lowIsGrand(r,0)&&isoD(r[1])===dd);if(gr){gAllVol=+gr[2]||sVol;gAllNG=+gr[5]||sNG;gtcAll=(+gr[4]||0)*100||gtcAll;ganAll=(+gr[3]||0)*100||ganAll;}}
+ // FD toàn vùng từ FD AM grand
+ let fdAll=null;const fdAM=FD.totalAM;
+ if(fdAM){const fdDate=_lowLatest(fdAM,1);const gr=fdAM.slice(1).find(r=>_lowIsGrand(r,0)&&isoD(r[1])===fdDate);if(gr)fdAll=(+gr[3]||0)*100;}
+ if(fdAll==null){let a=0,w=0;Object.values(M).forEach(b=>{if(b.fd!=null){a+=b.fd*(b.vol||1);w+=(b.vol||1);}});fdAll=w>0?a/w:null;}
+ // ODR/OPR toàn vùng
+ const grand=(sheet,dc,vc,cc)=>{if(!sheet)return null;const dd=_lowLatest(sheet,dc);let v=0,c=0;sheet.slice(1).forEach(r=>{if(isoD(r[dc])!==dd)return;const nm=(r[1]||'').trim();if(!nm||_lowIsGrand(r,1))return;v+=+r[vc]||0;c+=+r[cc]||0;});return v>0?{pct:c/v*100,vol:v}:null;};
+ const grandAM=sheet=>{if(!sheet)return null;const dd=_lowLatest(sheet,1);const gr=sheet.slice(1).find(r=>_lowIsGrand(r,0)&&isoD(r[1])===dd);return gr?{pct:(+gr[3]||0)*100,vol:+gr[2]||0}:null;};
+ const odrG=grandAM(D.odrAM)||grand(odrBC,2,3,5),oprG=grandAM(D.oprAM)||grand(oprBC,2,3,5);
+ // #BC dưới ngưỡng (Vol≥30)
+ const odrUnder=Object.values(M).filter(b=>b.odr!=null&&(b.odrVol||0)>=30&&b.odr<96).length;
+ const oprUnder=Object.values(M).filter(b=>b.opr!=null&&(b.oprVol||0)>=30&&b.opr<80).length;
+ // Aging ≥5N/≥8N toàn vùng
+ let ag5=0,ag8=0;ag.forEach(r=>{if(r[11]!==agDate)return;ag5++;if((+r[6]||0)>=8)ag8++;});
+ // ----- Lowlight BC -----
+ const flagged=[];
+ Object.values(M).forEach(b=>{
+  const rs=[];
+  if(b.gtc!=null&&b.gtc<48)rs.push({k:'GTC',t:`GTC ${b.gtc.toFixed(1)}%`});
+  if(b.odr!=null&&(((b.odrVol||0)>=100&&b.odr<85)||((b.odrVol||0)>=30&&b.odr<80)))rs.push({k:'ODR',t:`ODR ${b.odr.toFixed(1)}%`});
+  if(b.opr!=null&&(((b.oprVol||0)>=100&&b.opr<75)||((b.oprVol||0)>=30&&b.opr<50)))rs.push({k:'OPR',t:`OPR ${b.opr.toFixed(1)}%`});
+  if(b.fd!=null&&b.fd>=15)rs.push({k:'FD',t:`FD ${b.fd.toFixed(1)}%${b.fdRet?` (${fmt(b.fdRet)} đơn trả)`:''}`});
+  if((b.aging||0)>=120)rs.push({k:'AG',t:`Aging ${fmt(b.aging)}`});
+  if(rs.length){const score=(b.aging||0)+(b.gtc!=null?Math.max(0,48-b.gtc)*6:0)+(b.fd!=null?Math.max(0,b.fd-15)*8:0)+(b.opr!=null?Math.max(0,60-b.opr)*3:0);flagged.push({name:b.name,am:b.am,prov:b.prov,core:b.core,reasons:rs.map(x=>x.t),score});}
+ });
+ flagged.sort((a,b)=>b.score-a.score);
+ const weatherBCs=flagged.filter(b=>_lowIsWeather(b.name,b.core)).slice(0,12);
+ const realBCs=flagged.filter(b=>!_lowIsWeather(b.name,b.core)).slice(0,12);
+ // ----- AM cần quan tâm -----
+ const amFlags={};const addAM=(am,r)=>{if(!am)return;(amFlags[am]=amFlags[am]||[]).push(r);};
+ const ag8Sorted=Object.entries(ag8ByAM).sort((a,b)=>b[1]-a[1]);
+ ag8Sorted.slice(0,5).forEach(([am,n])=>addAM(am,`Aging ≥8N ${fmt(n)}`));
+ // GTC AM min, FD AM max, ODR/OPR AM min
+ const gAM=D.gtcTotalAM;
+ if(gAM){const dd=_lowLatest(gAM,1);const rows=gAM.slice(1).filter(r=>isoD(r[1])===dd&&(r[0]||'').trim()&&!_lowIsGrand(r,0)).map(r=>({am:(r[0]||'').trim(),v:(+r[4]||0)*100}));if(rows.length){const w=rows.reduce((a,b)=>a.v<b.v?a:b);addAM(w.am,`GTC ${w.v.toFixed(1)}% (thấp nhất vùng)`);}}
+ if(fdAM){const dd=_lowLatest(fdAM,1);const rows=fdAM.slice(1).filter(r=>isoD(r[1])===dd&&(r[0]||'').trim()&&!_lowIsGrand(r,0)).map(r=>({am:(r[0]||'').trim(),v:(+r[3]||0)*100}));if(rows.length){const w=rows.reduce((a,b)=>a.v>b.v?a:b);let ret=0;Object.values(M).forEach(b=>{if(b.am===w.am&&b.fdRet)ret+=b.fdRet;});addAM(w.am,`FD ${w.v.toFixed(1)}% (cao nhất vùng${ret?`, ${fmt(ret)} đơn trả`:''})`);}}
+ const amMin=(sheet,dc,cc,lbl)=>{if(!sheet)return;const dd=_lowLatest(sheet,dc);const rows=sheet.slice(1).filter(r=>isoD(r[dc])===dd&&(r[0]||'').trim()&&!_lowIsGrand(r,0)).map(r=>({am:(r[0]||'').trim(),v:(+r[cc]||0)*100}));if(rows.length){const w=rows.reduce((a,b)=>a.v<b.v?a:b);addAM(w.am,`${lbl} ${w.v.toFixed(1)}% (thấp nhất)`);}};
+ amMin(D.odrAM,1,3,'ODR');amMin(D.oprAM,1,3,'OPR');
+ // NS AM min (2 ngày gần nhất)
+ let nsMinAM=null,nsMinVal=null;
+ const nsRaw=window._nsRaw;
+ if(nsRaw&&nsRaw.length){const nd=[...new Set(nsRaw.map(r=>r[2]).filter(Boolean))].sort().slice(-2);const byAM={};nsRaw.forEach(r=>{if(!nd.includes(r[2]))return;const core=_coreBC(r[0]||'');const am=bcAM[core];if(!am)return;byAM[am]=byAM[am]||{nv:new Set(),gtc:0};byAM[am].nv.add((r[1]||'').trim());byAM[am].gtc+=(+r[4]||0);});const arr=Object.entries(byAM).map(([am,d])=>({am,ns:d.nv.size?Math.round(d.gtc/d.nv.size/nd.length):0})).filter(x=>x.ns>0);if(arr.length){const w=arr.reduce((a,b)=>a.ns<b.ns?a:b);nsMinAM=w.am;nsMinVal=w.ns;addAM(w.am,`NS ${w.ns} (thấp nhất)`);}}
+ const ams=Object.entries(amFlags).map(([am,rs])=>({am,reasons:rs})).sort((a,b)=>b.reasons.length-a.reasons.length);
+ // ----- KPI -----
+ const kpi=[
+  {label:'% GTC',val:gtcAll,unit:'%',target:'≥70%',ok:gtcAll!=null&&gtcAll>=70},
+  {label:'% Gán',val:ganAll,unit:'%',target:'',ok:null,extra:fdAll!=null?`FD ${fdAll.toFixed(2)}% (≤8%)`:''},
+  {label:'ODR',val:odrG?odrG.pct:null,unit:'%',target:'≥96%',ok:odrG&&odrG.pct>=96,extra:`${odrUnder} BC (Vol≥30) dưới ngưỡng`},
+  {label:'OPR',val:oprG?oprG.pct:null,unit:'%',target:'≥80%',ok:oprG&&oprG.pct>=80,extra:`${oprUnder} BC (Vol≥30) dưới ngưỡng`},
+  {label:'Aging',val:null,unit:'',target:'',ok:null,extra:`≥8N: ${fmt(ag8)} · ≥5N: ${fmt(ag5)} đơn`},
+  {label:'Sản lượng giao',val:gAllVol,unit:'',target:'',ok:null,extra:`GTC ${fmt(gAllNG)} đơn`}
+ ];
+ kpi[1].fdOk=fdAll!=null&&fdAll<=8;
+ // ----- Kế hoạch (data-driven) -----
+ const topAg8=ag8Sorted.slice(0,5).map(([am,n])=>`${am} (${fmt(n)})`).join(' · ')||'—';
+ const topFD=[...Object.values(M)].filter(b=>b.fd!=null&&b.fd>=15).sort((a,b)=>b.fd-a.fd).slice(0,4).map(b=>`${b.name} ${b.fd.toFixed(1)}%`).join(' · ')||'—';
+ const topOPR=[...Object.values(M)].filter(b=>b.opr!=null&&(b.oprVol||0)>=100&&b.opr<75).sort((a,b)=>a.opr-b.opr).slice(0,4).map(b=>`${b.name} ${b.opr.toFixed(1)}%`).join(' · ')||'—';
+ const topGTCreal=realBCs.filter(b=>b.reasons.some(r=>r.startsWith('GTC'))).slice(0,4).map(b=>b.name).join(' · ')||'—';
+ const plan=[
+  {head:'ỨNG PHÓ MƯA (KHẨN)',detail:`Bảo đảm AN TOÀN nhân viên phát tuyến cụm Quảng Ninh + trung du Bắc Giang + Lạng Sơn; kiểm soát hàng hoá không để thất thoát; sau mưa dồn lực giải phóng hàng tồn.`},
+  {head:`GIẢI PHÓNG AGING ≥8N (${fmt(ag8)} ĐƠN)`,detail:`Tập trung các AM tồn đọng nhiều nhất: ${topAg8}; ưu tiên đơn quá hạn >15 ngày.`},
+  {head:'XỬ LÝ TỈ LỆ TRẢ CAO',detail:`Rà soát các Bưu Cục trả hàng >15%: ${topFD}; phối hợp OE gọi khách xác nhận trước khi trả.`},
+  {head:'KÉO OPR (LẤY HÀNG) CỤM HẢI PHÒNG',detail:`Bổ sung lực lượng lấy hàng cho: ${topOPR}.`},
+  {head:'KÉO GTC CÁC BƯU CỤC KHÔNG DO MƯA',detail:`Ưu tiên xử cứng, có OE hỗ trợ: ${topGTCreal}.`}
+ ];
+ return {date,short,kpi,weatherBCs,realBCs,ams,plan};
+}
+
+function _lowSect(t){return `<div style="font-size:14px;font-weight:800;color:var(--orange-dark);text-transform:uppercase;letter-spacing:.3px;margin:18px 0 8px;padding-bottom:5px;border-bottom:2px solid var(--orange-mid)">${t}</div>`;}
+function _lowLine(html,indent){return `<div style="padding:3px 0 3px ${indent?18:4}px;font-size:13px;line-height:1.55">${html}</div>`;}
+function _lowBCLine(b){return _lowLine(`<b>• ${b.name}</b>${b.am?` <span style="color:var(--text-sub)">(${b.am})</span>`:''} — ${b.reasons.join(' · ')}`);}
+
+function buildLowlightPage(){
+ const el=document.getElementById('p24');if(!el)return;
+ const R=_lowCompute();
+ window._lowReport=R;
+ if(!R){el.innerHTML='<div class="page-header"><div class="page-title">Báo Cáo Lowlight Vùng XBG</div></div>'+errPage('Chưa có dữ liệu — hãy bấm "Cập nhật dữ liệu".');return;}
+ const weather=(localStorage.getItem(LOW_WEATHER_KEY)||LOW_WEATHER_DEFAULT);
+ // KPI section
+ let kpiH='';
+ R.kpi.forEach(k=>{
+  let v=k.val==null?'':(k.unit==='%'?k.val.toFixed(1)+'%':fmt(Math.round(k.val)));
+  let col=k.ok===true?'var(--green)':k.ok===false?'var(--red)':'var(--text-main)';
+  let extra=k.extra?` · ${k.extra}`:'';
+  let fdTag=k.label==='% Gán'&&k.fdOk!=null?` <span style="color:${k.fdOk?'var(--green)':'var(--red)'};font-weight:700">${k.fdOk?'✅ đạt':'⚠️ vượt'}</span>`:'';
+  kpiH+=_lowLine(`<b>• ${k.label}:</b> <b style="color:${col}">${v||k.extra}</b>${v?extra:''}${k.target?` <span style="color:var(--text-sub)">(mục tiêu ${k.target})</span>`:''}${fdTag}`);
+ });
+ // BC lists
+ const wH=R.weatherBCs.length?R.weatherBCs.map(_lowBCLine).join(''):_lowLine('<span style="color:var(--text-sub)">Không có Bưu Cục lowlight thuộc cụm mưa.</span>');
+ const rH=R.realBCs.length?R.realBCs.map(_lowBCLine).join(''):_lowLine('<span style="color:var(--text-sub)">Không có Bưu Cục lowlight nội tại.</span>');
+ const amH=R.ams.length?R.ams.map(a=>_lowLine(`<b>• ${a.am}</b> — ${a.reasons.join(' · ')}`)).join(''):_lowLine('<span style="color:var(--text-sub)">—</span>');
+ let planH='';R.plan.forEach((p,i)=>{planH+=_lowLine(`<b>${i+1}. ${p.head}:</b>`);planH+=_lowLine(p.detail,true);});
+ el.innerHTML=`<div class="page-header"><div class="page-title">🚨 Báo Cáo Vận Hành Lowlight — Vùng XBG</div>
+  <div class="page-meta"><span class="tag tag-orange">📅 Số liệu ngày ${R.short} · tự cập nhật khi bấm "Cập nhật dữ liệu"</span><button class="tg-inpage-btn" onclick="sendLowlightToTelegram(this)">📤 Bắn báo cáo Telegram</button></div></div>
+  <div class="card" id="low-card" style="padding:16px 18px">
+   ${_lowSect('1) TOÀN VÙNG vs MỤC TIÊU')}${kpiH}
+   ${_lowSect('2) YẾU TỐ KHÁCH QUAN — THỜI TIẾT')}
+   <textarea id="low-weather" oninput="localStorage.setItem(LOW_WEATHER_KEY,this.value)" style="width:100%;min-height:78px;border:1px solid var(--border);border-radius:8px;padding:9px 11px;font-size:13px;line-height:1.55;font-family:inherit;resize:vertical;background:var(--orange-light)">${weather.replace(/</g,'&lt;')}</textarea>
+   <div style="font-size:11px;color:var(--text-sub);margin-top:4px">✍️ Ô này nhập tay & lưu tự động (web tĩnh không tự lấy được thời tiết).</div>
+   ${_lowSect('3) BƯU CỤC LOWLIGHT DO THỜI TIẾT (hỗ trợ, không phạt nặng)')}${wH}
+   ${_lowSect('4) BƯU CỤC VẬN HÀNH THẬT (nội tại — xử cứng)')}${rH}
+   ${_lowSect('5) AM PHẢI QUAN TÂM')}${amH}
+   ${_lowSect('6) KẾ HOẠCH TRỌNG TÂM')}${planH}
+  </div>`;
+}
+
+function _lowTGChunks(){
+ const R=window._lowReport;if(!R)return null;
+ const weather=(localStorage.getItem(LOW_WEATHER_KEY)||LOW_WEATHER_DEFAULT);
+ const esc=s=>(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+ let s=`🚨 <b>BÁO CÁO VẬN HÀNH LOWLIGHT — VÙNG XBG · ${R.short}</b>\n\n`;
+ s+=`<b>1) TOÀN VÙNG vs MỤC TIÊU:</b>\n`;
+ R.kpi.forEach(k=>{let v=k.val==null?'':(k.unit==='%'?k.val.toFixed(1)+'%':fmt(Math.round(k.val)));let tail=k.extra?` · ${esc(k.extra)}`:'';let tgt=k.target?` (mục tiêu ${k.target})`:'';let fd=k.label==='% Gán'&&k.fdOk!=null?(k.fdOk?' ✅ đạt':' ⚠️ vượt'):'';s+=`• ${esc(k.label)}: ${v||esc(k.extra)}${v?tail:''}${tgt}${fd}\n`;});
+ s+=`\n<b>2) YẾU TỐ KHÁCH QUAN — THỜI TIẾT:</b>\n${esc(weather)}\n`;
+ s+=`\n<b>3) BƯU CỤC LOWLIGHT DO THỜI TIẾT:</b>\n`;
+ (R.weatherBCs.length?R.weatherBCs:[]).forEach(b=>{s+=`• ${esc(b.name)}${b.am?` (${esc(b.am)})`:''} — ${esc(b.reasons.join(' · '))}\n`;});if(!R.weatherBCs.length)s+=`• —\n`;
+ s+=`\n<b>4) BƯU CỤC VẬN HÀNH THẬT (xử cứng):</b>\n`;
+ (R.realBCs.length?R.realBCs:[]).forEach(b=>{s+=`• ${esc(b.name)}${b.am?` (${esc(b.am)})`:''} — ${esc(b.reasons.join(' · '))}\n`;});if(!R.realBCs.length)s+=`• —\n`;
+ s+=`\n<b>5) AM PHẢI QUAN TÂM:</b>\n`;
+ R.ams.forEach(a=>{s+=`• ${esc(a.am)} — ${esc(a.reasons.join(' · '))}\n`;});if(!R.ams.length)s+=`• —\n`;
+ s+=`\n<b>6) KẾ HOẠCH TRỌNG TÂM:</b>\n`;
+ R.plan.forEach((p,i)=>{s+=`<b>${i+1}. ${esc(p.head)}:</b>\n${esc(p.detail)}\n`;});
+ // chia nhỏ < 3900 ký tự theo dòng
+ const lines=s.split('\n');const chunks=[];let cur='';
+ lines.forEach(ln=>{if((cur+ln+'\n').length>3900){chunks.push(cur);cur='';}cur+=ln+'\n';});
+ if(cur.trim())chunks.push(cur);
+ return chunks;
+}
+async function sendLowlightToTelegram(btn){
+ const chunks=_lowTGChunks();
+ if(!chunks||!chunks.length){alert('Chưa có dữ liệu — hãy đợi trang tải xong.');return;}
+ const old=btn?btn.textContent:'';if(btn)btn.disabled=true;
+ let okN=0;
+ for(let i=0;i<chunks.length;i++){
+  if(btn)btn.textContent=`⏳ Đang bắn ${i+1}/${chunks.length}...`;
+  try{const res=await _tgSend(TG_LOW_CHAT,TG_LOW_THREAD,chunks[i]);if(res&&res.ok)okN++;else console.warn('[TG low]',res&&res.description);}catch(e){console.warn('[TG low]',e.message);}
+  await new Promise(r=>setTimeout(r,700));
+ }
+ if(btn){btn.textContent=okN===chunks.length?'✅ Đã bắn xong':`⚠️ Bắn ${okN}/${chunks.length}`;setTimeout(()=>{btn.textContent=old;btn.disabled=false;},4500);}
+}
+
+
 /* ===== INIT ===== */
 async function init(){
  const btn=document.getElementById('refreshBtn');btn.classList.add('spinning');btn.disabled=true;
@@ -3204,6 +3386,7 @@ async function init(){
  await buildGTCBCReport();
  // p20 — Năng suất nhân viên
  await buildNangSuatPage();
+ buildLowlightPage(); // p24 — Báo cáo Lowlight (cần _D,_FD,_agingRows,_nsRaw)
  // p21 — Tỉ lệ NVPTTT nộp COD
  await buildCODPage();
  // p22 — Kinh Doanh XBG
@@ -3826,6 +4009,7 @@ async function buildNangSuatPage(){
   if(!res.ok)throw new Error('HTTP '+res.status);
   const rows=parseCSV(await res.text()).slice(1).filter(r=>r[0]&&r[2]&&r[3]);
   // cols: A(0)=BC, B(1)=NV, C(2)=Ngày(YYYY-MM-DD), D(3)=Gán, E(4)=GTC, F(5)=%GTC, G(6)=Tỉnh
+  window._nsRaw=rows; // lưu để trang Lowlight (p24) tính NS theo AM
 
   // Lấy Volume từ window._volD (Tổng Mới + Tổng Tồn per Tỉnh và per Bưu Cục)
   // V[tinhKey][bc][loai][nhom][dateStr] = vol — BC names khớp với Năng suất NV
