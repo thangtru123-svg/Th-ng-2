@@ -3190,7 +3190,7 @@ function _lowCompute(){
   if(b.odr!=null&&(((b.odrVol||0)>=100&&b.odr<85)||((b.odrVol||0)>=30&&b.odr<80)))rs.push({k:'ODR',t:`ODR ${b.odr.toFixed(1)}%`});
   if(b.opr!=null&&(((b.oprVol||0)>=100&&b.opr<75)||((b.oprVol||0)>=30&&b.opr<50)))rs.push({k:'OPR',t:`OPR ${b.opr.toFixed(1)}%`});
   if(b.fd!=null&&b.fd>=15)rs.push({k:'FD',t:`FD ${b.fd.toFixed(1)}%${b.fdRet?` (${fmt(b.fdRet)} đơn trả)`:''}`});
-  if((b.aging||0)>=120)rs.push({k:'AG',t:`Aging ${fmt(b.aging)}`});
+  if((b.aging||0)>=120)rs.push({k:'AG',t:`Aging ${fmt(b.aging)} đơn`});
   if(rs.length){const score=(b.aging||0)+(b.gtc!=null?Math.max(0,48-b.gtc)*6:0)+(b.fd!=null?Math.max(0,b.fd-15)*8:0)+(b.opr!=null?Math.max(0,60-b.opr)*3:0);flagged.push({name:b.name,am:b.am,prov:b.prov,core:b.core,reasons:rs.map(x=>x.t),score});}
  });
  flagged.sort((a,b)=>b.score-a.score);
@@ -3199,7 +3199,7 @@ function _lowCompute(){
  // ----- AM cần quan tâm -----
  const amFlags={};const addAM=(am,r)=>{if(!am)return;(amFlags[am]=amFlags[am]||[]).push(r);};
  const ag8Sorted=Object.entries(ag8ByAM).sort((a,b)=>b[1]-a[1]);
- ag8Sorted.slice(0,5).forEach(([am,n])=>addAM(am,`Aging ≥8N ${fmt(n)}`));
+ ag8Sorted.slice(0,5).forEach(([am,n])=>addAM(am,`Aging ≥8N ${fmt(n)} đơn`));
  // GTC AM min, FD AM max, ODR/OPR AM min
  const gAM=D.gtcTotalAM;
  if(gAM){const dd=_lowLatest(gAM,1);const rows=gAM.slice(1).filter(r=>isoD(r[1])===dd&&(r[0]||'').trim()&&!_lowIsGrand(r,0)).map(r=>({am:(r[0]||'').trim(),v:(+r[4]||0)*100}));if(rows.length){const w=rows.reduce((a,b)=>a.v<b.v?a:b);addAM(w.am,`GTC ${w.v.toFixed(1)}% (thấp nhất vùng)`);}}
@@ -3209,7 +3209,7 @@ function _lowCompute(){
  // NS AM min (2 ngày gần nhất)
  let nsMinAM=null,nsMinVal=null;
  const nsRaw=window._nsRaw;
- if(nsRaw&&nsRaw.length){const nd=[...new Set(nsRaw.map(r=>r[2]).filter(Boolean))].sort().slice(-2);const byAM={};nsRaw.forEach(r=>{if(!nd.includes(r[2]))return;const core=_coreBC(r[0]||'');const am=bcAM[core];if(!am)return;byAM[am]=byAM[am]||{nv:new Set(),gtc:0};byAM[am].nv.add((r[1]||'').trim());byAM[am].gtc+=(+r[4]||0);});const arr=Object.entries(byAM).map(([am,d])=>({am,ns:d.nv.size?Math.round(d.gtc/d.nv.size/nd.length):0})).filter(x=>x.ns>0);if(arr.length){const w=arr.reduce((a,b)=>a.ns<b.ns?a:b);nsMinAM=w.am;nsMinVal=w.ns;addAM(w.am,`NS ${w.ns} (thấp nhất)`);}}
+ if(nsRaw&&nsRaw.length){const nd=[...new Set(nsRaw.map(r=>r[2]).filter(Boolean))].sort().slice(-2);const byAM={};nsRaw.forEach(r=>{if(!nd.includes(r[2]))return;const core=_coreBC(r[0]||'');const am=bcAM[core];if(!am)return;byAM[am]=byAM[am]||{nv:new Set(),gtc:0};byAM[am].nv.add((r[1]||'').trim());byAM[am].gtc+=(+r[4]||0);});const arr=Object.entries(byAM).map(([am,d])=>({am,ns:d.nv.size?Math.round(d.gtc/d.nv.size/nd.length):0})).filter(x=>x.ns>0);if(arr.length){const w=arr.reduce((a,b)=>a.ns<b.ns?a:b);nsMinAM=w.am;nsMinVal=w.ns;addAM(w.am,`NS ${w.ns} đơn/NV/ngày (thấp nhất)`);}}
  const ams=Object.entries(amFlags).map(([am,rs])=>({am,reasons:rs})).sort((a,b)=>b.reasons.length-a.reasons.length);
  // ----- KPI -----
  const kpi=[
@@ -3217,12 +3217,12 @@ function _lowCompute(){
   {label:'% Gán',val:ganAll,unit:'%',target:'',ok:null,extra:fdAll!=null?`FD ${fdAll.toFixed(2)}% (≤8%)`:''},
   {label:'ODR',val:odrG?odrG.pct:null,unit:'%',target:'≥96%',ok:odrG&&odrG.pct>=96,extra:`${odrUnder} BC (Vol≥30) dưới ngưỡng`},
   {label:'OPR',val:oprG?oprG.pct:null,unit:'%',target:'≥80%',ok:oprG&&oprG.pct>=80,extra:`${oprUnder} BC (Vol≥30) dưới ngưỡng`},
-  {label:'Aging',val:null,unit:'',target:'',ok:null,extra:`≥8N: ${fmt(ag8)} · ≥5N: ${fmt(ag5)} đơn`},
+  {label:'Aging',val:null,unit:'',target:'',ok:null,extra:`≥8N: ${fmt(ag8)} đơn · ≥5N: ${fmt(ag5)} đơn`},
   {label:'Sản lượng giao',val:gAllVol,unit:'',target:'',ok:null,extra:`GTC ${fmt(gAllNG)} đơn`}
  ];
  kpi[1].fdOk=fdAll!=null&&fdAll<=8;
  // ----- Kế hoạch (data-driven) -----
- const topAg8=ag8Sorted.slice(0,5).map(([am,n])=>`${am} (${fmt(n)})`).join(' · ')||'—';
+ const topAg8=ag8Sorted.slice(0,5).map(([am,n])=>`${am} (${fmt(n)} đơn)`).join(' · ')||'—';
  const topFD=[...Object.values(M)].filter(b=>b.fd!=null&&b.fd>=15).sort((a,b)=>b.fd-a.fd).slice(0,4).map(b=>`${b.name} ${b.fd.toFixed(1)}%`).join(' · ')||'—';
  const topOPR=[...Object.values(M)].filter(b=>b.opr!=null&&(b.oprVol||0)>=100&&b.opr<75).sort((a,b)=>a.opr-b.opr).slice(0,4).map(b=>`${b.name} ${b.opr.toFixed(1)}%`).join(' · ')||'—';
  const topGTCreal=realBCs.filter(b=>b.reasons.some(r=>r.startsWith('GTC'))).slice(0,4).map(b=>b.name).join(' · ')||'—';
@@ -3249,7 +3249,7 @@ function buildLowlightPage(){
  // KPI section
  let kpiH='';
  R.kpi.forEach(k=>{
-  let v=k.val==null?'':(k.unit==='%'?k.val.toFixed(1)+'%':fmt(Math.round(k.val)));
+  let v=k.val==null?'':(k.unit==='%'?k.val.toFixed(1)+'%':fmt(Math.round(k.val))+' đơn');
   let col=k.ok===true?'var(--green)':k.ok===false?'var(--red)':'var(--text-main)';
   let extra=k.extra?` · ${k.extra}`:'';
   let fdTag=k.label==='% Gán'&&k.fdOk!=null?` <span style="color:${k.fdOk?'var(--green)':'var(--red)'};font-weight:700">${k.fdOk?'✅ đạt':'⚠️ vượt'}</span>`:'';
@@ -3280,7 +3280,7 @@ function _lowTGChunks(){
  const esc=s=>(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
  let s=`🚨 <b>BÁO CÁO VẬN HÀNH LOWLIGHT — VÙNG XBG · ${R.short}</b>\n\n`;
  s+=`<b>1) TOÀN VÙNG vs MỤC TIÊU:</b>\n`;
- R.kpi.forEach(k=>{let v=k.val==null?'':(k.unit==='%'?k.val.toFixed(1)+'%':fmt(Math.round(k.val)));let tail=k.extra?` · ${esc(k.extra)}`:'';let tgt=k.target?` (mục tiêu ${k.target})`:'';let fd=k.label==='% Gán'&&k.fdOk!=null?(k.fdOk?' ✅ đạt':' ⚠️ vượt'):'';s+=`• ${esc(k.label)}: ${v||esc(k.extra)}${v?tail:''}${tgt}${fd}\n`;});
+ R.kpi.forEach(k=>{let v=k.val==null?'':(k.unit==='%'?k.val.toFixed(1)+'%':fmt(Math.round(k.val))+' đơn');let tail=k.extra?` · ${esc(k.extra)}`:'';let tgt=k.target?` (mục tiêu ${k.target})`:'';let fd=k.label==='% Gán'&&k.fdOk!=null?(k.fdOk?' ✅ đạt':' ⚠️ vượt'):'';s+=`• ${esc(k.label)}: ${v||esc(k.extra)}${v?tail:''}${tgt}${fd}\n`;});
  s+=`\n<b>2) YẾU TỐ KHÁCH QUAN — THỜI TIẾT:</b>\n${esc(weather)}\n`;
  s+=`\n<b>3) BƯU CỤC LOWLIGHT DO THỜI TIẾT:</b>\n`;
  (R.weatherBCs.length?R.weatherBCs:[]).forEach(b=>{s+=`• ${esc(b.name)}${b.am?` (${esc(b.am)})`:''} — ${esc(b.reasons.join(' · '))}\n`;});if(!R.weatherBCs.length)s+=`• —\n`;
