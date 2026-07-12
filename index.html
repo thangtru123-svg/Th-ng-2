@@ -3133,6 +3133,9 @@ const TG_LOW_THREAD=6;
 const LOW_WEATHER_KEY='xbg_low_weather';
 const LOW_WMODE_KEY='xbg_low_wmode'; // 'rain' = mưa lớn ảnh hưởng | 'normal' = bình thường
 const LOW_WEATHER_DEFAULT='Bắc Bộ mưa rào và dông, cục bộ mưa to đến rất to; tâm mưa vùng núi, trung du Bắc Bộ và Quảng Ninh. Nguy cơ lũ quét, sạt lở, ngập úng. (Đại nhân cập nhật tình hình thời tiết mỗi ngày tại đây — nội dung được lưu tự động.)';
+// Nội dung thời tiết mặc định THEO chế độ (tránh mâu thuẫn: ngày bình thường không hiện text mưa)
+function _lowWDef(m){return m==='rain'?'Bắc Bộ mưa rào và dông, cục bộ mưa to đến rất to; tâm mưa vùng núi, trung du Bắc Bộ và Quảng Ninh. Nguy cơ lũ quét, sạt lở, ngập úng.':m==='heat'?'Nắng nóng gay gắt ≥42°C, kéo dài đến chiều tối; nguy cơ sốc nhiệt cho nhân viên phát tuyến — giãn khung giao sang sáng sớm và chiều tối mát.':'Thời tiết bình thường — không có yếu tố khách quan ảnh hưởng vận hành.';}
+function _lowWeather(m){const saved=(localStorage.getItem(LOW_WEATHER_KEY)||'').trim();const defs=[_lowWDef('rain'),_lowWDef('heat'),_lowWDef('normal'),LOW_WEATHER_DEFAULT];return (saved&&defs.indexOf(saved)<0)?saved:_lowWDef(m);}
 const LOW_WEATHER_PROV=['QNI','LSO'];          // cụm tỉnh mưa (núi/ven biển)
 const LOW_WEATHER_CORE=['xuân cẩm'];           // BC trung du BG mặc định coi là mưa
 
@@ -3264,7 +3267,7 @@ function buildLowlightPage(){
  const R=_lowCompute();
  window._lowReport=R;
  if(!R){el.innerHTML='<div class="page-header"><div class="page-title">Báo Cáo Lowlight Vùng XBG</div></div>'+errPage('Chưa có dữ liệu — hãy bấm "Cập nhật dữ liệu".');return;}
- const weather=(localStorage.getItem(LOW_WEATHER_KEY)||LOW_WEATHER_DEFAULT);
+ const weather=_lowWeather(R.wmode);
  // KPI section
  let kpiH='';
  R.kpi.forEach(k=>{
@@ -3276,12 +3279,10 @@ function buildLowlightPage(){
  });
  // BC lists
  const modeRain=R.wmode==='rain',modeHeat=R.wmode==='heat';
- const wH=R.weatherBCs.length?R.weatherBCs.map(_lowBCLine).join(''):_lowLine('<span style="color:var(--text-sub)">Không có Bưu Cục lowlight thuộc cụm mưa.</span>');
  const rH=R.realBCs.length?R.realBCs.map(_lowBCLine).join(''):_lowLine('<span style="color:var(--text-sub)">Không có Bưu Cục lowlight.</span>');
- const sec3=modeRain?(_lowSect('3) BƯU CỤC LOWLIGHT DO THỜI TIẾT (hỗ trợ, không phạt nặng)')+wH)
-  :modeHeat?(_lowSect('3) YẾU TỐ THỜI TIẾT — NẮNG NÓNG')+_lowLine('<span style="color:var(--text-sub)">🌡️ Nắng nóng gay gắt ≥42°C toàn vùng, kéo dài đến chiều tối — không tách cụm Bưu Cục. Toàn bộ Bưu Cục lowlight xem mục 4.</span>'))
-  :(_lowSect('3) YẾU TỐ THỜI TIẾT')+_lowLine('<span style="color:var(--text-sub)">☀️ Thời tiết bình thường — không tách yếu tố thời tiết. Toàn bộ Bưu Cục lowlight xem mục 4.</span>'));
- const sec4=modeRain?(_lowSect('4) BƯU CỤC VẬN HÀNH THẬT (nội tại — xử cứng)')+rH):(_lowSect('4) BƯU CỤC LOWLIGHT CẦN XỬ LÝ')+rH);
+ // Mưa: liệt kê BC cụm bị ảnh hưởng ngay trong mục thời tiết (gộp, tránh trùng mục)
+ const wbcH=modeRain?(_lowLine('<b style="color:var(--text-sub)">🌧️ Bưu Cục ảnh hưởng thời tiết (hỗ trợ, không phạt nặng):</b>')+(R.weatherBCs.length?R.weatherBCs.map(_lowBCLine).join(''):_lowLine('<span style="color:var(--text-sub)">— không có —</span>'))):'';
+ const sec3title=modeRain?'3) BƯU CỤC VẬN HÀNH THẬT (nội tại — xử cứng)':'3) BƯU CỤC LOWLIGHT CẦN XỬ LÝ';
  const wmodeSel=`<div style="margin-bottom:8px"><label style="font-size:12px;font-weight:700;margin-right:8px">Chế độ thời tiết hôm nay:</label><select id="low-wmode" onchange="localStorage.setItem(LOW_WMODE_KEY,this.value);buildLowlightPage();" style="border:1px solid var(--border);border-radius:6px;padding:5px 10px;font-size:12px;background:#fff;cursor:pointer"><option value="normal"${!modeRain&&!modeHeat?' selected':''}>☀️ Bình thường</option><option value="rain"${modeRain?' selected':''}>🌧️ Mưa lớn (ảnh hưởng vận hành)</option><option value="heat"${modeHeat?' selected':''}>🌡️ Nắng nóng gay gắt (≥42°C)</option></select></div>`;
  const amH=R.ams.length?R.ams.map(a=>_lowLine(`<b>• ${a.am}</b> — ${a.reasons.join(' · ')}`)).join(''):_lowLine('<span style="color:var(--text-sub)">—</span>');
  let planH='';R.plan.forEach((p,i)=>{planH+=_lowLine(`<b>${i+1}. ${p.head}:</b>`);planH+=_lowLine(p.detail,true);});
@@ -3293,36 +3294,32 @@ function buildLowlightPage(){
    ${wmodeSel}
    <textarea id="low-weather" oninput="localStorage.setItem(LOW_WEATHER_KEY,this.value)" style="width:100%;min-height:78px;border:1px solid var(--border);border-radius:8px;padding:9px 11px;font-size:13px;line-height:1.55;font-family:inherit;resize:vertical;background:var(--orange-light)">${weather.replace(/</g,'&lt;')}</textarea>
    <div style="font-size:11px;color:var(--text-sub);margin-top:4px">✍️ Ô này nhập tay & lưu tự động (web tĩnh không tự lấy được thời tiết).</div>
-   ${sec3}
-   ${sec4}
-   ${_lowSect('5) AM PHẢI QUAN TÂM')}${amH}
-   ${_lowSect('6) KẾ HOẠCH TRỌNG TÂM')}${planH}
+   ${wbcH}
+   ${_lowSect(sec3title)}${rH}
+   ${_lowSect('4) AM PHẢI QUAN TÂM')}${amH}
+   ${_lowSect('5) KẾ HOẠCH TRỌNG TÂM')}${planH}
   </div>`;
 }
 
 function _lowTGChunks(){
  const R=window._lowReport;if(!R)return null;
- const weather=(localStorage.getItem(LOW_WEATHER_KEY)||LOW_WEATHER_DEFAULT);
+ const weather=_lowWeather(R.wmode);
  const esc=s=>(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
  let s=`🚨 <b>BÁO CÁO VẬN HÀNH LOWLIGHT — VÙNG XBG · ${R.short}</b>\n\n`;
  s+=`<b>1) TOÀN VÙNG vs MỤC TIÊU:</b>\n`;
  R.kpi.forEach(k=>{let v=k.val==null?'':(k.unit==='%'?k.val.toFixed(1)+'%':fmt(Math.round(k.val))+' đơn');let tail=k.extra?` · ${esc(k.extra)}`:'';let tgt=k.target?` (mục tiêu ${k.target})`:'';let fd=k.label==='% Gán'&&k.fdOk!=null?(k.fdOk?' ✅ đạt':' ⚠️ vượt'):'';s+=`• ${esc(k.label)}: ${v||esc(k.extra)}${v?tail:''}${tgt}${fd}\n`;});
  s+=`\n<b>2) YẾU TỐ KHÁCH QUAN — THỜI TIẾT:</b>\n${esc(weather)}\n`;
  if(R.wmode==='rain'){
-  s+=`\n<b>3) BƯU CỤC LOWLIGHT DO THỜI TIẾT:</b>\n`;
+  s+=`\n🌧️ Bưu Cục ảnh hưởng thời tiết (hỗ trợ, không phạt nặng):\n`;
   R.weatherBCs.forEach(b=>{s+=`• ${esc(b.name)}${b.am?` (${esc(b.am)})`:''} — ${esc(b.reasons.join(' · '))}\n`;});if(!R.weatherBCs.length)s+=`• —\n`;
-  s+=`\n<b>4) BƯU CỤC VẬN HÀNH THẬT (xử cứng):</b>\n`;
- }else if(R.wmode==='heat'){
-  s+=`\n<b>3) YẾU TỐ THỜI TIẾT — NẮNG NÓNG:</b>\n🌡️ Nắng nóng gay gắt ≥42°C toàn vùng, kéo dài đến chiều tối — không tách cụm Bưu Cục.\n`;
-  s+=`\n<b>4) BƯU CỤC LOWLIGHT CẦN XỬ LÝ:</b>\n`;
+  s+=`\n<b>3) BƯU CỤC VẬN HÀNH THẬT (nội tại — xử cứng):</b>\n`;
  }else{
-  s+=`\n<b>3) YẾU TỐ THỜI TIẾT:</b>\n☀️ Thời tiết bình thường — không tách yếu tố thời tiết.\n`;
-  s+=`\n<b>4) BƯU CỤC LOWLIGHT CẦN XỬ LÝ:</b>\n`;
+  s+=`\n<b>3) BƯU CỤC LOWLIGHT CẦN XỬ LÝ:</b>\n`;
  }
  (R.realBCs.length?R.realBCs:[]).forEach(b=>{s+=`• ${esc(b.name)}${b.am?` (${esc(b.am)})`:''} — ${esc(b.reasons.join(' · '))}\n`;});if(!R.realBCs.length)s+=`• —\n`;
- s+=`\n<b>5) AM PHẢI QUAN TÂM:</b>\n`;
+ s+=`\n<b>4) AM PHẢI QUAN TÂM:</b>\n`;
  R.ams.forEach(a=>{s+=`• ${esc(a.am)} — ${esc(a.reasons.join(' · '))}\n`;});if(!R.ams.length)s+=`• —\n`;
- s+=`\n<b>6) KẾ HOẠCH TRỌNG TÂM:</b>\n`;
+ s+=`\n<b>5) KẾ HOẠCH TRỌNG TÂM:</b>\n`;
  R.plan.forEach((p,i)=>{s+=`<b>${i+1}. ${esc(p.head)}:</b>\n${esc(p.detail)}\n`;});
  // chia nhỏ < 3900 ký tự theo dòng
  const lines=s.split('\n');const chunks=[];let cur='';
