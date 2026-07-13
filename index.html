@@ -3173,9 +3173,12 @@ function _lowCompute(){
  let gAllVol=sVol,gAllNG=sNG,gtcAll=sVol>0?sNG/sVol*100:null,ganAll=sVol>0?sGan/sVol:null;
  // Ưu tiên dòng Grand Total của sheet AM (khớp dashboard, không sót BC)
  if(D.gtcTotalAM){const dd=_lowLatest(D.gtcTotalAM,1);const gr=D.gtcTotalAM.slice(1).find(r=>_lowIsGrand(r,0)&&isoD(r[1])===dd);if(gr){gAllVol=+gr[2]||sVol;gAllNG=+gr[5]||sNG;gtcAll=(+gr[4]||0)*100||gtcAll;ganAll=(+gr[3]||0)*100||ganAll;}}
- // FD toàn vùng từ FD AM grand
+ // FD toàn vùng = weighted Σ(fd×%Vol)/Σ(%Vol) trên các dòng AM — GIỐNG HỆT trang TLT Ngày (p3),
+ // KHÔNG đọc dòng Grand Total của sheet (dòng đó không weighted → lệch, VD 9.67% vs 8.88%).
  let fdAll=null;const fdAM=FD.totalAM;
- if(fdAM){const fdDate=_lowLatest(fdAM,1);const gr=fdAM.slice(1).find(r=>_lowIsGrand(r,0)&&isoD(r[1])===fdDate);if(gr)fdAll=(+gr[3]||0)*100;}
+ if(fdAM&&fdAM.length>1){const fdDate=_lowLatest(fdAM,1);let sv=0,sf=0;
+  fdAM.slice(1).forEach(r=>{if(isoD(r[1])!==fdDate)return;const nm=(r[0]||'').trim();if(!nm||_lowIsGrand(r,0))return;const vol=parsePct(r[2]),fd=parsePct(r[3]);sv+=vol;sf+=fd*vol;});
+  if(sv>0)fdAll=sf/sv;}
  if(fdAll==null){let a=0,w=0;Object.values(M).forEach(b=>{if(b.fd!=null){a+=b.fd*(b.vol||1);w+=(b.vol||1);}});fdAll=w>0?a/w:null;}
  // ODR/OPR toàn vùng
  const grand=(sheet,dc,vc,cc)=>{if(!sheet)return null;const dd=_lowLatest(sheet,dc);let v=0,c=0;sheet.slice(1).forEach(r=>{if(isoD(r[dc])!==dd)return;const nm=(r[1]||'').trim();if(!nm||_lowIsGrand(r,1))return;v+=+r[vc]||0;c+=+r[cc]||0;});return v>0?{pct:c/v*100,vol:v}:null;};
