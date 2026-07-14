@@ -20,7 +20,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text-main);
 @keyframes sparkle{0%,100%{opacity:0;transform:scale(0.5)}50%{opacity:var(--op,.7);transform:scale(1)}}
 .splash-glow{position:absolute;width:600px;height:600px;border-radius:50%;background:radial-gradient(circle,rgba(241,93,41,0.08) 0%,transparent 70%);left:50%;top:50%;transform:translate(-50%,-50%);animation:glowPulse 4s ease-in-out infinite}
 @keyframes glowPulse{0%,100%{transform:translate(-50%,-50%) scale(1);opacity:.5}50%{transform:translate(-50%,-50%) scale(1.15);opacity:1}}
-.splash-inner{display:flex;flex-direction:column;align-items:center;gap:14px;max-width:960px;width:100%;padding:24px 28px;position:relative;z-index:2}
+.splash-inner{display:flex;flex-direction:column;align-items:center;gap:14px;max-width:1140px;width:100%;padding:24px 28px;position:relative;z-index:2}
 .splash-logo-wrap{display:flex;align-items:center;gap:12px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:40px;padding:8px 20px;backdrop-filter:blur(8px)}
 .splash-logo-txt{font-size:38px;font-weight:900;background:linear-gradient(135deg,#F15D29 0%,#FF9A6C 60%,#FFD0A8 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;letter-spacing:-1px}
 .splash-divider{width:1px;height:22px;background:rgba(255,255,255,0.18)}
@@ -28,8 +28,9 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text-main);
 .splash-title{font-size:52px;font-weight:900;color:#fff;text-align:center;line-height:1.2;text-shadow:0 4px 24px rgba(0,0,0,0.7),0 0 60px rgba(241,93,41,0.4);animation:titleGlow 3s ease-in-out infinite}
 @keyframes titleGlow{0%,100%{text-shadow:0 0 40px rgba(241,93,41,0.3),0 2px 12px rgba(0,0,0,0.5)}50%{text-shadow:0 0 60px rgba(241,93,41,0.55),0 2px 12px rgba(0,0,0,0.5)}}
 .splash-title span{background:linear-gradient(135deg,#F15D29,#FF9A6C);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
-.map-row{display:flex;align-items:flex-start;gap:18px;width:100%}
-.prov-grid{flex:1;display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.map-row{display:flex;align-items:center;gap:24px;width:100%}
+.splash-map{width:min(46%,480px);height:auto;flex-shrink:0}
+.prov-grid{flex:1;display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
 .prov-card{background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:9px 11px;transition:all .25s;cursor:default}
 .prov-card:hover{transform:translateY(-2px);border-color:rgba(255,255,255,0.22)}
 .prov-name{font-size:14px;font-weight:700;margin-bottom:4px;white-space:nowrap}
@@ -162,7 +163,7 @@ tr.tot td{background:#FFF0EB!important;font-weight:800!important;border-top:2px 
   </div>
   <div class="splash-title">GHN – Vùng XBG<br><span>XIN CHÀO BẠN! 👋</span></div>
   <div class="map-row">
-   <svg viewBox="0 0 480 340" width="330" height="234" xmlns="http://www.w3.org/2000/svg">
+   <svg viewBox="0 0 480 340" class="splash-map" xmlns="http://www.w3.org/2000/svg">
     <defs>
      <filter id="glow-ls"><feGaussianBlur stdDeviation="3" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
      <filter id="glow-bg"><feGaussianBlur stdDeviation="4" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
