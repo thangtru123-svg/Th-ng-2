@@ -1409,7 +1409,8 @@ async function buildAgingPage(){
 async function _tgSend(chatId,threadId,text){
  const r=await fetch(`https://api.telegram.org/bot${TG_TOKEN}/sendMessage`,{
   method:'POST',headers:{'Content-Type':'application/json'},
-  body:JSON.stringify({chat_id:chatId,message_thread_id:threadId,text,parse_mode:'HTML',disable_web_page_preview:true})
+  body:JSON.stringify({chat_id:chatId,message_thread_id:threadId,text,parse_mode:'HTML',disable_web_page_preview:true}),
+  signal:AbortSignal.timeout(30000)
  });
  return r.json();
 }
@@ -1419,7 +1420,7 @@ async function _tgSendPhoto(chatId,threadId,blob,caption){
  form.append('message_thread_id',threadId);
  form.append('photo',blob,'aging.png');
  if(caption){form.append('caption',caption);form.append('parse_mode','HTML');}
- const r=await fetch(`https://api.telegram.org/bot${TG_TOKEN}/sendPhoto`,{method:'POST',body:form});
+ const r=await fetch(`https://api.telegram.org/bot${TG_TOKEN}/sendPhoto`,{method:'POST',body:form,signal:AbortSignal.timeout(45000)});
  return r.json();
 }
 async function _tgSendDoc(chatId,threadId,blob,caption){
@@ -1429,12 +1430,12 @@ async function _tgSendDoc(chatId,threadId,blob,caption){
  form.append('message_thread_id',threadId);
  form.append('document',blob,'dashboard.png');
  if(caption){form.append('caption',caption);form.append('parse_mode','HTML');}
- const r=await fetch(`https://api.telegram.org/bot${TG_TOKEN}/sendDocument`,{method:'POST',body:form});
+ const r=await fetch(`https://api.telegram.org/bot${TG_TOKEN}/sendDocument`,{method:'POST',body:form,signal:AbortSignal.timeout(45000)});
  return r.json();
 }
 async function _captureEl(id){
  if(!window.html2canvas){
-  await new Promise((res,rej)=>{const s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';s.onload=res;s.onerror=rej;document.head.appendChild(s);});
+  await new Promise((res,rej)=>{const s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';s.onload=res;s.onerror=()=>rej(new Error('html2canvas load lỗi'));setTimeout(()=>rej(new Error('html2canvas load timeout')),12000);document.head.appendChild(s);});
  }
  const el=document.getElementById(id);
  if(!el)throw new Error('Element not found: '+id);
@@ -1453,7 +1454,10 @@ async function _captureEl(id){
  if(tbl&&tbl.scrollWidth>0)el.style.width=(tbl.scrollWidth+40)+'px';
  await new Promise(r=>setTimeout(r,200));
  try{
-  const canvas=await html2canvas(el,{scale:2,useCORS:true,allowTaint:true,logging:false,backgroundColor:'#ffffff'});
+  const canvas=await Promise.race([
+   html2canvas(el,{scale:2,useCORS:true,allowTaint:true,logging:false,backgroundColor:'#ffffff',imageTimeout:8000}),
+   new Promise((_,rej)=>setTimeout(()=>rej(new Error('html2canvas timeout 30s: '+id)),30000))
+  ]);
   const blob=await new Promise(res=>canvas.toBlob(res,'image/png'));
   if(!blob)throw new Error('canvas.toBlob trả về null — element quá lớn hoặc bị taint: '+id);
   return blob;
@@ -1669,10 +1673,10 @@ async function sendTLTToTelegram(){
   }
   // Gửi ảnh AM
   {const amCard=document.getElementById('p3-card-am');
-   if(amCard){const cl=amCard.cloneNode(true);cl.querySelectorAll('.table-wrap>div').forEach(e=>e.remove());cl.querySelectorAll('thead,th').forEach(el=>{el.style.position='';el.style.top='';el.style.zIndex='';});const tmp=document.createElement('div');tmp.id='tg-am-fd';tmp.style.cssText='position:fixed;top:-9999px;left:0;z-index:-1;width:960px;padding:0';tmp.appendChild(cl);document.body.appendChild(tmp);await new Promise(r=>setTimeout(r,300));try{const img=await _captureEl('tg-am-fd');const res=await _tgSendPhoto(TG_AGING_CHAT,TG_FD_THREAD,img,capFD('am'));if(!res.ok)throw new Error('TLT AM: '+(res.description||JSON.stringify(res)));}finally{tmp.remove();}await new Promise(r=>setTimeout(r,600));}}
+   if(amCard){const cl=amCard.cloneNode(true);cl.querySelectorAll('.table-wrap>div').forEach(e=>e.remove());cl.querySelectorAll('thead,th').forEach(el=>{el.style.position='';el.style.top='';el.style.zIndex='';});const tmp=document.createElement('div');tmp.id='tg-am-fd';tmp.style.cssText='position:fixed;top:-9999px;left:0;z-index:-1;width:960px;padding:0';tmp.appendChild(cl);document.body.appendChild(tmp);await new Promise(r=>setTimeout(r,300));try{const img=await _captureEl('tg-am-fd');const res=await _tgSendPhoto(TG_AGING_CHAT,TG_FD_THREAD,img,capFD('am'));if(!res.ok)throw new Error('TLT AM: '+(res.description||JSON.stringify(res)));}catch(_e){console.warn('TG bước lỗi:',_e&&_e.message);}finally{tmp.remove();}await new Promise(r=>setTimeout(r,600));}}
   // Gửi ảnh BC top 15
   {const bcCard=document.getElementById('p3-card-bc');const bcTbl=document.querySelector('#fdDayBCTable table[data-bc-srch]');
-   if(bcCard&&bcTbl){const cl=bcCard.cloneNode(true);cl.querySelectorAll('.table-wrap>div:not(.analysis-box)').forEach(e=>e.remove());cl.querySelectorAll('thead,th').forEach(el=>{el.style.position='';el.style.top='';el.style.zIndex='';});const mainTbl=cl.querySelector('table[data-bc-srch]');if(mainTbl){const tb=mainTbl.querySelector('tbody');if(tb){let k=0;[...tb.querySelectorAll('tr')].forEach(tr=>{const isTot=tr.classList.contains('tot');if(!isTot){if(k>=15)tr.remove();else k++;}});}}const titleEl=cl.querySelector('.card-title');if(titleEl)titleEl.innerHTML='<div class="card-icon">🏪</div>B. Theo Bưu Cục — Top 15 FD Total cao nhất';const tmp=document.createElement('div');tmp.id='tg-bc-top15';tmp.style.cssText='position:fixed;top:-9999px;left:0;z-index:-1;width:1200px;padding:0';tmp.appendChild(cl);document.body.appendChild(tmp);await new Promise(r=>setTimeout(r,300));try{const img=await _captureEl('tg-bc-top15');const res=await _tgSendPhoto(TG_AGING_CHAT,TG_FD_THREAD,img,capFD('bc'));if(!res.ok)throw new Error('TLT BC: '+(res.description||JSON.stringify(res)));}finally{tmp.remove();}await new Promise(r=>setTimeout(r,600));}}
+   if(bcCard&&bcTbl){const cl=bcCard.cloneNode(true);cl.querySelectorAll('.table-wrap>div:not(.analysis-box)').forEach(e=>e.remove());cl.querySelectorAll('thead,th').forEach(el=>{el.style.position='';el.style.top='';el.style.zIndex='';});const mainTbl=cl.querySelector('table[data-bc-srch]');if(mainTbl){const tb=mainTbl.querySelector('tbody');if(tb){let k=0;[...tb.querySelectorAll('tr')].forEach(tr=>{const isTot=tr.classList.contains('tot');if(!isTot){if(k>=15)tr.remove();else k++;}});}}const titleEl=cl.querySelector('.card-title');if(titleEl)titleEl.innerHTML='<div class="card-icon">🏪</div>B. Theo Bưu Cục — Top 15 FD Total cao nhất';const tmp=document.createElement('div');tmp.id='tg-bc-top15';tmp.style.cssText='position:fixed;top:-9999px;left:0;z-index:-1;width:1200px;padding:0';tmp.appendChild(cl);document.body.appendChild(tmp);await new Promise(r=>setTimeout(r,300));try{const img=await _captureEl('tg-bc-top15');const res=await _tgSendPhoto(TG_AGING_CHAT,TG_FD_THREAD,img,capFD('bc'));if(!res.ok)throw new Error('TLT BC: '+(res.description||JSON.stringify(res)));}catch(_e){console.warn('TG bước lỗi:',_e&&_e.message);}finally{tmp.remove();}await new Promise(r=>setTimeout(r,600));}}
   if(btn){btn.disabled=false;btn.textContent='✅ Đã gửi!';btn.style.background='rgba(34,197,94,0.15)';btn.style.borderColor='rgba(34,197,94,0.4)';btn.style.color='#4ade80';setTimeout(()=>{btn.textContent='📤 Bắn TLT Ngày TG';btn.style.background='';btn.style.borderColor='';btn.style.color='';},3000);}
  }catch(e){
   console.error('TG TLT Error:',e);
@@ -1703,9 +1707,11 @@ async function sendAllToTelegram(){
   if(btn)btn.innerHTML=`⏳ Đang gửi: ${label}...`;
   const el=document.getElementById(elId);
   if(!el){console.warn('[TG] element not found:',elId);return;}
-  const img=await _captureEl(elId);
-  const res=await _tgSendPhoto(chatId,threadId,img,cap);
-  if(!res.ok)throw new Error(`[${label}] TG lỗi: ${res.description||JSON.stringify(res)}`);
+  try{
+   const img=await _captureEl(elId);
+   const res=await _tgSendPhoto(chatId,threadId,img,cap);
+   if(!res||!res.ok)console.warn(`[${label}] TG lỗi:`,res&&res.description);
+  }catch(e){console.warn(`[${label}] lỗi:`,e&&e.message);}
   await new Promise(r=>setTimeout(r,600));
  }
 
@@ -1912,7 +1918,7 @@ async function sendAllToTelegram(){
      const img=await _captureEl('tg-p16-a');
      const res=await _tgSendPhoto(TG_AGING_CHAT,TG_VH_THREAD,img,capP16());
      if(!res.ok)throw new Error('P16 AM loi: '+(res.description||JSON.stringify(res)));
-    }finally{tmp.remove();}
+    }catch(_e){console.warn('TG bước lỗi:',_e&&_e.message);}finally{tmp.remove();}
     await new Promise(r=>setTimeout(r,600));
    }else{
     await sendPhoto('Van Hanh Ngay','p16-card-a',TG_AGING_CHAT,TG_VH_THREAD,capP16());
@@ -1936,7 +1942,7 @@ async function sendAllToTelegram(){
      const cap=`🎯 <b>BÁO CÁO TỶ LỆ GTC TTS</b>`;
      const res=await _tgSendPhoto(TG_AGING_CHAT,TG_VH_THREAD,img,cap);
      if(!res.ok)throw new Error('P16 B loi: '+(res.description||JSON.stringify(res)));
-    }finally{tmp.remove();}
+    }catch(_e){console.warn('TG bước lỗi:',_e&&_e.message);}finally{tmp.remove();}
     await new Promise(r=>setTimeout(r,600));
    }
   }
@@ -1963,7 +1969,7 @@ async function sendAllToTelegram(){
      const img=await _captureEl('tg-p1-bc');
      const res=await _tgSendPhoto(TG_AGING_CHAT,TG_VH_THREAD,img,capGTCBc());
      if(!res.ok)throw new Error('P1 BC loi: '+(res.description||JSON.stringify(res)));
-    }finally{tmp.remove();}
+    }catch(_e){console.warn('TG bước lỗi:',_e&&_e.message);}finally{tmp.remove();}
     await new Promise(r=>setTimeout(r,600));
    }else{
     await sendPhoto('GTC Total Theo BC','p1_bcCard',TG_AGING_CHAT,TG_VH_THREAD,capGTCBc());
@@ -1991,7 +1997,7 @@ async function sendAllToTelegram(){
      const img=await _captureEl('tg-am-fd');
      const res=await _tgSendPhoto(TG_AGING_CHAT,TG_FD_THREAD,img,capFD('am'));
      if(!res.ok)throw new Error('TLT AM loi: '+(res.description||JSON.stringify(res)));
-    }finally{tmp.remove();}
+    }catch(_e){console.warn('TG bước lỗi:',_e&&_e.message);}finally{tmp.remove();}
     await new Promise(r=>setTimeout(r,600));
    }else{
     await sendPhoto('TLT Theo AM','p3-card-am',TG_AGING_CHAT,TG_FD_THREAD,capFD('am'));
@@ -2024,7 +2030,7 @@ async function sendAllToTelegram(){
      const img=await _captureEl('tg-bc-top15');
      const res=await _tgSendPhoto(TG_AGING_CHAT,TG_FD_THREAD,img,capFD('bc'));
      if(!res.ok)throw new Error(`TLT BC lỗi: ${res.description||JSON.stringify(res)}`);
-    }finally{tmp.remove();}
+    }catch(_e){console.warn('TG bước lỗi:',_e&&_e.message);}finally{tmp.remove();}
     await new Promise(r=>setTimeout(r,600));
    }else{
     await sendPhoto('TLT Theo BC','p3-card-bc',TG_AGING_CHAT,TG_FD_THREAD,capFD('bc'));
@@ -2065,7 +2071,7 @@ async function sendAllToTelegram(){
      const img=await _captureEl('tg-'+eid);
      const res=await _tgSendPhoto(TG_AGING_CHAT,TG_TTS_THREAD,img,cap);
      if(!res.ok)throw new Error(`[${eid}] TG lỗi: ${res.description||JSON.stringify(res)}`);
-    }finally{tmp.remove();}
+    }catch(_e){console.warn('TG bước lỗi:',_e&&_e.message);}finally{tmp.remove();}
     await new Promise(r=>setTimeout(r,700));
    }
   }
