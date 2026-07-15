@@ -3528,13 +3528,13 @@ function _vwTable(list,last7,mode){
  if(!list.length){body=`<tr><td colspan="${6+last7.length}" style="padding:18px;text-align:center;color:var(--text-sub)">Không có Bưu Cục nào thoả điều kiện</td></tr>`;}
  list.forEach((o,i)=>{
   const rc=_vwRatioColor(o.ratio);
-  const days=o.s7.map((v,j)=>{const isLast=j===o.s7.length-1;return`<td style="${csNum};padding:9px 10px;${isLast?'font-weight:800;background:#FFFBEB':''}">${v?fmt(v):'—'}</td>`;}).join('');
+  const days=o.s7.map((v,j)=>{const isLast=j===o.s7.length-1;return`<td style="${csNum};padding:9px 10px;${isLast?'font-weight:800;background:#FFFBEB':''}">${v?fmt(v)+' đơn':'—'}</td>`;}).join('');
   body+=`<tr>
    <td style="${csNum};color:var(--text-sub)">${i+1}</td>
    <td style="${cs};position:sticky;left:0;background:#fff;font-weight:700">${o.bc}</td>
    <td style="${csNum}"><span class="pct" style="background:${_vwGtcColor(o.gtc)}22;color:${_vwGtcColor(o.gtc)};font-weight:800">${(o.gtc*100).toFixed(1)}%</span></td>
-   <td style="${csNum};font-weight:800;color:${rc}">${fmt(o.nl)}</td>
-   <td style="${csNum};color:var(--text-sub)">${fmt(Math.round(o.avg))}</td>
+   <td style="${csNum};font-weight:800;color:${rc}">${o.nl?fmt(o.nl)+' đơn':'—'}</td>
+   <td style="${csNum};color:var(--text-sub)">${o.avg?fmt(Math.round(o.avg))+' đơn':'—'}</td>
    <td style="${csNum};font-weight:800;color:${rc}">${o.ratio>=99?'MỚI':Math.round(o.ratio*100)+'%'}</td>
    ${days}
   </tr>`;
@@ -3544,9 +3544,9 @@ function _vwTable(list,last7,mode){
    <th style="${thNum};padding:11px 10px">#</th>
    <th style="${thBase};text-align:left;position:sticky;left:0;background:${headBg};z-index:3">Bưu Cục</th>
    <th style="${thNum}">GTC total<br><span style="font-size:11.5px;font-weight:800;color:#6B7280">${_vwDowFull(latest)} (${_vwFmtDMY(latest)})</span></th>
-   <th style="${thNum}">Vol HM<br><span style="font-size:11.5px;font-weight:800;color:#B45309">${_vwDowFull(latest)} (${_vwFmtDMY(latest)})</span></th>
-   <th style="${thNum}">TB tuần<br><span style="font-size:11.5px;font-weight:700;color:#6B7280">W-1</span></th>
-   <th style="${thNum}">Tỉ lệ<br><span style="font-size:11.5px;font-weight:700;color:#6B7280">nay/W-1</span></th>
+   <th style="${thNum}">Volume hàng mới<br><span style="font-size:11.5px;font-weight:800;color:#B45309">${_vwDowFull(latest)} (${_vwFmtDMY(latest)})</span></th>
+   <th style="${thNum}">TB tuần<br><span style="font-size:11.5px;font-weight:700;color:#6B7280">W-1${window._vwData?.w1?` (${_vwFmtDMY(window._vwData.w1[0])}–${_vwFmtDMY(window._vwData.w1[6])})`:''}</span></th>
+   <th style="${thNum}">So với TB<br><span style="font-size:11.5px;font-weight:700;color:#6B7280">tuần W-1</span></th>
    ${dayTh}
   </tr></thead><tbody>${body}</tbody></table></div>`;
 }
