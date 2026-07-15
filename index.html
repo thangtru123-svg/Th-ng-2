@@ -3492,7 +3492,7 @@ async function buildVolWarnPage(){
   const dt=new Date(latest+'T12:00:00');const dow=(dt.getDay()+6)%7;const monPrev=new Date(dt);monPrev.setDate(dt.getDate()-dow-7);
   const fmtd=x=>x.getFullYear()+'-'+String(x.getMonth()+1).padStart(2,'0')+'-'+String(x.getDate()).padStart(2,'0');
   const w1=[];for(let k=0;k<7;k++){const x=new Date(monPrev);x.setDate(monPrev.getDate()+k);w1.push(fmtd(x));}
-  const last7=allDates.slice(-7);
+  const last7=allDates.slice(-8,-1).reverse(); // 7 ngày liền TRƯỚC ngày gần nhất, xếp giảm dần (mới→cũ), KHÔNG gồm ngày gần nhất
   // bất ổn từ aging (col M index12)
   const ag=_vwParseCSV(agTxt);const batOn=new Set();
   for(let i=1;i<ag.length;i++){if(ag[i][12]&&ag[i][12].includes('bất ổn'))batOn.add((ag[i][2]||'').trim());}
@@ -3520,7 +3520,7 @@ function _vwTable(list,last7,mode){
  const thBase='padding:11px 12px;font-size:13px;white-space:nowrap;border-bottom:2px solid #E5E7EB;vertical-align:bottom';
  const thNum=thBase+';text-align:right';         // các cột số → căn phải khớp cell
  const dowLine=(iso,strong)=>`<div style="font-size:13px;font-weight:800;color:#111827">${_vwFmtDMY(iso)}</div><div style="font-size:11.5px;font-weight:800;color:#6B7280;margin-top:2px">${_vwDow(iso)}</div>`;
- const dayTh=last7.map((d,j)=>{const isLast=j===last7.length-1;return`<th style="${thNum};padding:11px 10px;${isLast?'background:#FEF3C7':''}">${dowLine(d)}</th>`;}).join('');
+ const dayTh=last7.map(d=>`<th style="${thNum};padding:11px 10px">${dowLine(d)}</th>`).join('');
  // cell dùng chung: hẹp, số căn phải
  const cs='padding:9px 12px;border-bottom:1px solid #F1F1F3;font-size:12.5px;white-space:nowrap';
  const csNum=cs+';text-align:right';
@@ -3528,7 +3528,7 @@ function _vwTable(list,last7,mode){
  if(!list.length){body=`<tr><td colspan="${6+last7.length}" style="padding:18px;text-align:center;color:var(--text-sub)">Không có Bưu Cục nào thoả điều kiện</td></tr>`;}
  list.forEach((o,i)=>{
   const rc=_vwRatioColor(o.ratio);
-  const days=o.s7.map((v,j)=>{const isLast=j===o.s7.length-1;return`<td style="${csNum};padding:9px 10px;${isLast?'font-weight:800;background:#FFFBEB':''}">${v?fmt(v)+' đơn':'—'}</td>`;}).join('');
+  const days=o.s7.map(v=>`<td style="${csNum};padding:9px 10px">${v?fmt(v)+' đơn':'—'}</td>`).join('');
   body+=`<tr>
    <td style="${csNum};color:var(--text-sub)">${i+1}</td>
    <td style="${cs};position:sticky;left:0;background:#fff;font-weight:700">${o.bc}</td>
@@ -3570,7 +3570,7 @@ function _vwRender(D){
  <div class="page-header">
   <div class="page-title">📥 Cảnh Báo Volume Hàng Về</div>
   <div class="page-meta"><span class="tag tag-orange">Ngày gần nhất: ${_vwFmtDMY(D.latest)} (${_vwDow(D.latest)})</span>
-   <span class="tag">TB tuần W-1: ${wLabel}</span><span class="tag">7 ngày gần nhất: ${l7Label}</span>
+   <span class="tag">TB tuần W-1: ${wLabel}</span><span class="tag">7 ngày liền trước: ${l7Label}</span>
    <span class="tag">Nguồn: Data_Voltotal (gộp Nhóm hàng)</span></div>
  </div>
  <div class="card">
