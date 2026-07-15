@@ -237,6 +237,7 @@ tr.tot td{background:#FFF0EB!important;font-weight:800!important;border-top:2px 
  <button class="nav-item" onclick="show('p17',this)"><span class="icon">📅</span>Báo Cáo Vận Hành Tuần</button>
  <div class="nav-section">Volume</div>
  <button class="nav-item" onclick="show('p18',this)"><span class="icon">📊</span>Tổng quan Volume</button>
+ <button class="nav-item" onclick="show('p25',this)" style="background:linear-gradient(135deg,rgba(220,38,38,0.16),rgba(241,93,41,0.08));border:1px solid rgba(220,38,38,0.32);font-weight:700"><span class="icon">📥</span>Cảnh báo Volume hàng về</button>
  <button class="nav-item" onclick="show('p19',this)"><span class="icon">🎯</span>GTC TTS Ca 1,2 theo BC</button>
  <button class="nav-item" onclick="show('p20',this)"><span class="icon">👷</span>Năng suất nhân viên</button>
  <button class="nav-item" onclick="show('p21',this)"><span class="icon">💰</span>Tỉ lệ NVPTTT nộp COD</button>
@@ -272,6 +273,7 @@ tr.tot td{background:#FFF0EB!important;font-weight:800!important;border-top:2px 
 <div class="page" id="p22"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
 <div class="page" id="p23"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
 <div class="page" id="p24"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
+<div class="page" id="p25"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
 </main>
 
 <script>
@@ -3444,6 +3446,8 @@ async function init(){
  buildWeeklyReport();
  // p18 — Tổng quan Volume
  await buildVolumeReport();
+ // p25 — Cảnh báo Volume hàng về
+ await buildVolWarnPage();
  // p19 — GTC TTS Ca 1,2 theo Bưu Cục
  await buildGTCBCReport();
  // p20 — Năng suất nhân viên
@@ -3461,6 +3465,117 @@ async function init(){
  const now=new Date();document.getElementById('lastUpdate').textContent=`Cập nhật: ${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`;
 }
 
+
+/* ===== DASHBOARD 25: CẢNH BÁO VOLUME HÀNG VỀ (p25) ===== */
+/* Nguồn: Data_Voltotal (SHEET_VOL) — gộp bỏ qua Nhóm hàng; bất ổn từ aging (col M). */
+function _vwParseCSV(s){var rs=[],row=[],cur='',q=false;for(var i=0;i<s.length;i++){var c=s[i];if(q){if(c==='"'){if(s[i+1]==='"'){cur+='"';i++;}else q=false;}else cur+=c;}else{if(c==='"')q=true;else if(c===','){row.push(cur);cur='';}else if(c==='\n'){row.push(cur);rs.push(row);row=[];cur='';}else if(c==='\r'){}else cur+=c;}}if(cur!==''||row.length){row.push(cur);rs.push(row);}return rs;}
+function _vwNum(v){v=String(v==null?'':v).trim().replace(/\./g,'').replace(',','.');var x=parseFloat(v.replace(/[^0-9.\-]/g,''));return isNaN(x)?0:x;}
+function _vwFmtDMY(iso){return iso?iso.slice(8)+'/'+iso.slice(5,7):'';}
+function _vwDow(iso){var d=new Date(iso+'T12:00:00');return['CN','T2','T3','T4','T5','T6','T7'][d.getDay()];}
+
+async function buildVolWarnPage(){
+ const el=document.getElementById('p25');if(!el)return;
+ try{
+  const [volTxt,agTxt]=await Promise.all([
+   fetch(`https://docs.google.com/spreadsheets/d/${SHEET_VOL_ID}/export?format=csv&gid=${SHEET_VOL_GID}`).then(r=>r.text()),
+   fetch(`https://docs.google.com/spreadsheets/d/${AGING_SHEET_ID}/export?format=csv&gid=${AGING_GID}`).then(r=>r.text())
+  ]);
+  const rows=_vwParseCSV(volTxt);
+  // gộp theo BC|loại|ngày: vol + Σ(vol×gtc) — bỏ qua Nhóm hàng
+  const agg={},dates=new Set();
+  for(let i=1;i<rows.length;i++){const r=rows[i];const bc=(r[1]||'').trim();if(!bc||bc==='Grand Total')continue;
+   const loai=(r[2]||'').trim(),d=isoD(r[4]);if(!d||!loai)continue;dates.add(d);
+   const k=bc+'|'+loai+'|'+d;if(!agg[k])agg[k]={vol:0,gv:0};const vv=_vwNum(r[5]);agg[k].vol+=vv;agg[k].gv+=vv*_vwNum(r[7]);}
+  const allDates=[...dates].sort();const latest=allDates[allDates.length-1];
+  // tuần W-1 (T2→CN liền trước) — dùng ngày local, neo trưa tránh lệch múi giờ
+  const dt=new Date(latest+'T12:00:00');const dow=(dt.getDay()+6)%7;const monPrev=new Date(dt);monPrev.setDate(dt.getDate()-dow-7);
+  const fmtd=x=>x.getFullYear()+'-'+String(x.getMonth()+1).padStart(2,'0')+'-'+String(x.getDate()).padStart(2,'0');
+  const w1=[];for(let k=0;k<7;k++){const x=new Date(monPrev);x.setDate(monPrev.getDate()+k);w1.push(fmtd(x));}
+  const last7=allDates.slice(-7);
+  // bất ổn từ aging (col M index12)
+  const ag=_vwParseCSV(agTxt);const batOn=new Set();
+  for(let i=1;i<ag.length;i++){if(ag[i][12]&&ag[i][12].includes('bất ổn'))batOn.add((ag[i][2]||'').trim());}
+  // per BC
+  const bcs=new Set();Object.keys(agg).forEach(k=>bcs.add(k.split('|')[0]));
+  const getV=(bc,l,d)=>agg[bc+'|'+l+'|'+d]?.vol||0;
+  const newV=(bc,d)=>getV(bc,'Hàng Mới Ca 1',d)+getV(bc,'Hàng Mới Ca 2',d);
+  const gtcT=(bc,d)=>{let v=0,gv=0;['Hàng Mới Ca 1','Hàng Mới Ca 2','Hàng Tồn'].forEach(l=>{const a=agg[bc+'|'+l+'|'+d];if(a){v+=a.vol;gv+=a.gv;}});return v>0?gv/v:0;};
+  const out=[...bcs].map(bc=>{const nl=newV(bc,latest);const avg=w1.map(d=>newV(bc,d)).reduce((a,b)=>a+b,0)/7;
+   return{bc,nl,avg,ratio:avg>0?nl/avg:(nl>0?99:0),gtc:gtcT(bc,latest),bat:batOn.has(bc),s7:last7.map(d=>newV(bc,d))};});
+  const b1=out.filter(o=>!o.bat&&o.ratio>=1.2&&o.nl>0).sort((a,b)=>b.ratio-a.ratio).slice(0,30);
+  const b2=out.filter(o=>o.bat).sort((a,b)=>b.ratio-a.ratio);
+  el.innerHTML=_vwRender({latest,w1,last7,b1,b2,batOnCount:batOn.size});
+ }catch(e){el.innerHTML=errPage('Không thể tải Cảnh báo Volume: '+e.message);}
+}
+
+function _vwRatioColor(r){if(r>=2)return'#B91C1C';if(r>=1.5)return'#DC2626';if(r>=1.2)return'var(--orange)';return'var(--text-sub)';}
+function _vwGtcColor(g){return g>=0.65?'var(--green)':g>=0.5?'var(--yellow)':'var(--red)';}
+
+function _vwTable(list,last7,mode){
+ // mode: 'top' (bảng 1) | 'bat' (bảng 2)
+ const dayTh=last7.map(d=>`<th style="text-align:right;padding:8px 6px;font-size:10px;white-space:nowrap">${_vwFmtDMY(d)}<br><span style="color:var(--text-sub);font-weight:500">${_vwDow(d)}</span></th>`).join('');
+ const headBg=mode==='bat'?'#FEF2F2':'#FFF7ED';
+ const cs='padding:9px 10px;border-bottom:1px solid #F1F1F3;font-size:12px';
+ let body='';
+ if(!list.length){body=`<tr><td colspan="${6+last7.length}" style="padding:16px;text-align:center;color:var(--text-sub)">Không có Bưu Cục nào thoả điều kiện</td></tr>`;}
+ list.forEach((o,i)=>{
+  const rc=_vwRatioColor(o.ratio);
+  const days=o.s7.map((v,j)=>{const isLast=j===o.s7.length-1;return`<td style="${cs};text-align:right;${isLast?'font-weight:800;background:#FFFBEB':''}">${v?fmt(v):'—'}</td>`;}).join('');
+  body+=`<tr>
+   <td style="${cs};text-align:center;color:var(--text-sub)">${i+1}</td>
+   <td style="${cs};position:sticky;left:0;background:#fff;font-weight:700;min-width:190px">${o.bc}</td>
+   <td style="${cs};text-align:right"><span class="pct" style="background:${_vwGtcColor(o.gtc)}22;color:${_vwGtcColor(o.gtc)};font-weight:800">${(o.gtc*100).toFixed(1)}%</span></td>
+   <td style="${cs};text-align:right;font-weight:800;color:${rc}">${fmt(o.nl)}</td>
+   <td style="${cs};text-align:right;color:var(--text-sub)">${fmt(Math.round(o.avg))}</td>
+   <td style="${cs};text-align:right;font-weight:800;color:${rc}">${o.ratio>=99?'MỚI':Math.round(o.ratio*100)+'%'}</td>
+   ${days}
+  </tr>`;
+ });
+ return`<div class="table-wrap" style="max-height:640px"><table style="width:max-content;min-width:100%;border-collapse:collapse">
+  <thead><tr style="background:${headBg};position:sticky;top:0;z-index:2">
+   <th style="padding:9px 8px;font-size:11px">#</th>
+   <th style="padding:9px 10px;font-size:11px;text-align:left;position:sticky;left:0;background:${headBg};z-index:3">Bưu Cục</th>
+   <th style="padding:9px 8px;font-size:11px;white-space:nowrap">GTC total<br><span style="color:var(--text-sub);font-weight:500">${_vwFmtDMY(window._vwCurLatest||'')}</span></th>
+   <th style="padding:9px 8px;font-size:11px;white-space:nowrap">Vol HM<br>ngày gần nhất</th>
+   <th style="padding:9px 8px;font-size:11px;white-space:nowrap">TB tuần<br>W-1</th>
+   <th style="padding:9px 8px;font-size:11px;white-space:nowrap">Tỉ lệ<br>nay/W-1</th>
+   ${dayTh}
+  </tr></thead><tbody>${body}</tbody></table></div>`;
+}
+
+function _vwRender(D){
+ window._vwData=D;window._vwCurLatest=D.latest;
+ const wLabel=`${_vwFmtDMY(D.w1[0])}–${_vwFmtDMY(D.w1[6])}`;
+ const l7Label=`${_vwFmtDMY(D.last7[0])}–${_vwFmtDMY(D.last7[6])}`;
+ // Phân tích Bảng 1
+ const top=D.b1[0];
+ let ana1=`📥 <strong>Top ${D.b1.length} Bưu Cục ổn định có Volume hàng mới (Ca 1+Ca 2) ngày ${_vwFmtDMY(D.latest)} tăng ≥ 120% so với TB tuần W-1.</strong><br>`;
+ ana1+=`Ngưỡng: Volume ngày gần nhất ≥ 1,2 × trung bình tuần W-1 (${wLabel}).<br>`;
+ if(top)ana1+=`🔴 Tăng mạnh nhất: <strong>${top.bc}</strong> — ${fmt(top.nl)} đơn (TB W-1: ${fmt(Math.round(top.avg))} → ${Math.round(top.ratio*100)}%), GTC total ${(top.gtc*100).toFixed(1)}%.<br>`;
+ ana1+=`🟢 Đây là các BC KHÔNG bất ổn nhưng hàng về đang dồn lên — cần theo dõi năng lực xử lý.`;
+ // Phân tích Bảng 2
+ const b2up=D.b2.filter(o=>o.ratio>=1.2).length;
+ let ana2=`⚠️ <strong>${D.b2.length} Bưu Cục ĐANG BẤT ỔN</strong> (theo aging) — Volume hàng mới ngày ${_vwFmtDMY(D.latest)} so với TB tuần W-1.<br>`;
+ ana2+=`Trong đó <strong style="color:var(--red)">${b2up}</strong> BC có hàng về tăng ≥ 120% so tuần trước → áp lực chồng thêm lên BC vốn đã bất ổn.<br>`;
+ if(D.b2[0])ana2+=`🔴 Cao nhất: <strong>${D.b2[0].bc}</strong> — ${fmt(D.b2[0].nl)} đơn (${Math.round(D.b2[0].ratio*100)}% so TB W-1), GTC total ${(D.b2[0].gtc*100).toFixed(1)}%.`;
+ return`
+ <div class="page-header">
+  <div class="page-title">📥 Cảnh Báo Volume Hàng Về</div>
+  <div class="page-meta"><span class="tag tag-orange">Ngày gần nhất: ${_vwFmtDMY(D.latest)} (${_vwDow(D.latest)})</span>
+   <span class="tag">TB tuần W-1: ${wLabel}</span><span class="tag">7 ngày gần nhất: ${l7Label}</span>
+   <span class="tag">Nguồn: Data_Voltotal (gộp Nhóm hàng)</span></div>
+ </div>
+ <div class="card">
+  <div class="card-header"><div class="card-title"><div class="card-icon">🟢</div>Bảng 1 — Top 30 BC ổn định có Volume hàng mới tăng ≥ 120% so TB tuần W-1</div><div class="card-info">Không bất ổn · sắp xếp Tỉ lệ nay/W-1 cao → thấp</div></div>
+  ${_vwTable(D.b1,D.last7,'top')}
+  <div class="analysis-box" style="margin:14px 16px 16px">${ana1}</div>
+ </div>
+ <div class="card">
+  <div class="card-header"><div class="card-title"><div class="card-icon">⚠️</div>Bảng 2 — Bưu Cục BẤT ỔN: Volume hàng mới ngày gần nhất so TB tuần W-1</div><div class="card-info">${D.b2.length} BC bất ổn · sắp xếp Tỉ lệ cao → thấp</div></div>
+  ${_vwTable(D.b2,D.last7,'bat')}
+  <div class="analysis-box" style="margin:14px 16px 16px">${ana2}</div>
+ </div>`;
+}
 
 /* ===== DASHBOARD 12: GTC TTS Ca 1,2 THEO BƯU CỤC (p19) ===== */
 async function buildGTCBCReport(){
