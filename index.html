@@ -3472,6 +3472,7 @@ function _vwParseCSV(s){var rs=[],row=[],cur='',q=false;for(var i=0;i<s.length;i
 function _vwNum(v){v=String(v==null?'':v).trim().replace(/\./g,'').replace(',','.');var x=parseFloat(v.replace(/[^0-9.\-]/g,''));return isNaN(x)?0:x;}
 function _vwFmtDMY(iso){return iso?iso.slice(8)+'/'+iso.slice(5,7):'';}
 function _vwDow(iso){var d=new Date(iso+'T12:00:00');return['CN','T2','T3','T4','T5','T6','T7'][d.getDay()];}
+function _vwDowFull(iso){var d=new Date(iso+'T12:00:00');return['Chủ Nhật','Thứ 2','Thứ 3','Thứ 4','Thứ 5','Thứ 6','Thứ 7'][d.getDay()];}
 
 async function buildVolWarnPage(){
  const el=document.getElementById('p25');if(!el)return;
@@ -3513,32 +3514,39 @@ function _vwGtcColor(g){return g>=0.65?'var(--green)':g>=0.5?'var(--yellow)':'va
 
 function _vwTable(list,last7,mode){
  // mode: 'top' (bảng 1) | 'bat' (bảng 2)
- const dayTh=last7.map(d=>`<th style="text-align:right;padding:8px 6px;font-size:10px;white-space:nowrap">${_vwFmtDMY(d)}<br><span style="color:var(--text-sub);font-weight:500">${_vwDow(d)}</span></th>`).join('');
+ const latest=window._vwCurLatest||last7[last7.length-1]||'';
  const headBg=mode==='bat'?'#FEF2F2':'#FFF7ED';
- const cs='padding:9px 10px;border-bottom:1px solid #F1F1F3;font-size:12px';
+ // header dùng chung: to, thứ + ngày in đậm
+ const thBase='padding:11px 12px;font-size:13px;white-space:nowrap;border-bottom:2px solid #E5E7EB;vertical-align:bottom';
+ const thNum=thBase+';text-align:right';         // các cột số → căn phải khớp cell
+ const dowLine=(iso,strong)=>`<div style="font-size:13px;font-weight:800;color:#111827">${_vwFmtDMY(iso)}</div><div style="font-size:11.5px;font-weight:800;color:#6B7280;margin-top:2px">${_vwDow(iso)}</div>`;
+ const dayTh=last7.map((d,j)=>{const isLast=j===last7.length-1;return`<th style="${thNum};padding:11px 10px;${isLast?'background:#FEF3C7':''}">${dowLine(d)}</th>`;}).join('');
+ // cell dùng chung: hẹp, số căn phải
+ const cs='padding:9px 12px;border-bottom:1px solid #F1F1F3;font-size:12.5px;white-space:nowrap';
+ const csNum=cs+';text-align:right';
  let body='';
- if(!list.length){body=`<tr><td colspan="${6+last7.length}" style="padding:16px;text-align:center;color:var(--text-sub)">Không có Bưu Cục nào thoả điều kiện</td></tr>`;}
+ if(!list.length){body=`<tr><td colspan="${6+last7.length}" style="padding:18px;text-align:center;color:var(--text-sub)">Không có Bưu Cục nào thoả điều kiện</td></tr>`;}
  list.forEach((o,i)=>{
   const rc=_vwRatioColor(o.ratio);
-  const days=o.s7.map((v,j)=>{const isLast=j===o.s7.length-1;return`<td style="${cs};text-align:right;${isLast?'font-weight:800;background:#FFFBEB':''}">${v?fmt(v):'—'}</td>`;}).join('');
+  const days=o.s7.map((v,j)=>{const isLast=j===o.s7.length-1;return`<td style="${csNum};padding:9px 10px;${isLast?'font-weight:800;background:#FFFBEB':''}">${v?fmt(v):'—'}</td>`;}).join('');
   body+=`<tr>
-   <td style="${cs};text-align:center;color:var(--text-sub)">${i+1}</td>
-   <td style="${cs};position:sticky;left:0;background:#fff;font-weight:700;min-width:190px">${o.bc}</td>
-   <td style="${cs};text-align:right"><span class="pct" style="background:${_vwGtcColor(o.gtc)}22;color:${_vwGtcColor(o.gtc)};font-weight:800">${(o.gtc*100).toFixed(1)}%</span></td>
-   <td style="${cs};text-align:right;font-weight:800;color:${rc}">${fmt(o.nl)}</td>
-   <td style="${cs};text-align:right;color:var(--text-sub)">${fmt(Math.round(o.avg))}</td>
-   <td style="${cs};text-align:right;font-weight:800;color:${rc}">${o.ratio>=99?'MỚI':Math.round(o.ratio*100)+'%'}</td>
+   <td style="${csNum};color:var(--text-sub)">${i+1}</td>
+   <td style="${cs};position:sticky;left:0;background:#fff;font-weight:700">${o.bc}</td>
+   <td style="${csNum}"><span class="pct" style="background:${_vwGtcColor(o.gtc)}22;color:${_vwGtcColor(o.gtc)};font-weight:800">${(o.gtc*100).toFixed(1)}%</span></td>
+   <td style="${csNum};font-weight:800;color:${rc}">${fmt(o.nl)}</td>
+   <td style="${csNum};color:var(--text-sub)">${fmt(Math.round(o.avg))}</td>
+   <td style="${csNum};font-weight:800;color:${rc}">${o.ratio>=99?'MỚI':Math.round(o.ratio*100)+'%'}</td>
    ${days}
   </tr>`;
  });
- return`<div class="table-wrap" style="max-height:640px"><table style="width:max-content;min-width:100%;border-collapse:collapse">
+ return`<div class="table-wrap" style="max-height:660px"><table style="width:auto;border-collapse:collapse">
   <thead><tr style="background:${headBg};position:sticky;top:0;z-index:2">
-   <th style="padding:9px 8px;font-size:11px">#</th>
-   <th style="padding:9px 10px;font-size:11px;text-align:left;position:sticky;left:0;background:${headBg};z-index:3">Bưu Cục</th>
-   <th style="padding:9px 8px;font-size:11px;white-space:nowrap">GTC total<br><span style="color:var(--text-sub);font-weight:500">${_vwFmtDMY(window._vwCurLatest||'')}</span></th>
-   <th style="padding:9px 8px;font-size:11px;white-space:nowrap">Vol HM<br>ngày gần nhất</th>
-   <th style="padding:9px 8px;font-size:11px;white-space:nowrap">TB tuần<br>W-1</th>
-   <th style="padding:9px 8px;font-size:11px;white-space:nowrap">Tỉ lệ<br>nay/W-1</th>
+   <th style="${thNum};padding:11px 10px">#</th>
+   <th style="${thBase};text-align:left;position:sticky;left:0;background:${headBg};z-index:3">Bưu Cục</th>
+   <th style="${thNum}">GTC total<br><span style="font-size:11.5px;font-weight:800;color:#6B7280">${_vwDowFull(latest)} (${_vwFmtDMY(latest)})</span></th>
+   <th style="${thNum}">Vol HM<br><span style="font-size:11.5px;font-weight:800;color:#B45309">${_vwDowFull(latest)} (${_vwFmtDMY(latest)})</span></th>
+   <th style="${thNum}">TB tuần<br><span style="font-size:11.5px;font-weight:700;color:#6B7280">W-1</span></th>
+   <th style="${thNum}">Tỉ lệ<br><span style="font-size:11.5px;font-weight:700;color:#6B7280">nay/W-1</span></th>
    ${dayTh}
   </tr></thead><tbody>${body}</tbody></table></div>`;
 }
