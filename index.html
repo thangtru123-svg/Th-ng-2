@@ -3591,7 +3591,7 @@ function _vwRender(D){
 
 /* ===== DASHBOARD 26: NĂNG SUẤT GTC NHÂN VIÊN — BẮC GIANG (p26) ===== */
 /* Nguồn: sheet Năng suất NV (gid 1723871284); hàng mới+tồn từ Data_Voltotal. */
-function _nsWeakStreak(days,last7){const arr=last7.slice().reverse();let s=0;for(const d of arr){const r=days[d];if(!r||r.gan<=0)break;if(r.gtc/r.gan<0.5)s++;else break;}return s;}
+function _nsWeakDays(days,last7){let n=0;for(const d of last7){const r=days[d];if(r&&r.gan>0&&r.gtc/r.gan<0.5)n++;}return n;} // đếm số ngày yếu trong 7 ngày (không cần liên tiếp)
 function _nsGtcColor(rate){return rate>=0.8?'var(--green)':rate>=0.5?'var(--yellow)':'var(--red)';}
 function _nsNvName(nv){const i=nv.indexOf('_');return i>=0?nv.slice(i+1):nv;}
 
@@ -3629,9 +3629,9 @@ function _nsBCTable(bc,nvMap,last7){
  // gom NV + streak + tổng; LOẠI NV không phát sinh GTC trong 7 ngày (ΣGTC=0)
  const list=Object.keys(nvMap).map(nv=>{
   const days=nvMap[nv].days;let sg=0,sgtc=0;last7.forEach(d=>{const r=days[d];if(r){sg+=r.gan;sgtc+=r.gtc;}});
-  return{nv,days,sg,sgtc,rate:sg>0?sgtc/sg:0,streak:_nsWeakStreak(days,last7)};
- }).filter(o=>o.sgtc>0)
-   .sort((a,b)=>(b.streak-a.streak)||(a.rate-b.rate));   // NV cờ yếu lên đầu, rồi %GTC thấp trước
+  return{nv,days,sg,sgtc,rate:sg>0?sgtc/sg:0,streak:_nsWeakDays(days,last7)};
+ }).filter(o=>o.sg>1)   // đưa vào bảng mọi NV có Σ đơn gán > 1 (kể cả GTC=0)
+   .sort((a,b)=>(b.streak-a.streak)||(a.rate-b.rate));   // NV kém (nhiều ngày yếu) lên đầu, rồi %GTC thấp trước
  const cs='padding:7px 9px;border-bottom:1px solid #F1F1F3;font-size:12px;white-space:nowrap';
  const csN=cs+';text-align:right';
  const th='padding:8px 9px;font-size:11.5px;white-space:nowrap;border-bottom:2px solid #E5E7EB;background:#FFF7ED';
@@ -3646,14 +3646,14 @@ function _nsBCTable(bc,nvMap,last7){
    const rate=r.gtc/r.gan;return`<td style="${csN};border-left:2px solid #F1F1F3">${fmt(r.gan)}</td><td style="${csN};font-weight:700;color:${_nsGtcColor(rate)}">${fmt(r.gtc)}</td>`;}).join('');
   body+=`<tr style="${rowBg}">
    <td style="${csN};color:var(--text-sub)">${i+1}</td>
-   <td style="${cs};position:sticky;left:0;background:${flag?'#FEF2F2':'#fff'};font-weight:700;min-width:180px">${flag?'🔴 ':''}${_nsNvName(o.nv)}${flag?` <span style="font-size:10px;color:#fff;background:var(--red);padding:1px 6px;border-radius:8px;font-weight:800">yếu ${o.streak} ngày</span>`:''}</td>
+   <td style="${cs};position:sticky;left:0;background:${flag?'#FEF2F2':'#fff'};font-weight:700;min-width:180px">${flag?'🔴 ':''}${_nsNvName(o.nv)}${flag?` <span style="font-size:10px;color:#fff;background:var(--red);padding:1px 6px;border-radius:8px;font-weight:800">yếu ${o.streak}/7 ngày</span>`:''}</td>
    ${days}
    <td style="${csN};font-weight:700;border-left:3px solid #D1D5DB">${fmt(o.sg)}</td>
    <td style="${csN};font-weight:700">${fmt(o.sgtc)}</td>
    <td style="${csN};font-weight:800;color:${_nsGtcColor(o.rate)}">${(o.rate*100).toFixed(1)}%</td>
   </tr>`;
  });
- if(!list.length)body=`<tr><td colspan="${2+disp.length*2+3}" style="padding:16px;text-align:center;color:var(--text-sub)">Không có nhân viên nào phát sinh đơn GTC trong 7 ngày</td></tr>`;
+ if(!list.length)body=`<tr><td colspan="${2+disp.length*2+3}" style="padding:16px;text-align:center;color:var(--text-sub)">Không có nhân viên nào có đơn gán > 1 trong 7 ngày</td></tr>`;
  return`<div class="table-wrap" style="max-height:520px"><table style="width:auto;border-collapse:collapse">
   <thead>
    <tr><th rowspan="2" style="${thN}">#</th><th rowspan="2" style="${th};text-align:left;position:sticky;left:0;z-index:3">Nhân viên</th>
@@ -3665,38 +3665,38 @@ function _nsBCTable(bc,nvMap,last7){
 function _nsBGRender(M,last7,volOf){
  const bcs=Object.keys(M).sort();
  const wRange=`${_vwFmtDMY(last7[0])}–${_vwFmtDMY(last7[last7.length-1])}`;
- const sumGTC=(days)=>{let g=0;last7.forEach(d=>{const r=days[d];if(r)g+=r.gtc;});return g;};
- // chỉ đếm NV có phát sinh GTC (đã loại NV ΣGTC=0)
+ const sumGan=(days)=>{let g=0;last7.forEach(d=>{const r=days[d];if(r)g+=r.gan;});return g;};
+ // chỉ đếm NV có Σ đơn gán > 1 (đưa vào bảng)
  let totNV=0,totFlag=0;bcs.forEach(bc=>Object.keys(M[bc]).forEach(nv=>{
-  if(sumGTC(M[bc][nv].days)<=0)return; totNV++; if(_nsWeakStreak(M[bc][nv].days,last7)>=3)totFlag++;}));
+  if(sumGan(M[bc][nv].days)<=1)return; totNV++; if(_nsWeakDays(M[bc][nv].days,last7)>=3)totFlag++;}));
  let cards='';
  bcs.forEach(bc=>{
   const nvMap=M[bc];const allNvs=Object.keys(nvMap);
-  const active=allNvs.filter(nv=>sumGTC(nvMap[nv].days)>0);  // NV có phát sinh GTC 7 ngày
+  const active=allNvs.filter(nv=>sumGan(nvMap[nv].days)>1);  // NV có Σ đơn gán > 1
   // tổng BC 7 ngày (GTC của NV bị loại = 0 nên không ảnh hưởng ΣGTC)
   let sg=0,sgtc=0;allNvs.forEach(nv=>last7.forEach(d=>{const r=nvMap[nv].days[d];if(r){sg+=r.gan;sgtc+=r.gtc;}}));
   const v=volOf(bc);
   const rateBC=v.vol7>0?sgtc/v.vol7:0;   // %GTC Bưu Cục = Σ GTC ÷ Σ(hàng mới+tồn) 7 ngày
-  const flagged=active.map(nv=>({nv,s:_nsWeakStreak(nvMap[nv].days,last7)})).filter(x=>x.s>=3)
+  const flagged=active.map(nv=>({nv,s:_nsWeakDays(nvMap[nv].days,last7)})).filter(x=>x.s>=3)
     .map(x=>{let g=0,gt=0;last7.forEach(d=>{const r=nvMap[x.nv].days[d];if(r){g+=r.gan;gt+=r.gtc;}});return{...x,rate:g>0?gt/g:0};})
     .sort((a,b)=>b.s-a.s);
   // phân tích (mỗi ý một dòng)
-  let ana=`👷 <strong>${bc}</strong> — ${active.length} NV (có phát sinh GTC) · 7 ngày (${wRange}).<br>`;
+  let ana=`👷 <strong>${bc}</strong> — ${active.length} NV (đơn gán > 1) · 7 ngày (${wRange}).<br>`;
   ana+=`Tổng đơn GTC: <strong>${fmt(sgtc)} đơn</strong> · Tổng Volume hàng mới + tồn 7 ngày: <strong>${fmt(v.vol7)} đơn</strong> (mới ${fmt(v.hm7)} + tồn ${fmt(v.ton7)}).<br>`;
   ana+=`%GTC Bưu Cục (GTC ÷ hàng mới+tồn): <strong style="color:${_nsGtcColor(rateBC)}">${(rateBC*100).toFixed(1)}%</strong> · Tổng đơn gán 7 ngày: ${fmt(sg)} đơn.<br>`;
   ana+=`Hàng về ngày ${_vwFmtDMY(v.d)}: hàng mới (Ca1+2) <strong>${fmt(v.hmL)} đơn</strong> · hàng tồn <strong style="color:${v.tonL>=v.hmL?'var(--red)':'var(--text-sub)'}">${fmt(v.tonL)} đơn</strong>.<br>`;
   if(flagged.length){
-   ana+=`🔴 <strong>${flagged.length}/${active.length} NV yếu kém ≥3 ngày liên tiếp</strong> (%GTC cá nhân &lt;50% liền nhau tính từ ngày gần nhất):<br>`;
-   flagged.forEach(f=>{ana+=`&nbsp;&nbsp;• <strong>${_nsNvName(f.nv)}</strong> — yếu ${f.s} ngày liên tiếp, %GTC cá nhân 7 ngày ${(f.rate*100).toFixed(1)}%.<br>`;});
+   ana+=`🔴 <strong>${flagged.length}/${active.length} NV kém</strong> (có %GTC cá nhân &lt;50% từ 3/7 ngày trở lên):<br>`;
+   flagged.forEach(f=>{ana+=`&nbsp;&nbsp;• <strong>${_nsNvName(f.nv)}</strong> — yếu ${f.s}/7 ngày, %GTC cá nhân 7 ngày ${(f.rate*100).toFixed(1)}%.<br>`;});
    const ratio=v.ton7/(v.hm7||1);
    ana+=`⚠️ Kết hợp hàng về 7 ngày: tồn ${fmt(v.ton7)} / mới ${fmt(v.hm7)} (tỉ lệ tồn/mới ${ratio.toFixed(2)}). `;
    ana+=(rateBC<0.5||ratio>=1)?`Bưu Cục <strong style="color:var(--red)">RỦI RO ứ đọng</strong>: %GTC thấp + hàng tồn cao → cần can thiệp nhóm NV yếu ngay.`:`Cần theo dõi sát nhóm NV yếu, tránh để hàng tồn tăng.`;
   }else{
-   ana+=`🟢 Không có NV nào yếu kém ≥3 ngày liên tiếp.`;
+   ana+=`🟢 Không có NV kém (yếu ≥ 3/7 ngày).`;
    ana+=(rateBC<0.5)?`<br>⚠️ Nhưng %GTC Bưu Cục (${(rateBC*100).toFixed(1)}%) còn thấp so với volume hàng về — năng lực xử lý chưa theo kịp hàng mới+tồn.`:` Bưu Cục vận hành ổn định.`;
   }
   cards+=`<div class="card">
-   <div class="card-header"><div class="card-title"><div class="card-icon">🏤</div>${bc}</div><div class="card-info">${active.length} NV · %GTC BC ${(rateBC*100).toFixed(1)}% · ${flagged.length} NV yếu liên tiếp</div></div>
+   <div class="card-header"><div class="card-title"><div class="card-icon">🏤</div>${bc}</div><div class="card-info">${active.length} NV · %GTC BC ${(rateBC*100).toFixed(1)}% · ${flagged.length} NV kém</div></div>
    ${_nsBCTable(bc,nvMap,last7)}
    <div class="analysis-box" style="margin:14px 16px 16px">${ana}</div>
   </div>`;
@@ -3706,8 +3706,8 @@ function _nsBGRender(M,last7,volOf){
   <div class="page-title">📈 Năng Suất GTC Nhân Viên — Tỉnh Bắc Giang</div>
   <div class="page-meta"><span class="tag tag-orange">7 ngày gần nhất: ${wRange}</span>
    <span class="tag">${bcs.length} Bưu Cục</span><span class="tag">${totNV} nhân viên (có GTC)</span>
-   <span class="tag" style="background:var(--red-bg);color:var(--red)">🔴 ${totFlag} NV yếu kém liên tiếp</span>
-   <span class="tag">%GTC BC = GTC ÷ (hàng mới+tồn) · yếu NV: %GTC cá nhân &lt; 50% ≥ 3 ngày</span></div>
+   <span class="tag" style="background:var(--red-bg);color:var(--red)">🔴 ${totFlag} NV kém</span>
+   <span class="tag">%GTC BC = GTC ÷ (hàng mới+tồn) · NV kém: %GTC cá nhân &lt; 50% ≥ 3/7 ngày</span></div>
  </div>${cards}`;
 }
 
