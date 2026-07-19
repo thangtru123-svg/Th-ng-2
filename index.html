@@ -3738,12 +3738,7 @@ async function sendNSBGToTelegram(btn){
  for(let i=0;i<D.rows.length;i++){
   const row=D.rows[i];
   if(btn)btn.textContent=`⏳ ${i+1}/${D.rows.length}: ${row.bc}`;
-  let cap=`🏤 <b>${row.bc}</b>\n`;
-  cap+=`NV (gán>1): ${row.active} · %GTC BC: <b>${(row.rateBC*100).toFixed(1)}%</b>\n`;
-  cap+=`GTC 7 ngày: ${fN(row.sgtc)} / Volume mới+tồn: ${fN(row.vol7)} (mới ${fN(row.hm7)} + tồn ${fN(row.ton7)})\n`;
-  cap+=`Hàng về ${dmy(row.d)}: mới ${fN(row.hmL)} · tồn ${fN(row.tonL)}\n`;
-  cap+=row.flagged.length?`🔴 ${row.flagged.length} NV kém: `+row.flagged.map(f=>`${f.name} (yếu ${f.s}/7, ${(f.rate*100).toFixed(0)}%)`).join('; '):`🟢 Không có NV kém`;
-  cap=trimCap(cap);
+  const cap=`🏤 <b>${row.bc}</b>`; // group Anh em Bắc Giang: chỉ tiêu đề, phân tích đã có trong ảnh
   try{
    const img=await _captureEl('nsbgCard_'+i);
    let res=await _tgSendPhoto(TG_NSBG_CHAT,undefined,img,cap);
