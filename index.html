@@ -291,6 +291,7 @@ const TG_VH_THREAD   = 5; // topic "Vận hành chung"
 const TG_FD_THREAD   = 8250; // topic "FD - Mục tiêu toàn vùng 8%"
 const TG_PICKUP_THREAD = 7; // topic "Pickup / Luân chuyển"
 const TG_TTS_THREAD   = 3; // topic "TTS - Vận hành"
+const TG_NSBG_CHAT   = -4931731378; // group "Anh em Bắc Giang" (group thường, không topic)
 
 /* ===== AUTH LOGIC ===== */
 function _decodeJWT(t){try{const b=t.split('.')[1].replace(/-/g,'+').replace(/_/g,'/');return JSON.parse(decodeURIComponent(atob(b).split('').map(c=>'%'+('00'+c.charCodeAt(0).toString(16)).slice(-2)).join('')));}catch{return{};}}
@@ -3669,8 +3670,8 @@ function _nsBGRender(M,last7,volOf){
  // chỉ đếm NV có Σ đơn gán > 1 (đưa vào bảng)
  let totNV=0,totFlag=0;bcs.forEach(bc=>Object.keys(M[bc]).forEach(nv=>{
   if(sumGan(M[bc][nv].days)<=1)return; totNV++; if(_nsWeakDays(M[bc][nv].days,last7)>=3)totFlag++;}));
- let cards='';
- bcs.forEach(bc=>{
+ let cards='';const tgData=[];
+ bcs.forEach((bc,ci)=>{
   const nvMap=M[bc];const allNvs=Object.keys(nvMap);
   const active=allNvs.filter(nv=>sumGan(nvMap[nv].days)>1);  // NV có Σ đơn gán > 1
   // tổng BC 7 ngày (GTC của NV bị loại = 0 nên không ảnh hưởng ΣGTC)
@@ -3695,20 +3696,63 @@ function _nsBGRender(M,last7,volOf){
    ana+=`🟢 Không có NV kém (yếu ≥ 3/7 ngày).`;
    ana+=(rateBC<0.5)?`<br>⚠️ Nhưng %GTC Bưu Cục (${(rateBC*100).toFixed(1)}%) còn thấp so với volume hàng về — năng lực xử lý chưa theo kịp hàng mới+tồn.`:` Bưu Cục vận hành ổn định.`;
   }
-  cards+=`<div class="card">
+  tgData.push({bc,active:active.length,rateBC,sgtc,vol7:v.vol7,hm7:v.hm7,ton7:v.ton7,hmL:v.hmL,tonL:v.tonL,d:v.d,flagged:flagged.map(f=>({name:_nsNvName(f.nv),s:f.s,rate:f.rate}))});
+  cards+=`<div class="card" id="nsbgCard_${ci}">
    <div class="card-header"><div class="card-title"><div class="card-icon">🏤</div>${bc}</div><div class="card-info">${active.length} NV · %GTC BC ${(rateBC*100).toFixed(1)}% · ${flagged.length} NV kém</div></div>
    ${_nsBCTable(bc,nvMap,last7)}
    <div class="analysis-box" style="margin:14px 16px 16px">${ana}</div>
   </div>`;
  });
+ window._NSBG={wRange,totNV,totFlag,bcCount:bcs.length,rows:tgData};
  return`
  <div class="page-header">
   <div class="page-title">📈 Năng Suất GTC Nhân Viên — Tỉnh Bắc Giang</div>
   <div class="page-meta"><span class="tag tag-orange">7 ngày gần nhất: ${wRange}</span>
-   <span class="tag">${bcs.length} Bưu Cục</span><span class="tag">${totNV} nhân viên (có GTC)</span>
+   <span class="tag">${bcs.length} Bưu Cục</span><span class="tag">${totNV} nhân viên (đơn gán > 1)</span>
    <span class="tag" style="background:var(--red-bg);color:var(--red)">🔴 ${totFlag} NV kém</span>
-   <span class="tag">%GTC BC = GTC ÷ (hàng mới+tồn) · NV kém: %GTC cá nhân &lt; 50% ≥ 3/7 ngày</span></div>
+   <span class="tag">%GTC BC = GTC ÷ (hàng mới+tồn) · NV kém: %GTC cá nhân &lt; 50% ≥ 3/7 ngày</span>
+   <button class="tg-inpage-btn" onclick="sendNSBGToTelegram(this)">📤 Bắn Telegram — Anh em Bắc Giang</button></div>
  </div>${cards}`;
+}
+
+/* Bắn dữ liệu p26 lên group Telegram "Anh em Bắc Giang" — 1 tin tổng quan + mỗi Bưu Cục 1 ảnh bảng kèm caption */
+async function sendNSBGToTelegram(btn){
+ const D=window._NSBG;
+ if(!D||!D.rows||!D.rows.length){alert('Chưa có dữ liệu — hãy đợi trang tải xong.');return;}
+ const p26=document.getElementById('p26');
+ if(!p26||!p26.classList.contains('active')){alert('Hãy mở trang "Năng suất GTC — Bắc Giang" trước khi bắn.');return;}
+ const fN=n=>(+n||0).toLocaleString('vi-VN');
+ const dmy=d=>d?d.slice(8)+'/'+d.slice(5,7):'';
+ const trimCap=s=>s.length>1020?s.slice(0,1017)+'…':s;
+ const old=btn?btn.textContent:'';if(btn)btn.disabled=true;
+ let okN=0;const total=1+D.rows.length;
+ // 1) tin tổng quan
+ let head=`📈 <b>NĂNG SUẤT GTC — TỈNH BẮC GIANG</b>\n`;
+ head+=`7 ngày: ${D.wRange}\n`;
+ head+=`${D.bcCount} Bưu Cục · ${fN(D.totNV)} NV (đơn gán > 1) · 🔴 ${fN(D.totFlag)} NV kém\n`;
+ head+=`Tiêu chí NV kém: %GTC cá nhân &lt; 50% từ 3/7 ngày. %GTC Bưu Cục = GTC ÷ (hàng mới+tồn).`;
+ if(btn)btn.textContent='⏳ Bắn tổng quan...';
+ try{const r=await _tgSend(TG_NSBG_CHAT,undefined,head);if(r&&r.ok)okN++;else console.warn('[NSBG head]',r&&r.description);}catch(e){console.warn('[NSBG head]',e.message);}
+ await new Promise(r=>setTimeout(r,700));
+ // 2) mỗi Bưu Cục 1 ảnh + caption
+ for(let i=0;i<D.rows.length;i++){
+  const row=D.rows[i];
+  if(btn)btn.textContent=`⏳ ${i+1}/${D.rows.length}: ${row.bc}`;
+  let cap=`🏤 <b>${row.bc}</b>\n`;
+  cap+=`NV (gán>1): ${row.active} · %GTC BC: <b>${(row.rateBC*100).toFixed(1)}%</b>\n`;
+  cap+=`GTC 7 ngày: ${fN(row.sgtc)} / Volume mới+tồn: ${fN(row.vol7)} (mới ${fN(row.hm7)} + tồn ${fN(row.ton7)})\n`;
+  cap+=`Hàng về ${dmy(row.d)}: mới ${fN(row.hmL)} · tồn ${fN(row.tonL)}\n`;
+  cap+=row.flagged.length?`🔴 ${row.flagged.length} NV kém: `+row.flagged.map(f=>`${f.name} (yếu ${f.s}/7, ${(f.rate*100).toFixed(0)}%)`).join('; '):`🟢 Không có NV kém`;
+  cap=trimCap(cap);
+  try{
+   const img=await _captureEl('nsbgCard_'+i);
+   let res=await _tgSendPhoto(TG_NSBG_CHAT,undefined,img,cap);
+   if(!res||!res.ok)res=await _tgSendDoc(TG_NSBG_CHAT,undefined,img,cap); // ảnh quá rộng → gửi document
+   if(res&&res.ok)okN++;else console.warn('[NSBG '+row.bc+']',res&&res.description);
+  }catch(e){console.warn('[NSBG '+row.bc+']',e.message);}
+  await new Promise(r=>setTimeout(r,900));
+ }
+ if(btn){btn.textContent=okN>=total?'✅ Đã bắn xong':`⚠️ Bắn ${okN}/${total}`;setTimeout(()=>{btn.textContent=old;btn.disabled=false;},5000);}
 }
 
 /* ===== DASHBOARD 12: GTC TTS Ca 1,2 THEO BƯU CỤC (p19) ===== */
