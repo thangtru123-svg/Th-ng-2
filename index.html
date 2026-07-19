@@ -240,6 +240,7 @@ tr.tot td{background:#FFF0EB!important;font-weight:800!important;border-top:2px 
  <button class="nav-item" onclick="show('p25',this)" style="background:linear-gradient(135deg,rgba(220,38,38,0.16),rgba(241,93,41,0.08));border:1px solid rgba(220,38,38,0.32);font-weight:700"><span class="icon">📥</span>Cảnh báo Volume hàng về</button>
  <button class="nav-item" onclick="show('p19',this)"><span class="icon">🎯</span>GTC TTS Ca 1,2 theo BC</button>
  <button class="nav-item" onclick="show('p20',this)"><span class="icon">👷</span>Năng suất nhân viên</button>
+ <button class="nav-item" onclick="show('p26',this)" style="background:linear-gradient(135deg,rgba(241,93,41,0.16),rgba(255,138,61,0.08));border:1px solid rgba(241,93,41,0.3);font-weight:700"><span class="icon">📈</span>Năng suất GTC — Bắc Giang</button>
  <button class="nav-item" onclick="show('p21',this)"><span class="icon">💰</span>Tỉ lệ NVPTTT nộp COD</button>
  <div class="nav-section">Kinh Doanh</div>
  <button class="nav-item" onclick="show('p22',this)"><span class="icon">💼</span>Kinh Doanh XBG</button>
@@ -274,6 +275,7 @@ tr.tot td{background:#FFF0EB!important;font-weight:800!important;border-top:2px 
 <div class="page" id="p23"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
 <div class="page" id="p24"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
 <div class="page" id="p25"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
+<div class="page" id="p26"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
 </main>
 
 <script>
@@ -3452,6 +3454,8 @@ async function init(){
  await buildGTCBCReport();
  // p20 — Năng suất nhân viên
  await buildNangSuatPage();
+ // p26 — Năng suất GTC nhân viên Bắc Giang
+ await buildNSBGPage();
  buildLowlightPage(); // p24 — Báo cáo Lowlight (cần _D,_FD,_agingRows,_nsRaw)
  // p21 — Tỉ lệ NVPTTT nộp COD
  await buildCODPage();
@@ -3583,6 +3587,118 @@ function _vwRender(D){
   ${_vwTable(D.b2,D.last7,'bat')}
   <div class="analysis-box" style="margin:14px 16px 16px">${ana2}</div>
  </div>`;
+}
+
+/* ===== DASHBOARD 26: NĂNG SUẤT GTC NHÂN VIÊN — BẮC GIANG (p26) ===== */
+/* Nguồn: sheet Năng suất NV (gid 1723871284); hàng mới+tồn từ Data_Voltotal. */
+function _nsWeakStreak(days,last7){const arr=last7.slice().reverse();let s=0;for(const d of arr){const r=days[d];if(!r||r.gan<=0)break;if(r.gtc/r.gan<0.5)s++;else break;}return s;}
+function _nsGtcColor(rate){return rate>=0.8?'var(--green)':rate>=0.5?'var(--yellow)':'var(--red)';}
+function _nsNvName(nv){const i=nv.indexOf('_');return i>=0?nv.slice(i+1):nv;}
+
+async function buildNSBGPage(){
+ const el=document.getElementById('p26');if(!el)return;
+ try{
+  const [nsTxt,volTxt]=await Promise.all([
+   fetch(`https://docs.google.com/spreadsheets/d/${SID}/gviz/tq?tqx=out:csv&gid=1723871284&_=${Date.now()}`).then(r=>r.text()),
+   fetch(`https://docs.google.com/spreadsheets/d/${SHEET_VOL_ID}/export?format=csv&gid=${SHEET_VOL_GID}`).then(r=>r.text())
+  ]);
+  const rows=_vwParseCSV(nsTxt);
+  const bg=rows.slice(1).filter(x=>(x[6]||'').trim()==='Bắc Giang');
+  const allDates=[...new Set(bg.map(x=>isoD(x[2])).filter(Boolean))].sort();
+  const last7=allDates.slice(-7);                 // 7 ngày gần nhất (tăng dần)
+  const M={};                                     // BC -> NV -> {am, days:{d:{gan,gtc}}}
+  bg.forEach(x=>{const bc=(x[0]||'').trim(),nv=(x[1]||'').trim(),d=isoD(x[2]);if(!bc||!nv||!d)return;
+   M[bc]=M[bc]||{}; if(!M[bc][nv])M[bc][nv]={am:(x[7]||'').trim(),days:{}};
+   M[bc][nv].days[d]={gan:_vwNum(x[3]),gtc:_vwNum(x[4])};});
+  // Data_Voltotal: hàng mới ca1+2 + hàng tồn theo BC (BGI), ngày gần nhất
+  const vr=_vwParseCSV(volTxt);const vAgg={},vDates=new Set();
+  for(let i=1;i<vr.length;i++){const r=vr[i];const bc=(r[1]||'').trim();if(!bc.startsWith('(BGI)'))continue;
+   const loai=(r[2]||'').trim(),d=isoD(r[4]);if(!d||!loai)continue;vDates.add(d);
+   vAgg[bc+'|'+loai+'|'+d]=(vAgg[bc+'|'+loai+'|'+d]||0)+_vwNum(r[5]);}
+  const vLatest=[...vDates].sort().pop()||'';
+  const volOf=bc=>({hm:(vAgg[bc+'|Hàng Mới Ca 1|'+vLatest]||0)+(vAgg[bc+'|Hàng Mới Ca 2|'+vLatest]||0),ton:vAgg[bc+'|Hàng Tồn|'+vLatest]||0,d:vLatest});
+  el.innerHTML=_nsBGRender(M,last7,volOf);
+ }catch(e){el.innerHTML=errPage('Không thể tải Năng suất Bắc Giang: '+e.message);}
+}
+
+function _nsBCTable(bc,nvMap,last7){
+ const disp=last7.slice().reverse();             // hiển thị giảm dần (mới→cũ)
+ // gom NV + streak + tổng
+ const list=Object.keys(nvMap).map(nv=>{
+  const days=nvMap[nv].days;let sg=0,sgtc=0;last7.forEach(d=>{const r=days[d];if(r){sg+=r.gan;sgtc+=r.gtc;}});
+  return{nv,days,sg,sgtc,rate:sg>0?sgtc/sg:0,streak:_nsWeakStreak(days,last7)};
+ }).sort((a,b)=>(b.streak-a.streak)||(a.rate-b.rate));   // NV cờ yếu lên đầu, rồi %GTC thấp trước
+ const cs='padding:7px 9px;border-bottom:1px solid #F1F1F3;font-size:12px;white-space:nowrap';
+ const csN=cs+';text-align:right';
+ const th='padding:8px 9px;font-size:11.5px;white-space:nowrap;border-bottom:2px solid #E5E7EB;background:#FFF7ED';
+ const thN=th+';text-align:right';
+ const dayTop=disp.map(d=>`<th colspan="2" style="${thN};text-align:center;border-left:2px solid #E5E7EB;font-weight:800">${_vwFmtDMY(d)}<br><span style="font-size:11px;color:#6B7280;font-weight:800">${_vwDow(d)}</span></th>`).join('');
+ const daySub=disp.map(()=>`<th style="${thN};border-left:2px solid #E5E7EB">Gán</th><th style="${thN}">GTC</th>`).join('');
+ let body='';
+ list.forEach((o,i)=>{
+  const flag=o.streak>=3;
+  const rowBg=flag?'background:#FEF2F2':'';
+  const days=disp.map(d=>{const r=o.days[d];if(!r||r.gan<=0)return`<td style="${csN};border-left:2px solid #F1F1F3;color:#C7C7CC">—</td><td style="${csN};color:#C7C7CC">—</td>`;
+   const rate=r.gtc/r.gan;return`<td style="${csN};border-left:2px solid #F1F1F3">${fmt(r.gan)}</td><td style="${csN};font-weight:700;color:${_nsGtcColor(rate)}">${fmt(r.gtc)}</td>`;}).join('');
+  body+=`<tr style="${rowBg}">
+   <td style="${csN};color:var(--text-sub)">${i+1}</td>
+   <td style="${cs};position:sticky;left:0;background:${flag?'#FEF2F2':'#fff'};font-weight:700;min-width:180px">${flag?'🔴 ':''}${_nsNvName(o.nv)}${flag?` <span style="font-size:10px;color:#fff;background:var(--red);padding:1px 6px;border-radius:8px;font-weight:800">yếu ${o.streak} ngày</span>`:''}</td>
+   <td style="${csN};font-weight:700;border-left:2px solid #E5E7EB">${fmt(o.sg)}</td>
+   <td style="${csN};font-weight:700">${fmt(o.sgtc)}</td>
+   <td style="${csN};font-weight:800;color:${_nsGtcColor(o.rate)}">${(o.rate*100).toFixed(1)}%</td>
+   ${days}
+  </tr>`;
+ });
+ return`<div class="table-wrap" style="max-height:520px"><table style="width:auto;border-collapse:collapse">
+  <thead>
+   <tr><th rowspan="2" style="${thN}">#</th><th rowspan="2" style="${th};text-align:left;position:sticky;left:0;z-index:3">Nhân viên</th>
+    <th colspan="3" style="${thN};text-align:center;border-left:2px solid #E5E7EB;font-weight:800">Tổng 7 ngày</th>${dayTop}</tr>
+   <tr><th style="${thN};border-left:2px solid #E5E7EB">Gán</th><th style="${thN}">GTC</th><th style="${thN}">%GTC</th>${daySub}</tr>
+  </thead><tbody>${body}</tbody></table></div>`;
+}
+
+function _nsBGRender(M,last7,volOf){
+ const bcs=Object.keys(M).sort();
+ const wRange=`${_vwFmtDMY(last7[0])}–${_vwFmtDMY(last7[last7.length-1])}`;
+ let totNV=0,totFlag=0;bcs.forEach(bc=>{const nvs=Object.keys(M[bc]);totNV+=nvs.length;nvs.forEach(nv=>{if(_nsWeakStreak(M[bc][nv].days,last7)>=3)totFlag++;});});
+ let cards='';
+ bcs.forEach(bc=>{
+  const nvMap=M[bc];const nvs=Object.keys(nvMap);
+  // tổng BC 7 ngày
+  let sg=0,sgtc=0;nvs.forEach(nv=>last7.forEach(d=>{const r=nvMap[nv].days[d];if(r){sg+=r.gan;sgtc+=r.gtc;}}));
+  const rate=sg>0?sgtc/sg:0;
+  const flagged=nvs.map(nv=>({nv,s:_nsWeakStreak(nvMap[nv].days,last7),days:nvMap[nv].days})).filter(x=>x.s>=3)
+    .map(x=>{let g=0,gt=0;last7.forEach(d=>{const r=x.days[d];if(r){g+=r.gan;gt+=r.gtc;}});return{...x,rate:g>0?gt/g:0};})
+    .sort((a,b)=>b.s-a.s);
+  const v=volOf(bc);
+  // phân tích (mỗi ý một dòng)
+  let ana=`👷 <strong>${bc}</strong> — ${nvs.length} NV · 7 ngày (${wRange}).<br>`;
+  ana+=`Tổng đơn gán: <strong>${fmt(sg)} đơn</strong> · Tổng GTC: <strong>${fmt(sgtc)} đơn</strong> · %GTC Bưu Cục: <strong style="color:${_nsGtcColor(rate)}">${(rate*100).toFixed(1)}%</strong>.<br>`;
+  ana+=`Hàng về ngày ${_vwFmtDMY(v.d)}: Hàng mới (Ca1+2) <strong>${fmt(v.hm)} đơn</strong> · Hàng tồn <strong style="color:${v.ton>=v.hm?'var(--red)':'var(--text-sub)'}">${fmt(v.ton)} đơn</strong>.<br>`;
+  if(flagged.length){
+   ana+=`🔴 <strong>${flagged.length}/${nvs.length} NV yếu kém ≥3 ngày liên tiếp</strong> (%GTC &lt;50% liền nhau tính từ ngày gần nhất):<br>`;
+   flagged.forEach(f=>{ana+=`&nbsp;&nbsp;• <strong>${_nsNvName(f.nv)}</strong> — yếu ${f.s} ngày liên tiếp, %GTC 7 ngày ${(f.rate*100).toFixed(1)}%.<br>`;});
+   const ratio=v.ton/(v.hm||1);
+   ana+=`⚠️ Kết hợp hàng về: hàng tồn ${fmt(v.ton)} đơn / hàng mới ${fmt(v.hm)} đơn (tỉ lệ tồn/mới ${ratio.toFixed(2)}). `;
+   ana+=(rate<0.5||ratio>=1)?`Bưu Cục đang <strong style="color:var(--red)">RỦI RO ứ đọng</strong>: %GTC thấp + hàng tồn cao, cần can thiệp nhân sự yếu ngay.`:`NV yếu nhưng %GTC Bưu Cục còn giữ được — theo dõi sát, tránh để hàng tồn tăng.`;
+  }else{
+   ana+=`🟢 Không có NV nào yếu kém ≥3 ngày liên tiếp. Bưu Cục vận hành ổn định ở mảng gán/GTC.`;
+   if(v.ton>=v.hm&&v.hm>0)ana+=`<br>⚠️ Tuy nhiên hàng tồn (${fmt(v.ton)}) ≥ hàng mới (${fmt(v.hm)}) — chú ý năng lực xử lý tồn.`;
+  }
+  cards+=`<div class="card">
+   <div class="card-header"><div class="card-title"><div class="card-icon">🏤</div>${bc}</div><div class="card-info">${nvs.length} NV · %GTC ${(rate*100).toFixed(1)}% · ${flagged.length} NV yếu liên tiếp</div></div>
+   ${_nsBCTable(bc,nvMap,last7)}
+   <div class="analysis-box" style="margin:14px 16px 16px">${ana}</div>
+  </div>`;
+ });
+ return`
+ <div class="page-header">
+  <div class="page-title">📈 Năng Suất GTC Nhân Viên — Tỉnh Bắc Giang</div>
+  <div class="page-meta"><span class="tag tag-orange">7 ngày gần nhất: ${wRange}</span>
+   <span class="tag">${bcs.length} Bưu Cục</span><span class="tag">${totNV} nhân viên</span>
+   <span class="tag" style="background:var(--red-bg);color:var(--red)">🔴 ${totFlag} NV yếu kém liên tiếp</span>
+   <span class="tag">Ngưỡng yếu: %GTC &lt; 50% · ≥ 3 ngày liên tiếp</span></div>
+ </div>${cards}`;
 }
 
 /* ===== DASHBOARD 12: GTC TTS Ca 1,2 THEO BƯU CỤC (p19) ===== */
