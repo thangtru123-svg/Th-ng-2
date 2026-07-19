@@ -3763,13 +3763,12 @@ async function buildGTCBCReport(){
 }
 
 function buildGTCBCPage(csvText){
- const lines=csvText.split('\n').slice(1).filter(l=>l.trim());
- const rows=lines.map(l=>{
-  const p=l.split(',');
-  return{am:(p[0]||'').trim(),bc:(p[1]||'').trim(),loai:(p[2]||'').trim(),
+ // dùng parser xử lý field có dấu phẩy trong ngoặc kép (VD cột AM "Tên A, Tên B") — tránh lệch cột
+ const rows=_vwParseCSV(csvText).slice(1).map(p=>({
+   am:(p[0]||'').trim(),bc:(p[1]||'').trim(),loai:(p[2]||'').trim(),
    ngay:(p[3]||'').trim(),vol:parseFloat(p[4])||0,gan:parseFloat(p[5])||0,
-   gtc:parseFloat(p[6])||0,soGTC:parseFloat(p[7])||0};
- }).filter(r=>r.bc&&r.loai&&r.ngay);
+   gtc:parseFloat(p[6])||0,soGTC:parseFloat(p[7])||0
+ })).filter(r=>r.bc&&r.loai&&r.ngay);
  const allDates=[...new Set(rows.map(r=>r.ngay))].sort((a,b)=>b.localeCompare(a));
  const fD=d=>d?(d.match(/(\d{4})-(\d{2})-(\d{2})/)||[,'','',''])[0].replace(/(\d{4})-(\d{2})-(\d{2})/,'$3/$2'):'';
  const gCol=v=>v>=0.80?'var(--green)':v>=0.50?'var(--yellow)':'var(--red)';
