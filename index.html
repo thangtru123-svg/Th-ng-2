@@ -3647,8 +3647,9 @@ function _nsBCTable(bc,nvMap,last7){
  const csN=cs+';text-align:right';
  const th='padding:8px 9px;font-size:11.5px;white-space:nowrap;border-bottom:2px solid #E5E7EB;background:#FFF7ED';
  const thN=th+';text-align:right';
- const dayTop=disp.map(d=>`<th colspan="2" style="${thN};text-align:center;border-left:2px solid #E5E7EB;font-weight:800">${_vwFmtDMY(d)}<br><span style="font-size:11px;color:#6B7280;font-weight:800">${_vwDow(d)}</span></th>`).join('');
- const daySub=disp.map(()=>`<th style="${thN};border-left:2px solid #E5E7EB">Gán</th><th style="${thN}">GTC</th>`).join('');
+ const stk1=';position:sticky;top:0;z-index:2';const stk2=';position:sticky;top:44px;z-index:2';
+ const dayTop=disp.map(d=>`<th colspan="2" style="${thN}${stk1};text-align:center;border-left:2px solid #E5E7EB;font-weight:800">${_vwFmtDMY(d)}<br><span style="font-size:11px;color:#6B7280;font-weight:800">${_vwDow(d)}</span></th>`).join('');
+ const daySub=disp.map(()=>`<th style="${thN}${stk2};border-left:2px solid #E5E7EB">Gán</th><th style="${thN}${stk2}">GTC</th>`).join('');
  let body='';
  list.forEach((o,i)=>{
   const flag=o.streak>=3;
@@ -3667,9 +3668,9 @@ function _nsBCTable(bc,nvMap,last7){
  if(!list.length)body=`<tr><td colspan="${2+disp.length*2+3}" style="padding:16px;text-align:center;color:var(--text-sub)">Không có nhân viên nào có đơn gán > 1 trong 7 ngày</td></tr>`;
  return`<div class="table-wrap" style="max-height:520px"><table style="width:auto;border-collapse:collapse">
   <thead>
-   <tr><th rowspan="2" style="${thN}">#</th><th rowspan="2" style="${th};text-align:left;position:sticky;left:0;z-index:3">Nhân viên</th>
-    ${dayTop}<th colspan="3" style="${thN};text-align:center;border-left:3px solid #D1D5DB;font-weight:800">Tổng 7 ngày</th></tr>
-   <tr>${daySub}<th style="${thN};border-left:3px solid #D1D5DB">Gán</th><th style="${thN}">GTC</th><th style="${thN}">%GTC</th></tr>
+   <tr><th rowspan="2" style="${thN}${stk1}">#</th><th rowspan="2" style="${th};text-align:left;position:sticky;left:0;top:0;z-index:3">Nhân viên</th>
+    ${dayTop}<th colspan="3" style="${thN}${stk1};text-align:center;border-left:3px solid #D1D5DB;font-weight:800">Tổng 7 ngày</th></tr>
+   <tr>${daySub}<th style="${thN}${stk2};border-left:3px solid #D1D5DB">Gán</th><th style="${thN}${stk2}">GTC</th><th style="${thN}${stk2}">%GTC</th></tr>
   </thead><tbody>${body}</tbody></table></div>`;
 }
 
