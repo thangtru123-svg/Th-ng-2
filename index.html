@@ -377,6 +377,15 @@ const SHEET_COD_GID='1639392945';
 /* ===== VOL SHEET ===== */
 const SHEET_VOL_ID='1BsqjKaWRHSq8RaiQ0AD-cGBU3jsF-fu0fEwqHmt6gu4';
 const SHEET_VOL_GID='375236641';
+/* Cache Data_Voltotal (8MB): tải 1 lần/đợt cập nhật, dùng chung cho p18/p25/p26 thay vì tải 3 lần.
+   Reset ở đầu init() nên mỗi lần bấm "Cập nhật dữ liệu" vẫn tải bản MỚI — số liệu không đổi. */
+let _volCSVCache=null;
+function _getVolCSV(){
+ if(!_volCSVCache) _volCSVCache=fetch(`https://docs.google.com/spreadsheets/d/${SHEET_VOL_ID}/export?format=csv&gid=${SHEET_VOL_GID}&_=${Date.now()}`)
+   .then(r=>{if(!r.ok)throw new Error('HTTP '+r.status);return r.text();})
+   .catch(e=>{_volCSVCache=null;throw e;});
+ return _volCSVCache;
+}
 
 /* ===== FETCH ===== */
 const SID='1Ec4qUpehq5ruroCTmw20cRDzkQiGmj9GLpS5f18UFE8';
@@ -3366,6 +3375,7 @@ async function sendLowlightToTelegram(btn){
 
 /* ===== INIT ===== */
 async function init(){
+ _volCSVCache=null; // mỗi đợt cập nhật tải Data_Voltotal mới
  const btn=document.getElementById('refreshBtn');btn.classList.add('spinning');btn.disabled=true;
  const sheetNames=[
   'GTC Total theo AM','GTC Total theo Bưu Cục',
@@ -3483,7 +3493,7 @@ async function buildVolWarnPage(){
  const el=document.getElementById('p25');if(!el)return;
  try{
   const [volTxt,agTxt]=await Promise.all([
-   fetch(`https://docs.google.com/spreadsheets/d/${SHEET_VOL_ID}/export?format=csv&gid=${SHEET_VOL_GID}`).then(r=>r.text()),
+   _getVolCSV(),
    fetch(`https://docs.google.com/spreadsheets/d/${AGING_SHEET_ID}/export?format=csv&gid=${AGING_GID}`).then(r=>r.text())
   ]);
   const rows=_vwParseCSV(volTxt);
@@ -3601,7 +3611,7 @@ async function buildNSBGPage(){
  try{
   const [nsTxt,volTxt]=await Promise.all([
    fetch(`https://docs.google.com/spreadsheets/d/${SID}/gviz/tq?tqx=out:csv&gid=1723871284&_=${Date.now()}`).then(r=>r.text()),
-   fetch(`https://docs.google.com/spreadsheets/d/${SHEET_VOL_ID}/export?format=csv&gid=${SHEET_VOL_GID}`).then(r=>r.text())
+   _getVolCSV()
   ]);
   const rows=_vwParseCSV(nsTxt);
   const bg=rows.slice(1).filter(x=>(x[6]||'').trim()==='Bắc Giang');
@@ -3938,9 +3948,7 @@ function buildGTCBCPage(csvText){
 async function buildVolumeReport(){
  const el=document.getElementById('p18');
  try{
-  const r=await fetch(`https://docs.google.com/spreadsheets/d/${SHEET_VOL_ID}/export?format=csv&gid=${SHEET_VOL_GID}`);
-  if(!r.ok)throw new Error('HTTP '+r.status);
-  window._volCSV=await r.text();
+  window._volCSV=await _getVolCSV();
   el.innerHTML=buildVolumePage(window._volCSV);
  }catch(e){el.innerHTML=errPage('Không thể tải dữ liệu Volume: '+e.message);}
 }
