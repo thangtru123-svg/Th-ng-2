@@ -219,7 +219,7 @@ tr.tot td{background:#FFF0EB!important;font-weight:800!important;border-top:2px 
  </div>
  <div class="nav-section">Tổng Quan</div>
  <button class="nav-item active" onclick="show('p0',this)"><span class="icon">📊</span>Dashboard Tổng Quan</button>
- <button class="nav-item" onclick="show('p23',this)" style="background:linear-gradient(135deg,rgba(241,93,41,0.18),rgba(255,138,61,0.1));border:1px solid rgba(241,93,41,0.35);font-weight:700"><span class="icon">🗺️</span>BC Vận Hành Khu Vực Thắng</button>
+ <button class="nav-item" onclick="show('p23',this)" style="background:linear-gradient(135deg,rgba(241,93,41,0.18),rgba(255,138,61,0.1));border:1px solid rgba(241,93,41,0.35);font-weight:700"><span class="icon">🗺️</span>BC Vận Hành Khu Vực Bắc Giang</button>
  <button class="nav-item" onclick="show('p24',this)" style="background:linear-gradient(135deg,rgba(220,38,38,0.16),rgba(241,93,41,0.08));border:1px solid rgba(220,38,38,0.32);font-weight:700"><span class="icon">🚨</span>Báo Cáo Lowlight XBG</button>
  <div class="nav-section">GTC</div>
  <button class="nav-item" onclick="show('p1',this)"><span class="icon">📦</span>Tổng quan GTC Total</button>
@@ -2955,7 +2955,7 @@ function rebuildWeakBC(dateISO){
 }
 
 /* ===== P23: BÁO CÁO VẬN HÀNH KHU VỰC THẮNG ===== */
-const THANG_BCS=['(BGI) Nếnh','(BGI) Yên Dũng','(BGI) Việt Yên','(BGI) Lục Nam','(BGI) Tân Yên','(BGI) Trường Sơn','(BGI) Bố Hạ','(BGI) Yên Thế','(BGI) Nhã Nam'];
+const THANG_BCS=['(BGI) Bắc Giang','(BGI) Bố Hạ','(BGI) Chũ','(BGI) Hiệp Hòa','(BGI) Kép','(BGI) Lạng Giang','(BGI) Lục Nam','(BGI) Nhã Nam','(BGI) Nếnh','(BGI) Sơn Động','(BGI) Trường Sơn','(BGI) Tân Yên','(BGI) Việt Yên','(BGI) Xuân Cẩm','(BGI) Yên Dũng','(BGI) Yên Thế'];
 function _coreBC(s){return (s||'').toString().toLowerCase().replace(/\([^)]*\)/g,'').replace(/\s+/g,' ').trim();}
 const _THANG_CORE=new Set(THANG_BCS.map(_coreBC));
 function _isThangBC(name){return _THANG_CORE.has(_coreBC(name));}
@@ -3043,12 +3043,12 @@ function _thangMulti(o){
  const delta=(gLatest!=null&&gPrev!=null)?gLatest-gPrev:null;
  const dGood=delta==null?null:(betterHigh?delta>=0:delta<=0);
  const volLatest=grand[latest]?grand[latest].vol:0;
- let ana=`🗺️ <b>Khu vực Thắng</b> — ${badge}<br>`;
+ let ana=`🗺️ <b>Khu vực Bắc Giang</b> — ${badge}<br>`;
  ana+=`📊 ${capUnit} chung ngày ${shortD(latest)}: <b style="color:${gLatest!=null&&pctColor?pctColor(gLatest):'inherit'}">${gLatest!=null?gLatest.toFixed(1)+'%':'—'}</b> (weighted theo Vol)<br>`;
  if(delta!=null)ana+=`${dGood?'🟢':'🔴'} So ngày N-1 (${shortD(prev)}): ${delta>=0?'▲ +':'▼ '}${Math.abs(delta).toFixed(1)} điểm %<br>`;
  if(best)ana+=`🟢 Tốt nhất: <b>${best.bc}</b> (${best.v.toFixed(1)}%)<br>`;
  if(worst)ana+=`🔴 Tệ nhất: <b>${worst.bc}</b> (${worst.v.toFixed(1)}%)`;
- let cap=`${icon} <b>${title}</b> — Khu vực Thắng\n`;
+ let cap=`${icon} <b>${title}</b> — Khu vực Bắc Giang\n`;
  cap+=`📊 ${capUnit} chung ${shortD(latest)}: ${gLatest!=null?gLatest.toFixed(1)+'%':'—'}\n`;
  if(delta!=null)cap+=`${dGood?'🟢':'🔴'} So N-1 (${shortD(prev)}): ${delta>=0?'▲ +':'▼ '}${Math.abs(delta).toFixed(1)} điểm %\n`;
  if(best)cap+=`🟢 Tốt nhất: ${best.bc} (${best.v.toFixed(1)}%)\n`;
@@ -3089,18 +3089,18 @@ function _thangAging(id){
  const totalHtml=`<tr class="tot" style="border-top:2px solid var(--orange)"><td style="${cs}position:sticky;left:0;background:#FFF3EC;width:34px"></td><td style="${cs}font-weight:800;color:var(--orange-dark);position:sticky;left:34px;background:#FFF3EC;white-space:nowrap">TỔNG CỘNG</td>${ttds}</tr>`;
  const td3=tcur-tprv;
  const perBC=THANG_BCS.map(bc=>({bc,v:(M[_coreBC(bc)]||{})[latest]||0})).sort((a,b)=>b.v-a.v);
- let ana=`🗺️ <b>Khu vực Thắng</b> — Aging &gt; 5 ngày (số đơn tồn)<br>`;
+ let ana=`🗺️ <b>Khu vực Bắc Giang</b> — Aging &gt; 5 ngày (số đơn tồn)<br>`;
  ana+=`📦 Tổng aging ngày ${shortD(latest)}: <b style="color:var(--orange)">${fmt(tcur)} đơn</b><br>`;
  ana+=`${td3<=0?'🟢':'🔴'} So ngày N-1 (${shortD(prev)}): ${td3>0?'▲ +':td3<0?'▼ ':''}${fmt(Math.abs(td3))} đơn<br>`;
  ana+=`🔴 BC tồn nhiều nhất: <b>${perBC[0].bc}</b> (${fmt(perBC[0].v)} đơn)<br>`;
  ana+=`⏳ Nhóm ngày hôm nay — 5-7: <b>${fmt(sg('g1'))}</b> · 8-10: <b>${fmt(sg('g2'))}</b> · 11-15: <b>${fmt(sg('g3'))}</b> · &gt;15: <b>${fmt(sg('g4'))}</b>`;
- let cap=`⏳ <b>Bảng 6 — Aging > 5 ngày</b> — Khu vực Thắng\n`;
+ let cap=`⏳ <b>Bảng 6 — Aging > 5 ngày</b> — Khu vực Bắc Giang\n`;
  cap+=`📦 Tổng aging ${shortD(latest)}: ${fmt(tcur)} đơn\n`;
  cap+=`${td3<=0?'🟢':'🔴'} So N-1 (${shortD(prev)}): ${td3>0?'▲ +':td3<0?'▼ ':''}${fmt(Math.abs(td3))} đơn\n`;
  cap+=`🔴 Tồn nhiều nhất: ${perBC[0].bc} (${fmt(perBC[0].v)} đơn)\n`;
  cap+=`⏳ Nhóm: 5-7=${fmt(sg('g1'))} · 8-10=${fmt(sg('g2'))} · 11-15=${fmt(sg('g3'))} · >15=${fmt(sg('g4'))}`;
  const inner=`<thead style="position:sticky;top:0;z-index:2">${h}</thead><tbody>${body}${totalHtml}</tbody>`;
- return {html:_thangCard(id,'Bảng 6 — Aging &gt; 5 ngày','⏳','9 Bưu Cục · 7 ngày · trend N-1 + nhóm ngày',ana,inner),cap};
+ return {html:_thangCard(id,'Bảng 6 — Aging &gt; 5 ngày','⏳','16 Bưu Cục · 7 ngày · trend N-1 + nhóm ngày',ana,inner),cap};
 }
 function buildThangPage(){
  const el=document.getElementById('p23');if(!el)return;
@@ -3113,24 +3113,24 @@ function buildThangPage(){
   {label:'GTC',val:o=>o?o.cnt:null},
   {label:'%GTC',pct:true,val:o=>o&&o.vol>0?o.cnt/o.vol*100:null}
  ];
- const t1=_thangMulti({id:'thang-t1',title:'Bảng 1 — GTC Total',icon:'📦',badge:'9 Bưu Cục · 7 ngày · Vol / Số đơn GTC / %GTC',sheet:D.gtcTotalBC,cfg:{bcCol:1,dateCol:2,volCol:3,rateCol:5,cntCol:6,volParse:'num'},subCols:gtcSub,pctColor:_cGTC,betterHigh:true,avgLabel:'TB %GTC',capUnit:'% GTC'});
- const t2=_thangMulti({id:'thang-t2',title:'Bảng 2 — GTC TTS',icon:'🎯',badge:'9 Bưu Cục · 7 ngày · Vol / Số đơn GTC / %GTC',sheet:D.gtcTTSBC,cfg:{bcCol:1,dateCol:2,volCol:3,rateCol:5,cntCol:6,volParse:'num'},subCols:gtcSub,pctColor:_cGTC,betterHigh:true,avgLabel:'TB %GTC',capUnit:'% GTC TTS'});
- const t3=_thangMulti({id:'thang-t3',title:'Bảng 3 — Tỉ lệ trả (TLT)',icon:'🔄',badge:'9 Bưu Cục · 7 ngày · %Trả / Số đơn trả (thấp = tốt, MT ≤8%)',sheet:FD.totalBC,cfg:{bcCol:0,dateCol:1,volCol:2,rateCol:3,cntCol:null,volParse:'pct'},subCols:[
+ const t1=_thangMulti({id:'thang-t1',title:'Bảng 1 — GTC Total',icon:'📦',badge:'16 Bưu Cục · 7 ngày · Vol / Số đơn GTC / %GTC',sheet:D.gtcTotalBC,cfg:{bcCol:1,dateCol:2,volCol:3,rateCol:5,cntCol:6,volParse:'num'},subCols:gtcSub,pctColor:_cGTC,betterHigh:true,avgLabel:'TB %GTC',capUnit:'% GTC'});
+ const t2=_thangMulti({id:'thang-t2',title:'Bảng 2 — GTC TTS',icon:'🎯',badge:'16 Bưu Cục · 7 ngày · Vol / Số đơn GTC / %GTC',sheet:D.gtcTTSBC,cfg:{bcCol:1,dateCol:2,volCol:3,rateCol:5,cntCol:6,volParse:'num'},subCols:gtcSub,pctColor:_cGTC,betterHigh:true,avgLabel:'TB %GTC',capUnit:'% GTC TTS'});
+ const t3=_thangMulti({id:'thang-t3',title:'Bảng 3 — Tỉ lệ trả (TLT)',icon:'🔄',badge:'16 Bưu Cục · 7 ngày · %Trả / Số đơn trả (thấp = tốt, MT ≤8%)',sheet:FD.totalBC,cfg:{bcCol:0,dateCol:1,volCol:2,rateCol:3,cntCol:null,volParse:'pct'},subCols:[
   {label:'%Trả',pct:true,val:o=>o&&o.vol>0?o.rv/o.vol:null},
   {label:'Đơn trả',val:(o,core,d)=>{const fd=o&&o.vol>0?o.rv/o.vol:null;const n=(nGTCmap[core]||{})[d];if(fd==null||n==null||n<=0||fd<=0||fd>=50)return null;return Math.round(fd/100*n/(1-fd/100));}}
  ],pctColor:_cFD,betterHigh:false,avgLabel:'TB %Trả',capUnit:'% trả'});
- const t4=_thangMulti({id:'thang-t4',title:'Bảng 4 — ODR (Ontime Giao TTS)',icon:'⏱️',badge:'9 Bưu Cục · 7 ngày · Volume GTC / %Ontime',sheet:D.odrBC,cfg:{bcCol:1,dateCol:2,volCol:3,rateCol:4,cntCol:5,volParse:'num'},subCols:[
+ const t4=_thangMulti({id:'thang-t4',title:'Bảng 4 — ODR (Ontime Giao TTS)',icon:'⏱️',badge:'16 Bưu Cục · 7 ngày · Volume GTC / %Ontime',sheet:D.odrBC,cfg:{bcCol:1,dateCol:2,volCol:3,rateCol:4,cntCol:5,volParse:'num'},subCols:[
   {label:'Vol GTC',val:o=>o?o.vol:null},
   {label:'%Ont',pct:true,val:o=>o&&o.vol>0?o.cnt/o.vol*100:null}
  ],pctColor:_cODR,betterHigh:true,avgLabel:'TB %',capUnit:'% Ontime giao'});
- const t5=_thangMulti({id:'thang-t5',title:'Bảng 5 — OPR (Ontime Lấy TTS)',icon:'🚀',badge:'9 Bưu Cục · 7 ngày · Volume LTC / %Ontime',sheet:D.oprBC,cfg:{bcCol:1,dateCol:2,volCol:3,rateCol:4,cntCol:5,volParse:'num'},subCols:[
+ const t5=_thangMulti({id:'thang-t5',title:'Bảng 5 — OPR (Ontime Lấy TTS)',icon:'🚀',badge:'16 Bưu Cục · 7 ngày · Volume LTC / %Ontime',sheet:D.oprBC,cfg:{bcCol:1,dateCol:2,volCol:3,rateCol:4,cntCol:5,volParse:'num'},subCols:[
   {label:'Vol LTC',val:o=>o?o.vol:null},
   {label:'%Ont',pct:true,val:o=>o&&o.vol>0?o.cnt/o.vol*100:null}
  ],pctColor:_cOPR,betterHigh:true,avgLabel:'TB %',capUnit:'% Ontime lấy'});
  const t6=_thangAging('thang-t6');
  const bcTags=THANG_BCS.map(b=>`<span style="background:var(--orange-light);color:var(--orange-dark);padding:2px 9px;border-radius:20px;font-size:11px;font-weight:600">${b}</span>`).join(' ');
- el.innerHTML=`<div class="page-header"><div class="page-title">Báo Cáo Vận Hành Khu Vực Thắng</div>
-  <div class="page-meta"><span class="tag tag-orange">🗺️ Tổng hợp GTC / TLT / ODR / OPR / Aging · ${THANG_BCS.length} Bưu Cục AM Thắng</span><button class="tg-inpage-btn" onclick="sendThangToTelegram(this)">📤 Bắn 6 bảng Telegram</button></div>
+ el.innerHTML=`<div class="page-header"><div class="page-title">Báo Cáo Vận Hành Khu Vực Bắc Giang</div>
+  <div class="page-meta"><span class="tag tag-orange">🗺️ Tổng hợp GTC / TLT / ODR / OPR / Aging · ${THANG_BCS.length} Bưu Cục tỉnh Bắc Giang</span><button class="tg-inpage-btn" onclick="sendThangToTelegram(this)">📤 Bắn 6 bảng Telegram</button></div>
   <div style="margin-top:10px;display:flex;flex-wrap:wrap;gap:6px">${bcTags}</div></div>
   ${t1.html}${t2.html}${t3.html}${t4.html}${t5.html}${t6.html}`;
  window._thangTG=[{id:'thang-t1',cap:t1.cap},{id:'thang-t2',cap:t2.cap},{id:'thang-t3',cap:t3.cap},{id:'thang-t4',cap:t4.cap},{id:'thang-t5',cap:t5.cap},{id:'thang-t6',cap:t6.cap}];
