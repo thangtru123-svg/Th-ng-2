@@ -3019,7 +3019,9 @@ function _thangMulti(o){
   const col=sc.pct&&pctColor?pctColor(v):'';
   return `<td style="${cs}text-align:center;${col?`color:${col};font-weight:700`:'font-weight:500'}">${txt}</td>`;};
  let body='';
- THANG_BCS.forEach((bc,i)=>{const core=_coreBC(bc);const md=M[core]||{};
+ const _bcVal=bc=>rate((M[_coreBC(bc)]||{})[latest]);
+ const _order=[...THANG_BCS].sort((a,b)=>{const va=_bcVal(a),vb=_bcVal(b);if(va==null&&vb==null)return 0;if(va==null)return 1;if(vb==null)return -1;return betterHigh?va-vb:vb-va;}); // BC tệ nhất (theo %ngày gần nhất) lên đầu
+ _order.forEach((bc,i)=>{const core=_coreBC(bc);const md=M[core]||{};
   let tds='';
   dispD.forEach(d=>{const ob=md[d];subCols.forEach(sc=>{tds+=fmtCell(sc.val(ob,core,d),sc);});});
   const g={vol:0,cnt:0,rv:0};last7.forEach(d=>{const ob=md[d];if(ob){g.vol+=ob.vol;g.cnt+=ob.cnt;g.rv+=ob.rv;}});
@@ -3077,7 +3079,8 @@ function _thangAging(id){
  const grpCell=(v,color)=>`<td style="${cs}text-align:center;font-weight:700;color:${v>0?color:'#CBD5E1'}">${v>0?fmt(v):'—'}</td>`;
  const trendCell=(cur,prv)=>{const d=cur-prv;const col=d<0?'var(--green)':d>0?'var(--red)':'var(--text-sub)';const txt=d<0?`▼ ${fmt(prv-cur)}`:d>0?`▲ ${fmt(cur-prv)}`:'—';return `<td style="${cs}text-align:center;font-weight:700;color:${col};border-left:2px solid #E5E7EB">${txt}</td>`;};
  let body='';
- THANG_BCS.forEach((bc,i)=>{const core=_coreBC(bc);const md=M[core]||{};
+ const _order=[...THANG_BCS].sort((a,b)=>((M[_coreBC(b)]||{})[latest]||0)-((M[_coreBC(a)]||{})[latest]||0)); // aging ngày gần nhất cao → thấp
+ _order.forEach((bc,i)=>{const core=_coreBC(bc);const md=M[core]||{};
   let tds='';dispD.forEach((d,idx)=>{tds+=numCell(md[d]||0,idx===0);});
   tds+=trendCell(md[latest]||0,md[prev]||0);
   const g=grp[core]||{g1:0,g2:0,g3:0,g4:0};
