@@ -3004,14 +3004,15 @@ function _thangMulti(o){
  const mp=_thangMap(sheet,cfg);
  if(!mp)return {html:_thangEmptyCard(title,icon,'Không có dữ liệu nguồn hoặc không có BC khu vực Thắng.'),cap:`${title}: không có dữ liệu`};
  const {M,last7,latest,prev,grand,hasCnt}=mp;
+ const dispD=[...last7].reverse(); // hiển thị cột ngày: mới nhất → cũ
  const rate=x=>x&&x.vol>0?(hasCnt?x.cnt/x.vol*100:x.rv/x.vol):null;
  const cs='padding:7px 10px;font-size:11.5px;';
  const th='background:var(--orange);color:#fff;font-weight:700;'+cs;
  let h1=`<tr><th rowspan="2" style="${th}text-align:center;position:sticky;left:0;z-index:3;width:34px">STT</th><th rowspan="2" style="${th}text-align:left;position:sticky;left:34px;z-index:3;min-width:120px">Bưu Cục</th>`;
- last7.forEach((d,i)=>{const isLast=i===last7.length-1;h1+=`<th colspan="${subCols.length}" style="${th}text-align:center;border-left:2px solid #fff;${isLast?'background:var(--orange-dark)':''}">${shortDDow(d)}</th>`;});
+ dispD.forEach((d,i)=>{const isLast=i===0;h1+=`<th colspan="${subCols.length}" style="${th}text-align:center;border-left:2px solid #fff;${isLast?'background:var(--orange-dark)':''}">${shortDDow(d)}</th>`;});
  h1+=`<th rowspan="2" style="${th}text-align:center;border-left:2px solid #fff;background:#7C3AED">${avgLabel}</th></tr>`;
  let h2='<tr>';
- last7.forEach(d=>{subCols.forEach((sc,j)=>{h2+=`<th style="${th}text-align:center;${j===0?'border-left:2px solid #fff':''}">${sc.label}</th>`;});});
+ dispD.forEach(d=>{subCols.forEach((sc,j)=>{h2+=`<th style="${th}text-align:center;${j===0?'border-left:2px solid #fff':''}">${sc.label}</th>`;});});
  h2+='</tr>';
  const fmtCell=(v,sc)=>{if(v==null||isNaN(v))return `<td style="${cs}text-align:center;color:#CBD5E1">—</td>`;
   const txt=sc.pct?v.toFixed(1)+'%':fmt(Math.round(v));
@@ -3020,13 +3021,13 @@ function _thangMulti(o){
  let body='';
  THANG_BCS.forEach((bc,i)=>{const core=_coreBC(bc);const md=M[core]||{};
   let tds='';
-  last7.forEach(d=>{const ob=md[d];subCols.forEach(sc=>{tds+=fmtCell(sc.val(ob,core,d),sc);});});
+  dispD.forEach(d=>{const ob=md[d];subCols.forEach(sc=>{tds+=fmtCell(sc.val(ob,core,d),sc);});});
   const g={vol:0,cnt:0,rv:0};last7.forEach(d=>{const ob=md[d];if(ob){g.vol+=ob.vol;g.cnt+=ob.cnt;g.rv+=ob.rv;}});
   const av=rate(g);
   tds+=`<td style="${cs}text-align:center;font-weight:700;color:${av!=null&&pctColor?pctColor(av):'#94A3B8'}">${av!=null?av.toFixed(1)+'%':'—'}</td>`;
   body+=`<tr><td style="${cs}text-align:center;color:var(--text-sub);position:sticky;left:0;background:#fff;width:34px">${i+1}</td><td style="${cs}font-weight:600;position:sticky;left:34px;background:#fff;white-space:nowrap">${bc}</td>${tds}</tr>`;});
  let ttds='';
- last7.forEach(d=>{subCols.forEach(sc=>{
+ dispD.forEach(d=>{subCols.forEach(sc=>{
   let v;
   if(sc.pct){v=rate(grand[d]);}
   else{v=0;let any=false;THANG_BCS.forEach(bc=>{const core=_coreBC(bc);const ob=(M[core]||{})[d];const x=sc.val(ob,core,d);if(x!=null){v+=x;any=true;}});if(!any)v=null;}
@@ -3065,10 +3066,11 @@ function _thangAging(id){
  const trows=rows.filter(r=>r[2]&&_isThangBC(r[2]));
  const allD=[...new Set(trows.map(r=>r[11]))].filter(d=>d&&d.startsWith('2026')).sort();
  const last7=allD.slice(-7);const latest=last7[last7.length-1],prev=last7[last7.length-2];
+ const dispD=[...last7].reverse(); // cột ngày: mới nhất → cũ
  const M={};trows.forEach(r=>{const d=r[11];if(!last7.includes(d))return;const core=_coreBC(r[2]);M[core]=M[core]||{};M[core][d]=(M[core][d]||0)+1;});
  const grp={};trows.filter(r=>r[11]===latest).forEach(r=>{const core=_coreBC(r[2]);const g=_agBLGroup(r);grp[core]=grp[core]||{g1:0,g2:0,g3:0,g4:0};grp[core][g]++;});
  let h=`<tr><th style="${th}text-align:center;position:sticky;left:0;z-index:3;width:34px">STT</th><th style="${th}text-align:left;position:sticky;left:34px;z-index:3;min-width:120px">Bưu Cục</th>`;
- last7.forEach((d,i)=>{const isLast=i===last7.length-1;h+=`<th style="${th}text-align:center;${isLast?'background:var(--orange-dark)':''}">${shortDDow(d)}</th>`;});
+ dispD.forEach((d,i)=>{const isLast=i===0;h+=`<th style="${th}text-align:center;${isLast?'background:var(--orange-dark)':''}">${shortDDow(d)}</th>`;});
  h+=`<th style="${th}text-align:center;border-left:2px solid #fff">Trend N-1</th>`;
  h+=`<th style="${th}text-align:center;border-left:2px solid #fff">5-7 ngày</th><th style="${th}text-align:center">8-10 ngày</th><th style="${th}text-align:center">11-15 ngày</th><th style="${th}text-align:center">&gt;15 ngày</th></tr>`;
  const numCell=(v,isLast)=>{const has=v>0;return `<td style="${cs}text-align:center;font-weight:${isLast?800:600};color:${has?(isLast?'var(--orange-dark)':'var(--text-main)'):'#CBD5E1'}">${has?fmt(v):'—'}</td>`;};
@@ -3076,12 +3078,12 @@ function _thangAging(id){
  const trendCell=(cur,prv)=>{const d=cur-prv;const col=d<0?'var(--green)':d>0?'var(--red)':'var(--text-sub)';const txt=d<0?`▼ ${fmt(prv-cur)}`:d>0?`▲ ${fmt(cur-prv)}`:'—';return `<td style="${cs}text-align:center;font-weight:700;color:${col};border-left:2px solid #E5E7EB">${txt}</td>`;};
  let body='';
  THANG_BCS.forEach((bc,i)=>{const core=_coreBC(bc);const md=M[core]||{};
-  let tds='';last7.forEach((d,idx)=>{tds+=numCell(md[d]||0,idx===last7.length-1);});
+  let tds='';dispD.forEach((d,idx)=>{tds+=numCell(md[d]||0,idx===0);});
   tds+=trendCell(md[latest]||0,md[prev]||0);
   const g=grp[core]||{g1:0,g2:0,g3:0,g4:0};
   tds+=grpCell(g.g1,'#6B7280')+grpCell(g.g2,'#D97706')+grpCell(g.g3,'#DC2626')+grpCell(g.g4,'#7F1D1D');
   body+=`<tr><td style="${cs}text-align:center;color:var(--text-sub);position:sticky;left:0;background:#fff;width:34px">${i+1}</td><td style="${cs}font-weight:600;position:sticky;left:34px;background:#fff;white-space:nowrap">${bc}</td>${tds}</tr>`;});
- let ttds='';last7.forEach((d,idx)=>{const s=Object.values(M).reduce((a,md)=>a+(md[d]||0),0);ttds+=numCell(s,idx===last7.length-1);});
+ let ttds='';dispD.forEach((d,idx)=>{const s=Object.values(M).reduce((a,md)=>a+(md[d]||0),0);ttds+=numCell(s,idx===0);});
  const tcur=Object.values(M).reduce((a,md)=>a+(md[latest]||0),0),tprv=Object.values(M).reduce((a,md)=>a+(md[prev]||0),0);
  ttds+=trendCell(tcur,tprv);
  const sg=k=>Object.values(grp).reduce((a,x)=>a+(x[k]||0),0);
