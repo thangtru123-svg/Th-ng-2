@@ -3956,6 +3956,7 @@ async function buildVolumeReport(){
  try{
   window._volCSV=await _getVolCSV();
   el.innerHTML=buildVolumePage(window._volCSV);
+  if(window._volD&&window._volRender)_volRender(); // hiện sẵn A/B/C, không chờ đại nhân đổi dropdown
  }catch(e){el.innerHTML=errPage('Không thể tải dữ liệu Volume: '+e.message);}
 }
 
