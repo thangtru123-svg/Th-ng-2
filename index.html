@@ -4598,7 +4598,7 @@ async function buildKinhDoanhPage(){
 }
 /* ===== DASHBOARD 27: RỚT LC THEO NGÀY (p27) ===== */
 /* Nguồn: "Data rớt LC các ngày" (SHEET_ROTLC). Mỗi dòng = 1 đơn rớt LC.
-   Cột: Bưu Cục[1], Tỉnh[3], Ngày[9]=DD/MM/YYYY, AM[10]. Loại BC bắt đầu "Kho Giao Hàng Nặng". */
+   Cột: Bưu Cục[1], Tỉnh[3], LoạiKH[6], Ngày[9]=DD/MM/YYYY, AM[10]. Loại BC "Kho Giao Hàng Nặng". */
 async function buildRotLCPage(){
  const el=document.getElementById('p27'); if(!el)return;
  try{
@@ -4612,24 +4612,26 @@ async function buildRotLCPage(){
   if(!last7.length){el.innerHTML='<div class="card"><p style="padding:16px;color:var(--text-sub)">Chưa có dữ liệu rớt LC.</p></div>';return;}
   const inWk=new Set(last7);
   const d0=last7[0], d1=last7[1]||null;
-  const c0=data.filter(r=>r[9]===d0).length, c1=d1?data.filter(r=>r[9]===d1).length:0;
-  const delta=c0-c1, pctD=c1?(delta/c1*100):0, up=delta>=0;
-  const aggAM={}, aggBC={};
-  data.forEach(r=>{ if(!inWk.has(r[9]))return;
-   const am=(r[10]||'').trim()||'—', bc=(r[1]||'—'), day=r[9];
-   if(!aggAM[am])aggAM[am]={name:am,d:{},tot:0}; aggAM[am].d[day]=(aggAM[am].d[day]||0)+1; aggAM[am].tot++;
-   if(!aggBC[bc])aggBC[bc]={name:bc,am:am,d:{},tot:0}; aggBC[bc].d[day]=(aggBC[bc].d[day]||0)+1; aggBC[bc].tot++;
-  });
-  const sortFn=(a,b)=>(b.d[d0]||0)-(a.d[d0]||0)||b.tot-a.tot;
-  const amArr=Object.values(aggAM).sort(sortFn), bcArr=Object.values(aggBC).sort(sortFn);
-  const sum7=amArr.reduce((s,o)=>s+o.tot,0);
   const dow=s=>['CN','T2','T3','T4','T5','T6','T7'][pd(s).getDay()];
   const dhdr=s=>`${dow(s)} ${s.slice(0,5)}`;
   const fmt=v=>v?v.toLocaleString('vi-VN'):'—';
-  window._rotlc={last7,d0,d1,c0,c1,delta,pctD,up,amArr,bcArr,sum7,dhdr};
+  const sortFn=(a,b)=>(b.d[d0]||0)-(a.d[d0]||0)||b.tot-a.tot;
+  // gom 1 tập dữ liệu -> {arrAM,arrBC,c0,c1,delta,pctD,up,sum7}
+  function agg(ds){
+   const aAM={}, aBC={};
+   ds.forEach(r=>{ if(!inWk.has(r[9]))return;
+    const am=(r[10]||'').trim()||'—', bc=(r[1]||'—'), day=r[9];
+    if(!aAM[am])aAM[am]={name:am,d:{},tot:0}; aAM[am].d[day]=(aAM[am].d[day]||0)+1; aAM[am].tot++;
+    if(!aBC[bc])aBC[bc]={name:bc,am:am,d:{},tot:0}; aBC[bc].d[day]=(aBC[bc].d[day]||0)+1; aBC[bc].tot++;
+   });
+   const c0=ds.filter(r=>inWk.has(r[9])&&r[9]===d0).length, c1=d1?ds.filter(r=>r[9]===d1).length:0;
+   const arrAM=Object.values(aAM).sort(sortFn), arrBC=Object.values(aBC).sort(sortFn);
+   return {arrAM,arrBC,c0,c1,delta:c0-c1,pctD:c1?(c0-c1)/c1*100:0,up:c0>=c1,sum7:arrAM.reduce((s,o)=>s+o.tot,0)};
+  }
+  const T=agg(data), TTS=agg(data.filter(r=>(r[6]||'').trim().toUpperCase()==='TTS'));
+  window._rotlc={last7,d0,d1,dhdr,T,TTS};
   // ==== 1 bảng ====
-  function tbl(arr,label,withAM,tid){
-   // palette dịu (cam đất) theo max mỗi bảng
+  function tbl(arr,label,withAM,tid,st,kind){
    const mx=Math.max(1,...arr.flatMap(o=>last7.map(dd=>o.d[dd]||0)));
    const bg=v=>{if(!v)return'#fff';const r=v/mx;return r>=.55?'#C56B4E':r>=.34?'#DA9A6E':r>=.18?'#EBC199':r>=.07?'#F6DFC6':'#FCEFDF';};
    const cl=v=>{const r=v/mx;return r>=.34?'#fff':'#7A4A2B';};
@@ -4651,15 +4653,13 @@ async function buildRotLCPage(){
       ${tds}
       <td style="text-align:center;padding:6px 10px;font-weight:800;background:#FFF3EA;color:var(--orange-dark)">${fmt(o.tot)}</td></tr>`;
    }).join('');
-   // analysis
    const t3=arr.slice(0,3).map(o=>`${o.name} (${fmt(o.d[d0]||0)} đơn)`).join(' · ');
    const ana=`<div class="analysis-box"><b>📌 Nhận định:</b><br>
-     • Tổng rớt LC ngày <b>${dhdr(d0)}</b>: <b>${fmt(c0)} đơn</b>${d1?` — ${up?'tăng':'giảm'} ${fmt(Math.abs(delta))} đơn (${up?'+':''}${pctD.toFixed(1)}%) so ${dhdr(d1)}`:''}.<br>
-     • 🔴 ${withAM?'Bưu Cục':'AM'} rớt nhiều nhất ngày gần nhất: ${t3}.<br>
-     • Tổng rớt LC 7 ngày: <b>${fmt(sum7)} đơn</b>.</div>`;
+     • Tổng rớt LC ${kind} ngày <b>${dhdr(d0)}</b>: <b>${fmt(st.c0)} đơn</b>${d1?` — ${st.up?'tăng':'giảm'} ${fmt(Math.abs(st.delta))} đơn (${st.up?'+':''}${st.pctD.toFixed(1)}%) so ${dhdr(d1)}`:''}.<br>
+     • 🔴 ${withAM?'Bưu Cục':'AM'} rớt nhiều nhất ngày gần nhất: ${t3||'—'}.<br>
+     • Tổng rớt LC ${kind} 7 ngày: <b>${fmt(st.sum7)} đơn</b>.</div>`;
    return `<div class="card" id="${tid}" style="margin-top:16px;padding:16px">
-     <div style="font-weight:800;font-size:15px;margin-bottom:3px">${label}</div>
-     <div style="color:var(--text-sub);font-size:12px;margin-bottom:11px">7 ngày gần nhất · ngày mới → cũ · sắp theo số đơn ngày ${d0.slice(0,5)} (cao → thấp) · loại trừ "Kho Giao Hàng Nặng"</div>
+     <div style="font-weight:800;font-size:15px;margin-bottom:11px">${label}</div>
      <div class="table-wrap" style="max-height:640px;overflow:auto;border:1px solid var(--border);border-radius:10px">
       <table style="border-collapse:collapse;font-size:12px">
        <thead><tr>
@@ -4671,24 +4671,31 @@ async function buildRotLCPage(){
        </tr></thead><tbody>${totRow}${body}</tbody></table>
      </div>${ana}</div>`;
   }
+  const up=T.up;
   const ov=`<div class="card" id="rotlcOv">
-    <div style="font-weight:800;font-size:16px;margin-bottom:12px">📉 Tổng quan Rớt LC</div>
+    <div style="font-weight:800;font-size:16px;margin-bottom:12px">📉 Tổng quan Rớt LC <span style="font-size:12px;color:var(--text-sub);font-weight:500">(Total — mọi loại KH)</span></div>
     <div style="display:flex;gap:14px;flex-wrap:wrap">
      <div style="flex:1;min-width:180px;background:#FBF1E9;border-left:4px solid #C56B4E;border-radius:10px;padding:14px 16px">
        <div style="color:var(--text-sub);font-size:12px">Ngày gần nhất (${dhdr(d0)})</div>
-       <div style="font-size:30px;font-weight:800;color:#B4552F">${fmt(c0)} <span style="font-size:14px;font-weight:600">đơn</span></div></div>
+       <div style="font-size:30px;font-weight:800;color:#B4552F">${fmt(T.c0)} <span style="font-size:14px;font-weight:600">đơn</span></div>
+       <div style="font-size:12px;color:var(--text-sub);margin-top:2px">Trong đó TTS: <b>${fmt(TTS.c0)} đơn</b></div></div>
      <div style="flex:1;min-width:180px;background:#F6F7F9;border-left:4px solid #9CA3AF;border-radius:10px;padding:14px 16px">
        <div style="color:var(--text-sub);font-size:12px">Ngày trước (${d1?dhdr(d1):'—'})</div>
-       <div style="font-size:30px;font-weight:800;color:#6B7280">${fmt(c1)} <span style="font-size:14px;font-weight:600">đơn</span></div></div>
+       <div style="font-size:30px;font-weight:800;color:#6B7280">${fmt(T.c1)} <span style="font-size:14px;font-weight:600">đơn</span></div>
+       <div style="font-size:12px;color:var(--text-sub);margin-top:2px">Trong đó TTS: <b>${fmt(TTS.c1)} đơn</b></div></div>
      <div style="flex:1;min-width:180px;background:${up?'#FBF1E9':'#EDF7F0'};border-left:4px solid ${up?'#C56B4E':'#4C9A6A'};border-radius:10px;padding:14px 16px">
        <div style="color:var(--text-sub);font-size:12px">Thay đổi so ngày trước</div>
-       <div style="font-size:30px;font-weight:800;color:${up?'#B4552F':'#3C8A5C'}">${up?'▲':'▼'} ${fmt(Math.abs(delta))} <span style="font-size:14px;font-weight:600">đơn</span></div>
-       <div style="font-size:13px;font-weight:600;color:${up?'#B4552F':'#3C8A5C'}">${up?'+':''}${pctD.toFixed(1)}%</div></div>
+       <div style="font-size:30px;font-weight:800;color:${up?'#B4552F':'#3C8A5C'}">${up?'▲':'▼'} ${fmt(Math.abs(T.delta))} <span style="font-size:14px;font-weight:600">đơn</span></div>
+       <div style="font-size:13px;font-weight:600;color:${up?'#B4552F':'#3C8A5C'}">${up?'+':''}${T.pctD.toFixed(1)}%</div></div>
     </div>
     <div style="margin-top:10px;color:var(--text-sub);font-size:12px">* Đã loại trừ các đơn thuộc Bưu Cục bắt đầu bằng "Kho Giao Hàng Nặng". Màu đậm dần = rớt càng nhiều.</div>
    </div>`;
-  const head=`<div class="page-header"><div class="page-title">📉 Rớt LC theo ngày — XBG</div><div class="page-meta"><span style="color:var(--text-sub);font-size:12px">Nguồn: Data rớt LC các ngày</span></div></div>`;
-  el.innerHTML=head+ov+tbl(amArr,'Bảng 1 — Rớt LC theo AM',false,'rotlcT1')+tbl(bcArr,'Bảng 2 — Rớt LC theo Bưu Cục',true,'rotlcT2');
+  const head=`<div class="page-header"><div class="page-title">📉 Rớt LC theo ngày — XBG</div><div class="page-meta"><span style="color:var(--text-sub);font-size:12px">Nguồn: Data rớt LC các ngày · 7 ngày gần nhất (mới → cũ)</span></div></div>`;
+  el.innerHTML=head+ov
+   +tbl(T.arrAM,'Bảng 1 — Rớt LC Total theo AM',false,'rotlcT1',T,'Total')
+   +tbl(T.arrBC,'Bảng 2 — Rớt LC Total theo Bưu Cục',true,'rotlcT2',T,'Total')
+   +tbl(TTS.arrAM,'Bảng 3 — Rớt LC TTS theo AM',false,'rotlcT3',TTS,'TTS')
+   +tbl(TTS.arrBC,'Bảng 4 — Rớt LC TTS theo Bưu Cục',true,'rotlcT4',TTS,'TTS');
   injectTgBtn('p27',()=>sendRotLCToTelegram(),'Bắn Rớt LC TG');
  }catch(e){ el.innerHTML=`<div class="card"><p style="padding:16px;color:#DC2626">Lỗi tải dữ liệu rớt LC: ${e.message}</p></div>`; }
 }
@@ -4698,27 +4705,32 @@ async function sendRotLCToTelegram(){
  try{
   const R=window._rotlc; if(!R)throw new Error('Chưa có dữ liệu');
   const CHAT=TG_AGING_CHAT, TH=TG_PICKUP_THREAD, f=v=>(+v||0).toLocaleString('vi-VN');
-  let txt=`📉 <b>RỚT LC THEO NGÀY — XBG</b>\n`;
-  txt+=`Ngày <b>${R.dhdr(R.d0)}</b>: <b>${f(R.c0)} đơn</b> (${R.up?'▲ +':'▼ '}${f(Math.abs(R.delta))} · ${R.up?'+':''}${R.pctD.toFixed(1)}% so ${R.d1?R.dhdr(R.d1):'—'})\n`;
-  txt+=`Tổng rớt 7 ngày: <b>${f(R.sum7)} đơn</b>\n`;
-  txt+=`\n🔴 <b>AM rớt nhiều nhất ngày ${R.d0.slice(0,5)}:</b>\n`;
-  R.amArr.slice(0,3).forEach((o,i)=>{txt+=`${i+1}. ${o.name}: ${f(o.d[R.d0]||0)} đơn\n`;});
-  txt+=`\n🔴 <b>Bưu Cục rớt nhiều nhất ngày ${R.d0.slice(0,5)}:</b>\n`;
-  R.bcArr.slice(0,3).forEach((o,i)=>{txt+=`${i+1}. ${o.name}: ${f(o.d[R.d0]||0)} đơn\n`;});
+  const seg=(st,unit,kind)=>{
+   let s=`\n🔴 <b>${unit} rớt ${kind} nhiều nhất ngày ${R.d0.slice(0,5)}:</b>\n`;
+   (unit==='AM'?st.arrAM:st.arrBC).slice(0,3).forEach((o,i)=>{s+=`${i+1}. ${o.name}: ${f(o.d[R.d0]||0)} đơn\n`;});
+   return s;
+  };
+  let txt=`📉 <b>RỚT LC THEO NGÀY — XBG</b> (${R.dhdr(R.d0)})\n`;
+  txt+=`• Total: <b>${f(R.T.c0)} đơn</b> (${R.T.up?'▲ +':'▼ '}${f(Math.abs(R.T.delta))} · ${R.T.up?'+':''}${R.T.pctD.toFixed(1)}%)\n`;
+  txt+=`• TTS: <b>${f(R.TTS.c0)} đơn</b> (${R.TTS.up?'▲ +':'▼ '}${f(Math.abs(R.TTS.delta))} · ${R.TTS.up?'+':''}${R.TTS.pctD.toFixed(1)}%)\n`;
+  txt+=`• Tổng 7 ngày: Total <b>${f(R.T.sum7)}</b> · TTS <b>${f(R.TTS.sum7)}</b> đơn\n`;
+  txt+=seg(R.T,'AM','Total')+seg(R.T,'Bưu Cục','Total');
   txt+=`\n<i>* Đã loại trừ "Kho Giao Hàng Nặng".</i>`;
   await _tgSend(CHAT,TH,txt);
-  const img1=await _captureEl('rotlcT1');
-  await _tgSendPhoto(CHAT,TH,img1,'📊 Bảng 1 — Rớt LC theo AM (7 ngày gần nhất)');
-  const src=document.getElementById('rotlcT2');
-  const clone=src.cloneNode(true); clone.id='rotlcT2clone';
-  const trs=[...clone.querySelectorAll('tbody tr')]; trs.slice(21).forEach(r=>r.remove());
-  clone.querySelectorAll('.analysis-box').forEach(a=>a.remove());
-  clone.querySelectorAll('.table-wrap').forEach(w=>{w.style.maxHeight='none';w.style.overflow='visible';});
-  const tmp=document.createElement('div'); tmp.style.cssText='position:fixed;top:-9999px;left:0;width:1150px';
-  tmp.appendChild(clone); document.body.appendChild(tmp);
-  await new Promise(r=>setTimeout(r,300));
-  try{ const img2=await _captureEl('rotlcT2clone'); await _tgSendPhoto(CHAT,TH,img2,'📊 Bảng 2 — Rớt LC theo Bưu Cục (Top 20 ngày gần nhất)'); }
-  finally{ tmp.remove(); }
+  const cap={rotlcT1:'📊 Bảng 1 — Rớt LC Total theo AM',rotlcT2:'📊 Bảng 2 — Rớt LC Total theo Bưu Cục (Top 20 Bưu Cục nhiều nhất)',rotlcT3:'📊 Bảng 3 — Rớt LC TTS theo AM',rotlcT4:'📊 Bảng 4 — Rớt LC TTS theo Bưu Cục (Top 20 Bưu Cục nhiều nhất)'};
+  for(const id of ['rotlcT1','rotlcT2','rotlcT3','rotlcT4']){
+   const src=document.getElementById(id); if(!src)continue;
+   const isBC=(id==='rotlcT2'||id==='rotlcT4');
+   if(!isBC){ const img=await _captureEl(id); await _tgSendPhoto(CHAT,TH,img,cap[id]); continue; }
+   const clone=src.cloneNode(true); clone.id=id+'clone';
+   [...clone.querySelectorAll('tbody tr')].slice(21).forEach(r=>r.remove());
+   clone.querySelectorAll('.analysis-box').forEach(a=>a.remove());
+   clone.querySelectorAll('.table-wrap').forEach(w=>{w.style.maxHeight='none';w.style.overflow='visible';});
+   const tmp=document.createElement('div'); tmp.style.cssText='position:fixed;top:-9999px;left:0;width:1150px';
+   tmp.appendChild(clone); document.body.appendChild(tmp);
+   await new Promise(r=>setTimeout(r,300));
+   try{ const img=await _captureEl(id+'clone'); await _tgSendPhoto(CHAT,TH,img,cap[id]); } finally{ tmp.remove(); }
+  }
   if(btn){btn.innerHTML='✅ Đã gửi';setTimeout(()=>{btn.disabled=false;btn.innerHTML='📤 Bắn Rớt LC TG';},2500);}
  }catch(e){ alert('Lỗi gửi Telegram: '+e.message); if(btn){btn.disabled=false;btn.innerHTML='📤 Bắn Rớt LC TG';} }
 }
