@@ -362,6 +362,7 @@ function injectAllTgBtns(){
  injectTgBtn('p3',()=>sendTLTToTelegram(),'Bắn TLT Ngày TG');
  injectTgBtn('p7',()=>sendAgingToTelegram(),'Bắn Aging TG');
  injectTgBtn('p16',()=>sendP16ToTelegram(),'Bắn VH Ngày TG');
+ injectTgBtn('p27',()=>sendRotLCToTelegram(),'Bắn Rớt LC TG');
 }
 function fmt(n){return(+n||0).toLocaleString('vi-VN');}
 function isoD(d){return(d||'').match(/\d{4}-\d{2}-\d{2}/)?.[0]||'';}
@@ -4606,14 +4607,13 @@ async function buildRotLCPage(){
   const rows=_vwParseCSV(raw);
   const data=rows.slice(1).filter(r=>r.length>10 && r[9] && !(r[1]||'').startsWith('Kho Giao Hàng Nặng'));
   const pd=s=>{const m=/(\d{1,2})\/(\d{1,2})\/(\d{4})/.exec(s||'');return m?new Date(+m[3],+m[2]-1,+m[1]):null;};
-  const days=[...new Set(data.map(r=>r[9]))].filter(s=>pd(s)).sort((a,b)=>pd(b)-pd(a)); // giảm dần (mới→cũ)
+  const days=[...new Set(data.map(r=>r[9]))].filter(s=>pd(s)).sort((a,b)=>pd(b)-pd(a));
   const last7=days.slice(0,7);
   if(!last7.length){el.innerHTML='<div class="card"><p style="padding:16px;color:var(--text-sub)">Chưa có dữ liệu rớt LC.</p></div>';return;}
   const inWk=new Set(last7);
   const d0=last7[0], d1=last7[1]||null;
   const c0=data.filter(r=>r[9]===d0).length, c1=d1?data.filter(r=>r[9]===d1).length:0;
   const delta=c0-c1, pctD=c1?(delta/c1*100):0, up=delta>=0;
-  // gom theo AM & BC
   const aggAM={}, aggBC={};
   data.forEach(r=>{ if(!inWk.has(r[9]))return;
    const am=(r[10]||'').trim()||'—', bc=(r[1]||'—'), day=r[9];
@@ -4622,55 +4622,105 @@ async function buildRotLCPage(){
   });
   const sortFn=(a,b)=>(b.d[d0]||0)-(a.d[d0]||0)||b.tot-a.tot;
   const amArr=Object.values(aggAM).sort(sortFn), bcArr=Object.values(aggBC).sort(sortFn);
-  const cellBg=v=>!v?'#fff':v>=200?'#DC2626':v>=100?'#F87171':v>=50?'#FCA5A5':v>=20?'#FED7AA':'#FEF3C7';
-  const cellCol=v=>v>=100?'#fff':'#7C2D12';
+  const sum7=amArr.reduce((s,o)=>s+o.tot,0);
   const dow=s=>['CN','T2','T3','T4','T5','T6','T7'][pd(s).getDay()];
   const dhdr=s=>`${dow(s)} ${s.slice(0,5)}`;
   const fmt=v=>v?v.toLocaleString('vi-VN'):'—';
-  function tbl(arr,label,withAM){
-   const th=last7.map(dd=>`<th style="position:sticky;top:0;z-index:2;background:#1F3864;color:#fff;padding:7px 6px;font-size:11px;text-align:center;white-space:nowrap">${dhdr(dd)}</th>`).join('');
+  window._rotlc={last7,d0,d1,c0,c1,delta,pctD,up,amArr,bcArr,sum7,dhdr};
+  // ==== 1 bảng ====
+  function tbl(arr,label,withAM,tid){
+   // palette dịu (cam đất) theo max mỗi bảng
+   const mx=Math.max(1,...arr.flatMap(o=>last7.map(dd=>o.d[dd]||0)));
+   const bg=v=>{if(!v)return'#fff';const r=v/mx;return r>=.55?'#C56B4E':r>=.34?'#DA9A6E':r>=.18?'#EBC199':r>=.07?'#F6DFC6':'#FCEFDF';};
+   const cl=v=>{const r=v/mx;return r>=.34?'#fff':'#7A4A2B';};
+   const th=last7.map(dd=>`<th style="position:sticky;top:0;z-index:2;background:#1F3864;color:#fff;padding:8px 10px;font-size:11px;text-align:center;white-space:nowrap">${dhdr(dd)}</th>`).join('');
+   const dayTot=last7.map(dd=>arr.reduce((s,o)=>s+(o.d[dd]||0),0));
+   const grand=arr.reduce((s,o)=>s+o.tot,0);
+   const totRow=`<tr style="background:#FDEBDA;border-bottom:2px solid #E6B98F;font-weight:800">
+     <td style="padding:7px 8px;text-align:center;color:#7A4A2B">Σ</td>
+     <td style="padding:7px 10px;color:#7A4A2B;white-space:nowrap">TỔNG mỗi ngày</td>
+     ${withAM?'<td></td>':''}
+     ${dayTot.map(v=>`<td style="text-align:center;padding:7px 10px;color:#7A4A2B">${fmt(v)}</td>`).join('')}
+     <td style="text-align:center;padding:7px 10px;color:var(--orange-dark)">${fmt(grand)}</td></tr>`;
    const body=arr.map((o,i)=>{
-    const tds=last7.map(dd=>{const v=o.d[dd]||0;return `<td style="text-align:center;padding:5px 6px;background:${cellBg(v)};color:${cellCol(v)};font-weight:${v>=50?'700':'500'}">${fmt(v)}</td>`;}).join('');
+    const tds=last7.map(dd=>{const v=o.d[dd]||0;return `<td style="text-align:center;padding:6px 10px;background:${bg(v)};color:${cl(v)};font-weight:${v/mx>=.34?'700':'500'}">${fmt(v)}</td>`;}).join('');
     return `<tr style="border-bottom:1px solid var(--border)">
-      <td style="padding:5px 8px;text-align:center;color:var(--text-sub)">${i+1}</td>
-      <td style="padding:5px 8px;font-weight:600;white-space:nowrap">${o.name}</td>
-      ${withAM?`<td style="padding:5px 8px;color:var(--text-sub);white-space:nowrap">${o.am||'—'}</td>`:''}
+      <td style="padding:6px 8px;text-align:center;color:var(--text-sub)">${i+1}</td>
+      <td style="padding:6px 10px;font-weight:600;white-space:nowrap">${o.name}</td>
+      ${withAM?`<td style="padding:6px 10px;color:var(--text-sub);white-space:nowrap">${o.am||'—'}</td>`:''}
       ${tds}
-      <td style="text-align:center;padding:5px 8px;font-weight:800;background:#FFF0EB;color:var(--orange-dark)">${fmt(o.tot)}</td></tr>`;
+      <td style="text-align:center;padding:6px 10px;font-weight:800;background:#FFF3EA;color:var(--orange-dark)">${fmt(o.tot)}</td></tr>`;
    }).join('');
-   return `<div class="card" style="margin-top:16px">
-     <div style="font-weight:800;font-size:15px;margin-bottom:4px">${label}</div>
-     <div style="color:var(--text-sub);font-size:12px;margin-bottom:10px">7 ngày gần nhất · ngày mới → cũ · sắp theo số đơn ngày ${d0.slice(0,5)} (cao → thấp) · loại trừ "Kho Giao Hàng Nặng"</div>
-     <div class="table-wrap" style="max-height:640px;overflow:auto">
-      <table style="border-collapse:collapse;width:100%;font-size:12px">
+   // analysis
+   const t3=arr.slice(0,3).map(o=>`${o.name} (${fmt(o.d[d0]||0)} đơn)`).join(' · ');
+   const ana=`<div class="analysis-box"><b>📌 Nhận định:</b><br>
+     • Tổng rớt LC ngày <b>${dhdr(d0)}</b>: <b>${fmt(c0)} đơn</b>${d1?` — ${up?'tăng':'giảm'} ${fmt(Math.abs(delta))} đơn (${up?'+':''}${pctD.toFixed(1)}%) so ${dhdr(d1)}`:''}.<br>
+     • 🔴 ${withAM?'Bưu Cục':'AM'} rớt nhiều nhất ngày gần nhất: ${t3}.<br>
+     • Tổng rớt LC 7 ngày: <b>${fmt(sum7)} đơn</b>.</div>`;
+   return `<div class="card" id="${tid}" style="margin-top:16px;padding:16px">
+     <div style="font-weight:800;font-size:15px;margin-bottom:3px">${label}</div>
+     <div style="color:var(--text-sub);font-size:12px;margin-bottom:11px">7 ngày gần nhất · ngày mới → cũ · sắp theo số đơn ngày ${d0.slice(0,5)} (cao → thấp) · loại trừ "Kho Giao Hàng Nặng"</div>
+     <div class="table-wrap" style="max-height:640px;overflow:auto;border:1px solid var(--border);border-radius:10px">
+      <table style="border-collapse:collapse;font-size:12px">
        <thead><tr>
-        <th style="position:sticky;top:0;z-index:2;background:#1F3864;color:#fff;padding:7px 6px">#</th>
-        <th style="position:sticky;top:0;z-index:2;background:#1F3864;color:#fff;padding:7px 8px;text-align:left">${withAM?'Bưu Cục':'AM'}</th>
-        ${withAM?'<th style="position:sticky;top:0;z-index:2;background:#1F3864;color:#fff;padding:7px 8px;text-align:left">AM</th>':''}
+        <th style="position:sticky;top:0;z-index:2;background:#1F3864;color:#fff;padding:8px 8px">#</th>
+        <th style="position:sticky;top:0;z-index:2;background:#1F3864;color:#fff;padding:8px 10px;text-align:left">${withAM?'Bưu Cục':'AM'}</th>
+        ${withAM?'<th style="position:sticky;top:0;z-index:2;background:#1F3864;color:#fff;padding:8px 10px;text-align:left">AM</th>':''}
         ${th}
-        <th style="position:sticky;top:0;z-index:2;background:#1F3864;color:#fff;padding:7px 8px">Tổng 7N</th>
-       </tr></thead><tbody>${body}</tbody></table>
-     </div></div>`;
+        <th style="position:sticky;top:0;z-index:2;background:#1F3864;color:#fff;padding:8px 10px;text-align:center">Tổng 7N</th>
+       </tr></thead><tbody>${totRow}${body}</tbody></table>
+     </div>${ana}</div>`;
   }
-  const ov=`<div class="card">
+  const ov=`<div class="card" id="rotlcOv">
     <div style="font-weight:800;font-size:16px;margin-bottom:12px">📉 Tổng quan Rớt LC</div>
     <div style="display:flex;gap:14px;flex-wrap:wrap">
-     <div style="flex:1;min-width:180px;background:#FEF2F2;border-left:4px solid #DC2626;border-radius:10px;padding:14px 16px">
+     <div style="flex:1;min-width:180px;background:#FBF1E9;border-left:4px solid #C56B4E;border-radius:10px;padding:14px 16px">
        <div style="color:var(--text-sub);font-size:12px">Ngày gần nhất (${dhdr(d0)})</div>
-       <div style="font-size:30px;font-weight:800;color:#DC2626">${c0.toLocaleString('vi-VN')} <span style="font-size:14px;font-weight:600">đơn</span></div></div>
-     <div style="flex:1;min-width:180px;background:#F9FAFB;border-left:4px solid #9CA3AF;border-radius:10px;padding:14px 16px">
+       <div style="font-size:30px;font-weight:800;color:#B4552F">${fmt(c0)} <span style="font-size:14px;font-weight:600">đơn</span></div></div>
+     <div style="flex:1;min-width:180px;background:#F6F7F9;border-left:4px solid #9CA3AF;border-radius:10px;padding:14px 16px">
        <div style="color:var(--text-sub);font-size:12px">Ngày trước (${d1?dhdr(d1):'—'})</div>
-       <div style="font-size:30px;font-weight:800;color:#6B7280">${c1.toLocaleString('vi-VN')} <span style="font-size:14px;font-weight:600">đơn</span></div></div>
-     <div style="flex:1;min-width:180px;background:${up?'#FEF2F2':'#ECFDF5'};border-left:4px solid ${up?'#DC2626':'#16A34A'};border-radius:10px;padding:14px 16px">
-       <div style="color:var(--text-sub);font-size:12px">Thay đổi</div>
-       <div style="font-size:30px;font-weight:800;color:${up?'#DC2626':'#16A34A'}">${up?'▲':'▼'} ${Math.abs(delta).toLocaleString('vi-VN')} <span style="font-size:14px;font-weight:600">đơn</span></div>
-       <div style="font-size:13px;font-weight:600;color:${up?'#DC2626':'#16A34A'}">${up?'+':''}${pctD.toFixed(1)}% so ngày trước</div></div>
+       <div style="font-size:30px;font-weight:800;color:#6B7280">${fmt(c1)} <span style="font-size:14px;font-weight:600">đơn</span></div></div>
+     <div style="flex:1;min-width:180px;background:${up?'#FBF1E9':'#EDF7F0'};border-left:4px solid ${up?'#C56B4E':'#4C9A6A'};border-radius:10px;padding:14px 16px">
+       <div style="color:var(--text-sub);font-size:12px">Thay đổi so ngày trước</div>
+       <div style="font-size:30px;font-weight:800;color:${up?'#B4552F':'#3C8A5C'}">${up?'▲':'▼'} ${fmt(Math.abs(delta))} <span style="font-size:14px;font-weight:600">đơn</span></div>
+       <div style="font-size:13px;font-weight:600;color:${up?'#B4552F':'#3C8A5C'}">${up?'+':''}${pctD.toFixed(1)}%</div></div>
     </div>
-    <div style="margin-top:10px;color:var(--text-sub);font-size:12px">* Đã loại trừ các đơn thuộc Bưu Cục bắt đầu bằng "Kho Giao Hàng Nặng". Rớt tăng = xấu (đỏ).</div>
+    <div style="margin-top:10px;color:var(--text-sub);font-size:12px">* Đã loại trừ các đơn thuộc Bưu Cục bắt đầu bằng "Kho Giao Hàng Nặng". Màu đậm dần = rớt càng nhiều.</div>
    </div>`;
   const head=`<div class="page-header"><div class="page-title">📉 Rớt LC theo ngày — XBG</div><div class="page-meta"><span style="color:var(--text-sub);font-size:12px">Nguồn: Data rớt LC các ngày</span></div></div>`;
-  el.innerHTML=head+ov+tbl(amArr,'Bảng 1 — Rớt LC theo AM',false)+tbl(bcArr,'Bảng 2 — Rớt LC theo Bưu Cục',true);
+  el.innerHTML=head+ov+tbl(amArr,'Bảng 1 — Rớt LC theo AM',false,'rotlcT1')+tbl(bcArr,'Bảng 2 — Rớt LC theo Bưu Cục',true,'rotlcT2');
+  injectTgBtn('p27',()=>sendRotLCToTelegram(),'Bắn Rớt LC TG');
  }catch(e){ el.innerHTML=`<div class="card"><p style="padding:16px;color:#DC2626">Lỗi tải dữ liệu rớt LC: ${e.message}</p></div>`; }
+}
+
+async function sendRotLCToTelegram(){
+ const btn=document.getElementById('tgInpage_p27'); if(btn){btn.disabled=true;btn.innerHTML='⏳ Đang gửi...';}
+ try{
+  const R=window._rotlc; if(!R)throw new Error('Chưa có dữ liệu');
+  const CHAT=TG_AGING_CHAT, TH=TG_PICKUP_THREAD, f=v=>(+v||0).toLocaleString('vi-VN');
+  let txt=`📉 <b>RỚT LC THEO NGÀY — XBG</b>\n`;
+  txt+=`Ngày <b>${R.dhdr(R.d0)}</b>: <b>${f(R.c0)} đơn</b> (${R.up?'▲ +':'▼ '}${f(Math.abs(R.delta))} · ${R.up?'+':''}${R.pctD.toFixed(1)}% so ${R.d1?R.dhdr(R.d1):'—'})\n`;
+  txt+=`Tổng rớt 7 ngày: <b>${f(R.sum7)} đơn</b>\n`;
+  txt+=`\n🔴 <b>AM rớt nhiều nhất ngày ${R.d0.slice(0,5)}:</b>\n`;
+  R.amArr.slice(0,3).forEach((o,i)=>{txt+=`${i+1}. ${o.name}: ${f(o.d[R.d0]||0)} đơn\n`;});
+  txt+=`\n🔴 <b>Bưu Cục rớt nhiều nhất ngày ${R.d0.slice(0,5)}:</b>\n`;
+  R.bcArr.slice(0,3).forEach((o,i)=>{txt+=`${i+1}. ${o.name}: ${f(o.d[R.d0]||0)} đơn\n`;});
+  txt+=`\n<i>* Đã loại trừ "Kho Giao Hàng Nặng".</i>`;
+  await _tgSend(CHAT,TH,txt);
+  const img1=await _captureEl('rotlcT1');
+  await _tgSendPhoto(CHAT,TH,img1,'📊 Bảng 1 — Rớt LC theo AM (7 ngày gần nhất)');
+  const src=document.getElementById('rotlcT2');
+  const clone=src.cloneNode(true); clone.id='rotlcT2clone';
+  const trs=[...clone.querySelectorAll('tbody tr')]; trs.slice(21).forEach(r=>r.remove());
+  clone.querySelectorAll('.analysis-box').forEach(a=>a.remove());
+  clone.querySelectorAll('.table-wrap').forEach(w=>{w.style.maxHeight='none';w.style.overflow='visible';});
+  const tmp=document.createElement('div'); tmp.style.cssText='position:fixed;top:-9999px;left:0;width:1150px';
+  tmp.appendChild(clone); document.body.appendChild(tmp);
+  await new Promise(r=>setTimeout(r,300));
+  try{ const img2=await _captureEl('rotlcT2clone'); await _tgSendPhoto(CHAT,TH,img2,'📊 Bảng 2 — Rớt LC theo Bưu Cục (Top 20 ngày gần nhất)'); }
+  finally{ tmp.remove(); }
+  if(btn){btn.innerHTML='✅ Đã gửi';setTimeout(()=>{btn.disabled=false;btn.innerHTML='📤 Bắn Rớt LC TG';},2500);}
+ }catch(e){ alert('Lỗi gửi Telegram: '+e.message); if(btn){btn.disabled=false;btn.innerHTML='📤 Bắn Rớt LC TG';} }
 }
 
 async function buildCODPage(){
