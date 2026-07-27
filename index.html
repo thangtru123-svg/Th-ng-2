@@ -221,6 +221,7 @@ tr.tot td{background:#FFF0EB!important;font-weight:800!important;border-top:2px 
  <button class="nav-item active" onclick="show('p0',this)"><span class="icon">📊</span>Dashboard Tổng Quan</button>
  <button class="nav-item" onclick="show('p23',this)" style="background:linear-gradient(135deg,rgba(241,93,41,0.18),rgba(255,138,61,0.1));border:1px solid rgba(241,93,41,0.35);font-weight:700"><span class="icon">🗺️</span>BC Vận Hành Khu Vực Bắc Giang</button>
  <button class="nav-item" onclick="show('p24',this)" style="background:linear-gradient(135deg,rgba(220,38,38,0.16),rgba(241,93,41,0.08));border:1px solid rgba(220,38,38,0.32);font-weight:700"><span class="icon">🚨</span>Báo Cáo Lowlight XBG</button>
+ <button class="nav-item" onclick="show('p27',this)" style="background:linear-gradient(135deg,rgba(220,38,38,0.16),rgba(241,93,41,0.08));border:1px solid rgba(220,38,38,0.32);font-weight:700"><span class="icon">📉</span>Rớt LC theo ngày</button>
  <div class="nav-section">GTC</div>
  <button class="nav-item" onclick="show('p1',this)"><span class="icon">📦</span>Tổng quan GTC Total</button>
  <button class="nav-item" onclick="show('p2',this)"><span class="icon">🎯</span>Tổng quan GTC TTS</button>
@@ -276,6 +277,7 @@ tr.tot td{background:#FFF0EB!important;font-weight:800!important;border-top:2px 
 <div class="page" id="p24"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
 <div class="page" id="p25"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
 <div class="page" id="p26"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
+<div class="page" id="p27"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
 </main>
 
 <script>
@@ -377,6 +379,8 @@ const SHEET_COD_GID='1639392945';
 /* ===== VOL SHEET ===== */
 const SHEET_VOL_ID='1BsqjKaWRHSq8RaiQ0AD-cGBU3jsF-fu0fEwqHmt6gu4';
 const SHEET_VOL_GID='375236641';
+const SHEET_ROTLC_ID='1kNe1tsvV_kqXqMUsr2pnxN9lfG3_CwGFyN5JtiVldrs'; // "Data rớt LC các ngày"
+const SHEET_ROTLC_GID='406146643';
 /* Cache Data_Voltotal (8MB): tải 1 lần/đợt cập nhật, dùng chung cho p18/p25/p26 thay vì tải 3 lần.
    Reset ở đầu init() nên mỗi lần bấm "Cập nhật dữ liệu" vẫn tải bản MỚI — số liệu không đổi. */
 let _volCSVCache=null;
@@ -3475,6 +3479,8 @@ async function init(){
  buildLowlightPage(); // p24 — Báo cáo Lowlight (cần _D,_FD,_agingRows,_nsRaw)
  // p21 — Tỉ lệ NVPTTT nộp COD
  await buildCODPage();
+ // p27 — Rớt LC theo ngày
+ await buildRotLCPage();
  // p22 — Kinh Doanh XBG
  await buildKinhDoanhPage();
  // p0 — Tổng quan (sau khi có đủ data)
@@ -4589,6 +4595,84 @@ async function buildKinhDoanhPage(){
    <div class="card"><div class="card-header"><div class="card-title"><div class="card-icon">🧑‍💼</div>C. Doanh thu theo AM (còn đang làm việc)</div><div class="card-info">${amNames.length} AM active · Ngày → Tuần → Tháng</div></div><div style="font-weight:800;margin:12px 10px 4px;color:var(--orange-dark);font-size:15px">① Theo ngày — 7 ngày gần nhất</div>${amDayTbl}${dayNote}<div style="font-weight:800;margin:16px 10px 4px;color:var(--orange-dark);font-size:15px">② Theo tuần — 4 tuần gần nhất</div>${amWkTbl}${wkNote}<div style="font-weight:800;margin:16px 10px 4px;color:var(--orange-dark);font-size:15px">③ Theo tháng — đầy đủ</div>${amMoTbl}${moNote}</div>`;
  }catch(e){ el.innerHTML=`<div class="card"><p style="color:var(--red);padding:16px">Lỗi tải Kinh Doanh XBG: ${e.message}</p></div>`; }
 }
+/* ===== DASHBOARD 27: RỚT LC THEO NGÀY (p27) ===== */
+/* Nguồn: "Data rớt LC các ngày" (SHEET_ROTLC). Mỗi dòng = 1 đơn rớt LC.
+   Cột: Bưu Cục[1], Tỉnh[3], Ngày[9]=DD/MM/YYYY, AM[10]. Loại BC bắt đầu "Kho Giao Hàng Nặng". */
+async function buildRotLCPage(){
+ const el=document.getElementById('p27'); if(!el)return;
+ try{
+  const url=`https://docs.google.com/spreadsheets/d/${SHEET_ROTLC_ID}/export?format=csv&gid=${SHEET_ROTLC_GID}&_=${Date.now()}`;
+  const raw=await (await fetch(url)).text();
+  const rows=_vwParseCSV(raw);
+  const data=rows.slice(1).filter(r=>r.length>10 && r[9] && !(r[1]||'').startsWith('Kho Giao Hàng Nặng'));
+  const pd=s=>{const m=/(\d{1,2})\/(\d{1,2})\/(\d{4})/.exec(s||'');return m?new Date(+m[3],+m[2]-1,+m[1]):null;};
+  const days=[...new Set(data.map(r=>r[9]))].filter(s=>pd(s)).sort((a,b)=>pd(b)-pd(a)); // giảm dần (mới→cũ)
+  const last7=days.slice(0,7);
+  if(!last7.length){el.innerHTML='<div class="card"><p style="padding:16px;color:var(--text-sub)">Chưa có dữ liệu rớt LC.</p></div>';return;}
+  const inWk=new Set(last7);
+  const d0=last7[0], d1=last7[1]||null;
+  const c0=data.filter(r=>r[9]===d0).length, c1=d1?data.filter(r=>r[9]===d1).length:0;
+  const delta=c0-c1, pctD=c1?(delta/c1*100):0, up=delta>=0;
+  // gom theo AM & BC
+  const aggAM={}, aggBC={};
+  data.forEach(r=>{ if(!inWk.has(r[9]))return;
+   const am=(r[10]||'').trim()||'—', bc=(r[1]||'—'), day=r[9];
+   if(!aggAM[am])aggAM[am]={name:am,d:{},tot:0}; aggAM[am].d[day]=(aggAM[am].d[day]||0)+1; aggAM[am].tot++;
+   if(!aggBC[bc])aggBC[bc]={name:bc,am:am,d:{},tot:0}; aggBC[bc].d[day]=(aggBC[bc].d[day]||0)+1; aggBC[bc].tot++;
+  });
+  const sortFn=(a,b)=>(b.d[d0]||0)-(a.d[d0]||0)||b.tot-a.tot;
+  const amArr=Object.values(aggAM).sort(sortFn), bcArr=Object.values(aggBC).sort(sortFn);
+  const cellBg=v=>!v?'#fff':v>=200?'#DC2626':v>=100?'#F87171':v>=50?'#FCA5A5':v>=20?'#FED7AA':'#FEF3C7';
+  const cellCol=v=>v>=100?'#fff':'#7C2D12';
+  const dow=s=>['CN','T2','T3','T4','T5','T6','T7'][pd(s).getDay()];
+  const dhdr=s=>`${dow(s)} ${s.slice(0,5)}`;
+  const fmt=v=>v?v.toLocaleString('vi-VN'):'—';
+  function tbl(arr,label,withAM){
+   const th=last7.map(dd=>`<th style="position:sticky;top:0;z-index:2;background:#1F3864;color:#fff;padding:7px 6px;font-size:11px;text-align:center;white-space:nowrap">${dhdr(dd)}</th>`).join('');
+   const body=arr.map((o,i)=>{
+    const tds=last7.map(dd=>{const v=o.d[dd]||0;return `<td style="text-align:center;padding:5px 6px;background:${cellBg(v)};color:${cellCol(v)};font-weight:${v>=50?'700':'500'}">${fmt(v)}</td>`;}).join('');
+    return `<tr style="border-bottom:1px solid var(--border)">
+      <td style="padding:5px 8px;text-align:center;color:var(--text-sub)">${i+1}</td>
+      <td style="padding:5px 8px;font-weight:600;white-space:nowrap">${o.name}</td>
+      ${withAM?`<td style="padding:5px 8px;color:var(--text-sub);white-space:nowrap">${o.am||'—'}</td>`:''}
+      ${tds}
+      <td style="text-align:center;padding:5px 8px;font-weight:800;background:#FFF0EB;color:var(--orange-dark)">${fmt(o.tot)}</td></tr>`;
+   }).join('');
+   return `<div class="card" style="margin-top:16px">
+     <div style="font-weight:800;font-size:15px;margin-bottom:4px">${label}</div>
+     <div style="color:var(--text-sub);font-size:12px;margin-bottom:10px">7 ngày gần nhất · ngày mới → cũ · sắp theo số đơn ngày ${d0.slice(0,5)} (cao → thấp) · loại trừ "Kho Giao Hàng Nặng"</div>
+     <div class="table-wrap" style="max-height:640px;overflow:auto">
+      <table style="border-collapse:collapse;width:100%;font-size:12px">
+       <thead><tr>
+        <th style="position:sticky;top:0;z-index:2;background:#1F3864;color:#fff;padding:7px 6px">#</th>
+        <th style="position:sticky;top:0;z-index:2;background:#1F3864;color:#fff;padding:7px 8px;text-align:left">${withAM?'Bưu Cục':'AM'}</th>
+        ${withAM?'<th style="position:sticky;top:0;z-index:2;background:#1F3864;color:#fff;padding:7px 8px;text-align:left">AM</th>':''}
+        ${th}
+        <th style="position:sticky;top:0;z-index:2;background:#1F3864;color:#fff;padding:7px 8px">Tổng 7N</th>
+       </tr></thead><tbody>${body}</tbody></table>
+     </div></div>`;
+  }
+  const ov=`<div class="card">
+    <div style="font-weight:800;font-size:16px;margin-bottom:12px">📉 Tổng quan Rớt LC</div>
+    <div style="display:flex;gap:14px;flex-wrap:wrap">
+     <div style="flex:1;min-width:180px;background:#FEF2F2;border-left:4px solid #DC2626;border-radius:10px;padding:14px 16px">
+       <div style="color:var(--text-sub);font-size:12px">Ngày gần nhất (${dhdr(d0)})</div>
+       <div style="font-size:30px;font-weight:800;color:#DC2626">${c0.toLocaleString('vi-VN')} <span style="font-size:14px;font-weight:600">đơn</span></div></div>
+     <div style="flex:1;min-width:180px;background:#F9FAFB;border-left:4px solid #9CA3AF;border-radius:10px;padding:14px 16px">
+       <div style="color:var(--text-sub);font-size:12px">Ngày trước (${d1?dhdr(d1):'—'})</div>
+       <div style="font-size:30px;font-weight:800;color:#6B7280">${c1.toLocaleString('vi-VN')} <span style="font-size:14px;font-weight:600">đơn</span></div></div>
+     <div style="flex:1;min-width:180px;background:${up?'#FEF2F2':'#ECFDF5'};border-left:4px solid ${up?'#DC2626':'#16A34A'};border-radius:10px;padding:14px 16px">
+       <div style="color:var(--text-sub);font-size:12px">Thay đổi</div>
+       <div style="font-size:30px;font-weight:800;color:${up?'#DC2626':'#16A34A'}">${up?'▲':'▼'} ${Math.abs(delta).toLocaleString('vi-VN')} <span style="font-size:14px;font-weight:600">đơn</span></div>
+       <div style="font-size:13px;font-weight:600;color:${up?'#DC2626':'#16A34A'}">${up?'+':''}${pctD.toFixed(1)}% so ngày trước</div></div>
+    </div>
+    <div style="margin-top:10px;color:var(--text-sub);font-size:12px">* Đã loại trừ các đơn thuộc Bưu Cục bắt đầu bằng "Kho Giao Hàng Nặng". Rớt tăng = xấu (đỏ).</div>
+   </div>`;
+  const head=`<div class="page-header"><div class="page-title">📉 Rớt LC theo ngày — XBG</div><div class="page-meta"><span style="color:var(--text-sub);font-size:12px">Nguồn: Data rớt LC các ngày</span></div></div>`;
+  el.innerHTML=head+ov+tbl(amArr,'Bảng 1 — Rớt LC theo AM',false)+tbl(bcArr,'Bảng 2 — Rớt LC theo Bưu Cục',true);
+ }catch(e){ el.innerHTML=`<div class="card"><p style="padding:16px;color:#DC2626">Lỗi tải dữ liệu rớt LC: ${e.message}</p></div>`; }
+}
+
 async function buildCODPage(){
  const el=document.getElementById('p21');
  if(!el)return;
