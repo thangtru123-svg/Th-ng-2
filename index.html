@@ -4747,38 +4747,47 @@ async function buildTonDongPage(){
  try{
   const GROUPS=['Dưới 1 ngày','1 ngày','2 ngày','3 ngày','4 ngày','5 ngày','Trên 5 ngày'];
   const nz=v=>parseFloat(String(v||'0').replace(',','.').replace(/[^0-9.\-]/g,''))||0;
-  // 1) FD theo BC tuần gần nhất (weighted Σ(%FD×%Vol)/Σ%Vol)
+  const d10=s=>{const m=/(\d{4}-\d{2}-\d{2})/.exec(s||'');return m?m[1]:'';};
+  // 1) FD theo BC tuần gần nhất (weighted Σ(%FD×%Vol)/Σ%Vol) — lọc > 13%
   const fdUrl=`https://docs.google.com/spreadsheets/d/${SID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent('FD Total theo Bưu Cục')}&_=${Date.now()}`;
-  const fdRows=_vwParseCSV(await(await fetch(fdUrl)).text()).slice(1); // BC0,Ngày1,%Vol2,%FD3,Trả4,Tuần5
+  const fdRows=_vwParseCSV(await(await fetch(fdUrl)).text()).slice(1);
   let maxWk=0; fdRows.forEach(r=>{const w=parseInt((r[5]||'').replace(/[^0-9]/g,''))||0; if(w>maxWk)maxWk=w;});
   const fa={}; fdRows.forEach(r=>{const w=parseInt((r[5]||'').replace(/[^0-9]/g,''))||0; if(w!==maxWk)return;
    const bc=(r[0]||'').trim(); if(!bc)return; const pv=nz(r[2]),fd=nz(r[3]);
    if(!fa[bc])fa[bc]={a:0,b:0}; fa[bc].a+=fd*pv; fa[bc].b+=pv;});
   const fdBC={}; Object.keys(fa).forEach(k=>fdBC[k]=fa[k].b?fa[k].a/fa[k].b*100:0);
-  const hi=new Set(Object.keys(fdBC).filter(k=>fdBC[k]>=10));
-  // 2) tồn đọng
+  const hi=new Set(Object.keys(fdBC).filter(k=>fdBC[k]>13));
+  // 2) GTC ngày gần nhất theo BC (GTC Total theo Bưu Cục: AM0,BC1,Ngày2,Vol3,%gán4,%GTC5,nGTC6)
+  const gUrl=`https://docs.google.com/spreadsheets/d/${SID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent('GTC Total theo Bưu Cục')}&_=${Date.now()}`;
+  const gRows=_vwParseCSV(await(await fetch(gUrl)).text()).slice(1);
+  let gLatest=''; gRows.forEach(r=>{const d=d10(r[2]); if(d>gLatest)gLatest=d;});
+  const gtcDay={}; gRows.forEach(r=>{ if(d10(r[2])===gLatest)gtcDay[(r[1]||'').trim()]=Math.round(nz(r[6])); });
+  // 3) tồn đọng
   const tdUrl=`https://docs.google.com/spreadsheets/d/${SHEET_ROTLC_ID}/export?format=csv&gid=${SHEET_TONDONG_GID}&_=${Date.now()}`;
   const td=_vwParseCSV(await(await fetch(tdUrl)).text()).slice(1);
   const agg={};
   td.forEach(r=>{ if(r.length<6||!r[4])return; const bc=r[4].trim(), grp=(r[3]||'').trim();
    if(!agg[bc])agg[bc]={bc,am:(r[5]||'').trim(),g:{},tot:0};
    if(GROUPS.includes(grp))agg[bc].g[grp]=(agg[bc].g[grp]||0)+1; agg[bc].tot++;});
-  let arr=Object.values(agg).filter(o=>hi.has(o.bc)).map(o=>Object.assign(o,{fd:fdBC[o.bc]||0}));
+  let arr=Object.values(agg).filter(o=>hi.has(o.bc)).map(o=>{const gtc=gtcDay[o.bc]||0; return Object.assign(o,{fd:fdBC[o.bc]||0,gtc,allow:Math.floor(gtc*0.13/0.87)});});
   arr.sort((a,b)=>b.fd-a.fd||b.tot-a.tot);
   const totOrders=arr.reduce((s,o)=>s+o.tot,0);
+  const totGtc=arr.reduce((s,o)=>s+o.gtc,0), totAllow=arr.reduce((s,o)=>s+o.allow,0);
   const grpTot={}; GROUPS.forEach(g=>grpTot[g]=arr.reduce((s,o)=>s+(o.g[g]||0),0));
-  window._tondong={arr,GROUPS,maxWk,totOrders,grpTot};
+  window._tondong={arr,GROUPS,maxWk,totOrders,grpTot,gLatest};
   const fmt=v=>v?v.toLocaleString('vi-VN'):'—';
-  if(!arr.length){el.innerHTML='<div class="card"><p style="padding:16px;color:var(--text-sub)">Không có Bưu Cục nào có tỉ lệ trả ≥ 10% tuần gần nhất.</p></div>';return;}
-  // heatmap ô nhóm (cam đất dịu)
+  const gd=gLatest?gLatest.slice(8,10)+'/'+gLatest.slice(5,7):'';
+  if(!arr.length){el.innerHTML='<div class="card"><p style="padding:16px;color:var(--text-sub)">Không có Bưu Cục nào có tỉ lệ trả > 13% tuần gần nhất.</p></div>';return;}
   const mx=Math.max(1,...arr.flatMap(o=>GROUPS.map(g=>o.g[g]||0)));
   const bg=v=>{if(!v)return'#fff';const r=v/mx;return r>=.72?'#E0A583':r>=.48?'#EAC0A2':r>=.26?'#F2D6BF':r>=.1?'#F9E8DA':'#FDF6EF';};
   const cl=v=>{const r=v/mx;return r>=.72?'#fff':'#6B4128';};
-  const fdBgc=v=>v>=15?'#ECC0A2':v>=12?'#F3D5BF':'#F9E8DB';
+  const fdBgc=v=>v>=18?'#E7A98A':v>=15?'#ECC0A2':'#F3D5BF';
   const th=g=>`<th style="position:sticky;top:0;z-index:2;background:#1F3864;color:#fff;padding:8px 8px;font-size:11px;text-align:center;white-space:nowrap">${g}</th>`;
   const totRow=`<tr style="background:#FDEBDA;border-bottom:2px solid #E6B98F;font-weight:800">
-    <td style="padding:7px 8px;color:#7A4A2B;white-space:nowrap" colspan="2">TỔNG mỗi nhóm</td>
+    <td style="padding:7px 8px;color:#7A4A2B;white-space:nowrap" colspan="2">TỔNG</td>
+    <td style="text-align:center;padding:7px 8px;color:#7A4A2B">${fmt(totGtc)}</td>
     <td style="text-align:center;padding:7px 8px;color:#7A4A2B">—</td>
+    <td style="text-align:center;padding:7px 8px;color:#166534">${fmt(totAllow)}</td>
     ${GROUPS.map(g=>`<td style="text-align:center;padding:7px 8px;color:#7A4A2B">${fmt(grpTot[g])}</td>`).join('')}
     <td style="text-align:center;padding:7px 8px;color:var(--orange-dark)">${fmt(totOrders)}</td></tr>`;
   const body=arr.map((o,i)=>{
@@ -4786,21 +4795,24 @@ async function buildTonDongPage(){
    return `<tr style="border-bottom:1px solid var(--border)">
      <td style="padding:6px 8px;text-align:center;color:var(--text-sub)">${i+1}</td>
      <td style="padding:6px 10px;font-weight:600;white-space:nowrap">${o.bc}<div style="font-size:10.5px;color:var(--text-sub);font-weight:400">${o.am||'—'}</div></td>
+     <td style="text-align:center;padding:6px 8px;font-weight:700;color:#1F3864">${fmt(o.gtc)}</td>
      <td style="text-align:center;padding:6px 8px;font-weight:800;background:${fdBgc(o.fd)};color:#7A2E1B">${o.fd.toFixed(1)}%</td>
+     <td style="text-align:center;padding:6px 8px;font-weight:800;background:#E2EFDA;color:#166534">${fmt(o.allow)}</td>
      ${tds}
      <td style="text-align:center;padding:6px 10px;font-weight:800;background:#FFF3EA;color:var(--orange-dark)">${fmt(o.tot)}</td></tr>`;
   }).join('');
-  const top3=arr.slice(0,3).map(o=>`${o.bc} (${fmt(o.tot)} đơn)`).join(' · ');
+  const top3=arr.slice().sort((a,b)=>b.tot-a.tot).slice(0,3).map(o=>`${o.bc} (${fmt(o.tot)} đơn)`).join(' · ');
   const overdue=arr.reduce((s,o)=>s+(o.g['3 ngày']||0)+(o.g['4 ngày']||0)+(o.g['5 ngày']||0)+(o.g['Trên 5 ngày']||0),0);
   const ana=`<div class="analysis-box"><b>📌 Nhận định:</b><br>
-    • Có <b>${arr.length} Bưu Cục</b> tỉ lệ trả tuần gần nhất (Tuần ${maxWk}) ≥ 10% — tổng <b>${fmt(totOrders)} đơn</b> tồn đọng chờ chuyển trả.<br>
+    • Có <b>${arr.length} Bưu Cục</b> tỉ lệ trả tuần gần nhất (Tuần ${maxWk}) <b>> 13%</b> — tổng <b>${fmt(totOrders)} đơn</b> tồn đọng chờ chuyển trả.<br>
     • Tồn ≥ 3 ngày (nguy cơ cao): <b>${fmt(overdue)} đơn</b> — cần revert/xử lý gấp.<br>
-    • 🔴 Bưu Cục tồn nhiều nhất: ${top3}.</div>`;
+    • 🔴 Bưu Cục tồn nhiều nhất: ${top3}.<br>
+    • Cột <b>"Đơn được trả (&lt;13%)"</b> = số đơn tối đa Bưu Cục được phép trả trong ngày (≈ 0,149 × GTC ngày ${gd}) để giữ tỉ lệ trả dưới 13%.</div>`;
   const ov=`<div class="card">
     <div style="font-weight:800;font-size:16px;margin-bottom:12px">📦 Tổng quan Tồn đọng chờ chuyển trả</div>
     <div style="display:flex;gap:14px;flex-wrap:wrap">
      <div style="flex:1;min-width:160px;background:#FBF1E9;border-left:4px solid #C56B4E;border-radius:10px;padding:14px 16px">
-       <div style="color:var(--text-sub);font-size:12px">Số Bưu Cục (FD ≥ 10% Tuần ${maxWk})</div>
+       <div style="color:var(--text-sub);font-size:12px">Số Bưu Cục (FD > 13% Tuần ${maxWk})</div>
        <div style="font-size:30px;font-weight:800;color:#B4552F">${arr.length}</div></div>
      <div style="flex:1;min-width:160px;background:#FBF1E9;border-left:4px solid #C56B4E;border-radius:10px;padding:14px 16px">
        <div style="color:var(--text-sub);font-size:12px">Tổng đơn tồn đọng</div>
@@ -4809,9 +4821,9 @@ async function buildTonDongPage(){
        <div style="color:var(--text-sub);font-size:12px">Tồn ≥ 3 ngày (gấp)</div>
        <div style="font-size:30px;font-weight:800;color:#B91C1C">${fmt(overdue)} <span style="font-size:14px;font-weight:600">đơn</span></div></div>
     </div>
-    <div style="margin-top:10px;color:var(--text-sub);font-size:12px">* Chỉ tính các Bưu Cục có tỉ lệ trả (FD) tuần gần nhất ≥ 10%. Yêu cầu AM check & revert đơn để kiểm soát tỉ lệ trả.</div>
+    <div style="margin-top:10px;color:var(--text-sub);font-size:12px">* Chỉ tính Bưu Cục có tỉ lệ trả (FD) tuần gần nhất > 13%. Tỉ lệ trả = Đơn trả ÷ (Đơn GTC + Đơn trả). Yêu cầu AM check & revert đơn.</div>
    </div>`;
-  const head=`<div class="page-header"><div class="page-title">📦 Tồn đọng chờ chuyển trả — XBG</div><div class="page-meta"><span style="color:var(--text-sub);font-size:12px">Nguồn: Data tồn đọng chờ chuyển trả · lọc BC tỉ lệ trả ≥ 10% Tuần ${maxWk}</span></div></div>`;
+  const head=`<div class="page-header"><div class="page-title">📦 Tồn đọng chờ chuyển trả — XBG</div><div class="page-meta"><span style="color:var(--text-sub);font-size:12px">Nguồn: Data tồn đọng chờ chuyển trả · lọc BC tỉ lệ trả > 13% Tuần ${maxWk} · GTC ngày ${gd}</span></div></div>`;
   el.innerHTML=head+ov+`<div class="card" id="tondongTbl" style="margin-top:16px;padding:16px">
     <div style="font-weight:800;font-size:15px;margin-bottom:11px">Tồn đọng theo Bưu Cục (tỉ lệ trả cao → thấp)</div>
     <div class="table-wrap" style="max-height:660px;overflow:auto;border:1px solid var(--border);border-radius:10px">
@@ -4819,7 +4831,9 @@ async function buildTonDongPage(){
       <thead><tr>
        <th style="position:sticky;top:0;z-index:2;background:#1F3864;color:#fff;padding:8px 8px">#</th>
        <th style="position:sticky;top:0;z-index:2;background:#1F3864;color:#fff;padding:8px 10px;text-align:left">Bưu Cục / AM</th>
+       <th style="position:sticky;top:0;z-index:2;background:#1F3864;color:#fff;padding:8px 8px;text-align:center">GTC ${gd}</th>
        <th style="position:sticky;top:0;z-index:2;background:#1F3864;color:#fff;padding:8px 8px;text-align:center">FD tuần</th>
+       <th style="position:sticky;top:0;z-index:2;background:#166534;color:#fff;padding:8px 8px;text-align:center">Đơn được trả (&lt;13%)</th>
        ${GROUPS.map(th).join('')}
        <th style="position:sticky;top:0;z-index:2;background:#1F3864;color:#fff;padding:8px 10px;text-align:center">Tổng</th>
       </tr></thead><tbody>${totRow}${body}</tbody></table>
