@@ -4835,8 +4835,25 @@ async function sendTonDongToTelegram(){
   const CAP='📦 <b>Danh sách các đơn tồn đọng chờ chuyển trả thuộc các Bưu Cục có tỉ lệ trả lớn hơn hoặc bằng 10% trong tuần hiện tại</b>\n\n'
    +'Yêu cầu toàn bộ AM vào check với revert đơn để kiểm soát tỉ lệ trả hàng ngày.\n\n'
    +'🔗 Link truy cập: https://docs.google.com/spreadsheets/d/'+SHEET_ROTLC_ID+'/edit?gid='+SHEET_TONDONG_GID+'#gid='+SHEET_TONDONG_GID;
-  const img=await _captureEl('tondongTbl');
-  const res=await _tgSendPhoto(TG_AGING_CHAT,TG_FD_THREAD,img,CAP);
+  const src=document.getElementById('tondongTbl');
+  const nBC=src.querySelectorAll('tbody tr').length-1, half=Math.ceil(nBC/2); // trừ dòng TỔNG
+  const shot=async(part)=>{
+   const cl=src.cloneNode(true); cl.id='tdClone';
+   const trs=[...cl.querySelectorAll('tbody tr')]; // [0]=TỔNG, 1..nBC
+   if(part===1) trs.slice(1+half).forEach(r=>r.remove());      // giữ TỔNG + BC 1..half
+   else trs.slice(1,1+half).forEach(r=>r.remove());            // giữ TỔNG + BC (half+1)..nBC
+   cl.querySelectorAll('.analysis-box').forEach(a=>a.remove());
+   cl.querySelectorAll('.table-wrap').forEach(w=>{w.style.maxHeight='none';w.style.overflow='visible';});
+   const tmp=document.createElement('div'); tmp.style.cssText='position:fixed;top:-9999px;left:0;width:980px';
+   tmp.appendChild(cl); document.body.appendChild(tmp);
+   await new Promise(r=>setTimeout(r,300));
+   try{ return await _captureEl('tdClone'); } finally{ tmp.remove(); }
+  };
+  const img1=await shot(1);
+  let res=await _tgSendPhoto(TG_AGING_CHAT,TG_FD_THREAD,img1,CAP+'\n\n<i>(Phần 1/2 — Bưu Cục #1–'+half+')</i>');
+  if(res&&res.ok===false)throw new Error(res.description||'gửi thất bại');
+  const img2=await shot(2);
+  res=await _tgSendPhoto(TG_AGING_CHAT,TG_FD_THREAD,img2,'📦 <b>Tồn đọng chờ chuyển trả</b> — (Phần 2/2 — Bưu Cục #'+(half+1)+'–'+nBC+')');
   if(res&&res.ok===false)throw new Error(res.description||'gửi thất bại');
   if(btn){btn.innerHTML='✅ Đã gửi';setTimeout(()=>{btn.disabled=false;btn.innerHTML='📤 Bắn Tồn đọng TG';},2500);}
  }catch(e){ alert('Lỗi gửi Telegram: '+e.message); if(btn){btn.disabled=false;btn.innerHTML='📤 Bắn Tồn đọng TG';} }
