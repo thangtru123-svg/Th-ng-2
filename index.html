@@ -222,6 +222,7 @@ tr.tot td{background:#FFF0EB!important;font-weight:800!important;border-top:2px 
  <button class="nav-item" onclick="show('p23',this)" style="background:linear-gradient(135deg,rgba(241,93,41,0.18),rgba(255,138,61,0.1));border:1px solid rgba(241,93,41,0.35);font-weight:700"><span class="icon">🗺️</span>BC Vận Hành Khu Vực Bắc Giang</button>
  <button class="nav-item" onclick="show('p24',this)" style="background:linear-gradient(135deg,rgba(220,38,38,0.16),rgba(241,93,41,0.08));border:1px solid rgba(220,38,38,0.32);font-weight:700"><span class="icon">🚨</span>Báo Cáo Lowlight XBG</button>
  <button class="nav-item" onclick="show('p27',this)" style="background:linear-gradient(135deg,rgba(220,38,38,0.16),rgba(241,93,41,0.08));border:1px solid rgba(220,38,38,0.32);font-weight:700"><span class="icon">📉</span>Rớt LC theo ngày</button>
+ <button class="nav-item" onclick="show('p28',this)" style="background:linear-gradient(135deg,rgba(220,38,38,0.16),rgba(241,93,41,0.08));border:1px solid rgba(220,38,38,0.32);font-weight:700"><span class="icon">📦</span>Tồn đọng chờ chuyển trả</button>
  <div class="nav-section">GTC</div>
  <button class="nav-item" onclick="show('p1',this)"><span class="icon">📦</span>Tổng quan GTC Total</button>
  <button class="nav-item" onclick="show('p2',this)"><span class="icon">🎯</span>Tổng quan GTC TTS</button>
@@ -278,6 +279,7 @@ tr.tot td{background:#FFF0EB!important;font-weight:800!important;border-top:2px 
 <div class="page" id="p25"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
 <div class="page" id="p26"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
 <div class="page" id="p27"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
+<div class="page" id="p28"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
 </main>
 
 <script>
@@ -363,6 +365,7 @@ function injectAllTgBtns(){
  injectTgBtn('p7',()=>sendAgingToTelegram(),'Bắn Aging TG');
  injectTgBtn('p16',()=>sendP16ToTelegram(),'Bắn VH Ngày TG');
  injectTgBtn('p27',()=>sendRotLCToTelegram(),'Bắn Rớt LC TG');
+ injectTgBtn('p28',()=>sendTonDongToTelegram(),'Bắn Tồn đọng TG');
 }
 function fmt(n){return(+n||0).toLocaleString('vi-VN');}
 function isoD(d){return(d||'').match(/\d{4}-\d{2}-\d{2}/)?.[0]||'';}
@@ -382,6 +385,7 @@ const SHEET_VOL_ID='1BsqjKaWRHSq8RaiQ0AD-cGBU3jsF-fu0fEwqHmt6gu4';
 const SHEET_VOL_GID='375236641';
 const SHEET_ROTLC_ID='1kNe1tsvV_kqXqMUsr2pnxN9lfG3_CwGFyN5JtiVldrs'; // "Data rớt LC các ngày"
 const SHEET_ROTLC_GID='406146643';
+const SHEET_TONDONG_GID='397128643'; // sheet "Data tồn đọng chờ chuyển trả" (cùng file SHEET_ROTLC_ID)
 /* Cache Data_Voltotal (8MB): tải 1 lần/đợt cập nhật, dùng chung cho p18/p25/p26 thay vì tải 3 lần.
    Reset ở đầu init() nên mỗi lần bấm "Cập nhật dữ liệu" vẫn tải bản MỚI — số liệu không đổi. */
 let _volCSVCache=null;
@@ -3482,6 +3486,8 @@ async function init(){
  await buildCODPage();
  // p27 — Rớt LC theo ngày
  await buildRotLCPage();
+ // p28 — Tồn đọng chờ chuyển trả
+ await buildTonDongPage();
  // p22 — Kinh Doanh XBG
  await buildKinhDoanhPage();
  // p0 — Tổng quan (sau khi có đủ data)
@@ -4733,6 +4739,110 @@ async function sendRotLCToTelegram(){
   }
   if(btn){btn.innerHTML='✅ Đã gửi';setTimeout(()=>{btn.disabled=false;btn.innerHTML='📤 Bắn Rớt LC TG';},2500);}
  }catch(e){ alert('Lỗi gửi Telegram: '+e.message); if(btn){btn.disabled=false;btn.innerHTML='📤 Bắn Rớt LC TG';} }
+}
+
+/* ===== DASHBOARD 28: TỒN ĐỌNG CHỜ CHUYỂN TRẢ (p28) ===== */
+/* Nguồn: "Data tồn đọng chờ chuyển trả" (SHEET_ROTLC_ID, gid TONDONG). Mỗi dòng = 1 đơn tồn.
+   Cột: Bưu Cục[4], AM[5], Thời gian tồn đọng[3] (Dưới 1 ngày…Trên 5 ngày).
+   Chỉ lấy BC có FD (tỉ lệ trả) tuần gần nhất >= 10% (từ "FD Total theo Bưu Cục"). */
+async function buildTonDongPage(){
+ const el=document.getElementById('p28'); if(!el)return;
+ try{
+  const GROUPS=['Dưới 1 ngày','1 ngày','2 ngày','3 ngày','4 ngày','5 ngày','Trên 5 ngày'];
+  const nz=v=>parseFloat(String(v||'0').replace(',','.').replace(/[^0-9.\-]/g,''))||0;
+  // 1) FD theo BC tuần gần nhất (weighted Σ(%FD×%Vol)/Σ%Vol)
+  const fdUrl=`https://docs.google.com/spreadsheets/d/${SID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent('FD Total theo Bưu Cục')}&_=${Date.now()}`;
+  const fdRows=_vwParseCSV(await(await fetch(fdUrl)).text()).slice(1); // BC0,Ngày1,%Vol2,%FD3,Trả4,Tuần5
+  let maxWk=0; fdRows.forEach(r=>{const w=parseInt((r[5]||'').replace(/[^0-9]/g,''))||0; if(w>maxWk)maxWk=w;});
+  const fa={}; fdRows.forEach(r=>{const w=parseInt((r[5]||'').replace(/[^0-9]/g,''))||0; if(w!==maxWk)return;
+   const bc=(r[0]||'').trim(); if(!bc)return; const pv=nz(r[2]),fd=nz(r[3]);
+   if(!fa[bc])fa[bc]={a:0,b:0}; fa[bc].a+=fd*pv; fa[bc].b+=pv;});
+  const fdBC={}; Object.keys(fa).forEach(k=>fdBC[k]=fa[k].b?fa[k].a/fa[k].b*100:0);
+  const hi=new Set(Object.keys(fdBC).filter(k=>fdBC[k]>=10));
+  // 2) tồn đọng
+  const tdUrl=`https://docs.google.com/spreadsheets/d/${SHEET_ROTLC_ID}/export?format=csv&gid=${SHEET_TONDONG_GID}&_=${Date.now()}`;
+  const td=_vwParseCSV(await(await fetch(tdUrl)).text()).slice(1);
+  const agg={};
+  td.forEach(r=>{ if(r.length<6||!r[4])return; const bc=r[4].trim(), grp=(r[3]||'').trim();
+   if(!agg[bc])agg[bc]={bc,am:(r[5]||'').trim(),g:{},tot:0};
+   if(GROUPS.includes(grp))agg[bc].g[grp]=(agg[bc].g[grp]||0)+1; agg[bc].tot++;});
+  let arr=Object.values(agg).filter(o=>hi.has(o.bc)).map(o=>Object.assign(o,{fd:fdBC[o.bc]||0}));
+  arr.sort((a,b)=>b.tot-a.tot);
+  const totOrders=arr.reduce((s,o)=>s+o.tot,0);
+  const grpTot={}; GROUPS.forEach(g=>grpTot[g]=arr.reduce((s,o)=>s+(o.g[g]||0),0));
+  window._tondong={arr,GROUPS,maxWk,totOrders,grpTot};
+  const fmt=v=>v?v.toLocaleString('vi-VN'):'—';
+  if(!arr.length){el.innerHTML='<div class="card"><p style="padding:16px;color:var(--text-sub)">Không có Bưu Cục nào có tỉ lệ trả ≥ 10% tuần gần nhất.</p></div>';return;}
+  // heatmap ô nhóm (cam đất dịu)
+  const mx=Math.max(1,...arr.flatMap(o=>GROUPS.map(g=>o.g[g]||0)));
+  const bg=v=>{if(!v)return'#fff';const r=v/mx;return r>=.55?'#C56B4E':r>=.34?'#DA9A6E':r>=.18?'#EBC199':r>=.07?'#F6DFC6':'#FCEFDF';};
+  const cl=v=>{const r=v/mx;return r>=.34?'#fff':'#7A4A2B';};
+  const fdBgc=v=>v>=13?'#E88E76':v>=11?'#F0AE93':'#F6C9B4';
+  const th=g=>`<th style="position:sticky;top:0;z-index:2;background:#1F3864;color:#fff;padding:8px 8px;font-size:11px;text-align:center;white-space:nowrap">${g}</th>`;
+  const totRow=`<tr style="background:#FDEBDA;border-bottom:2px solid #E6B98F;font-weight:800">
+    <td style="padding:7px 8px;color:#7A4A2B;white-space:nowrap" colspan="2">TỔNG mỗi nhóm</td>
+    <td style="text-align:center;padding:7px 8px;color:#7A4A2B">—</td>
+    ${GROUPS.map(g=>`<td style="text-align:center;padding:7px 8px;color:#7A4A2B">${fmt(grpTot[g])}</td>`).join('')}
+    <td style="text-align:center;padding:7px 8px;color:var(--orange-dark)">${fmt(totOrders)}</td></tr>`;
+  const body=arr.map((o,i)=>{
+   const tds=GROUPS.map(g=>{const v=o.g[g]||0;return `<td style="text-align:center;padding:6px 8px;background:${bg(v)};color:${cl(v)};font-weight:${v/mx>=.34?'700':'500'}">${fmt(v)}</td>`;}).join('');
+   return `<tr style="border-bottom:1px solid var(--border)">
+     <td style="padding:6px 8px;text-align:center;color:var(--text-sub)">${i+1}</td>
+     <td style="padding:6px 10px;font-weight:600;white-space:nowrap">${o.bc}<div style="font-size:10.5px;color:var(--text-sub);font-weight:400">${o.am||'—'}</div></td>
+     <td style="text-align:center;padding:6px 8px;font-weight:800;background:${fdBgc(o.fd)};color:#7A2E1B">${o.fd.toFixed(1)}%</td>
+     ${tds}
+     <td style="text-align:center;padding:6px 10px;font-weight:800;background:#FFF3EA;color:var(--orange-dark)">${fmt(o.tot)}</td></tr>`;
+  }).join('');
+  const top3=arr.slice(0,3).map(o=>`${o.bc} (${fmt(o.tot)} đơn)`).join(' · ');
+  const overdue=arr.reduce((s,o)=>s+(o.g['3 ngày']||0)+(o.g['4 ngày']||0)+(o.g['5 ngày']||0)+(o.g['Trên 5 ngày']||0),0);
+  const ana=`<div class="analysis-box"><b>📌 Nhận định:</b><br>
+    • Có <b>${arr.length} Bưu Cục</b> tỉ lệ trả tuần gần nhất (Tuần ${maxWk}) ≥ 10% — tổng <b>${fmt(totOrders)} đơn</b> tồn đọng chờ chuyển trả.<br>
+    • Tồn ≥ 3 ngày (nguy cơ cao): <b>${fmt(overdue)} đơn</b> — cần revert/xử lý gấp.<br>
+    • 🔴 Bưu Cục tồn nhiều nhất: ${top3}.</div>`;
+  const ov=`<div class="card">
+    <div style="font-weight:800;font-size:16px;margin-bottom:12px">📦 Tổng quan Tồn đọng chờ chuyển trả</div>
+    <div style="display:flex;gap:14px;flex-wrap:wrap">
+     <div style="flex:1;min-width:160px;background:#FBF1E9;border-left:4px solid #C56B4E;border-radius:10px;padding:14px 16px">
+       <div style="color:var(--text-sub);font-size:12px">Số Bưu Cục (FD ≥ 10% Tuần ${maxWk})</div>
+       <div style="font-size:30px;font-weight:800;color:#B4552F">${arr.length}</div></div>
+     <div style="flex:1;min-width:160px;background:#FBF1E9;border-left:4px solid #C56B4E;border-radius:10px;padding:14px 16px">
+       <div style="color:var(--text-sub);font-size:12px">Tổng đơn tồn đọng</div>
+       <div style="font-size:30px;font-weight:800;color:#B4552F">${fmt(totOrders)} <span style="font-size:14px;font-weight:600">đơn</span></div></div>
+     <div style="flex:1;min-width:160px;background:#FEF2F2;border-left:4px solid #DC2626;border-radius:10px;padding:14px 16px">
+       <div style="color:var(--text-sub);font-size:12px">Tồn ≥ 3 ngày (gấp)</div>
+       <div style="font-size:30px;font-weight:800;color:#B91C1C">${fmt(overdue)} <span style="font-size:14px;font-weight:600">đơn</span></div></div>
+    </div>
+    <div style="margin-top:10px;color:var(--text-sub);font-size:12px">* Chỉ tính các Bưu Cục có tỉ lệ trả (FD) tuần gần nhất ≥ 10%. Yêu cầu AM check & revert đơn để kiểm soát tỉ lệ trả.</div>
+   </div>`;
+  const head=`<div class="page-header"><div class="page-title">📦 Tồn đọng chờ chuyển trả — XBG</div><div class="page-meta"><span style="color:var(--text-sub);font-size:12px">Nguồn: Data tồn đọng chờ chuyển trả · lọc BC tỉ lệ trả ≥ 10% Tuần ${maxWk}</span></div></div>`;
+  el.innerHTML=head+ov+`<div class="card" id="tondongTbl" style="margin-top:16px;padding:16px">
+    <div style="font-weight:800;font-size:15px;margin-bottom:11px">Tồn đọng theo Bưu Cục (tổng đơn cao → thấp)</div>
+    <div class="table-wrap" style="max-height:660px;overflow:auto;border:1px solid var(--border);border-radius:10px">
+     <table style="border-collapse:collapse;font-size:12px">
+      <thead><tr>
+       <th style="position:sticky;top:0;z-index:2;background:#1F3864;color:#fff;padding:8px 8px">#</th>
+       <th style="position:sticky;top:0;z-index:2;background:#1F3864;color:#fff;padding:8px 10px;text-align:left">Bưu Cục / AM</th>
+       <th style="position:sticky;top:0;z-index:2;background:#1F3864;color:#fff;padding:8px 8px;text-align:center">FD tuần</th>
+       ${GROUPS.map(th).join('')}
+       <th style="position:sticky;top:0;z-index:2;background:#1F3864;color:#fff;padding:8px 10px;text-align:center">Tổng</th>
+      </tr></thead><tbody>${totRow}${body}</tbody></table>
+    </div>${ana}</div>`;
+  injectTgBtn('p28',()=>sendTonDongToTelegram(),'Bắn Tồn đọng TG');
+ }catch(e){ el.innerHTML=`<div class="card"><p style="padding:16px;color:#DC2626">Lỗi tải dữ liệu tồn đọng: ${e.message}</p></div>`; }
+}
+
+async function sendTonDongToTelegram(){
+ const btn=document.getElementById('tgInpage_p28'); if(btn){btn.disabled=true;btn.innerHTML='⏳ Đang gửi...';}
+ try{
+  if(!window._tondong)throw new Error('Chưa có dữ liệu');
+  const CAP='📦 <b>Danh sách các đơn tồn đọng chờ chuyển trả thuộc các Bưu Cục có tỉ lệ trả lớn hơn hoặc bằng 10% trong tuần hiện tại</b>\n\n'
+   +'Yêu cầu toàn bộ AM vào check với revert đơn để kiểm soát tỉ lệ trả hàng ngày.\n\n'
+   +'🔗 Link truy cập: https://docs.google.com/spreadsheets/d/'+SHEET_ROTLC_ID+'/edit?gid='+SHEET_TONDONG_GID+'#gid='+SHEET_TONDONG_GID;
+  const img=await _captureEl('tondongTbl');
+  const res=await _tgSendPhoto(TG_AGING_CHAT,TG_FD_THREAD,img,CAP);
+  if(res&&res.ok===false)throw new Error(res.description||'gửi thất bại');
+  if(btn){btn.innerHTML='✅ Đã gửi';setTimeout(()=>{btn.disabled=false;btn.innerHTML='📤 Bắn Tồn đọng TG';},2500);}
+ }catch(e){ alert('Lỗi gửi Telegram: '+e.message); if(btn){btn.disabled=false;btn.innerHTML='📤 Bắn Tồn đọng TG';} }
 }
 
 async function buildCODPage(){
