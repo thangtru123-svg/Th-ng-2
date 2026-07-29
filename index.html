@@ -1463,7 +1463,7 @@ async function _tgSendDoc(chatId,threadId,blob,caption){
  const r=await fetch(`https://api.telegram.org/bot${TG_TOKEN}/sendDocument`,{method:'POST',body:form,signal:AbortSignal.timeout(45000)});
  return r.json();
 }
-async function _captureEl(id){
+async function _captureEl(id,scale=2,jpeg=false){
  if(!window.html2canvas){
   await new Promise((res,rej)=>{const s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';s.onload=res;s.onerror=()=>rej(new Error('html2canvas load lỗi'));setTimeout(()=>rej(new Error('html2canvas load timeout')),12000);document.head.appendChild(s);});
  }
@@ -1485,10 +1485,10 @@ async function _captureEl(id){
  await new Promise(r=>setTimeout(r,200));
  try{
   const canvas=await Promise.race([
-   html2canvas(el,{scale:2,useCORS:true,allowTaint:true,logging:false,backgroundColor:'#ffffff',imageTimeout:8000}),
+   html2canvas(el,{scale,useCORS:true,allowTaint:true,logging:false,backgroundColor:'#ffffff',imageTimeout:8000}),
    new Promise((_,rej)=>setTimeout(()=>rej(new Error('html2canvas timeout 30s: '+id)),30000))
   ]);
-  const blob=await new Promise(res=>canvas.toBlob(res,'image/png'));
+  const blob=await new Promise(res=>jpeg?canvas.toBlob(res,'image/jpeg',0.92):canvas.toBlob(res,'image/png'));
   if(!blob)throw new Error('canvas.toBlob trả về null — element quá lớn hoặc bị taint: '+id);
   return blob;
  }finally{
@@ -3759,19 +3759,19 @@ async function sendNSBGToTelegram(btn){
  head+=`Tiêu chí NV kém: %GTC cá nhân &lt; 50% từ 3/7 ngày. %GTC Bưu Cục = GTC ÷ (hàng mới+tồn).`;
  if(btn)btn.textContent='⏳ Bắn tổng quan...';
  try{const r=await _tgSend(TG_NSBG_CHAT,undefined,head);if(r&&r.ok)okN++;else console.warn('[NSBG head]',r&&r.description);}catch(e){console.warn('[NSBG head]',e.message);}
- await new Promise(r=>setTimeout(r,700));
+ await new Promise(r=>setTimeout(r,400));
  // 2) mỗi Bưu Cục 1 ảnh + caption
  for(let i=0;i<D.rows.length;i++){
   const row=D.rows[i];
   if(btn)btn.textContent=`⏳ ${i+1}/${D.rows.length}: ${row.bc}`;
   const cap=`🏤 <b>${row.bc}</b>`; // group Anh em Bắc Giang: chỉ tiêu đề, phân tích đã có trong ảnh
   try{
-   const img=await _captureEl('nsbgCard_'+i);
+   const img=await _captureEl('nsbgCard_'+i,1.6,true); // scale 1.6 + JPEG: nhẹ & nhanh
    let res=await _tgSendPhoto(TG_NSBG_CHAT,undefined,img,cap);
    if(!res||!res.ok)res=await _tgSendDoc(TG_NSBG_CHAT,undefined,img,cap); // ảnh quá rộng → gửi document
    if(res&&res.ok)okN++;else console.warn('[NSBG '+row.bc+']',res&&res.description);
   }catch(e){console.warn('[NSBG '+row.bc+']',e.message);}
-  await new Promise(r=>setTimeout(r,900));
+  await new Promise(r=>setTimeout(r,400));
  }
  if(btn){btn.textContent=okN>=total?'✅ Đã bắn xong':`⚠️ Bắn ${okN}/${total}`;setTimeout(()=>{btn.textContent=old;btn.disabled=false;},5000);}
 }
