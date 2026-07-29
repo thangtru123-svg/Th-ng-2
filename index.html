@@ -4882,31 +4882,28 @@ async function sendTonDongToTelegram(){
    Chỉ NV thuộc 36 BC tham gia & thâm niên < 2 tháng. Thâm niên = hôm nay − ngày vào làm.
    Thang thưởng theo sheet "Logic" (đơn GTC/ngày):
      Nhóm 1 (TN<30 ngày): ≤34→0 · 35-59→50k · 60-69→100k · ≥70→150k
-     Nhóm 2 (TN 30..<60 ngày): ≤44→0 · 45-69→50k · 70-94→100k · ≥95→150k */
+     Nhóm 2 (TN 30..<60 ngày): ≤44→0 · 45-69→50k · 70-94→100k · ≥95→150k
+   Hiển thị CHIA THEO TỈNH → BƯU CỤC (không trộn lẫn). */
 async function buildThuongPage(){
  const el=document.getElementById('p29'); if(!el)return;
  try{
   const NID=SHEET_THUONG_ID;
   const bonus=(g,gtc)=> g===1 ? (gtc<=34?0:gtc<=59?50000:gtc<=69?100000:150000)
                               : (gtc<=44?0:gtc<=69?50000:gtc<=94?100000:150000);
-  // 1) hồ sơ NV (Data NS): ID0,Tên1,Chức vụ2,Ngày vào làm3,...,Bưu cục6,Zone7,AM8
   const nsUrl=`https://docs.google.com/spreadsheets/d/${NID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent('Data NS ')}&_=${Date.now()}`;
   const emp={};
   _vwParseCSV(await(await fetch(nsUrl)).text()).slice(1).forEach(r=>{
    const id=(r[0]||'').trim(); if(!id)return;
-   emp[id]={name:(r[1]||'').trim(),join:(r[3]||'').trim(),bc:(r[6]||'').trim(),bccode:(r[6]||'').split(' - ')[0].trim(),am:(r[8]||'').trim()};
+   emp[id]={name:(r[1]||'').trim(),join:(r[3]||'').trim(),bc:(r[6]||'').trim(),bccode:(r[6]||'').split(' - ')[0].trim(),am:(r[8]||'').trim(),tinh:(r[10]||'').trim()};
   });
-  // 2) 36 Bưu Cục tham gia
   const bcUrl=`https://docs.google.com/spreadsheets/d/${NID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent('Danh sách Bưu Cục tham gia')}&_=${Date.now()}`;
   const joinBC=new Set(_vwParseCSV(await(await fetch(bcUrl)).text()).slice(1).map(r=>(r[0]||'').split(' - ')[0].trim()).filter(Boolean));
-  // 3) Năng suất NV 7 ngày gần nhất (BC0,NV1=mã_tên,Ngày2,gán3,GTC4)
   const agUrl=`https://docs.google.com/spreadsheets/d/${SID}/export?format=csv&gid=1723871284&_=${Date.now()}`;
   const ag=_vwParseCSV(await(await fetch(agUrl)).text()).slice(1);
-  const days=[...new Set(ag.map(r=>r[2]).filter(d=>/^2026-\d\d-\d\d/.test(d)))].sort().slice(-7).reverse(); // mới→cũ
+  const days=[...new Set(ag.map(r=>r[2]).filter(d=>/^2026-\d\d-\d\d/.test(d)))].sort().slice(-7).reverse();
   const inWk=new Set(days), gtcByNV={};
   ag.forEach(r=>{ if(!inWk.has(r[2]))return; const m=/^(\d+)/.exec((r[1]||'').trim()); if(!m)return;
    (gtcByNV[m[1]]=gtcByNV[m[1]]||{})[r[2]]=parseInt(r[4]||0)||0;});
-  // 4) tính thưởng — thâm niên theo hôm nay (cố định)
   const today=new Date(); const grp=tn=>tn<30?1:tn<60?2:0;
   const rows=[];
   Object.keys(emp).forEach(id=>{
@@ -4916,9 +4913,8 @@ async function buildThuongPage(){
    const daily=gtcByNV[id]; if(!daily)return;
    let tot=0; const pd={};
    days.forEach(d=>{const gtc=daily[d]||0; const b=bonus(g,gtc); pd[d]={gtc,b}; tot+=b;});
-   rows.push({name:e.name,bc:e.bc,am:e.am,tn,g,pd,tot});
+   rows.push({name:e.name,bc:e.bc,tinh:e.tinh||'—',am:e.am,tn,g,pd,tot});
   });
-  rows.sort((a,b)=>b.tot-a.tot);
   window._thuong={rows,days};
   const fmt=v=>(+v||0).toLocaleString('vi-VN');
   const dow=s=>['CN','T2','T3','T4','T5','T6','T7'][new Date(s).getDay()];
@@ -4931,25 +4927,49 @@ async function buildThuongPage(){
   const bCol=b=>b>=100000?'#166534':b>=50000?'#854D0E':'#9CA3AF';
   const kfmt=b=>b?'+'+(b/1000)+'k':'—';
   const grpBadge=g=>g===1?'<span style="background:#DBEAFE;color:#1E40AF;padding:1px 6px;border-radius:6px;font-size:10.5px;font-weight:700">N1</span>':'<span style="background:#FEF3C7;color:#92400E;padding:1px 6px;border-radius:6px;font-size:10.5px;font-weight:700">N2</span>';
-  const th=d=>`<th style="position:sticky;top:0;z-index:2;background:#166534;color:#fff;padding:7px 6px;font-size:11px;text-align:center;white-space:nowrap">${dh(d)}</th>`;
-  const body=rows.map((r,i)=>{
-   const tds=days.map(d=>{const c=r.pd[d];return `<td style="text-align:center;padding:4px 7px;background:${bBg(c.b)}">
-     <div style="font-weight:700;color:#1F2937">${c.gtc||'—'}</div>
-     <div style="font-size:10px;font-weight:700;color:${bCol(c.b)}">${kfmt(c.b)}</div></td>`;}).join('');
-   return `<tr style="border-bottom:1px solid var(--border)">
-     <td style="padding:5px 8px;text-align:center;color:var(--text-sub)">${i+1}</td>
-     <td style="padding:5px 10px;font-weight:600;white-space:nowrap">${r.name}<div style="font-size:10.5px;color:var(--text-sub);font-weight:400">${r.bc}</div></td>
-     <td style="padding:5px 8px;color:var(--text-sub);white-space:nowrap">${r.am||'—'}</td>
-     <td style="text-align:center;padding:5px 8px;color:#374151;font-weight:600">${r.tn}</td>
-     <td style="text-align:center;padding:5px 8px">${grpBadge(r.g)}</td>
-     ${tds}
-     <td style="text-align:center;padding:5px 10px;font-weight:800;background:#DCFCE7;color:#166534">${fmt(r.tot)} đ</td></tr>`;
-  }).join('');
+  // gom Tỉnh → Bưu Cục
+  const T={};
+  rows.forEach(r=>{ (T[r.tinh]=T[r.tinh]||{sum:0,nv:0,bc:{}}); T[r.tinh].sum+=r.tot; T[r.tinh].nv++;
+   (T[r.tinh].bc[r.bc]=T[r.tinh].bc[r.bc]||{sum:0,rows:[]}); T[r.tinh].bc[r.bc].sum+=r.tot; T[r.tinh].bc[r.bc].rows.push(r);});
+  const thH=days.map(d=>`<th style="background:#166534;color:#fff;padding:6px 6px;font-size:11px;text-align:center;white-space:nowrap">${dh(d)}</th>`).join('');
+  function bcTable(bc,d){
+   d.rows.sort((a,b)=>b.tot-a.tot);
+   const body=d.rows.map((r,i)=>{
+    const tds=days.map(dd=>{const c=r.pd[dd];return `<td style="text-align:center;padding:4px 7px;background:${bBg(c.b)}"><div style="font-weight:700;color:#1F2937">${c.gtc||'—'}</div><div style="font-size:10px;font-weight:700;color:${bCol(c.b)}">${kfmt(c.b)}</div></td>`;}).join('');
+    return `<tr style="border-bottom:1px solid var(--border)">
+      <td style="padding:5px 8px;text-align:center;color:var(--text-sub)">${i+1}</td>
+      <td style="padding:5px 10px;font-weight:600;white-space:nowrap">${r.name}</td>
+      <td style="text-align:center;padding:5px 8px;color:#374151;font-weight:600">${r.tn}</td>
+      <td style="text-align:center;padding:5px 8px">${grpBadge(r.g)}</td>
+      ${tds}
+      <td style="text-align:center;padding:5px 10px;font-weight:800;background:#DCFCE7;color:#166534">${fmt(r.tot)} đ</td></tr>`;
+   }).join('');
+   return `<div class="card" style="margin-top:12px;padding:14px 16px">
+     <div style="font-weight:800;font-size:14px;margin-bottom:9px">🏤 ${bc} <span style="font-weight:600;color:var(--text-sub);font-size:12px">· ${d.rows.length} NV · thưởng ${fmt(d.sum)} đ</span></div>
+     <div class="table-wrap" style="overflow:auto;border:1px solid var(--border);border-radius:10px">
+      <table style="border-collapse:collapse;font-size:12px">
+       <thead><tr>
+        <th style="background:#166534;color:#fff;padding:6px 8px">#</th>
+        <th style="background:#166534;color:#fff;padding:6px 10px;text-align:left">Nhân viên</th>
+        <th style="background:#166534;color:#fff;padding:6px 8px;text-align:center">TN</th>
+        <th style="background:#166534;color:#fff;padding:6px 8px;text-align:center">Nhóm</th>
+        ${thH}
+        <th style="background:#166534;color:#fff;padding:6px 10px;text-align:center">Tổng thưởng</th>
+       </tr></thead><tbody>${body}</tbody></table>
+     </div></div>`;
+  }
+  let sect='';
+  Object.keys(T).sort((a,b)=>T[b].sum-T[a].sum).forEach(tinh=>{
+   const t=T[tinh];
+   sect+=`<div style="margin-top:22px;padding:10px 16px;background:linear-gradient(135deg,#166534,#22A957);border-radius:12px;color:#fff;font-weight:800;font-size:16px;display:flex;justify-content:space-between;flex-wrap:wrap">
+     <span>🗺️ ${tinh}</span><span style="font-size:14px">${t.nv} NV · ${fmt(t.sum)} đ</span></div>`;
+   Object.keys(t.bc).sort((a,b)=>t.bc[b].sum-t.bc[a].sum).forEach(bc=>{ sect+=bcTable(bc,t.bc[bc]); });
+  });
   const ana=`<div class="analysis-box" style="border-left-color:#16A34A;background:#F0FDF4"><b>📌 Nhận định:</b><br>
     • <b>${rows.length} nhân viên</b> đủ điều kiện (thuộc ${joinBC.size} Bưu Cục tham gia · thâm niên &lt; 2 tháng · có phát sinh đơn).<br>
     • Tổng quỹ thưởng 7 ngày (${dh(days[days.length-1])}–${dh(days[0])}): <b>${fmt(tot)} đ</b> — Nhóm 1: ${fmt(s1)} đ (${n1.length} NV) · Nhóm 2: ${fmt(s2)} đ (${n2.length} NV).<br>
     • Thang thưởng/ngày theo đơn GTC — N1 (TN&lt;30 ngày): 35→50k · 60→100k · 70→150k · N2 (1-2 tháng): 45→50k · 70→100k · 95→150k.<br>
-    • Mốc thâm niên tính theo ngày hiện tại cố định; NV đã vào chương trình giữ đến hết tháng 8.</div>`;
+    • Bảng chia theo Tỉnh → Bưu Cục; mốc thâm niên theo ngày hiện tại cố định, NV đã vào chương trình giữ đến hết tháng 8.</div>`;
   const ov=`<div class="card">
     <div style="font-weight:800;font-size:16px;margin-bottom:12px">🎁 Tổng quan Thưởng Năng Suất NV Mới</div>
     <div style="display:flex;gap:14px;flex-wrap:wrap">
@@ -4965,21 +4985,8 @@ async function buildThuongPage(){
     </div>
     <div style="margin-top:10px;color:var(--text-sub);font-size:12px">* Ô mỗi ngày: số trên = đơn GTC, số dưới = tiền thưởng ngày đó. Chỉ NV thuộc 36 Bưu Cục tham gia & thâm niên &lt; 2 tháng.</div>
    </div>`;
-  const head=`<div class="page-header"><div class="page-title">🎁 Thưởng Năng Suất — Nhân Viên Mới (< 2 tháng)</div><div class="page-meta"><span style="color:var(--text-sub);font-size:12px">Bảng test · 7 ngày gần nhất · thưởng theo đơn GTC/ngày</span></div></div>`;
-  el.innerHTML=head+ov+`<div class="card" id="thuongTbl" style="margin-top:16px;padding:16px">
-    <div style="font-weight:800;font-size:15px;margin-bottom:11px">Thưởng theo nhân viên (tổng thưởng cao → thấp)</div>
-    <div class="table-wrap" style="max-height:680px;overflow:auto;border:1px solid var(--border);border-radius:10px">
-     <table style="border-collapse:collapse;font-size:12px">
-      <thead><tr>
-       <th style="position:sticky;top:0;z-index:2;background:#166534;color:#fff;padding:7px 8px">#</th>
-       <th style="position:sticky;top:0;z-index:2;background:#166534;color:#fff;padding:7px 10px;text-align:left">Nhân viên / Bưu Cục</th>
-       <th style="position:sticky;top:0;z-index:2;background:#166534;color:#fff;padding:7px 8px;text-align:left">AM</th>
-       <th style="position:sticky;top:0;z-index:2;background:#166534;color:#fff;padding:7px 8px;text-align:center">TN (ngày)</th>
-       <th style="position:sticky;top:0;z-index:2;background:#166534;color:#fff;padding:7px 8px;text-align:center">Nhóm</th>
-       ${days.map(th).join('')}
-       <th style="position:sticky;top:0;z-index:2;background:#166534;color:#fff;padding:7px 10px;text-align:center">Tổng thưởng</th>
-      </tr></thead><tbody>${body}</tbody></table>
-    </div>${ana}</div>`;
+  const head=`<div class="page-header"><div class="page-title">🎁 Thưởng Năng Suất — Nhân Viên Mới (< 2 tháng)</div><div class="page-meta"><span style="color:var(--text-sub);font-size:12px">Bảng test · 7 ngày gần nhất · chia theo Tỉnh → Bưu Cục</span></div></div>`;
+  el.innerHTML=head+ov+ana+sect;
  }catch(e){ el.innerHTML=`<div class="card"><p style="padding:16px;color:#DC2626">Lỗi tải dữ liệu thưởng: ${e.message}</p></div>`; }
 }
 
