@@ -4998,44 +4998,44 @@ async function buildThuongPage(){
 
 /* ===== DASHBOARD 30: KHOÁ ID VI PHẠM (p30) ===== */
 /* Nguồn: SID sheet "Khoá ID vi phạm" (gid 954997741). Cột: NV0, BC1, Lý do2, Mã đơn3, Link4, Vùng5, Tỉnh6, Ngày thông báo7(H), Ngày khoá8.
-   Lấy theo NGÀY THÔNG BÁO mới nhất, mỗi NV chỉ 1 dòng (dedup); cột "Số lần vi phạm" = số ngày thông báo distinct của NV trên TOÀN sheet. */
+   Lấy theo NGÀY THÔNG BÁO mới nhất, mỗi NV chỉ 1 dòng (dedup); "Số lần vi phạm" = số ngày thông báo distinct/NV trên TOÀN sheet. */
 async function buildKhoaIDPage(){
  const el=document.getElementById('p30'); if(!el)return;
  try{
+  const LINK='https://docs.google.com/spreadsheets/d/1kDVp2soHOAgp_AhhTddSlocXCUjB07kbLi1EHcCqay8/edit?gid=802313671#gid=802313671';
   const url=`https://docs.google.com/spreadsheets/d/${SID}/export?format=csv&gid=${SHEET_KHOAID_GID}&_=${Date.now()}`;
   const rows=_vwParseCSV(await(await fetch(url)).text()).slice(1).filter(r=>r.length>8&&(r[0]||'').trim());
   const dmy=s=>{const m=/(\d{4})-(\d{2})-(\d{2})/.exec(s||'');return m?`${m[3]}/${m[2]}/${m[1]}`:(s||'—');};
-  // số lần vi phạm = số ngày TB distinct/NV toàn sheet
   const datesByNV={};
   rows.forEach(r=>{const nv=r[0].trim(),d=(r[7]||'').trim(); if(!d)return; (datesByNV[nv]=datesByNV[nv]||new Set()).add(d);});
   const soLan=nv=>(datesByNV[nv]||new Set()).size;
-  // ngày TB mới nhất
   const allD=[...new Set(rows.map(r=>(r[7]||'').trim()).filter(Boolean))].sort();
   const latest=allD[allD.length-1];
-  // dedup NV ngày latest
   const byNV={};
   rows.forEach(r=>{ if((r[7]||'').trim()!==latest)return; const nv=r[0].trim();
    if(!byNV[nv])byNV[nv]={nv,bc:(r[1]||'').trim(),tinh:(r[6]||'').trim(),lydo:new Set(),khoa:(r[8]||'').trim(),ndon:0};
    if((r[2]||'').trim())byNV[nv].lydo.add((r[2]||'').trim()); byNV[nv].ndon++;});
   let arr=Object.values(byNV).map(o=>({...o,lan:soLan(o.nv),lydoTxt:[...o.lydo].join(' · ')}));
   arr.sort((a,b)=>b.lan-a.lan||b.ndon-a.ndon);
-  window._khoaid={arr,latest,dmy};
+  // ngày khoá phổ biến nhất
+  const kc={}; arr.forEach(o=>{if(o.khoa)kc[o.khoa]=(kc[o.khoa]||0)+1;});
+  const khoa=Object.keys(kc).sort((a,b)=>kc[b]-kc[a])[0]||'';
+  // đoạn văn thông báo (dùng cho box dưới bảng + caption Telegram)
+  const noteHTML=`Ngày <b>${dmy(latest)}</b> thông báo có <b>${arr.length}</b> nhân viên vi phạm bị khoá ID vào ngày <b>${dmy(khoa)}</b>.<br>Chi tiết check tại link: <a href="${LINK}" target="_blank" style="color:#1D4ED8">${LINK}</a><br><b>Yêu cầu các AM vào check và xử lý giải trình để tránh ảnh hưởng đến vận hành.</b>`;
+  const noteTG=`Ngày ${dmy(latest)} thông báo có ${arr.length} nhân viên vi phạm bị khoá ID vào ngày ${dmy(khoa)}.\n\nChi tiết check tại link: ${LINK}\n\nYêu cầu các AM vào check và xử lý giải trình để tránh ảnh hưởng đến vận hành.`;
+  window._khoaid={arr,latest,dmy,noteTG};
   if(!arr.length){el.innerHTML='<div class="card"><p style="padding:16px;color:var(--text-sub)">Không có dữ liệu khoá ID.</p></div>';return;}
   const nRepeat=arr.filter(o=>o.lan>=2).length;
   const lanBg=n=>n>=3?'#DC2626':n>=2?'#F59E0B':'#E5E7EB';
   const lanCol=n=>n>=2?'#fff':'#374151';
   const body=arr.map((o,i)=>`<tr style="border-bottom:1px solid var(--border)">
-    <td style="padding:7px 8px;text-align:center;color:var(--text-sub)">${i+1}</td>
-    <td style="padding:7px 10px;font-weight:600;white-space:nowrap">${o.bc}<div style="font-size:10.5px;color:var(--text-sub);font-weight:400">${o.tinh}</div></td>
-    <td style="padding:7px 10px;font-weight:600;white-space:nowrap">${o.nv}</td>
-    <td style="padding:7px 10px;color:#374151">${o.lydoTxt||'—'}${o.ndon>1?`<span style="color:var(--text-sub);font-size:11px"> · ${o.ndon} đơn</span>`:''}</td>
-    <td style="text-align:center;padding:7px 8px;white-space:nowrap">${dmy(latest)}</td>
-    <td style="text-align:center;padding:7px 8px;white-space:nowrap;color:#B91C1C;font-weight:600">${dmy(o.khoa)}</td>
-    <td style="text-align:center;padding:7px 8px"><span style="background:${lanBg(o.lan)};color:${lanCol(o.lan)};padding:2px 10px;border-radius:8px;font-weight:800">${o.lan}</span></td></tr>`).join('');
-  const ana=`<div class="analysis-box" style="border-left-color:#DC2626;background:#FEF2F2"><b>📌 Nhận định:</b><br>
-    • Ngày thông báo mới nhất <b>${dmy(latest)}</b>: <b>${arr.length} nhân viên</b> bị khoá ID vi phạm.<br>
-    • Trong đó <b>${nRepeat} NV tái phạm</b> (vi phạm từ 2 lần trở lên tính trên toàn bộ lịch sử).<br>
-    • Mỗi NV chỉ hiển thị 1 dòng dù có nhiều đơn vi phạm trong ngày; cột "Số lần" đếm theo số ngày thông báo khác nhau.</div>`;
+    <td style="padding:7px 10px;text-align:center;color:var(--text-sub)">${i+1}</td>
+    <td style="padding:7px 12px;font-weight:600;white-space:nowrap">${o.bc}<div style="font-size:10.5px;color:var(--text-sub);font-weight:400">${o.tinh}</div></td>
+    <td style="padding:7px 12px;font-weight:600;white-space:nowrap">${o.nv}</td>
+    <td style="padding:7px 12px;color:#374151;white-space:nowrap">${o.lydoTxt||'—'}${o.ndon>1?`<span style="color:var(--text-sub);font-size:11px"> · ${o.ndon} đơn</span>`:''}</td>
+    <td style="text-align:center;padding:7px 12px;white-space:nowrap">${dmy(latest)}</td>
+    <td style="text-align:center;padding:7px 12px;white-space:nowrap;color:#B91C1C;font-weight:600">${dmy(o.khoa)}</td>
+    <td style="text-align:center;padding:7px 12px"><span style="background:${lanBg(o.lan)};color:${lanCol(o.lan)};padding:2px 10px;border-radius:8px;font-weight:800">${o.lan}</span></td></tr>`).join('');
   const ov=`<div class="card">
     <div style="font-weight:800;font-size:16px;margin-bottom:12px">🔒 Tổng quan Khoá ID vi phạm</div>
     <div style="display:flex;gap:14px;flex-wrap:wrap">
@@ -5046,20 +5046,21 @@ async function buildKhoaIDPage(){
        <div style="color:var(--text-sub);font-size:12px">NV tái phạm (≥ 2 lần)</div>
        <div style="font-size:30px;font-weight:800;color:#B45309">${nRepeat}</div></div>
      <div style="flex:1;min-width:160px;background:#F9FAFB;border-left:4px solid #9CA3AF;border-radius:10px;padding:14px 16px">
-       <div style="color:var(--text-sub);font-size:12px">Ngày thông báo</div>
-       <div style="font-size:24px;font-weight:800;color:#374151">${dmy(latest)}</div></div>
-    </div>
-    <div style="margin-top:10px;color:var(--text-sub);font-size:12px">* Lấy theo ngày thông báo mới nhất (cột H). Mỗi NV 1 dòng. "Số lần vi phạm" truy xuất toàn bộ lịch sử sheet.</div>
-   </div>`;
+       <div style="color:var(--text-sub);font-size:12px">Ngày khoá</div>
+       <div style="font-size:24px;font-weight:800;color:#374151">${dmy(khoa)}</div></div>
+    </div></div>`;
   const head=`<div class="page-header"><div class="page-title">🔒 Khoá ID vi phạm — XBG</div><div class="page-meta"><span style="color:var(--text-sub);font-size:12px">Nguồn: sheet Khoá ID vi phạm · ngày thông báo ${dmy(latest)}</span></div></div>`;
-  el.innerHTML=head+ov+`<div class="card" id="khoaidTbl" style="margin-top:16px;padding:16px">
+  const tableCard=`<div class="card" id="khoaidTbl" style="margin-top:16px;padding:16px;display:inline-block;max-width:100%">
     <div style="font-weight:800;font-size:15px;margin-bottom:11px">Danh sách NV bị khoá ID (số lần vi phạm cao → thấp)</div>
     <div class="table-wrap" style="max-height:660px;overflow:auto;border:1px solid var(--border);border-radius:10px">
-     <table style="border-collapse:collapse;width:100%;font-size:12.5px">
+     <table style="border-collapse:collapse;font-size:12.5px">
       <thead><tr>
-       ${['#','Bưu Cục / Tỉnh','NV vi phạm','Lý do','Ngày thông báo','Ngày khoá','Số lần vi phạm'].map((h,i)=>`<th style="position:sticky;top:0;z-index:2;background:#1F3864;color:#fff;padding:8px 10px;text-align:${i>=4?'center':'left'};white-space:nowrap">${h}</th>`).join('')}
+       ${['#','Bưu Cục / Tỉnh','NV vi phạm','Lý do','Ngày thông báo','Ngày khoá','Số lần vi phạm'].map((h,i)=>`<th style="position:sticky;top:0;z-index:2;background:#1F3864;color:#fff;padding:8px 12px;text-align:${i>=4?'center':'left'};white-space:nowrap">${h}</th>`).join('')}
       </tr></thead><tbody>${body}</tbody></table>
-    </div>${ana}</div>`;
+    </div></div>`;
+  const noteBox=`<div class="card" id="khoaidNote" style="margin-top:14px;border-left:4px solid #DC2626;background:#FEF2F2">
+    <div style="font-size:13.5px;line-height:1.85;color:#1F2937">${noteHTML}</div></div>`;
+  el.innerHTML=head+ov+tableCard+noteBox;
   injectTgBtn('p30',()=>sendKhoaIDToTelegram(),'Bắn Khoá ID TG');
  }catch(e){ el.innerHTML=`<div class="card"><p style="padding:16px;color:#DC2626">Lỗi tải dữ liệu khoá ID: ${e.message}</p></div>`; }
 }
@@ -5068,10 +5069,9 @@ async function sendKhoaIDToTelegram(){
  const btn=document.getElementById('tgInpage_p30'); if(btn){btn.disabled=true;btn.innerHTML='⏳ Đang gửi...';}
  try{
   const R=window._khoaid; if(!R)throw new Error('Chưa có dữ liệu');
-  const cap=`🔒 <b>DANH SÁCH NV BỊ KHOÁ ID VI PHẠM</b> — ngày thông báo ${R.dmy(R.latest)}\n${R.arr.length} nhân viên · ${R.arr.filter(o=>o.lan>=2).length} NV tái phạm (≥2 lần).`;
-  const img=await _captureEl('khoaidTbl');
-  let res=await _tgSendPhoto(TG_AGING_CHAT,1,img,cap); // thread 1 (topic General)
-  if(!res||!res.ok)res=await _tgSendDoc(TG_AGING_CHAT,1,img,cap);
+  const img=await _captureEl('khoaidTbl'); // chỉ chụp BẢNG (không tổng quan/analysis)
+  let res=await _tgSendPhoto(TG_AGING_CHAT,1,img,R.noteTG); // thread 1, caption = đoạn văn thông báo
+  if(!res||!res.ok)res=await _tgSendDoc(TG_AGING_CHAT,1,img,R.noteTG);
   if(res&&res.ok===false)throw new Error(res.description||'gửi thất bại');
   if(btn){btn.innerHTML='✅ Đã gửi';setTimeout(()=>{btn.disabled=false;btn.innerHTML='📤 Bắn Khoá ID TG';},2500);}
  }catch(e){ alert('Lỗi gửi Telegram: '+e.message); if(btn){btn.disabled=false;btn.innerHTML='📤 Bắn Khoá ID TG';} }
