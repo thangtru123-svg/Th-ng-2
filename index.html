@@ -390,7 +390,8 @@ const SHEET_ROTLC_ID='1kNe1tsvV_kqXqMUsr2pnxN9lfG3_CwGFyN5JtiVldrs'; // "Data r�
 const SHEET_ROTLC_GID='406146643';
 const SHEET_TONDONG_GID='397128643'; // sheet "Data tồn đọng chờ chuyển trả" (cùng file SHEET_ROTLC_ID)
 const SHEET_THUONG_ID='1dURlj_qQsWLjDBFeUylbWirWs0bPp3AkqLEggvx41Ks'; // Thưởng NS: sheet "Data NS " (hồ sơ), "Danh sách Bưu Cục tham gia", "Logic "
-const SHEET_KHOAID_GID='954997741'; // sheet "Khoá ID vi phạm" (trong SID chính)
+const SHEET_KHOAID_ID='1VB4bdj6dMftDF8RgTG_vpYPl3YaDF1RN28u-AKqC4zY'; // file "Khoá ID vi phạm" mới
+const SHEET_KHOAID_GID='0'; // Sheet1
 /* Cache Data_Voltotal (8MB): tải 1 lần/đợt cập nhật, dùng chung cho p18/p25/p26 thay vì tải 3 lần.
    Reset ở đầu init() nên mỗi lần bấm "Cập nhật dữ liệu" vẫn tải bản MỚI — số liệu không đổi. */
 let _volCSVCache=null;
@@ -5003,7 +5004,7 @@ async function buildKhoaIDPage(){
  const el=document.getElementById('p30'); if(!el)return;
  try{
   const LINK='https://docs.google.com/spreadsheets/d/1VB4bdj6dMftDF8RgTG_vpYPl3YaDF1RN28u-AKqC4zY/edit?gid=0#gid=0';
-  const url=`https://docs.google.com/spreadsheets/d/${SID}/export?format=csv&gid=${SHEET_KHOAID_GID}&_=${Date.now()}`;
+  const url=`https://docs.google.com/spreadsheets/d/${SHEET_KHOAID_ID}/export?format=csv&gid=${SHEET_KHOAID_GID}&_=${Date.now()}`;
   const rows=_vwParseCSV(await(await fetch(url)).text()).slice(1).filter(r=>r.length>8&&(r[0]||'').trim());
   const dmy=s=>{const m=/(\d{4})-(\d{2})-(\d{2})/.exec(s||'');return m?`${m[3]}/${m[2]}/${m[1]}`:(s||'—');};
   const datesByNV={};
