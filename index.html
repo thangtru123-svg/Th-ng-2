@@ -1454,7 +1454,7 @@ async function _tgSend(chatId,threadId,text){
 async function _tgSendPhoto(chatId,threadId,blob,caption){
  const form=new FormData();
  form.append('chat_id',chatId);
- form.append('message_thread_id',threadId);
+ if(threadId!=null&&threadId!=='')form.append('message_thread_id',threadId);
  form.append('photo',blob,'aging.png');
  if(caption){form.append('caption',caption);form.append('parse_mode','HTML');}
  const r=await fetch(`https://api.telegram.org/bot${TG_TOKEN}/sendPhoto`,{method:'POST',body:form,signal:AbortSignal.timeout(45000)});
@@ -1464,7 +1464,7 @@ async function _tgSendDoc(chatId,threadId,blob,caption){
  // Dùng sendDocument khi ảnh quá rộng (PHOTO_INVALID_DIMENSIONS)
  const form=new FormData();
  form.append('chat_id',chatId);
- form.append('message_thread_id',threadId);
+ if(threadId!=null&&threadId!=='')form.append('message_thread_id',threadId);
  form.append('document',blob,'dashboard.png');
  if(caption){form.append('caption',caption);form.append('parse_mode','HTML');}
  const r=await fetch(`https://api.telegram.org/bot${TG_TOKEN}/sendDocument`,{method:'POST',body:form,signal:AbortSignal.timeout(45000)});
@@ -5070,8 +5070,8 @@ async function sendKhoaIDToTelegram(){
  try{
   const R=window._khoaid; if(!R)throw new Error('Chưa có dữ liệu');
   const img=await _captureEl('khoaidTbl'); // chỉ chụp BẢNG (không tổng quan/analysis)
-  let res=await _tgSendPhoto(TG_AGING_CHAT,1,img,R.noteTG); // thread 1, caption = đoạn văn thông báo
-  if(!res||!res.ok)res=await _tgSendDoc(TG_AGING_CHAT,1,img,R.noteTG);
+  let res=await _tgSendPhoto(TG_AGING_CHAT,undefined,img,R.noteTG); // topic General → không kèm message_thread_id
+  if(!res||!res.ok)res=await _tgSendDoc(TG_AGING_CHAT,undefined,img,R.noteTG);
   if(res&&res.ok===false)throw new Error(res.description||'gửi thất bại');
   if(btn){btn.innerHTML='✅ Đã gửi';setTimeout(()=>{btn.disabled=false;btn.innerHTML='📤 Bắn Khoá ID TG';},2500);}
  }catch(e){ alert('Lỗi gửi Telegram: '+e.message); if(btn){btn.disabled=false;btn.innerHTML='📤 Bắn Khoá ID TG';} }
