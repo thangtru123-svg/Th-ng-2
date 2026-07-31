@@ -244,6 +244,7 @@ tr.tot td{background:#FFF0EB!important;font-weight:800!important;border-top:2px 
  <button class="nav-item" onclick="show('p19',this)"><span class="icon">🎯</span>GTC TTS Ca 1,2 theo BC</button>
  <button class="nav-item" onclick="show('p20',this)"><span class="icon">👷</span>Năng suất nhân viên</button>
  <button class="nav-item" onclick="show('p26',this)" style="background:linear-gradient(135deg,rgba(241,93,41,0.16),rgba(255,138,61,0.08));border:1px solid rgba(241,93,41,0.3);font-weight:700"><span class="icon">📈</span>Năng suất GTC — Bắc Giang</button>
+ <button class="nav-item" onclick="show('p31',this)" style="background:linear-gradient(135deg,rgba(220,38,38,0.16),rgba(241,93,41,0.08));border:1px solid rgba(220,38,38,0.32);font-weight:700"><span class="icon">🚨</span>Bưu Cục Bất Ổn XBG</button>
  <button class="nav-item" onclick="show('p21',this)"><span class="icon">💰</span>Tỉ lệ NVPTTT nộp COD</button>
  <div class="nav-section">Kinh Doanh</div>
  <button class="nav-item" onclick="show('p22',this)"><span class="icon">💼</span>Kinh Doanh XBG</button>
@@ -282,6 +283,7 @@ tr.tot td{background:#FFF0EB!important;font-weight:800!important;border-top:2px 
 <div class="page" id="p28"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
 <div class="page" id="p29"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
 <div class="page" id="p30"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
+<div class="page" id="p31"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
 </main>
 
 <script>
@@ -3497,6 +3499,8 @@ async function init(){
  await buildThuongPage();
  // p30 — Khoá ID vi phạm
  await buildKhoaIDPage();
+ // p31 — Bưu Cục Bất Ổn XBG
+ await buildBatOnPage();
  // p22 — Kinh Doanh XBG
  await buildKinhDoanhPage();
  // p0 — Tổng quan (sau khi có đủ data)
@@ -5076,6 +5080,159 @@ async function sendKhoaIDToTelegram(){
   if(res&&res.ok===false)throw new Error(res.description||'gửi thất bại');
   if(btn){btn.innerHTML='✅ Đã gửi';setTimeout(()=>{btn.disabled=false;btn.innerHTML='📤 Bắn Khoá ID TG';},2500);}
  }catch(e){ alert('Lỗi gửi Telegram: '+e.message); if(btn){btn.disabled=false;btn.innerHTML='📤 Bắn Khoá ID TG';} }
+}
+
+/* ===== DASHBOARD 31: BƯU CỤC BẤT ỔN — VÙNG XBG (p31) ===== */
+/* BC bất ổn lấy từ sheet Aging cột M (Note='Bưu Cục bất ổn'), ngày mới nhất — toàn Vùng XBG (6 tỉnh).
+   Mỗi BC: đơn tồn aging (phân nhóm ngày theo Nhóm BL) + bảng năng suất NV giống p26 (gid 1723871284)
+   + %GTC Bưu Cục = GTC ÷ (hàng mới+tồn) từ Data_Voltotal. Nguồn cập nhật hàng ngày. */
+async function buildBatOnPage(){
+ const el=document.getElementById('p31');if(!el)return;
+ try{
+  const [agTxt,nsTxt,volTxt]=await Promise.all([
+   fetch(`https://docs.google.com/spreadsheets/d/${AGING_SHEET_ID}/export?format=csv&gid=${AGING_GID}&_=${Date.now()}`).then(r=>r.text()),
+   fetch(`https://docs.google.com/spreadsheets/d/${SID}/gviz/tq?tqx=out:csv&gid=1723871284&_=${Date.now()}`).then(r=>r.text()),
+   _getVolCSV()
+  ]);
+  // ── Aging: xác định BC bất ổn ngày mới nhất ──
+  const ag=_vwParseCSV(agTxt).slice(1).filter(r=>r.length>12);
+  const agDates=[...new Set(ag.map(r=>r[11]).filter(d=>d&&d.startsWith('2026')))].sort();
+  if(!agDates.length){el.innerHTML=errPage('Không có dữ liệu Aging');return;}
+  const agLatest=agDates[agDates.length-1],agPrev=agDates[agDates.length-2];
+  const bcAg={};   // bc -> {bc,tinh,am,cnt,prev,g:{g1..g4}}
+  ag.filter(r=>r[11]===agLatest&&(r[12]||'').includes('bất ổn')).forEach(r=>{
+   const bc=(r[2]||'').trim();if(!bc)return;
+   if(!bcAg[bc])bcAg[bc]={bc,tinh:(r[1]||'').trim(),am:(r[10]||'').trim(),cnt:0,prev:0,g:{g1:0,g2:0,g3:0,g4:0}};
+   bcAg[bc].cnt++;bcAg[bc].g[_agBLGroup(r)]++;});
+  if(agPrev)ag.filter(r=>r[11]===agPrev).forEach(r=>{const bc=(r[2]||'').trim();if(bcAg[bc])bcAg[bc].prev++;});
+  const arr=Object.values(bcAg).sort((a,b)=>b.cnt-a.cnt);
+  if(!arr.length){el.innerHTML=`<div class="page-header"><div class="page-title">🚨 Bưu Cục Bất Ổn — Vùng XBG</div></div><div class="card"><p style="padding:16px;color:var(--green)">🟢 Ngày ${agingFmtDate(agLatest)}: không có Bưu Cục bất ổn nào trong Vùng XBG.</p></div>`;return;}
+  // ── Năng suất NV (chỉ giữ BC bất ổn) ──
+  const nsRows=_vwParseCSV(nsTxt).slice(1);
+  const nsDates=[...new Set(nsRows.map(x=>isoD(x[2])).filter(Boolean))].sort();
+  const last7=nsDates.slice(-7);
+  const NS={};   // bc -> nv -> {am,days}
+  nsRows.forEach(x=>{const bc=(x[0]||'').trim();if(!bcAg[bc])return;
+   const nv=(x[1]||'').trim(),d=isoD(x[2]);if(!nv||!d)return;
+   NS[bc]=NS[bc]||{};if(!NS[bc][nv])NS[bc][nv]={am:(x[7]||'').trim(),days:{}};
+   NS[bc][nv].days[d]={gan:_vwNum(x[3]),gtc:_vwNum(x[4])};});
+  // ── Volume hàng mới+tồn (toàn Vùng, chỉ BC bất ổn) ──
+  const vr=_vwParseCSV(volTxt);const vAgg={},vDates=new Set();
+  for(let i=1;i<vr.length;i++){const r=vr[i];const bc=(r[1]||'').trim();if(!bcAg[bc])continue;
+   const loai=(r[2]||'').trim(),d=isoD(r[4]);if(!d||!loai)continue;vDates.add(d);
+   vAgg[bc+'|'+loai+'|'+d]=(vAgg[bc+'|'+loai+'|'+d]||0)+_vwNum(r[5]);}
+  const vLatest=[...vDates].sort().pop()||'';
+  const _hm=(bc,d)=>(vAgg[bc+'|Hàng Mới Ca 1|'+d]||0)+(vAgg[bc+'|Hàng Mới Ca 2|'+d]||0);
+  const _ton=(bc,d)=>vAgg[bc+'|Hàng Tồn|'+d]||0;
+  const volOf=bc=>{let hm7=0,ton7=0;last7.forEach(d=>{hm7+=_hm(bc,d);ton7+=_ton(bc,d);});
+   return{hm7,ton7,vol7:hm7+ton7,hmL:_hm(bc,vLatest),tonL:_ton(bc,vLatest),d:vLatest};};
+  el.innerHTML=_batOnRender(arr,NS,last7,volOf,agLatest,agPrev);
+ }catch(e){el.innerHTML=errPage('Không thể tải Bưu Cục Bất Ổn: '+e.message);}
+}
+
+function _batOnRender(arr,NS,last7,volOf,agLatest,agPrev){
+ const wRange=last7.length?`${_vwFmtDMY(last7[0])}–${_vwFmtDMY(last7[last7.length-1])}`:'—';
+ const totCnt=arr.reduce((s,o)=>s+o.cnt,0),totPrev=arr.reduce((s,o)=>s+o.prev,0);
+ const provinces=[...new Set(arr.map(o=>o.tinh).filter(Boolean))];
+ let totFlag=0,totNV=0;
+ const tgData=[];let cards='';
+ arr.forEach((o,ci)=>{
+  const nvMap=NS[o.bc]||{};const hasNS=Object.keys(nvMap).length>0;
+  // gộp NV (đơn gán >1) + số NV kém
+  const active=[],flagged=[];let sg=0,sgtc=0;
+  Object.keys(nvMap).forEach(nv=>{let g=0,gt=0;last7.forEach(d=>{const r=nvMap[nv].days[d];if(r){g+=r.gan;gt+=r.gtc;}});
+   sg+=g;sgtc+=gt;if(g>1){active.push(nv);const s=_nsWeakDays(nvMap[nv].days,last7);if(s>=3)flagged.push({name:_nsNvName(nv),s,rate:g>0?gt/g:0});}});
+  flagged.sort((a,b)=>b.s-a.s);
+  totFlag+=flagged.length;totNV+=active.length;
+  const v=volOf(o.bc);const rateBC=v.vol7>0?sgtc/v.vol7:0;
+  const dAg=o.cnt-o.prev;
+  // ── stat chips aging ──
+  const chip=(lb,val,col,sub)=>`<div style="flex:1;min-width:110px;background:#fff;border:1px solid var(--border);border-left:4px solid ${col};border-radius:10px;padding:9px 12px">
+    <div style="color:var(--text-sub);font-size:11px">${lb}</div><div style="font-size:20px;font-weight:800;color:${col}">${val}</div>${sub?`<div style="font-size:10.5px;color:var(--text-sub)">${sub}</div>`:''}</div>`;
+  const trendTxt=agPrev?(dAg<0?`<span style="color:var(--green)">▼ giảm ${fmt(-dAg)} đơn</span>`:dAg>0?`<span style="color:var(--red)">▲ tăng ${fmt(dAg)} đơn</span>`:'<span style="color:var(--text-sub)">không đổi</span>'):'—';
+  const agStrip=`<div style="display:flex;gap:10px;flex-wrap:wrap;padding:2px 16px 12px">
+    ${chip('Đơn tồn aging '+agingFmtDate(agLatest),fmt(o.cnt)+' đơn','var(--red)',agPrev?`N-1: ${fmt(o.prev)} đơn`:'')}
+    ${chip('So ngày trước',trendTxt,dAg>0?'var(--red)':dAg<0?'var(--green)':'#9CA3AF','')}
+    ${chip('5-7 ngày',fmt(o.g.g1)+' đơn','#D97706','')}
+    ${chip('8-10 ngày',fmt(o.g.g2)+' đơn','#EA580C','')}
+    ${chip('11-15 ngày',fmt(o.g.g3)+' đơn','#DC2626','')}
+    ${chip('&gt;15 ngày',fmt(o.g.g4)+' đơn','#991B1B','tồn lâu nhất')}
+   </div>`;
+  // ── phân tích (mỗi ý một dòng) ──
+  let ana=`🚨 <strong>${o.bc}</strong> (${o.tinh}) — AM ${o.am||'—'} · <strong style="color:var(--red)">BƯU CỤC BẤT ỔN</strong> theo aging ngày ${agingFmtDate(agLatest)}.<br>`;
+  ana+=`Đơn tồn aging: <strong style="color:var(--red)">${fmt(o.cnt)} đơn</strong>`+(agPrev?` · N-1 (${agingFmtDate(agPrev)}): ${fmt(o.prev)} đơn · ${trendTxt}.`:'.')+`<br>`;
+  ana+=`Phân nhóm ngày tồn: 5-7 ngày ${fmt(o.g.g1)} đơn · 8-10 ngày ${fmt(o.g.g2)} đơn · 11-15 ngày ${fmt(o.g.g3)} đơn · &gt;15 ngày <strong style="color:#991B1B">${fmt(o.g.g4)} đơn</strong>.<br>`;
+  if(hasNS){
+   ana+=`Năng suất 7 ngày (${wRange}): <strong>${active.length} NV</strong> (đơn gán > 1) · Tổng GTC <strong>${fmt(sgtc)} đơn</strong> · Volume hàng mới+tồn <strong>${fmt(v.vol7)} đơn</strong> (mới ${fmt(v.hm7)} + tồn ${fmt(v.ton7)}).<br>`;
+   ana+=`%GTC Bưu Cục (GTC ÷ hàng mới+tồn): <strong style="color:${_nsGtcColor(rateBC)}">${(rateBC*100).toFixed(1)}%</strong>.<br>`;
+   ana+=`Hàng về ngày ${_vwFmtDMY(v.d)}: hàng mới (Ca1+2) <strong>${fmt(v.hmL)} đơn</strong> · hàng tồn <strong style="color:${v.tonL>=v.hmL?'var(--red)':'var(--text-sub)'}">${fmt(v.tonL)} đơn</strong>.<br>`;
+   if(flagged.length){
+    ana+=`🔴 <strong>${flagged.length}/${active.length} NV kém</strong> (%GTC cá nhân &lt;50% từ 3/7 ngày trở lên):<br>`;
+    flagged.forEach(f=>{ana+=`&nbsp;&nbsp;• <strong>${f.name}</strong> — yếu ${f.s}/7 ngày, %GTC cá nhân 7 ngày ${(f.rate*100).toFixed(1)}%.<br>`;});
+   }else ana+=`🟢 Không có NV kém (yếu ≥ 3/7 ngày).<br>`;
+   const ratio=v.ton7/(v.hm7||1);
+   ana+=(rateBC<0.5||o.g.g3+o.g.g4>0||ratio>=1)
+     ?`⚠️ <strong style="color:var(--red)">RỦI RO ứ đọng</strong>: đơn tồn lâu + %GTC ${(rateBC*100).toFixed(1)}% (tỉ lệ tồn/mới ${ratio.toFixed(2)}) → cần can thiệp giải phóng hàng tồn & nhóm NV yếu ngay.`
+     :`Cần theo dõi sát, đẩy nhanh xử lý để đưa BC ra khỏi trạng thái bất ổn.`;
+  }else{
+   ana+=`⚠️ Không có dữ liệu năng suất nhân viên cho bưu cục này trong sheet năng suất — chỉ theo dõi qua đơn tồn aging.`;
+  }
+  tgData.push({bc:o.bc,tinh:o.tinh,cnt:o.cnt});
+  cards+=`<div class="card" id="batonCard_${ci}">
+    <div class="card-header"><div class="card-title"><div class="card-icon">🚨</div>${o.bc}</div>
+     <div class="card-info">${o.tinh} · AM ${o.am||'—'} · ${fmt(o.cnt)} đơn tồn${hasNS?` · ${active.length} NV · ${flagged.length} NV kém`:''}</div></div>
+    ${agStrip}
+    ${hasNS?_nsBCTable(o.bc,nvMap,last7):'<div style="padding:6px 16px 12px;color:var(--text-sub);font-size:13px">Không có dữ liệu năng suất nhân viên cho bưu cục này.</div>'}
+    <div class="analysis-box" style="margin:14px 16px 16px">${ana}</div>
+   </div>`;
+ });
+ window._BATON={agLatest,agPrev,totCnt,totPrev,nBC:arr.length,provinces,totNV,totFlag,rows:tgData};
+ const dTot=totCnt-totPrev;
+ const ov=`<div class="card"><div style="display:flex;gap:14px;flex-wrap:wrap">
+   <div style="flex:1;min-width:150px;background:#FEF2F2;border-left:4px solid #DC2626;border-radius:10px;padding:14px 16px"><div style="color:var(--text-sub);font-size:12px">BC bất ổn ngày ${agingFmtDate(agLatest)}</div><div style="font-size:30px;font-weight:800;color:#B91C1C">${arr.length}</div><div style="font-size:11px;color:var(--text-sub)">${provinces.length} tỉnh: ${provinces.join(', ')}</div></div>
+   <div style="flex:1;min-width:150px;background:#FFF7ED;border-left:4px solid var(--orange);border-radius:10px;padding:14px 16px"><div style="color:var(--text-sub);font-size:12px">Tổng đơn tồn aging BC bất ổn</div><div style="font-size:30px;font-weight:800;color:var(--orange-dark)">${fmt(totCnt)}</div><div style="font-size:11px;color:${dTot>0?'var(--red)':dTot<0?'var(--green)':'var(--text-sub)'}">${agPrev?(dTot>0?`▲ +${fmt(dTot)}`:dTot<0?`▼ ${fmt(-dTot)}`:'không đổi')+' so N-1':''}</div></div>
+   <div style="flex:1;min-width:150px;background:#F9FAFB;border-left:4px solid #6B7280;border-radius:10px;padding:14px 16px"><div style="color:var(--text-sub);font-size:12px">NV trong BC bất ổn (đơn gán > 1)</div><div style="font-size:30px;font-weight:800;color:#374151">${fmt(totNV)}</div></div>
+   <div style="flex:1;min-width:150px;background:#FEF2F2;border-left:4px solid #DC2626;border-radius:10px;padding:14px 16px"><div style="color:var(--text-sub);font-size:12px">🔴 NV kém trong BC bất ổn</div><div style="font-size:30px;font-weight:800;color:#B91C1C">${fmt(totFlag)}</div><div style="font-size:11px;color:var(--text-sub)">%GTC cá nhân &lt;50% ≥ 3/7 ngày</div></div>
+  </div></div>`;
+ return`<div class="page-header">
+   <div class="page-title">🚨 Bưu Cục Bất Ổn — Vùng XBG</div>
+   <div class="page-meta"><span class="tag tag-orange">Aging ngày ${agingFmtDate(agLatest)}</span>
+    <span class="tag">${arr.length} Bưu Cục bất ổn · ${provinces.length} tỉnh</span>
+    <span class="tag">Năng suất 7 ngày: ${wRange}</span>
+    <span class="tag" style="background:var(--red-bg);color:var(--red)">🔴 ${totFlag} NV kém</span>
+    <span class="tag">Nguồn: sheet Aging (cột Note) · cập nhật hàng ngày · %GTC BC = GTC ÷ (hàng mới+tồn)</span>
+    <button class="tg-inpage-btn" onclick="sendBatOnToTelegram(this)">📤 Bắn Bưu Cục Bất Ổn TG</button></div>
+  </div>${ov}${cards}`;
+}
+
+/* Bắn p31 lên topic Aging/Backlog: 1 tin tổng quan + mỗi BC bất ổn 1 ảnh (đơn tồn + năng suất) */
+async function sendBatOnToTelegram(btn){
+ const D=window._BATON;
+ if(!D||!D.rows||!D.rows.length){alert('Chưa có dữ liệu — hãy đợi trang tải xong.');return;}
+ const p31=document.getElementById('p31');
+ if(!p31||!p31.classList.contains('active')){alert('Hãy mở trang "Bưu Cục Bất Ổn XBG" trước khi bắn.');return;}
+ const old=btn?btn.textContent:'';if(btn){btn.disabled=true;}
+ let okN=0;const total=1+D.rows.length;
+ let head=`🚨 <b>BƯU CỤC BẤT ỔN — VÙNG XBG</b>\n`;
+ head+=`Aging ngày ${agingFmtDate(D.agLatest)}\n`;
+ head+=`${D.nBC} Bưu Cục bất ổn · ${D.provinces.length} tỉnh (${D.provinces.join(', ')})\n`;
+ head+=`Tổng đơn tồn: ${fmt(D.totCnt)} đơn · 🔴 ${fmt(D.totFlag)} NV kém\n`;
+ head+=`Chi tiết đơn tồn + năng suất NV từng BC ở các ảnh bên dưới.`;
+ if(btn)btn.textContent='⏳ Bắn tổng quan...';
+ try{const r=await _tgSend(TG_AGING_CHAT,TG_AGING_THREAD,head);if(r&&r.ok)okN++;else console.warn('[BATON head]',r&&r.description);}catch(e){console.warn('[BATON head]',e.message);}
+ await new Promise(r=>setTimeout(r,400));
+ for(let i=0;i<D.rows.length;i++){
+  const row=D.rows[i];
+  if(btn)btn.textContent=`⏳ ${i+1}/${D.rows.length}: ${row.bc}`;
+  const cap=`🚨 <b>${row.bc}</b> (${row.tinh}) — ${fmt(row.cnt)} đơn tồn`;
+  try{
+   const img=await _captureEl('batonCard_'+i,2,false);
+   const res=await _tgSendDoc(TG_AGING_CHAT,TG_AGING_THREAD,img,cap);
+   if(res&&res.ok)okN++;else console.warn('[BATON '+row.bc+']',res&&res.description);
+  }catch(e){console.warn('[BATON '+row.bc+']',e.message);}
+  await new Promise(r=>setTimeout(r,400));
+ }
+ if(btn){btn.textContent=okN>=total?'✅ Đã bắn xong':`⚠️ Bắn ${okN}/${total}`;setTimeout(()=>{btn.textContent=old;btn.disabled=false;},5000);}
 }
 
 async function buildCODPage(){
