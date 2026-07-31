@@ -5146,18 +5146,7 @@ function _batOnRender(arr,NS,last7,volOf,agLatest,agPrev){
   totFlag+=flagged.length;totNV+=active.length;
   const v=volOf(o.bc);const rateBC=v.vol7>0?sgtc/v.vol7:0;
   const dAg=o.cnt-o.prev;
-  // ── stat chips aging ──
-  const chip=(lb,val,col,sub)=>`<div style="flex:1;min-width:110px;background:#fff;border:1px solid var(--border);border-left:4px solid ${col};border-radius:10px;padding:9px 12px">
-    <div style="color:var(--text-sub);font-size:11px">${lb}</div><div style="font-size:20px;font-weight:800;color:${col}">${val}</div>${sub?`<div style="font-size:10.5px;color:var(--text-sub)">${sub}</div>`:''}</div>`;
   const trendTxt=agPrev?(dAg<0?`<span style="color:var(--green)">▼ giảm ${fmt(-dAg)} đơn</span>`:dAg>0?`<span style="color:var(--red)">▲ tăng ${fmt(dAg)} đơn</span>`:'<span style="color:var(--text-sub)">không đổi</span>'):'—';
-  const agStrip=`<div style="display:flex;gap:10px;flex-wrap:wrap;padding:2px 16px 12px">
-    ${chip('Đơn tồn aging '+agingFmtDate(agLatest),fmt(o.cnt)+' đơn','var(--red)',agPrev?`N-1: ${fmt(o.prev)} đơn`:'')}
-    ${chip('So ngày trước',trendTxt,dAg>0?'var(--red)':dAg<0?'var(--green)':'#9CA3AF','')}
-    ${chip('5-7 ngày',fmt(o.g.g1)+' đơn','#D97706','')}
-    ${chip('8-10 ngày',fmt(o.g.g2)+' đơn','#EA580C','')}
-    ${chip('11-15 ngày',fmt(o.g.g3)+' đơn','#DC2626','')}
-    ${chip('&gt;15 ngày',fmt(o.g.g4)+' đơn','#991B1B','tồn lâu nhất')}
-   </div>`;
   // ── phân tích (mỗi ý một dòng) ──
   let ana=`🚨 <strong>${o.bc}</strong> (${o.tinh}) — AM ${o.am||'—'} · <strong style="color:var(--red)">BƯU CỤC BẤT ỔN</strong> theo aging ngày ${agingFmtDate(agLatest)}.<br>`;
   ana+=`Đơn tồn aging: <strong style="color:var(--red)">${fmt(o.cnt)} đơn</strong>`+(agPrev?` · N-1 (${agingFmtDate(agPrev)}): ${fmt(o.prev)} đơn · ${trendTxt}.`:'.')+`<br>`;
@@ -5181,7 +5170,6 @@ function _batOnRender(arr,NS,last7,volOf,agLatest,agPrev){
   cards+=`<div class="card" id="batonCard_${ci}">
     <div class="card-header"><div class="card-title"><div class="card-icon">🚨</div>${o.bc}</div>
      <div class="card-info">${o.tinh} · AM ${o.am||'—'} · ${fmt(o.cnt)} đơn tồn${hasNS?` · ${active.length} NV · ${flagged.length} NV kém`:''}</div></div>
-    ${agStrip}
     ${hasNS?_nsBCTable(o.bc,nvMap,last7):'<div style="padding:6px 16px 12px;color:var(--text-sub);font-size:13px">Không có dữ liệu năng suất nhân viên cho bưu cục này.</div>'}
     <div class="analysis-box" style="margin:14px 16px 16px">${ana}</div>
    </div>`;
