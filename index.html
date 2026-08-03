@@ -224,6 +224,7 @@ tr.tot td{background:#FFF0EB!important;font-weight:800!important;border-top:2px 
  <button class="nav-item" onclick="show('p28',this)" style="background:linear-gradient(135deg,rgba(220,38,38,0.16),rgba(241,93,41,0.08));border:1px solid rgba(220,38,38,0.32);font-weight:700"><span class="icon">📦</span>Tồn đọng chờ chuyển trả</button>
  <button class="nav-item" onclick="show('p29',this)" style="background:linear-gradient(135deg,rgba(22,101,52,0.14),rgba(34,197,94,0.08));border:1px solid rgba(22,101,52,0.3);font-weight:700"><span class="icon">🎁</span>Thưởng Năng Suất NV Mới</button>
  <button class="nav-item" onclick="show('p30',this)" style="background:linear-gradient(135deg,rgba(220,38,38,0.16),rgba(241,93,41,0.08));border:1px solid rgba(220,38,38,0.32);font-weight:700"><span class="icon">🔒</span>Khoá ID vi phạm</button>
+ <button class="nav-item" onclick="show('p31',this)" style="background:linear-gradient(135deg,rgba(37,99,235,0.14),rgba(59,130,246,0.08));border:1px solid rgba(37,99,235,0.3);font-weight:700"><span class="icon">📑</span>Báo Cáo Tồn / LC / 48H</button>
  <div class="nav-section">GTC</div>
  <button class="nav-item" onclick="show('p1',this)"><span class="icon">📦</span>Tổng quan GTC Total</button>
  <button class="nav-item" onclick="show('p2',this)"><span class="icon">🎯</span>Tổng quan GTC TTS</button>
@@ -371,6 +372,7 @@ function injectAllTgBtns(){
  injectTgBtn('p27',()=>sendRotLCToTelegram(),'Bắn Rớt LC TG');
  injectTgBtn('p28',()=>sendTonDongToTelegram(),'Bắn Tồn đọng TG');
  injectTgBtn('p30',()=>sendKhoaIDToTelegram(),'Bắn Khoá ID TG');
+ injectTgBtn('p31',()=>sendBaoCaoToTelegram(),'Bắn Task Thắng TG');
 }
 function fmt(n){return(+n||0).toLocaleString('vi-VN');}
 function isoD(d){return(d||'').match(/\d{4}-\d{2}-\d{2}/)?.[0]||'';}
@@ -394,6 +396,9 @@ const SHEET_TONDONG_GID='397128643'; // sheet "Data tồn đọng chờ chuyển
 const SHEET_THUONG_ID='1dURlj_qQsWLjDBFeUylbWirWs0bPp3AkqLEggvx41Ks'; // Thưởng NS: sheet "Data NS " (hồ sơ), "Danh sách Bưu Cục tham gia", "Logic "
 const SHEET_KHOAID_ID='1VB4bdj6dMftDF8RgTG_vpYPl3YaDF1RN28u-AKqC4zY'; // file "Khoá ID vi phạm" mới
 const SHEET_KHOAID_GID='0'; // Sheet1
+const SHEET_BAOCAO_ID='18-oZRCYgehTY84K9ylQAkVU3DzDl9yyfQ6eUSI9139M'; // file có sheet "Báo cáo" (LC/Tồn đọng/48H)
+const SHEET_BAOCAO_GID='1603810887';
+const TG_TASK_CHAT=-619907023; // group "Task Thắng" (group thường, không topic)
 /* Cache Data_Voltotal (8MB): tải 1 lần/đợt cập nhật, dùng chung cho p18/p25/p26 thay vì tải 3 lần.
    Reset ở đầu init() nên mỗi lần bấm "Cập nhật dữ liệu" vẫn tải bản MỚI — số liệu không đổi. */
 let _volCSVCache=null;
@@ -3499,6 +3504,8 @@ async function init(){
  await buildThuongPage();
  // p30 — Khoá ID vi phạm
  await buildKhoaIDPage();
+ // p31 — Báo cáo Tồn/LC/48H
+ await buildBaoCaoPage();
  // p31 — Bưu Cục Bất Ổn XBG
  await buildBatOnPage();
  // p22 — Kinh Doanh XBG
@@ -5221,6 +5228,89 @@ async function sendBatOnToTelegram(btn){
   await new Promise(r=>setTimeout(r,400));
  }
  if(btn){btn.textContent=okN>=total?'✅ Đã bắn xong':`⚠️ Bắn ${okN}/${total}`;setTimeout(()=>{btn.textContent=old;btn.disabled=false;},5000);}
+}
+
+/* ===== DASHBOARD 31: BÁO CÁO TỒN / LC / 48H (p31) ===== */
+/* Nguồn: sheet "Báo cáo" (SHEET_BAOCAO). 2 khối cột:
+   - Khối trái (cột B): LC GIao · LC Trả · Tồn đọng · 48H Chưa gán · 48H TTS Chưa gán
+   - Khối phải (cột N): Tồn trả Shop
+   Mỗi bảng: tiêu đề → header (AM/back_log) → data rows → dòng Tổng/Total. */
+async function buildBaoCaoPage(){
+ const el=document.getElementById('p31'); if(!el)return;
+ try{
+  const url=`https://docs.google.com/spreadsheets/d/${SHEET_BAOCAO_ID}/export?format=csv&gid=${SHEET_BAOCAO_GID}&_=${Date.now()}`;
+  const rows=_vwParseCSV(await(await fetch(url)).text());
+  const num=v=>{v=(v||'').trim();if(!v||v==='-')return 0;return parseInt(v.replace(/[.,\s]/g,''))||0;};
+  function parseBlock(sc,ec,titles){
+   const out=[];let cur=null;
+   for(const r of rows){
+    const c=(r[sc]||'').trim();
+    if(titles.includes(c)){cur={title:c,header:null,rows:[],total:null};out.push(cur);continue;}
+    if(!cur)continue;
+    if(c==='AM'||c==='back_log'){const h=[];for(let i=sc;i<ec;i++){const v=(r[i]||'').trim();if(v)h.push({label:v,col:i});}cur.header=h;continue;}
+    if(c==='Tổng'||c==='Total'){if(cur.header)cur.total=cur.header.map(x=>(r[x.col]||'').trim());cur=null;continue;}
+    if(c&&cur.header)cur.rows.push(cur.header.map(x=>(r[x.col]||'').trim()));
+   }
+   return out.filter(t=>t.header&&t.rows.length);
+  }
+  const left=parseBlock(1,13,['LC GIao','LC Trả','Tồn đọng','48H Chưa gán','48H TTS Chưa gán']);
+  const right=parseBlock(14,24,['Tồn trả Shop']);
+  // sắp: LC Giao, LC Trả, Tồn trả Shop, Tồn đọng, 48H Chưa gán, 48H TTS
+  const byT={};[...left,...right].forEach(t=>byT[t.title]=t);
+  const order=['LC GIao','LC Trả','Tồn trả Shop','Tồn đọng','48H Chưa gán','48H TTS Chưa gán'];
+  const tables=order.map(t=>byT[t]).filter(Boolean);
+  window._baocao={tables};
+  if(!tables.length){el.innerHTML='<div class="card"><p style="padding:16px;color:var(--text-sub)">Không đọc được bảng nào từ sheet Báo cáo.</p></div>';return;}
+  const bg=(v,mx)=>{if(!v||!mx)return'#fff';const r=v/mx;return r>=.6?'#F4B0A0':r>=.35?'#F8CBAD':r>=.15?'#FCE4D6':'#FDF3EE';};
+  function render(t,idx){
+   const H=t.header;
+   // max mỗi cột số (bỏ cột 0 = tên, và cột nhãn "Tổng")
+   const numCols=H.map((h,ci)=>ci>0);
+   const colMax=H.map((h,ci)=>ci===0?0:Math.max(1,...t.rows.map(rw=>num(rw[ci]))));
+   const th=H.map((h,ci)=>`<th style="position:sticky;top:0;z-index:2;background:#1F3864;color:#fff;padding:7px 9px;font-size:11px;text-align:${ci===0?'left':'center'};white-space:nowrap">${h.label}</th>`).join('');
+   const body=t.rows.map((rw,i)=>{
+    const isKCT=/^KCT|^Total|^Tổng/i.test(rw[0]||'');
+    const tds=rw.map((v,ci)=>{
+     if(ci===0)return `<td style="padding:5px 9px;font-weight:600;white-space:nowrap${isKCT?';color:#6B7280':''}">${v||'—'}</td>`;
+     const nv=num(v);const last=/Tổng/i.test(H[ci].label);
+     return `<td style="text-align:center;padding:5px 9px;background:${last?'#FFF3EA':bg(nv,colMax[ci])};font-weight:${last?'800':(nv/colMax[ci]>=.6?'700':'500')};color:${last?'var(--orange-dark)':'#1F2937'}">${v||'—'}</td>`;
+    }).join('');
+    return `<tr style="border-bottom:1px solid var(--border)">${tds}</tr>`;
+   }).join('');
+   let totRow='';
+   if(t.total){
+    totRow=`<tr style="background:#DCE6F1;border-top:2px solid #A9C0DF;font-weight:800">`+t.total.map((v,ci)=>`<td style="padding:6px 9px;text-align:${ci===0?'left':'center'};color:#1F3864">${v||''}</td>`).join('')+`</tr>`;
+   }
+   const icon={'LC GIao':'🔄','LC Trả':'↩️','Tồn trả Shop':'🏪','Tồn đọng':'📦','48H Chưa gán':'⏰','48H TTS Chưa gán':'⏰'}[t.title]||'📋';
+   return `<div class="card" id="bcCard_${idx}" style="margin-top:16px;padding:16px">
+     <div style="font-weight:800;font-size:15px;margin-bottom:11px">${icon} ${t.title}</div>
+     <div class="table-wrap" style="max-height:560px;overflow:auto;border:1px solid var(--border);border-radius:10px">
+      <table style="border-collapse:collapse;font-size:12px"><thead><tr>${th}</tr></thead><tbody>${body}${totRow}</tbody></table>
+     </div></div>`;
+  }
+  const head=`<div class="page-header"><div class="page-title">📑 Báo Cáo Tồn / LC / 48H — XBG</div><div class="page-meta"><span style="color:var(--text-sub);font-size:12px">Nguồn: sheet Báo cáo · ${tables.length} bảng</span></div></div>`;
+  el.innerHTML=head+tables.map((t,i)=>render(t,i)).join('');
+  injectTgBtn('p31',()=>sendBaoCaoToTelegram(),'Bắn Task Thắng TG');
+ }catch(e){ el.innerHTML=`<div class="card"><p style="padding:16px;color:#DC2626">Lỗi tải Báo cáo: ${e.message}</p></div>`; }
+}
+
+async function sendBaoCaoToTelegram(){
+ const btn=document.getElementById('tgInpage_p31'); if(btn){btn.disabled=true;btn.innerHTML='⏳ Đang gửi...';}
+ try{
+  const D=window._baocao; if(!D||!D.tables.length)throw new Error('Chưa có dữ liệu');
+  await _tgSend(TG_TASK_CHAT,undefined,`📑 <b>BÁO CÁO TỒN / LC / 48H — XBG</b>\n${D.tables.length} bảng · cập nhật lúc ${new Date().toLocaleString('vi-VN')}`);
+  await new Promise(r=>setTimeout(r,400));
+  for(let i=0;i<D.tables.length;i++){
+   if(btn)btn.innerHTML=`⏳ ${i+1}/${D.tables.length}: ${D.tables[i].title}`;
+   try{
+    const img=await _captureEl('bcCard_'+i,2,false);
+    let res=await _tgSendPhoto(TG_TASK_CHAT,undefined,img,'📋 '+D.tables[i].title);
+    if(!res||!res.ok)res=await _tgSendDoc(TG_TASK_CHAT,undefined,img,'📋 '+D.tables[i].title);
+   }catch(e){console.warn('[BC '+D.tables[i].title+']',e.message);}
+   await new Promise(r=>setTimeout(r,500));
+  }
+  if(btn){btn.innerHTML='✅ Đã gửi';setTimeout(()=>{btn.disabled=false;btn.innerHTML='📤 Bắn Task Thắng TG';},2500);}
+ }catch(e){ alert('Lỗi gửi Telegram: '+e.message); if(btn){btn.disabled=false;btn.innerHTML='📤 Bắn Task Thắng TG';} }
 }
 
 async function buildCODPage(){
