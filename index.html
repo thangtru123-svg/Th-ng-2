@@ -246,7 +246,6 @@ tr.tot td{background:#FFF0EB!important;font-weight:800!important;border-top:2px 
  <button class="nav-item" onclick="show('p20',this)"><span class="icon">👷</span>Năng suất nhân viên</button>
  <button class="nav-item" onclick="show('p26',this)" style="background:linear-gradient(135deg,rgba(241,93,41,0.16),rgba(255,138,61,0.08));border:1px solid rgba(241,93,41,0.3);font-weight:700"><span class="icon">📈</span>Năng suất GTC — Bắc Giang</button>
  <button class="nav-item" onclick="show('p31',this)" style="background:linear-gradient(135deg,rgba(220,38,38,0.16),rgba(241,93,41,0.08));border:1px solid rgba(220,38,38,0.32);font-weight:700"><span class="icon">🚨</span>Bưu Cục Bất Ổn XBG</button>
- <button class="nav-item" onclick="show('p21',this)"><span class="icon">💰</span>Tỉ lệ NVPTTT nộp COD</button>
  <div class="nav-section">Kinh Doanh</div>
  <button class="nav-item" onclick="show('p22',this)"><span class="icon">💼</span>Kinh Doanh XBG</button>
  <div class="nav-section">AI</div>
@@ -275,7 +274,6 @@ tr.tot td{background:#FFF0EB!important;font-weight:800!important;border-top:2px 
 <div class="page" id="p18"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
 <div class="page" id="p19"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
 <div class="page" id="p20"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
-<div class="page" id="p21"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
 <div class="page" id="p22"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
 <div class="page" id="p23"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
 <div class="page" id="p25"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
@@ -3495,8 +3493,6 @@ async function init(){
  await buildNangSuatPage();
  // p26 — Năng suất GTC nhân viên Bắc Giang
  await buildNSBGPage();
- // p21 — Tỉ lệ NVPTTT nộp COD
- await buildCODPage();
  // p27 — Rớt LC theo ngày
  await buildRotLCPage();
  // p28 — Tồn đọng chờ chuyển trả
