@@ -4915,20 +4915,31 @@ async function buildThuongPage(){
   const joinBC=new Set(_vwParseCSV(await(await fetch(bcUrl)).text()).slice(1).map(r=>(r[0]||'').split(' - ')[0].trim()).filter(Boolean));
   const agUrl=`https://docs.google.com/spreadsheets/d/${SID}/export?format=csv&gid=1723871284&_=${Date.now()}`;
   const ag=_vwParseCSV(await(await fetch(agUrl)).text()).slice(1);
-  const days=[...new Set(ag.map(r=>r[2]).filter(d=>/^2026-\d\d-\d\d/.test(d)))].sort().slice(-7).reverse();
+  // kỳ: từ 01/08 đến ngày mới nhất — hiển thị ĐẦY ĐỦ mọi ngày (mới → cũ)
+  const days=[...new Set(ag.map(r=>r[2]).filter(d=>/^2026-\d\d-\d\d/.test(d)&&d>='2026-08-01'))].sort().reverse();
   const inWk=new Set(days), gtcByNV={};
   ag.forEach(r=>{ if(!inWk.has(r[2]))return; const m=/^(\d+)/.exec((r[1]||'').trim()); if(!m)return;
    (gtcByNV[m[1]]=gtcByNV[m[1]]||{})[r[2]]=parseInt(r[4]||0)||0;});
-  const today=new Date(); const grp=tn=>tn<30?1:tn<60?2:0;
+  const grp=tn=>tn<30?1:tn<60?2:0; const DAY=86400000;
+  const VNM={'thg 1':0,'thg 2':1,'thg 3':2,'thg 4':3,'thg 5':4,'thg 6':5,'thg 7':6,'thg 8':7,'thg 9':8,'thg 10':9,'thg 11':10,'thg 12':11};
+  const parseJoin=s=>{s=(s||'').trim(); const m=/^(\d{1,2})\s*(thg\s*\d{1,2}),?\s*(\d{4})/.exec(s); if(m&&VNM[m[2].replace(/\s+/g,' ')]!==undefined)return new Date(+m[3],VNM[m[2].replace(/\s+/g,' ')],+m[1]); const d=new Date(s); return isNaN(d)?null:d;};
   const rows=[];
   Object.keys(emp).forEach(id=>{
    const e=emp[id]; if(!joinBC.has(e.bccode))return;
-   const jd=new Date(e.join); if(isNaN(jd))return;
-   const tn=Math.floor((today-jd)/86400000); const g=grp(tn); if(!g)return;
+   const jd=parseJoin(e.join); if(!jd)return;
    const daily=gtcByNV[id]; if(!daily)return;
-   let tot=0; const pd={};
-   days.forEach(d=>{const gtc=daily[d]||0; const b=bonus(g,gtc); pd[d]={gtc,b}; tot+=b;});
-   rows.push({name:e.name,bc:e.bc,tinh:e.tinh||'—',am:e.am,tn,g,pd,tot});
+   let tot=0,anyElig=false; const pd={};
+   days.forEach(d=>{
+    const gtc=daily[d]||0;
+    const tn=Math.floor((new Date(d)-jd)/DAY);   // thâm niên TẠI NGÀY đó
+    const g=grp(tn);                              // <30→N1 · 30..<60→N2 · ≥60→0 (hết thưởng)
+    const b=g?bonus(g,gtc):0;
+    if(g)anyElig=true;
+    pd[d]={gtc,b,tn,g}; tot+=b;
+   });
+   if(!anyElig)return;                            // toàn kỳ NV đã ≥ 60 ngày → không tham gia
+   const tnLast=Math.floor((new Date(days[0])-jd)/DAY);
+   rows.push({name:e.name,bc:e.bc,tinh:e.tinh||'—',am:e.am,tn:tnLast,g:grp(tnLast),pd,tot});
   });
   window._thuong={rows,days};
   const fmt=v=>(+v||0).toLocaleString('vi-VN');
@@ -4941,7 +4952,7 @@ async function buildThuongPage(){
   const bBg=b=>b>=150000?'#BBF7D0':b>=100000?'#DCFCE7':b>=50000?'#FEF9C3':'#F9FAFB';
   const bCol=b=>b>=100000?'#166534':b>=50000?'#854D0E':'#9CA3AF';
   const kfmt=b=>b?'+'+(b/1000)+'k':'—';
-  const grpBadge=g=>g===1?'<span style="background:#DBEAFE;color:#1E40AF;padding:1px 6px;border-radius:6px;font-size:10.5px;font-weight:700">N1</span>':'<span style="background:#FEF3C7;color:#92400E;padding:1px 6px;border-radius:6px;font-size:10.5px;font-weight:700">N2</span>';
+  const grpBadge=g=>g===1?'<span style="background:#DBEAFE;color:#1E40AF;padding:1px 6px;border-radius:6px;font-size:10.5px;font-weight:700">N1</span>':g===2?'<span style="background:#FEF3C7;color:#92400E;padding:1px 6px;border-radius:6px;font-size:10.5px;font-weight:700">N2</span>':'<span style="background:#F3F4F6;color:#6B7280;padding:1px 6px;border-radius:6px;font-size:10.5px;font-weight:700">Hết</span>';
   // gom Tỉnh → Bưu Cục
   const T={};
   rows.forEach(r=>{ (T[r.tinh]=T[r.tinh]||{sum:0,nv:0,bc:{}}); T[r.tinh].sum+=r.tot; T[r.tinh].nv++;
@@ -4982,9 +4993,9 @@ async function buildThuongPage(){
   });
   const ana=`<div class="analysis-box" style="border-left-color:#16A34A;background:#F0FDF4"><b>📌 Nhận định:</b><br>
     • <b>${rows.length} nhân viên</b> đủ điều kiện (thuộc ${joinBC.size} Bưu Cục tham gia · thâm niên &lt; 2 tháng · có phát sinh đơn).<br>
-    • Tổng quỹ thưởng 7 ngày (${dh(days[days.length-1])}–${dh(days[0])}): <b>${fmt(tot)} đ</b> — Nhóm 1: ${fmt(s1)} đ (${n1.length} NV) · Nhóm 2: ${fmt(s2)} đ (${n2.length} NV).<br>
+    • Tổng quỹ thưởng kỳ ${dh(days[days.length-1])}–${dh(days[0])} (${days.length} ngày): <b>${fmt(tot)} đ</b> — Nhóm 1: ${fmt(s1)} đ (${n1.length} NV) · Nhóm 2: ${fmt(s2)} đ (${n2.length} NV).<br>
     • Thang thưởng/ngày theo đơn GTC — N1 (TN&lt;30 ngày): 35→50k · 60→100k · 70→150k · N2 (1-2 tháng): 45→50k · 70→100k · 95→150k.<br>
-    • Bảng chia theo Tỉnh → Bưu Cục; mốc thâm niên theo ngày hiện tại cố định, NV đã vào chương trình giữ đến hết tháng 8.</div>`;
+    • Thâm niên tính THEO TỪNG NGÀY: dưới 30 ngày → Nhóm 1 · 30 đến dưới 60 ngày → Nhóm 2 · từ ngày thứ 60 trở đi không tính thưởng (vẫn ghi nhận các ngày trước đó). Bảng chia theo Tỉnh → Bưu Cục.</div>`;
   const ov=`<div class="card">
     <div style="font-weight:800;font-size:16px;margin-bottom:12px">🎁 Tổng quan Thưởng Năng Suất NV Mới</div>
     <div style="display:flex;gap:14px;flex-wrap:wrap">
@@ -4992,7 +5003,7 @@ async function buildThuongPage(){
        <div style="color:var(--text-sub);font-size:12px">NV đủ điều kiện</div>
        <div style="font-size:30px;font-weight:800;color:#166534">${rows.length}</div></div>
      <div style="flex:1;min-width:160px;background:#F0FDF4;border-left:4px solid #16A34A;border-radius:10px;padding:14px 16px">
-       <div style="color:var(--text-sub);font-size:12px">Tổng quỹ thưởng 7 ngày</div>
+       <div style="color:var(--text-sub);font-size:12px">Tổng quỹ thưởng (từ 01/08, ${days.length} ngày)</div>
        <div style="font-size:28px;font-weight:800;color:#166534">${fmt(tot)} <span style="font-size:14px;font-weight:600">đ</span></div></div>
      <div style="flex:1;min-width:160px;background:#EFF6FF;border-left:4px solid #2563EB;border-radius:10px;padding:14px 16px">
        <div style="color:var(--text-sub);font-size:12px">Nhóm 1 (&lt;30 ngày) · Nhóm 2 (1-2 tháng)</div>
@@ -5000,7 +5011,7 @@ async function buildThuongPage(){
     </div>
     <div style="margin-top:10px;color:var(--text-sub);font-size:12px">* Ô mỗi ngày: số trên = đơn GTC, số dưới = tiền thưởng ngày đó. Chỉ NV thuộc 36 Bưu Cục tham gia & thâm niên &lt; 2 tháng.</div>
    </div>`;
-  const head=`<div class="page-header"><div class="page-title">🎁 Thưởng Năng Suất — Nhân Viên Mới (< 2 tháng)</div><div class="page-meta"><span style="color:var(--text-sub);font-size:12px">Bảng test · 7 ngày gần nhất · chia theo Tỉnh → Bưu Cục</span></div></div>`;
+  const head=`<div class="page-header"><div class="page-title">🎁 Thưởng Năng Suất — Nhân Viên Mới (< 2 tháng)</div><div class="page-meta"><span style="color:var(--text-sub);font-size:12px">Từ 01/08 · thâm niên tính theo từng ngày · chia theo Tỉnh → Bưu Cục</span></div></div>`;
   el.innerHTML=head+ov+ana+sect;
  }catch(e){ el.innerHTML=`<div class="card"><p style="padding:16px;color:#DC2626">Lỗi tải dữ liệu thưởng: ${e.message}</p></div>`; }
 }
