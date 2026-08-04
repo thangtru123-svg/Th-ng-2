@@ -400,6 +400,7 @@ const SHEET_BAOCAO_ID='18-oZRCYgehTY84K9ylQAkVU3DzDl9yyfQ6eUSI9139M'; // file c�
 const SHEET_BAOCAO_GID='1603810887';
 const TG_TASK_CHAT=-619907023; // group "Task Thắng" (group thường, không topic)
 const TG_KTNS_CHAT=-5386795695; // group "Chạy kích thích NS cho NV mới" (bắn p29 — chỉ Bắc Giang)
+const TG_KTNS_HP_CHAT=-5155148023; // group "Chính sách Hải Phòng" (bắn p29 — chỉ Hải Phòng)
 /* Cache Data_Voltotal (8MB): tải 1 lần/đợt cập nhật, dùng chung cho p18/p25/p26 thay vì tải 3 lần.
    Reset ở đầu init() nên mỗi lần bấm "Cập nhật dữ liệu" vẫn tải bản MỚI — số liệu không đổi. */
 let _volCSVCache=null;
@@ -4992,13 +4993,14 @@ async function buildThuongPage(){
        </tr></thead><tbody>${body}</tbody></table>
      </div></div>`;
   }
-  let sect='',bcIdx=0; const bgCards=[]; let bgNV=0,bgSum=0;
+  let sect='',bcIdx=0; const bgCards=[], cardsByTinh={}; let bgNV=0,bgSum=0;
   Object.keys(T).sort((a,b)=>T[b].sum-T[a].sum).forEach(tinh=>{
    const t=T[tinh];
    sect+=`<div style="margin-top:22px;padding:10px 16px;background:linear-gradient(135deg,#166534,#22A957);border-radius:12px;color:#fff;font-weight:800;font-size:16px;display:flex;justify-content:space-between;flex-wrap:wrap">
      <span>🗺️ ${tinh}</span><span style="font-size:14px">${t.nv} NV · ${fmt(t.sum)} đ</span></div>`;
    Object.keys(t.bc).sort((a,b)=>t.bc[b].sum-t.bc[a].sum).forEach(bc=>{
     sect+=bcTable(bc,t.bc[bc],bcIdx);
+    (cardsByTinh[tinh]=cardsByTinh[tinh]||{cards:[],nv:t.nv,sum:t.sum}).cards.push({id:'thuongBC_'+bcIdx,bc,sum:t.bc[bc].sum,nv:t.bc[bc].rows.length});
     if(tinh==='Bắc Giang')bgCards.push({id:'thuongBC_'+bcIdx,bc,sum:t.bc[bc].sum,nv:t.bc[bc].rows.length});
     bcIdx++;
    });
@@ -5026,9 +5028,15 @@ async function buildThuongPage(){
    </div>`;
   const head=`<div class="page-header"><div class="page-title">🎁 Thưởng Năng Suất — Nhân Viên Mới (< 2 tháng)</div><div class="page-meta"><span style="color:var(--text-sub);font-size:12px">Từ 01/08 · thâm niên tính theo từng ngày · chia theo Tỉnh → Bưu Cục</span></div></div>`;
   el.innerHTML=head+ov+ana+sect;
-  Object.assign(window._thuong,{bgCards,bg:{nv:bgNV,sum:bgSum}});
+  Object.assign(window._thuong,{bgCards,bg:{nv:bgNV,sum:bgSum},cardsByTinh});
   injectTgBtn('p29',()=>sendThuongToTelegram(),'Bắn KTNS Bắc Giang TG');
   const _meta29=el.querySelector('.page-meta');
+  if(_meta29 && !_meta29.querySelector('.hp-inpage-btn')){
+   const hb=document.createElement('button');
+   hb.className='tg-inpage-btn hp-inpage-btn'; hb.id='tgHP_p29'; hb.style.background='#0EA5E9';
+   hb.innerHTML='📤 Bắn KTNS Hải Phòng TG'; hb.onclick=()=>sendThuongHaiPhong();
+   _meta29.appendChild(hb);
+  }
   if(_meta29 && !_meta29.querySelector('.xls-inpage-btn')){
    const xb=document.createElement('button');
    xb.className='tg-inpage-btn xls-inpage-btn'; xb.style.background='#166534';
@@ -5063,32 +5071,36 @@ function exportThuongExcel(){
  document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),3000);
 }
 
-async function sendThuongToTelegram(){
- const btn=document.getElementById('tgInpage_p29'); if(btn){btn.disabled=true;btn.innerHTML='⏳ Đang gửi...';}
+// Hàm bắn chung theo TỈNH — chỉ 7 ngày gần nhất + Tổng thưởng (ẩn .thu-old khi chụp)
+async function sendThuongTinh(tinhName,chatId,btnId,label){
+ const btn=document.getElementById(btnId); if(btn){btn.disabled=true;btn.innerHTML='⏳ Đang gửi...';}
  try{
-  const D=window._thuong; if(!D||!D.bgCards||!D.bgCards.length)throw new Error('Không có Bưu Cục tỉnh Bắc Giang');
-  const CHAT=TG_KTNS_CHAT, f=v=>(+v||0).toLocaleString('vi-VN'), dh=s=>s.slice(8)+'/'+s.slice(5,7);
-  let txt=`🎁 <b>THƯỞNG NĂNG SUẤT NV MỚI — TỈNH BẮC GIANG</b>\n`;
+  const D=window._thuong; const info=D&&D.cardsByTinh&&D.cardsByTinh[tinhName];
+  if(!info||!info.cards.length)throw new Error('Không có Bưu Cục tỉnh '+tinhName);
+  const f=v=>(+v||0).toLocaleString('vi-VN'), dh=s=>s.slice(8)+'/'+s.slice(5,7);
+  let txt=`🎁 <b>THƯỞNG NĂNG SUẤT NV MỚI — TỈNH ${tinhName.toUpperCase()}</b>\n`;
   txt+=`Kỳ ${dh(D.days[D.days.length-1])}–${dh(D.days[0])} (${D.days.length} ngày)\n`;
-  txt+=`${D.bg.nv} NV · ${D.bgCards.length} Bưu Cục · tổng thưởng <b>${f(D.bg.sum)} đ</b>.`;
-  await _tgSend(CHAT,undefined,txt);
+  txt+=`${info.nv} NV · ${info.cards.length} Bưu Cục · tổng thưởng <b>${f(info.sum)} đ</b>.`;
+  await _tgSend(chatId,undefined,txt);
   await new Promise(r=>setTimeout(r,400));
-  for(let i=0;i<D.bgCards.length;i++){
-   const c=D.bgCards[i];
-   if(btn)btn.innerHTML=`⏳ ${i+1}/${D.bgCards.length}: ${c.bc}`;
+  for(let i=0;i<info.cards.length;i++){
+   const c=info.cards[i];
+   if(btn)btn.innerHTML=`⏳ ${i+1}/${info.cards.length}: ${c.bc}`;
    const _olds=[...document.querySelectorAll('#'+c.id+' .thu-old')];
    _olds.forEach(e=>e.style.display='none');   // TG chỉ bắn 7 ngày gần nhất + Tổng thưởng
    try{
     const img=await _captureEl(c.id,2,false);
-    let res=await _tgSendPhoto(CHAT,undefined,img,`🏤 ${c.bc} · ${c.nv} NV · thưởng ${f(c.sum)} đ`);
-    if(!res||!res.ok)res=await _tgSendDoc(CHAT,undefined,img,`🏤 ${c.bc}`);
+    let res=await _tgSendPhoto(chatId,undefined,img,`🏤 ${c.bc} · ${c.nv} NV · thưởng ${f(c.sum)} đ`);
+    if(!res||!res.ok)res=await _tgSendDoc(chatId,undefined,img,`🏤 ${c.bc}`);
    }catch(e){console.warn('[KTNS '+c.bc+']',e.message);}
    finally{ _olds.forEach(e=>e.style.display=''); }
    await new Promise(r=>setTimeout(r,500));
   }
-  if(btn){btn.innerHTML='✅ Đã gửi';setTimeout(()=>{btn.disabled=false;btn.innerHTML='📤 Bắn KTNS Bắc Giang TG';},2500);}
- }catch(e){ alert('Lỗi gửi Telegram: '+e.message); if(btn){btn.disabled=false;btn.innerHTML='📤 Bắn KTNS Bắc Giang TG';} }
+  if(btn){btn.innerHTML='✅ Đã gửi';setTimeout(()=>{btn.disabled=false;btn.innerHTML=label;},2500);}
+ }catch(e){ alert('Lỗi gửi Telegram: '+e.message); if(btn){btn.disabled=false;btn.innerHTML=label;} }
 }
+function sendThuongToTelegram(){ return sendThuongTinh('Bắc Giang',TG_KTNS_CHAT,'tgInpage_p29','📤 Bắn KTNS Bắc Giang TG'); }
+function sendThuongHaiPhong(){ return sendThuongTinh('Hải Phòng',TG_KTNS_HP_CHAT,'tgHP_p29','📤 Bắn KTNS Hải Phòng TG'); }
 
 /* ===== DASHBOARD 30: KHOÁ ID VI PHẠM (p30) ===== */
 /* Nguồn: SID sheet "Khoá ID vi phạm" (gid 954997741). Cột: NV0, BC1, Lý do2, Mã đơn3, Link4, Vùng5, Tỉnh6, Ngày thông báo7(H), Ngày khoá8.
