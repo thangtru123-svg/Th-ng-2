@@ -224,7 +224,7 @@ tr.tot td{background:#FFF0EB!important;font-weight:800!important;border-top:2px 
  <button class="nav-item" onclick="show('p28',this)" style="background:linear-gradient(135deg,rgba(220,38,38,0.16),rgba(241,93,41,0.08));border:1px solid rgba(220,38,38,0.32);font-weight:700"><span class="icon">📦</span>Tồn đọng chờ chuyển trả</button>
  <button class="nav-item" onclick="show('p29',this)" style="background:linear-gradient(135deg,rgba(22,101,52,0.14),rgba(34,197,94,0.08));border:1px solid rgba(22,101,52,0.3);font-weight:700"><span class="icon">🎁</span>Thưởng Năng Suất NV Mới</button>
  <button class="nav-item" onclick="show('p30',this)" style="background:linear-gradient(135deg,rgba(220,38,38,0.16),rgba(241,93,41,0.08));border:1px solid rgba(220,38,38,0.32);font-weight:700"><span class="icon">🔒</span>Khoá ID vi phạm</button>
- <button class="nav-item" onclick="show('p31',this)" style="background:linear-gradient(135deg,rgba(37,99,235,0.14),rgba(59,130,246,0.08));border:1px solid rgba(37,99,235,0.3);font-weight:700"><span class="icon">📑</span>Báo Cáo Tồn / LC / 48H</button>
+ <button class="nav-item" onclick="show('p32',this)" style="background:linear-gradient(135deg,rgba(37,99,235,0.14),rgba(59,130,246,0.08));border:1px solid rgba(37,99,235,0.3);font-weight:700"><span class="icon">📑</span>Báo Cáo Tồn / LC / 48H</button>
  <div class="nav-section">GTC</div>
  <button class="nav-item" onclick="show('p1',this)"><span class="icon">📦</span>Tổng quan GTC Total</button>
  <button class="nav-item" onclick="show('p2',this)"><span class="icon">🎯</span>Tổng quan GTC TTS</button>
@@ -285,6 +285,7 @@ tr.tot td{background:#FFF0EB!important;font-weight:800!important;border-top:2px 
 <div class="page" id="p29"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
 <div class="page" id="p30"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
 <div class="page" id="p31"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
+<div class="page" id="p32"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
 </main>
 
 <script>
@@ -372,7 +373,7 @@ function injectAllTgBtns(){
  injectTgBtn('p27',()=>sendRotLCToTelegram(),'Bắn Rớt LC TG');
  injectTgBtn('p28',()=>sendTonDongToTelegram(),'Bắn Tồn đọng TG');
  injectTgBtn('p30',()=>sendKhoaIDToTelegram(),'Bắn Khoá ID TG');
- injectTgBtn('p31',()=>sendBaoCaoToTelegram(),'Bắn Task Thắng TG');
+ injectTgBtn('p32',()=>sendBaoCaoToTelegram(),'Bắn Task Thắng TG');
 }
 function fmt(n){return(+n||0).toLocaleString('vi-VN');}
 function isoD(d){return(d||'').match(/\d{4}-\d{2}-\d{2}/)?.[0]||'';}
@@ -5236,7 +5237,7 @@ async function sendBatOnToTelegram(btn){
    - Khối phải (cột N): Tồn trả Shop
    Mỗi bảng: tiêu đề → header (AM/back_log) → data rows → dòng Tổng/Total. */
 async function buildBaoCaoPage(){
- const el=document.getElementById('p31'); if(!el)return;
+ const el=document.getElementById('p32'); if(!el)return;
  try{
   const url=`https://docs.google.com/spreadsheets/d/${SHEET_BAOCAO_ID}/export?format=csv&gid=${SHEET_BAOCAO_GID}&_=${Date.now()}`;
   const rows=_vwParseCSV(await(await fetch(url)).text());
@@ -5290,12 +5291,12 @@ async function buildBaoCaoPage(){
   }
   const head=`<div class="page-header"><div class="page-title">📑 Báo Cáo Tồn / LC / 48H — XBG</div><div class="page-meta"><span style="color:var(--text-sub);font-size:12px">Nguồn: sheet Báo cáo · ${tables.length} bảng</span></div></div>`;
   el.innerHTML=head+tables.map((t,i)=>render(t,i)).join('');
-  injectTgBtn('p31',()=>sendBaoCaoToTelegram(),'Bắn Task Thắng TG');
+  injectTgBtn('p32',()=>sendBaoCaoToTelegram(),'Bắn Task Thắng TG');
  }catch(e){ el.innerHTML=`<div class="card"><p style="padding:16px;color:#DC2626">Lỗi tải Báo cáo: ${e.message}</p></div>`; }
 }
 
 async function sendBaoCaoToTelegram(){
- const btn=document.getElementById('tgInpage_p31'); if(btn){btn.disabled=true;btn.innerHTML='⏳ Đang gửi...';}
+ const btn=document.getElementById('tgInpage_p32'); if(btn){btn.disabled=true;btn.innerHTML='⏳ Đang gửi...';}
  try{
   const D=window._baocao; if(!D||!D.tables.length)throw new Error('Chưa có dữ liệu');
   await _tgSend(TG_TASK_CHAT,undefined,`📑 <b>BÁO CÁO TỒN / LC / 48H — XBG</b>\n${D.tables.length} bảng · cập nhật lúc ${new Date().toLocaleString('vi-VN')}`);
