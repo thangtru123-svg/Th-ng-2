@@ -4939,7 +4939,7 @@ async function buildThuongPage(){
     if(g)anyElig=true;
     pd[d]={gtc,b,tn,g,wk:daily[d]!==undefined}; tot+=b;
    });
-   // KHÔNG ẩn NV đã ≥60 ngày: NV đã/đang chạy chính sách vẫn hiển thị đầy đủ (badge "Hết"), chỉ đánh dấu anyElig
+   if(!anyElig)return;   // BỎ NV thâm niên ≥60 suốt kỳ (chưa từng thi đua từ 01/08). NV đã thi đua/thưởng trong kỳ rồi mới sang ≥60 (badge "Hết") vẫn giữ vì anyElig=true
    const tnLast=Math.floor((new Date(days[0])-jd)/DAY);
    rows.push({id,name:e.name,bc:e.bc,tinh:e.tinh||'—',am:e.am,tn:tnLast,g:grp(tnLast),pd,tot,anyElig});
   });
@@ -4949,7 +4949,7 @@ async function buildThuongPage(){
   const dh=s=>`${dow(s)} ${s.slice(8)}/${s.slice(5,7)}`;
   if(!rows.length){el.innerHTML='<div class="card"><p style="padding:16px;color:var(--text-sub)">Chưa có NV đủ điều kiện (thuộc BC tham gia & thâm niên < 2 tháng).</p></div>';return;}
   const tot=rows.reduce((s,r)=>s+r.tot,0);
-  const eligCount=rows.filter(r=>r.anyElig).length, hetCount=rows.length-eligCount;
+  const eligCount=rows.length, hetCount=rows.filter(r=>r.g===0).length;
   const n1=rows.filter(r=>r.g===1), n2=rows.filter(r=>r.g===2);
   const s1=n1.reduce((s,r)=>s+r.tot,0), s2=n2.reduce((s,r)=>s+r.tot,0);
   const bBg=b=>b>=150000?'#BBF7D0':b>=100000?'#DCFCE7':b>=50000?'#FEF9C3':'#F9FAFB';
@@ -5000,7 +5000,7 @@ async function buildThuongPage(){
    if(tinh==='Bắc Giang'){bgNV=t.nv;bgSum=t.sum;}
   });
   const ana=`<div class="analysis-box" style="border-left-color:#16A34A;background:#F0FDF4"><b>📌 Nhận định:</b><br>
-    • <b>${eligCount} nhân viên</b> đủ điều kiện nhận thưởng (thuộc ${joinBC.size} Bưu Cục tham gia · có phát sinh đơn).${hetCount?` <b>${hetCount} NV</b> đã hết chính sách (≥60 ngày) vẫn hiển thị đầy đủ để theo dõi.`:''}<br>
+    • <b>${eligCount} nhân viên</b> trong diện thi đua (thuộc ${joinBC.size} Bưu Cục tham gia · có ngày thâm niên &lt;60 trong kỳ từ 01/08).${hetCount?` Trong đó <b>${hetCount} NV</b> đã sang ≥60 ngày, vẫn hiển thị vì đã thi đua trong kỳ.`:''}<br>
     • Tổng quỹ thưởng kỳ ${dh(days[days.length-1])}–${dh(days[0])} (${days.length} ngày): <b>${fmt(tot)} đ</b> — Nhóm 1: ${fmt(s1)} đ (${n1.length} NV) · Nhóm 2: ${fmt(s2)} đ (${n2.length} NV).<br>
     • Thang thưởng/ngày theo đơn GTC — N1 (TN&lt;30 ngày): 35→50k · 60→100k · 70→150k · N2 (1-2 tháng): 45→50k · 70→100k · 95→150k.<br>
     • Thâm niên tính THEO TỪNG NGÀY: dưới 30 ngày → Nhóm 1 · 30 đến dưới 60 ngày → Nhóm 2 · từ ngày thứ 60 trở đi không tính thưởng (vẫn ghi nhận các ngày trước đó). Bảng chia theo Tỉnh → Bưu Cục.</div>`;
@@ -5008,8 +5008,8 @@ async function buildThuongPage(){
     <div style="font-weight:800;font-size:16px;margin-bottom:12px">🎁 Tổng quan Thưởng Năng Suất NV Mới</div>
     <div style="display:flex;gap:14px;flex-wrap:wrap">
      <div style="flex:1;min-width:160px;background:#F0FDF4;border-left:4px solid #16A34A;border-radius:10px;padding:14px 16px">
-       <div style="color:var(--text-sub);font-size:12px">NV đủ điều kiện (có thưởng)</div>
-       <div style="font-size:30px;font-weight:800;color:#166534">${eligCount}</div>${hetCount?`<div style="font-size:11px;color:#9CA3AF;margin-top:2px">+ ${hetCount} NV đã hết chính sách (≥60 ngày) — vẫn hiển thị</div>`:''}</div>
+       <div style="color:var(--text-sub);font-size:12px">NV trong diện thi đua</div>
+       <div style="font-size:30px;font-weight:800;color:#166534">${eligCount}</div>${hetCount?`<div style="font-size:11px;color:#9CA3AF;margin-top:2px">trong đó ${hetCount} NV đã sang ≥60 ngày (badge "Hết") — vẫn hiển thị vì đã thi đua trong kỳ</div>`:''}</div>
      <div style="flex:1;min-width:160px;background:#F0FDF4;border-left:4px solid #16A34A;border-radius:10px;padding:14px 16px">
        <div style="color:var(--text-sub);font-size:12px">Tổng quỹ thưởng (từ 01/08, ${days.length} ngày)</div>
        <div style="font-size:28px;font-weight:800;color:#166534">${fmt(tot)} <span style="font-size:14px;font-weight:600">đ</span></div></div>
