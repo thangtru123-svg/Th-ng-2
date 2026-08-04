@@ -4960,18 +4960,22 @@ async function buildThuongPage(){
   const T={};
   rows.forEach(r=>{ (T[r.tinh]=T[r.tinh]||{sum:0,nv:0,bc:{}}); T[r.tinh].sum+=r.tot; T[r.tinh].nv++;
    (T[r.tinh].bc[r.bc]=T[r.tinh].bc[r.bc]||{sum:0,rows:[]}); T[r.tinh].bc[r.bc].sum+=r.tot; T[r.tinh].bc[r.bc].rows.push(r);});
-  const thH=days.map(d=>`<th style="background:#166534;color:#fff;padding:6px 6px;font-size:11px;text-align:center;white-space:nowrap">${dh(d)}</th>`).join('');
+  const recent=days.slice(0,7), older=days.slice(7);   // >7 ngày: 7 ngày gần nhất hiển thị; ngày cũ ẩn bên phải cột Tổng thưởng (kéo ngang mới thấy)
+  const dayTh=(list,old)=>list.map(dd=>`<th class="${old?'thu-old':''}" style="background:#166534;color:#fff;padding:6px 6px;font-size:11px;text-align:center;white-space:nowrap">${dh(dd)}</th>`).join('');
+  const dayTd=(r,dd,old)=>{const c=r.pd[dd];return `<td class="${old?'thu-old':''}" style="text-align:center;padding:4px 7px;background:${bBg(c.b)}"><div style="font-weight:700;color:#1F2937">${c.gtc||'—'}</div><div style="font-size:10px;font-weight:700;color:${bCol(c.b)}">${kfmt(c.b)}</div></td>`;};
   function bcTable(bc,d,idx){
    d.rows.sort((a,b)=>b.tot-a.tot);
    const body=d.rows.map((r,i)=>{
-    const tds=days.map(dd=>{const c=r.pd[dd];return `<td style="text-align:center;padding:4px 7px;background:${bBg(c.b)}"><div style="font-weight:700;color:#1F2937">${c.gtc||'—'}</div><div style="font-size:10px;font-weight:700;color:${bCol(c.b)}">${kfmt(c.b)}</div></td>`;}).join('');
+    const tdsR=recent.map(dd=>dayTd(r,dd,false)).join('');
+    const tdsO=older.map(dd=>dayTd(r,dd,true)).join('');
     return `<tr style="border-bottom:1px solid var(--border)">
       <td style="padding:5px 8px;text-align:center;color:var(--text-sub)">${i+1}</td>
       <td style="padding:5px 10px;font-weight:600;white-space:nowrap">${r.name}</td>
       <td style="text-align:center;padding:5px 8px;color:#374151;font-weight:600">${r.tn}</td>
       <td style="text-align:center;padding:5px 8px">${grpBadge(r.g)}</td>
-      ${tds}
-      <td style="text-align:center;padding:5px 10px;font-weight:800;background:#DCFCE7;color:#166534">${fmt(r.tot)} đ</td></tr>`;
+      ${tdsR}
+      <td style="text-align:center;padding:5px 10px;font-weight:800;background:#DCFCE7;color:#166534">${fmt(r.tot)} đ</td>
+      ${tdsO}</tr>`;
    }).join('');
    return `<div class="card" id="thuongBC_${idx}" style="margin-top:12px;padding:14px 16px">
      <div style="font-weight:800;font-size:14px;margin-bottom:9px">🏤 ${bc} <span style="font-weight:600;color:var(--text-sub);font-size:12px">· ${d.rows.length} NV · thưởng ${fmt(d.sum)} đ</span></div>
@@ -4982,8 +4986,9 @@ async function buildThuongPage(){
         <th style="background:#166534;color:#fff;padding:6px 10px;text-align:left">Nhân viên</th>
         <th style="background:#166534;color:#fff;padding:6px 8px;text-align:center">TN</th>
         <th style="background:#166534;color:#fff;padding:6px 8px;text-align:center">Nhóm</th>
-        ${thH}
+        ${dayTh(recent,false)}
         <th style="background:#166534;color:#fff;padding:6px 10px;text-align:center">Tổng thưởng</th>
+        ${dayTh(older,true)}
        </tr></thead><tbody>${body}</tbody></table>
      </div></div>`;
   }
@@ -5071,11 +5076,14 @@ async function sendThuongToTelegram(){
   for(let i=0;i<D.bgCards.length;i++){
    const c=D.bgCards[i];
    if(btn)btn.innerHTML=`⏳ ${i+1}/${D.bgCards.length}: ${c.bc}`;
+   const _olds=[...document.querySelectorAll('#'+c.id+' .thu-old')];
+   _olds.forEach(e=>e.style.display='none');   // TG chỉ bắn 7 ngày gần nhất + Tổng thưởng
    try{
     const img=await _captureEl(c.id,2,false);
     let res=await _tgSendPhoto(CHAT,undefined,img,`🏤 ${c.bc} · ${c.nv} NV · thưởng ${f(c.sum)} đ`);
     if(!res||!res.ok)res=await _tgSendDoc(CHAT,undefined,img,`🏤 ${c.bc}`);
    }catch(e){console.warn('[KTNS '+c.bc+']',e.message);}
+   finally{ _olds.forEach(e=>e.style.display=''); }
    await new Promise(r=>setTimeout(r,500));
   }
   if(btn){btn.innerHTML='✅ Đã gửi';setTimeout(()=>{btn.disabled=false;btn.innerHTML='📤 Bắn KTNS Bắc Giang TG';},2500);}
