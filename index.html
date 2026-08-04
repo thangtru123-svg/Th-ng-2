@@ -372,6 +372,7 @@ function injectAllTgBtns(){
  injectTgBtn('p28',()=>sendTonDongToTelegram(),'Bắn Tồn đọng TG');
  injectTgBtn('p30',()=>sendKhoaIDToTelegram(),'Bắn Khoá ID TG');
  injectTgBtn('p32',()=>sendBaoCaoToTelegram(),'Bắn Task Thắng TG');
+ injectTgBtn('p29',()=>sendThuongToTelegram(),'Bắn KTNS Bắc Giang TG');
 }
 function fmt(n){return(+n||0).toLocaleString('vi-VN');}
 function isoD(d){return(d||'').match(/\d{4}-\d{2}-\d{2}/)?.[0]||'';}
@@ -398,6 +399,7 @@ const SHEET_KHOAID_GID='0'; // Sheet1
 const SHEET_BAOCAO_ID='18-oZRCYgehTY84K9ylQAkVU3DzDl9yyfQ6eUSI9139M'; // file có sheet "Báo cáo" (LC/Tồn đọng/48H)
 const SHEET_BAOCAO_GID='1603810887';
 const TG_TASK_CHAT=-619907023; // group "Task Thắng" (group thường, không topic)
+const TG_KTNS_CHAT=-5386795695; // group "Chạy kích thích NS cho NV mới" (bắn p29 — chỉ Bắc Giang)
 /* Cache Data_Voltotal (8MB): tải 1 lần/đợt cập nhật, dùng chung cho p18/p25/p26 thay vì tải 3 lần.
    Reset ở đầu init() nên mỗi lần bấm "Cập nhật dữ liệu" vẫn tải bản MỚI — số liệu không đổi. */
 let _volCSVCache=null;
@@ -4958,7 +4960,7 @@ async function buildThuongPage(){
   rows.forEach(r=>{ (T[r.tinh]=T[r.tinh]||{sum:0,nv:0,bc:{}}); T[r.tinh].sum+=r.tot; T[r.tinh].nv++;
    (T[r.tinh].bc[r.bc]=T[r.tinh].bc[r.bc]||{sum:0,rows:[]}); T[r.tinh].bc[r.bc].sum+=r.tot; T[r.tinh].bc[r.bc].rows.push(r);});
   const thH=days.map(d=>`<th style="background:#166534;color:#fff;padding:6px 6px;font-size:11px;text-align:center;white-space:nowrap">${dh(d)}</th>`).join('');
-  function bcTable(bc,d){
+  function bcTable(bc,d,idx){
    d.rows.sort((a,b)=>b.tot-a.tot);
    const body=d.rows.map((r,i)=>{
     const tds=days.map(dd=>{const c=r.pd[dd];return `<td style="text-align:center;padding:4px 7px;background:${bBg(c.b)}"><div style="font-weight:700;color:#1F2937">${c.gtc||'—'}</div><div style="font-size:10px;font-weight:700;color:${bCol(c.b)}">${kfmt(c.b)}</div></td>`;}).join('');
@@ -4970,7 +4972,7 @@ async function buildThuongPage(){
       ${tds}
       <td style="text-align:center;padding:5px 10px;font-weight:800;background:#DCFCE7;color:#166534">${fmt(r.tot)} đ</td></tr>`;
    }).join('');
-   return `<div class="card" style="margin-top:12px;padding:14px 16px">
+   return `<div class="card" id="thuongBC_${idx}" style="margin-top:12px;padding:14px 16px">
      <div style="font-weight:800;font-size:14px;margin-bottom:9px">🏤 ${bc} <span style="font-weight:600;color:var(--text-sub);font-size:12px">· ${d.rows.length} NV · thưởng ${fmt(d.sum)} đ</span></div>
      <div class="table-wrap" style="overflow:auto;border:1px solid var(--border);border-radius:10px">
       <table style="border-collapse:collapse;font-size:12px">
@@ -4984,12 +4986,17 @@ async function buildThuongPage(){
        </tr></thead><tbody>${body}</tbody></table>
      </div></div>`;
   }
-  let sect='';
+  let sect='',bcIdx=0; const bgCards=[]; let bgNV=0,bgSum=0;
   Object.keys(T).sort((a,b)=>T[b].sum-T[a].sum).forEach(tinh=>{
    const t=T[tinh];
    sect+=`<div style="margin-top:22px;padding:10px 16px;background:linear-gradient(135deg,#166534,#22A957);border-radius:12px;color:#fff;font-weight:800;font-size:16px;display:flex;justify-content:space-between;flex-wrap:wrap">
      <span>🗺️ ${tinh}</span><span style="font-size:14px">${t.nv} NV · ${fmt(t.sum)} đ</span></div>`;
-   Object.keys(t.bc).sort((a,b)=>t.bc[b].sum-t.bc[a].sum).forEach(bc=>{ sect+=bcTable(bc,t.bc[bc]); });
+   Object.keys(t.bc).sort((a,b)=>t.bc[b].sum-t.bc[a].sum).forEach(bc=>{
+    sect+=bcTable(bc,t.bc[bc],bcIdx);
+    if(tinh==='Bắc Giang')bgCards.push({id:'thuongBC_'+bcIdx,bc,sum:t.bc[bc].sum,nv:t.bc[bc].rows.length});
+    bcIdx++;
+   });
+   if(tinh==='Bắc Giang'){bgNV=t.nv;bgSum=t.sum;}
   });
   const ana=`<div class="analysis-box" style="border-left-color:#16A34A;background:#F0FDF4"><b>📌 Nhận định:</b><br>
     • <b>${rows.length} nhân viên</b> đủ điều kiện (thuộc ${joinBC.size} Bưu Cục tham gia · thâm niên &lt; 2 tháng · có phát sinh đơn).<br>
@@ -5013,7 +5020,33 @@ async function buildThuongPage(){
    </div>`;
   const head=`<div class="page-header"><div class="page-title">🎁 Thưởng Năng Suất — Nhân Viên Mới (< 2 tháng)</div><div class="page-meta"><span style="color:var(--text-sub);font-size:12px">Từ 01/08 · thâm niên tính theo từng ngày · chia theo Tỉnh → Bưu Cục</span></div></div>`;
   el.innerHTML=head+ov+ana+sect;
+  Object.assign(window._thuong,{bgCards,bg:{nv:bgNV,sum:bgSum}});
+  injectTgBtn('p29',()=>sendThuongToTelegram(),'Bắn KTNS Bắc Giang TG');
  }catch(e){ el.innerHTML=`<div class="card"><p style="padding:16px;color:#DC2626">Lỗi tải dữ liệu thưởng: ${e.message}</p></div>`; }
+}
+
+async function sendThuongToTelegram(){
+ const btn=document.getElementById('tgInpage_p29'); if(btn){btn.disabled=true;btn.innerHTML='⏳ Đang gửi...';}
+ try{
+  const D=window._thuong; if(!D||!D.bgCards||!D.bgCards.length)throw new Error('Không có Bưu Cục tỉnh Bắc Giang');
+  const CHAT=TG_KTNS_CHAT, f=v=>(+v||0).toLocaleString('vi-VN'), dh=s=>s.slice(8)+'/'+s.slice(5,7);
+  let txt=`🎁 <b>THƯỞNG NĂNG SUẤT NV MỚI — TỈNH BẮC GIANG</b>\n`;
+  txt+=`Kỳ ${dh(D.days[D.days.length-1])}–${dh(D.days[0])} (${D.days.length} ngày)\n`;
+  txt+=`${D.bg.nv} NV · ${D.bgCards.length} Bưu Cục · tổng thưởng <b>${f(D.bg.sum)} đ</b>.`;
+  await _tgSend(CHAT,undefined,txt);
+  await new Promise(r=>setTimeout(r,400));
+  for(let i=0;i<D.bgCards.length;i++){
+   const c=D.bgCards[i];
+   if(btn)btn.innerHTML=`⏳ ${i+1}/${D.bgCards.length}: ${c.bc}`;
+   try{
+    const img=await _captureEl(c.id,2,false);
+    let res=await _tgSendPhoto(CHAT,undefined,img,`🏤 ${c.bc} · ${c.nv} NV · thưởng ${f(c.sum)} đ`);
+    if(!res||!res.ok)res=await _tgSendDoc(CHAT,undefined,img,`🏤 ${c.bc}`);
+   }catch(e){console.warn('[KTNS '+c.bc+']',e.message);}
+   await new Promise(r=>setTimeout(r,500));
+  }
+  if(btn){btn.innerHTML='✅ Đã gửi';setTimeout(()=>{btn.disabled=false;btn.innerHTML='📤 Bắn KTNS Bắc Giang TG';},2500);}
+ }catch(e){ alert('Lỗi gửi Telegram: '+e.message); if(btn){btn.disabled=false;btn.innerHTML='📤 Bắn KTNS Bắc Giang TG';} }
 }
 
 /* ===== DASHBOARD 30: KHOÁ ID VI PHẠM (p30) ===== */
