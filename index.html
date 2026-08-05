@@ -5031,6 +5031,12 @@ async function buildThuongPage(){
   Object.assign(window._thuong,{bgCards,bg:{nv:bgNV,sum:bgSum},cardsByTinh});
   injectTgBtn('p29',()=>sendThuongToTelegram(),'Bắn KTNS Bắc Giang TG');
   const _meta29=el.querySelector('.page-meta');
+  if(_meta29 && !_meta29.querySelector('.refresh-inpage-btn')){
+   const rb=document.createElement('button');
+   rb.className='tg-inpage-btn refresh-inpage-btn'; rb.style.background='#2563EB';
+   rb.innerHTML='🔄 Cập nhật dữ liệu'; rb.onclick=()=>{rb.disabled=true;rb.innerHTML='⏳ Đang cập nhật...';buildThuongPage();};
+   _meta29.appendChild(rb);
+  }
   if(_meta29 && !_meta29.querySelector('.hp-inpage-btn')){
    const hb=document.createElement('button');
    hb.className='tg-inpage-btn hp-inpage-btn'; hb.id='tgHP_p29'; hb.style.background='#0EA5E9';
