@@ -2097,6 +2097,11 @@ async function sendAllToTelegram(){
    await sendPhoto('OPR BC Alert 30-100','p6-card-alert2',TG_AGING_CHAT,TG_PICKUP_THREAD,capOPRBCRange(30,100,'BC Vol LTC 30–100 &amp; Ontime &lt;80%'));
   }
 
+  /* --- P27: Rớt LC theo ngày → Pickup thread (dùng chung hàm bắn cá nhân) --- */
+  if(btn)btn.innerHTML='⏳ Đang gửi: Rớt LC...';
+  await navTo('p27');
+  try{ await sendRotLCToTelegram(true); }catch(e){ console.warn('[Rớt LC] lỗi:',e&&e.message); }
+
   /* --- P19: GTC TTS Ca 1,2 theo BC → TTS - Vận hành thread --- */
   await navTo('p19');
   await new Promise(r=>setTimeout(r,600));
@@ -4725,7 +4730,7 @@ async function buildRotLCPage(){
  }catch(e){ el.innerHTML=`<div class="card"><p style="padding:16px;color:#DC2626">Lỗi tải dữ liệu rớt LC: ${e.message}</p></div>`; }
 }
 
-async function sendRotLCToTelegram(){
+async function sendRotLCToTelegram(silent){
  const btn=document.getElementById('tgInpage_p27'); if(btn){btn.disabled=true;btn.innerHTML='⏳ Đang gửi...';}
  try{
   const R=window._rotlc; if(!R)throw new Error('Chưa có dữ liệu');
@@ -4757,7 +4762,7 @@ async function sendRotLCToTelegram(){
    try{ const img=await _captureEl(id+'clone'); await _tgSendPhoto(CHAT,TH,img,cap[id]); } finally{ tmp.remove(); }
   }
   if(btn){btn.innerHTML='✅ Đã gửi';setTimeout(()=>{btn.disabled=false;btn.innerHTML='📤 Bắn Rớt LC TG';},2500);}
- }catch(e){ alert('Lỗi gửi Telegram: '+e.message); if(btn){btn.disabled=false;btn.innerHTML='📤 Bắn Rớt LC TG';} }
+ }catch(e){ if(!silent)alert('Lỗi gửi Telegram: '+e.message); else console.warn('[Rớt LC] lỗi:',e&&e.message); if(btn){btn.disabled=false;btn.innerHTML='📤 Bắn Rớt LC TG';} }
 }
 
 /* ===== DASHBOARD 28: TỒN ĐỌNG CHỜ CHUYỂN TRẢ (p28) ===== */
