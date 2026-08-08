@@ -4795,10 +4795,10 @@ async function buildTonChuaGanPage(){
   const body=rows.map((r,i)=>`<tr style="border-bottom:1px solid var(--border)">
     <td style="padding:6px 8px;text-align:center;color:var(--text-sub)">${i+1}</td>
     <td style="padding:6px 10px;font-weight:600;white-space:nowrap">${r.bc}</td>
-    <td style="padding:6px 10px;text-align:right">${fmt(r.o)}</td>
-    <td style="padding:6px 10px;text-align:right">${fmt(r.s)}</td>
-    <td style="padding:6px 10px;text-align:right">${fmt(r.t)}</td>
-    <td style="padding:6px 10px;text-align:right;font-weight:800;background:${hb(r.tot)};color:${hc(r.tot)}">${fmt(r.tot)}</td></tr>`).join('');
+    <td style="padding:6px 12px;text-align:center">${fmt(r.o)}</td>
+    <td style="padding:6px 12px;text-align:center">${fmt(r.s)}</td>
+    <td style="padding:6px 12px;text-align:center">${fmt(r.t)}</td>
+    <td style="padding:6px 12px;text-align:center;font-weight:800;background:${hb(r.tot)};color:${hc(r.tot)}">${fmt(r.tot)}</td></tr>`).join('');
   const stat=(lbl,val,share,bg,bd,col)=>`<div style="flex:1;min-width:150px;background:${bg};border-left:4px solid ${bd};border-radius:10px;padding:14px 16px">
      <div style="color:var(--text-sub);font-size:12px">${lbl}</div>
      <div style="font-size:26px;font-weight:800;color:${col}">${fmt(val)}</div>${share!=null?`<div style="font-size:11px;color:var(--text-sub);margin-top:2px">${share}% tổng tồn</div>`:''}</div>`;
@@ -4814,15 +4814,15 @@ async function buildTonChuaGanPage(){
    </div>`;
   const tbl=`<div class="card" id="tongan-tbl" style="margin-top:14px">
     <div style="font-weight:800;font-size:15px;margin-bottom:9px">🏤 Tồn chưa gán theo Bưu Cục <span style="font-weight:600;color:var(--text-sub);font-size:12px">· sắp xếp Total giảm dần · ${rows.length} BC</span></div>
-    <div class="table-wrap" style="max-height:620px;overflow:auto;border:1px solid var(--border);border-radius:10px">
-     <table style="border-collapse:collapse;font-size:12.5px;width:100%">
+    <div class="table-wrap" style="max-height:620px;overflow:auto;border:1px solid var(--border);border-radius:10px;display:inline-block;max-width:100%">
+     <table style="border-collapse:collapse;font-size:12.5px">
       <thead><tr>
-       <th style="background:#1E40AF;color:#fff;padding:7px 8px;position:sticky;top:0">#</th>
-       <th style="background:#1E40AF;color:#fff;padding:7px 10px;text-align:left;position:sticky;top:0">Bưu Cục</th>
-       <th style="background:#F97316;color:#fff;padding:7px 10px;text-align:right;position:sticky;top:0">OTHER</th>
-       <th style="background:#EF4444;color:#fff;padding:7px 10px;text-align:right;position:sticky;top:0">Shopee</th>
-       <th style="background:#16A34A;color:#fff;padding:7px 10px;text-align:right;position:sticky;top:0">TTS</th>
-       <th style="background:#1E40AF;color:#fff;padding:7px 10px;text-align:right;position:sticky;top:0">Total</th>
+       <th style="background:#1E40AF;color:#fff;padding:7px 8px;width:44px;position:sticky;top:0">#</th>
+       <th style="background:#1E40AF;color:#fff;padding:7px 12px;text-align:left;position:sticky;top:0">Bưu Cục</th>
+       <th style="background:#F97316;color:#fff;padding:7px 12px;text-align:center;width:96px;position:sticky;top:0">OTHER</th>
+       <th style="background:#EF4444;color:#fff;padding:7px 12px;text-align:center;width:96px;position:sticky;top:0">Shopee</th>
+       <th style="background:#16A34A;color:#fff;padding:7px 12px;text-align:center;width:84px;position:sticky;top:0">TTS</th>
+       <th style="background:#1E40AF;color:#fff;padding:7px 12px;text-align:center;width:96px;position:sticky;top:0">Total</th>
       </tr></thead><tbody>${body}</tbody></table>
     </div></div>`;
   const top5=rows.slice(0,5).map((r,i)=>`${i+1}. ${r.bc}: ${fmt(r.tot)} đơn`).join('<br>');
