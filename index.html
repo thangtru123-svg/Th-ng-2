@@ -5465,6 +5465,23 @@ async function buildBaoCaoPage(){
   const byT={};[...left,...right].forEach(t=>byT[t.title]=t);
   const order=['LC GIao','LC Trả','Tồn trả Shop','Tồn đọng','48H Chưa gán','48H TTS Chưa gán'];
   const tables=order.map(t=>byT[t]).filter(Boolean);
+  // ── Sắp xếp AM: Bảng 1&2 (LC Giao/Trả) theo "Tổng trên 36h" giảm dần + 4 KCT xuống cuối; Bảng 3 (Tồn trả Shop) theo "Tổng trên 48h" giảm dần ──
+  function sortTable(title,rx,kctBottom){
+   const t=byT[title]; if(!t||!t.header)return;
+   const ci=t.header.findIndex(h=>rx.test(h.label)); if(ci<0)return;
+   const val=rw=>num(rw[ci]);
+   const isKCT=rw=>/^KCT/i.test((rw[0]||'').trim());
+   if(kctBottom){
+    const am=t.rows.filter(rw=>!isKCT(rw)).sort((a,b)=>val(b)-val(a));
+    const kct=t.rows.filter(rw=>isKCT(rw)).sort((a,b)=>val(b)-val(a));
+    t.rows=[...am,...kct];
+   }else{
+    t.rows=t.rows.slice().sort((a,b)=>val(b)-val(a));
+   }
+  }
+  sortTable('LC GIao',/trên\s*36h/i,true);
+  sortTable('LC Trả',/trên\s*36h/i,true);
+  sortTable('Tồn trả Shop',/trên\s*48h/i,false);
   window._baocao={tables};
   if(!tables.length){el.innerHTML='<div class="card"><p style="padding:16px;color:var(--text-sub)">Không đọc được bảng nào từ sheet Báo cáo.</p></div>';return;}
   const bg=(v,mx)=>{if(!v||!mx)return'#fff';const r=v/mx;return r>=.6?'#F4B0A0':r>=.35?'#F8CBAD':r>=.15?'#FCE4D6':'#FDF3EE';};
