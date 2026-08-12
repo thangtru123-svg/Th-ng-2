@@ -306,43 +306,74 @@ const TG_NSBG_CHAT   = -4931731378; // group "Anh em Bắc Giang" (group thườ
 /* ===== AUTH LOGIC ===== */
 function _decodeJWT(t){try{const b=t.split('.')[1].replace(/-/g,'+').replace(/_/g,'/');return JSON.parse(decodeURIComponent(atob(b).split('').map(c=>'%'+('00'+c.charCodeAt(0).toString(16)).slice(-2)).join('')));}catch{return{};}}
 
-async function _handleGoogleSignIn(resp){
-  const {email='',name=''}=_decodeJWT(resp.credential);
-  if(!email){_showAuthError('Không lấy được thông tin tài khoản. Thử lại.');return;}
-  const ck=document.getElementById('authChecking'),er=document.getElementById('authError');
-  ck.style.display='block';er.style.display='none';
-  try{
-    const url=`https://docs.google.com/spreadsheets/d/${WHITELIST_SHEET_ID}/export?format=csv`;
-    const res=await fetch(url);if(!res.ok)throw new Error('sheet_error');
-    const text=await res.text();
-    const list=text.split(/\r?\n/).map(e=>e.replace(/["\s]/g,'').toLowerCase()).filter(Boolean);
-    ck.style.display='none';
-    if(list.includes(email.toLowerCase())){
-      sessionStorage.setItem('_ae',email);sessionStorage.setItem('_an',name||email);
-      document.getElementById('authOverlay').style.display='none';
-    }else{
-      er.innerHTML=`<strong>${email}</strong> không có quyền truy cập dashboard này.<br><br>Liên hệ <strong>Phạm Đức Thắng</strong> để được cấp quyền.`;
-      er.style.display='block';
-    }
-  }catch(e){ck.style.display='none';_showAuthError('Không thể kiểm tra quyền truy cập. Thử lại sau.');}
-}
+function _showAuthError(msg){const er=document.getElementById('authError');if(er){er.textContent=msg;er.style.display='block';}}
 
-function _showAuthError(msg){const er=document.getElementById('authError');er.textContent=msg;er.style.display='block';}
+/* ===== ĐỌC SHEET QUA SHEETS API v4 (token @ghn.vn) — thay link công khai (đã bị chặn) ===== */
+let _tokenClient=null; window._gToken=null; let _silentTry=false; const _titleCache={};
+const _origFetch=window.fetch.bind(window);
+function _rowsToCsv(rows){return (rows||[]).map(r=>(r||[]).map(c=>{c=(c==null?'':String(c));return /[",\n\r]/.test(c)?'"'+c.replace(/"/g,'""')+'"':c;}).join(',')).join('\n');}
+async function _gidToTitle(id,gid){
+  if(!_titleCache[id]){
+    const r=await _origFetch(`https://sheets.googleapis.com/v4/spreadsheets/${id}?fields=sheets(properties(sheetId,title))`,{headers:{Authorization:'Bearer '+window._gToken}});
+    if(!r.ok)throw new Error('meta '+r.status);
+    const j=await r.json(); _titleCache[id]={_first:(j.sheets&&j.sheets[0]&&j.sheets[0].properties.title)||'Sheet1'};
+    (j.sheets||[]).forEach(s=>{_titleCache[id][String(s.properties.sheetId)]=s.properties.title;});
+  }
+  if(gid==null||gid==='')return _titleCache[id]._first;
+  return _titleCache[id][String(gid)]||_titleCache[id]._first;
+}
+async function _sheetViaApi(url){
+  const id=(url.match(/\/d\/([A-Za-z0-9_\-]+)/)||[])[1]; if(!id)throw new Error('no id');
+  const u=new URL(url); let name=u.searchParams.get('sheet'); const gid=u.searchParams.get('gid');
+  if(!name)name=await _gidToTitle(id,gid);
+  const range=encodeURIComponent("'"+String(name).replace(/'/g,"''")+"'");
+  const api=`https://sheets.googleapis.com/v4/spreadsheets/${id}/values/${range}?valueRenderOption=FORMATTED_VALUE&dateTimeRenderOption=FORMATTED_STRING`;
+  const r=await _origFetch(api,{headers:{Authorization:'Bearer '+window._gToken}});
+  if(r.status===401){window._gToken=null; if(_tokenClient)_tokenClient.requestAccessToken({prompt:''}); throw new Error('token hết hạn — đăng nhập lại');}
+  if(!r.ok)throw new Error('Sheets API '+r.status);
+  const j=await r.json();
+  return new Response(_rowsToCsv(j.values||[]),{status:200,headers:{'Content-Type':'text/csv'}});
+}
+window.fetch=async function(input,opts){
+  const url=(typeof input==='string')?input:(input&&input.url)||'';
+  if(url.indexOf('docs.google.com/spreadsheets/')>=0 && /out:csv|format=csv/.test(url) && window._gToken){
+    try{return await _sheetViaApi(url);}catch(e){console.warn('[sheetApi]',e.message);throw e;}
+  }
+  return _origFetch(input,opts);
+};
+
+async function _startSession(){
+  const ck=document.getElementById('authChecking'),er=document.getElementById('authError');
+  if(ck)ck.style.display='block'; if(er)er.style.display='none';
+  try{
+    const ui=await(await _origFetch('https://www.googleapis.com/oauth2/v3/userinfo',{headers:{Authorization:'Bearer '+window._gToken}})).json();
+    const email=(ui.email||'').toLowerCase();
+    const text=await(await fetch(`https://docs.google.com/spreadsheets/d/${WHITELIST_SHEET_ID}/export?format=csv`)).text();
+    const list=text.split(/\r?\n/).map(e=>e.replace(/["\s]/g,'').toLowerCase()).filter(Boolean);
+    if(ck)ck.style.display='none';
+    if(list.includes(email)){
+      sessionStorage.setItem('_ae',email); sessionStorage.setItem('_an',ui.name||email);
+      document.getElementById('authOverlay').style.display='none';
+      init();
+    }else if(er){ er.innerHTML=`<strong>${ui.email||email}</strong> không có quyền truy cập dashboard này.<br><br>Liên hệ <strong>Phạm Đức Thắng</strong> để được cấp quyền.`; er.style.display='block'; }
+  }catch(e){ if(ck)ck.style.display='none'; _showAuthError('Không thể xác thực / đọc dữ liệu: '+(e&&e.message||e)); }
+}
+function _onToken(resp){
+  if(!resp||resp.error||!resp.access_token){ if(_silentTry){_silentTry=false;return;} _showAuthError('Đăng nhập thất bại, vui lòng thử lại.'); return; }
+  _silentTry=false; window._gToken=resp.access_token; _startSession();
+}
 
 window.onGoogleLibraryLoad=function(){
   if(!AUTH_CLIENT_ID||AUTH_CLIENT_ID.includes('YOUR_'))return;
-  google.accounts.id.initialize({client_id:AUTH_CLIENT_ID,callback:_handleGoogleSignIn,auto_select:false,cancel_on_tap_outside:false});
-  google.accounts.id.renderButton(document.getElementById('authSignInBtn'),{theme:'outline',size:'large',text:'signin_with',locale:'vi',width:320});
-};
-
-// Kiểm tra session khi load
-(function(){
-  const saved=sessionStorage.getItem('_ae');
-  if(saved||AUTH_CLIENT_ID.includes('YOUR_')){
-    // Đã đăng nhập hoặc chưa config → cho vào
-    document.getElementById('authOverlay').style.display='none';
+  _tokenClient=google.accounts.oauth2.initTokenClient({client_id:AUTH_CLIENT_ID,scope:'openid email profile https://www.googleapis.com/auth/spreadsheets.readonly',callback:_onToken});
+  const holder=document.getElementById('authSignInBtn');
+  if(holder){
+    holder.innerHTML='<button type="button" style="background:#1a73e8;color:#fff;border:none;border-radius:9px;padding:12px 24px;font-size:15px;font-weight:600;cursor:pointer">🔐 Đăng nhập Google (@ghn.vn)</button>';
+    holder.querySelector('button').onclick=()=>{ _silentTry=false; _tokenClient.requestAccessToken({prompt:''}); };
   }
-})();
+  // thử đăng nhập im lặng nếu phiên đã cấp quyền trước đó
+  _silentTry=true; try{_tokenClient.requestAccessToken({prompt:'none'});}catch(e){_silentTry=false;}
+};
 
 /* ===== HELPERS ===== */
 function fixStickyBar(el){requestAnimationFrame(()=>{el.querySelectorAll('.table-wrap').forEach(tw=>{const bar=[...tw.children].find(c=>c.tagName==='DIV'&&c.style.position==='sticky');const tbl=tw.querySelector('table[data-bc-srch]');if(!bar||!tbl)return;const barH=bar.offsetHeight;if(!barH)return;let sTop=barH;tbl.querySelectorAll('thead tr').forEach(tr=>{tr.querySelectorAll('th').forEach(th=>{th.style.position='sticky';th.style.top=sTop+'px';});sTop+=tr.offsetHeight||22;});});});}
@@ -5841,7 +5872,9 @@ loadAll=async function(){
 };
 
 initSplash();
-init();
+// init() KHÔNG auto-chạy — cần token @ghn.vn trước. Chạy trong _startSession() sau khi đăng nhập.
+// Fallback: nếu chưa cấu hình OAuth thì chạy luôn (chế độ dev).
+if(!AUTH_CLIENT_ID||AUTH_CLIENT_ID.includes('YOUR_')){const _ov=document.getElementById('authOverlay');if(_ov)_ov.style.display='none';init();}
 </script>
 </body>
 </html>
