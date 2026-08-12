@@ -332,7 +332,10 @@ async function _sheetViaApi(url){
   if(r.status===401){window._gToken=null; if(_tokenClient)_tokenClient.requestAccessToken({prompt:''}); throw new Error('token hết hạn — đăng nhập lại');}
   if(!r.ok)throw new Error('Sheets API '+r.status);
   const j=await r.json();
-  return new Response(_rowsToCsv(j.values||[]),{status:200,headers:{'Content-Type':'text/csv'}});
+  // Sheets API cắt ô trống cuối dòng → đệm mọi dòng về đủ chiều rộng (như gviz) để parser theo cột không lệch
+  const vals=j.values||[]; const w=vals.reduce((m,rw)=>Math.max(m,(rw||[]).length),0);
+  const padded=vals.map(rw=>{const c=(rw||[]).slice(); while(c.length<w)c.push(''); return c;});
+  return new Response(_rowsToCsv(padded),{status:200,headers:{'Content-Type':'text/csv'}});
 }
 window.fetch=async function(input,opts){
   const url=(typeof input==='string')?input:(input&&input.url)||'';
@@ -4673,7 +4676,10 @@ async function buildRotLCPage(){
   const url=`https://docs.google.com/spreadsheets/d/${SHEET_ROTLC_ID}/export?format=csv&gid=${SHEET_ROTLC_GID}&_=${Date.now()}`;
   const raw=await (await fetch(url)).text();
   const rows=_vwParseCSV(raw);
-  const data=rows.slice(1).filter(r=>r.length>10 && r[9] && !(r[1]||'').startsWith('Kho Giao Hàng Nặng'));
+  const data=rows.slice(1).filter(r=>r.length>7 && !(r[1]||'').startsWith('Kho Giao Hàng Nặng'));
+  // Cột "Ngày"(9) hay trống → lấy ngày từ end_pick_time(7) dạng YYYY-MM-DD, chuẩn hoá về DD/MM/YYYY để giữ nguyên logic phía sau
+  const toDMY=r=>{const d=(r[9]||'').trim();if(/\d{1,2}\/\d{1,2}\/\d{4}/.test(d))return d;const m=/(\d{4})-(\d{2})-(\d{2})/.exec((r[7]||'').trim());return m?`${m[3]}/${m[2]}/${m[1]}`:'';};
+  data.forEach(r=>{r[9]=toDMY(r);});
   const pd=s=>{const m=/(\d{1,2})\/(\d{1,2})\/(\d{4})/.exec(s||'');return m?new Date(+m[3],+m[2]-1,+m[1]):null;};
   const days=[...new Set(data.map(r=>r[9]))].filter(s=>pd(s)).sort((a,b)=>pd(b)-pd(a));
   const last7=days.slice(0,7);
