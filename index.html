@@ -311,10 +311,25 @@ function _showAuthError(msg){const er=document.getElementById('authError');if(er
 /* ===== ĐỌC SHEET QUA SHEETS API v4 (token @ghn.vn) — thay link công khai (đã bị chặn) ===== */
 let _tokenClient=null; window._gToken=null; let _silentTry=false; const _titleCache={};
 const _origFetch=window.fetch.bind(window);
+window._apiCache=window._apiCache||{}; const _apiInflight={}; let _apiGate=Promise.resolve();
 function _rowsToCsv(rows){return (rows||[]).map(r=>(r||[]).map(c=>{c=(c==null?'':String(c));return /[",\n\r]/.test(c)?'"'+c.replace(/"/g,'""')+'"':c;}).join(',')).join('\n');}
+// Giãn nhịp (~150ms/lượt) + tự thử lại khi 429 (Too Many Requests) để không vượt quota 60 lượt đọc/phút/user
+async function _apiFetch(u){
+  const run=async()=>{
+    for(let t=0;t<5;t++){
+      const r=await _origFetch(u,{headers:{Authorization:'Bearer '+window._gToken}});
+      if(r.status===429){const ra=parseInt(r.headers.get('Retry-After')||'')||0; await new Promise(z=>setTimeout(z,(ra||(1+t))*1000)); continue;}
+      return r;
+    }
+    return _origFetch(u,{headers:{Authorization:'Bearer '+window._gToken}});
+  };
+  const p=_apiGate.then(()=>new Promise(z=>setTimeout(z,150))).then(run);
+  _apiGate=p.then(()=>{},()=>{});
+  return p;
+}
 async function _gidToTitle(id,gid){
   if(!_titleCache[id]){
-    const r=await _origFetch(`https://sheets.googleapis.com/v4/spreadsheets/${id}?fields=sheets(properties(sheetId,title))`,{headers:{Authorization:'Bearer '+window._gToken}});
+    const r=await _apiFetch(`https://sheets.googleapis.com/v4/spreadsheets/${id}?fields=sheets(properties(sheetId,title))`);
     if(!r.ok)throw new Error('meta '+r.status);
     const j=await r.json(); _titleCache[id]={_first:(j.sheets&&j.sheets[0]&&j.sheets[0].properties.title)||'Sheet1'};
     (j.sheets||[]).forEach(s=>{_titleCache[id][String(s.properties.sheetId)]=s.properties.title;});
@@ -326,16 +341,24 @@ async function _sheetViaApi(url){
   const id=(url.match(/\/d\/([A-Za-z0-9_\-]+)/)||[])[1]; if(!id)throw new Error('no id');
   const u=new URL(url); let name=u.searchParams.get('sheet'); const gid=u.searchParams.get('gid');
   if(!name)name=await _gidToTitle(id,gid);
-  const range=encodeURIComponent("'"+String(name).replace(/'/g,"''")+"'");
-  const api=`https://sheets.googleapis.com/v4/spreadsheets/${id}/values/${range}?valueRenderOption=FORMATTED_VALUE&dateTimeRenderOption=FORMATTED_STRING`;
-  const r=await _origFetch(api,{headers:{Authorization:'Bearer '+window._gToken}});
-  if(r.status===401){window._gToken=null; if(_tokenClient)_tokenClient.requestAccessToken({prompt:''}); throw new Error('token hết hạn — đăng nhập lại');}
-  if(!r.ok)throw new Error('Sheets API '+r.status);
-  const j=await r.json();
-  // Sheets API cắt ô trống cuối dòng → đệm mọi dòng về đủ chiều rộng (như gviz) để parser theo cột không lệch
-  const vals=j.values||[]; const w=vals.reduce((m,rw)=>Math.max(m,(rw||[]).length),0);
-  const padded=vals.map(rw=>{const c=(rw||[]).slice(); while(c.length<w)c.push(''); return c;});
-  return new Response(_rowsToCsv(padded),{status:200,headers:{'Content-Type':'text/csv'}});
+  const ck=id+'|'+name;
+  if(window._apiCache[ck]!=null)return new Response(window._apiCache[ck],{status:200,headers:{'Content-Type':'text/csv'}});
+  if(_apiInflight[ck]){const csv=await _apiInflight[ck];return new Response(csv,{status:200,headers:{'Content-Type':'text/csv'}});}
+  const job=(async()=>{
+    const range=encodeURIComponent("'"+String(name).replace(/'/g,"''")+"'");
+    const api=`https://sheets.googleapis.com/v4/spreadsheets/${id}/values/${range}?valueRenderOption=FORMATTED_VALUE&dateTimeRenderOption=FORMATTED_STRING`;
+    const r=await _apiFetch(api);
+    if(r.status===401){window._gToken=null; if(_tokenClient)_tokenClient.requestAccessToken({prompt:''}); throw new Error('token hết hạn — đăng nhập lại');}
+    if(!r.ok)throw new Error('Sheets API '+r.status);
+    const j=await r.json();
+    // Sheets API cắt ô trống cuối dòng → đệm mọi dòng về đủ chiều rộng (như gviz) để parser theo cột không lệch
+    const vals=j.values||[]; const w=vals.reduce((m,rw)=>Math.max(m,(rw||[]).length),0);
+    const padded=vals.map(rw=>{const c=(rw||[]).slice(); while(c.length<w)c.push(''); return c;});
+    const csv=_rowsToCsv(padded); window._apiCache[ck]=csv; return csv;
+  })();
+  _apiInflight[ck]=job;
+  try{const csv=await job; return new Response(csv,{status:200,headers:{'Content-Type':'text/csv'}});}
+  finally{delete _apiInflight[ck];}
 }
 window.fetch=async function(input,opts){
   const url=(typeof input==='string')?input:(input&&input.url)||'';
@@ -3448,6 +3471,7 @@ async function sendLowlightToTelegram(btn){
 
 /* ===== INIT ===== */
 async function init(){
+ window._apiCache={}; // xoá cache Sheets API mỗi đợt cập nhật → lấy số liệu mới
  _volCSVCache=null; // mỗi đợt cập nhật tải Data_Voltotal mới
  const btn=document.getElementById('refreshBtn');btn.classList.add('spinning');btn.disabled=true;
  const sheetNames=[
