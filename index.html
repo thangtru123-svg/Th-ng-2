@@ -916,8 +916,9 @@ function parseWeeklySection(rows,headerLabel){
  for(let i=hIdx+1;i<rows.length;i++){
   const name=(rows[i][7]||'').trim();
   if(!name)continue;
+  if(name===headerLabel||name.toLowerCase()===headerLabel.toLowerCase())continue; // bỏ dòng header lặp lại (VD "AM") → tránh ô năm 2026 ×100 = 202600%
   const wData={};
-  weeks.forEach((w,wi)=>{wData[w]=parsePct(rows[i][8+wi]||'');});
+  weeks.forEach((w,wi)=>{const v=parsePct(rows[i][8+wi]||'');wData[w]=(v>1000)?null:v;}); // chặn giá trị phi lý (ô ngày/năm lọt cột %FD)
   data.push({name,wData});
  }
  return{weeks,data};
