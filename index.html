@@ -5296,7 +5296,7 @@ function sendThuongHaiPhong(){ return sendThuongTinh('Hải Phòng',TG_KTNS_HP_C
 async function buildKhoaIDPage(){
  const el=document.getElementById('p30'); if(!el)return;
  try{
-  const LINK='https://docs.google.com/spreadsheets/d/1VB4bdj6dMftDF8RgTG_vpYPl3YaDF1RN28u-AKqC4zY/edit?gid=0#gid=0';
+  const LINK='https://docs.google.com/spreadsheets/d/1kDVp2soHOAgp_AhhTddSlocXCUjB07kbLi1EHcCqay8/edit?gid=802313671#gid=802313671';
   const url=`https://docs.google.com/spreadsheets/d/${SHEET_KHOAID_ID}/export?format=csv&gid=${SHEET_KHOAID_GID}&_=${Date.now()}`;
   const rows=_vwParseCSV(await(await fetch(url)).text()).slice(1).filter(r=>r.length>8&&(r[0]||'').trim());
   const dmy=s=>{const m=/(\d{4})-(\d{2})-(\d{2})/.exec(s||'');return m?`${m[3]}/${m[2]}/${m[1]}`:(s||'—');};
