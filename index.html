@@ -1727,6 +1727,20 @@ async function sendP16ToTelegram(){
    const img2=await _captureEl('p16-card-b');
    await _tgSendPhoto(TG_AGING_CHAT,TG_VH_THREAD,img2,`🎯 <b>BÁO CÁO TỶ LỆ GTC TTS</b>`);
   }
+  // Bảng GTC Total theo Bưu Cục (lấy từ p1, Top 20 BC %GTC thấp nhất) — an search bar
+  const p1bc=document.getElementById('p1_bcCard');
+  if(p1bc){
+   await new Promise(r=>setTimeout(r,600));
+   const cl=p1bc.cloneNode(true);
+   cl.querySelectorAll('.table-wrap>div').forEach(e=>e.remove());
+   cl.querySelectorAll('thead,th').forEach(el=>{el.style.position='';el.style.top='';el.style.zIndex='';});
+   const bcDT=cl.querySelector('.table-wrap>table')||[...cl.querySelectorAll('table')].find(t=>t.offsetWidth>0||t.rows.length>0);
+   if(bcDT){const bcTb=bcDT.querySelector('tbody');if(bcTb){const bcTrs=[...bcTb.querySelectorAll('tr')];bcTrs.slice(20,-1).forEach(tr=>tr.remove());}}
+   const tmp=document.createElement('div'); tmp.id='tg-p16-bc'; tmp.style.cssText='position:fixed;top:-9999px;left:0;z-index:-1;width:1400px;padding:0';
+   tmp.appendChild(cl); document.body.appendChild(tmp);
+   await new Promise(r=>setTimeout(r,300));
+   try{ const img3=await _captureEl('tg-p16-bc'); await _tgSendPhoto(TG_AGING_CHAT,TG_VH_THREAD,img3,`🏪 <b>GTC TOTAL — THEO BƯU CỤC (Top 20 %GTC thấp nhất)</b>`); }finally{ tmp.remove(); }
+  }
  }catch(e){console.error('TG P16 Error:',e);alert('Lỗi gửi Telegram: '+e.message);}
 }
 
