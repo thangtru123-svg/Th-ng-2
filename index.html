@@ -5618,7 +5618,7 @@ async function sendBaoCaoToTelegram(){
 
 /* ===== p34 — BÁO CÁO BƯU CỤC (BGI) VIỆT YÊN ===== */
 const VY_BC='(BGI) Việt Yên';
-function _vyNum(v){v=(v||'').toString().trim().replace(/\./g,'').replace(',','.');const n=parseFloat(v);return isNaN(n)?0:n;}
+function _vyNum(v){v=(v||'').toString().trim().replace(/,/g,'');const n=parseFloat(v);return isNaN(n)?0:n;}
 function _vyPct(v){v=(v||'').toString().trim().replace(',','.');let n=parseFloat(v);if(isNaN(n))return 0;if(n<=1)n*=100;return n;}
 function _vyDate(s){const m=/(\d{4}-\d{2}-\d{2})/.exec((s||'').toString());return m?m[1]:'';}
 function _vyLatest(rows,dcol,bccol,bcname){let best='';for(const r of rows){if(bcname&&!( (r[bccol]||'').includes(bcname)))continue;const d=_vyDate(r[dcol]);if(d>best)best=d;}return best;}
@@ -5638,17 +5638,17 @@ async function buildVietYenPage(){
    fetchSheet('FD Total theo Bưu Cục').catch(()=>''),
    (typeof _getVolCSV==='function'?_getVolCSV().catch(()=>''):Promise.resolve(''))
   ]);
-  try{const rows=_vwParseCSV(nsT).slice(1);const d=_vyLatest(rows,2,0,VY_BC);const day=rows.filter(r=>(r[0]||'').includes(VY_BC)&&_vyDate(r[2])===d);
+  try{const rows=(nsT||[]).slice(1);const d=_vyLatest(rows,2,0,VY_BC);const day=rows.filter(r=>(r[0]||'').includes(VY_BC)&&_vyDate(r[2])===d);
    const elig=day.filter(r=>_vyNum(r[4])>10);A.nhanSu=elig.length;
    const sumG=day.reduce((s,r)=>s+_vyNum(r[4]),0);A.nsTB=day.length?Math.round(sumG/day.length):0;if(d)A.date=d;}catch(e){}
-  try{const rows=_vwParseCSV(gtcT).slice(1);const d=_vyLatest(rows,2,1,VY_BC);const row=rows.filter(r=>(r[1]||'').includes(VY_BC)&&_vyDate(r[2])===d);
+  try{const rows=(gtcT||[]).slice(1);const d=_vyLatest(rows,2,1,VY_BC);const row=rows.filter(r=>(r[1]||'').includes(VY_BC)&&_vyDate(r[2])===d);
    const vol=row.reduce((s,r)=>s+_vyNum(r[3]),0),gtc=row.reduce((s,r)=>s+_vyNum(r[6]),0);
    A.volTotal=vol;A.volGTC=gtc;A.volTon=Math.max(0,vol-gtc);A.volGTC_N1=gtc;if(d&&!A.date)A.date=d;}catch(e){}
-  try{const rows=_vwParseCSV(odrT).slice(1);const d=_vyLatest(rows,2,1,VY_BC);const row=rows.filter(r=>(r[1]||'').includes(VY_BC)&&_vyDate(r[2])===d);
+  try{const rows=(odrT||[]).slice(1);const d=_vyLatest(rows,2,1,VY_BC);const row=rows.filter(r=>(r[1]||'').includes(VY_BC)&&_vyDate(r[2])===d);
    let sv=0,so=0;row.forEach(r=>{const v=_vyNum(r[3]);sv+=v;so+=_vyPct(r[4])/100*v;});A.odr=sv?Math.round(so/sv*1000)/10:0;}catch(e){}
-  try{const rows=_vwParseCSV(oprT).slice(1);const d=_vyLatest(rows,2,1,VY_BC);const row=rows.filter(r=>(r[1]||'').includes(VY_BC)&&_vyDate(r[2])===d);
+  try{const rows=(oprT||[]).slice(1);const d=_vyLatest(rows,2,1,VY_BC);const row=rows.filter(r=>(r[1]||'').includes(VY_BC)&&_vyDate(r[2])===d);
    let sv=0,so=0;row.forEach(r=>{const v=_vyNum(r[3]);sv+=v;so+=_vyPct(r[4])/100*v;});A.opr=sv?Math.round(so/sv*1000)/10:0;}catch(e){}
-  try{const rows=_vwParseCSV(fdT).slice(1);const d=_vyLatest(rows,1,0,VY_BC);const row=rows.filter(r=>(r[0]||'').includes(VY_BC)&&_vyDate(r[1])===d);
+  try{const rows=(fdT||[]).slice(1);const d=_vyLatest(rows,1,0,VY_BC);const row=rows.filter(r=>(r[0]||'').includes(VY_BC)&&_vyDate(r[1])===d);
    let sw=0,sf=0;row.forEach(r=>{const w=_vyPct(r[2]);sw+=w;sf+=_vyPct(r[3])*w;});A.fd=sw?Math.round(sf/sw*100)/100:0;}catch(e){}
   try{const rows=_vwParseCSV(volCSV).slice(1);const CK=['2. 5-10Kg','3. 10-15Kg','4. >=15Kg'];
    const vy=rows.filter(r=>(r[1]||'').includes(VY_BC)&&CK.includes((r[3]||'').trim()));
