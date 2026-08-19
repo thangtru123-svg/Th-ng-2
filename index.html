@@ -5621,6 +5621,8 @@ const VY_BCS=['(BGI) Việt Yên','(BGI) Lạng Giang','(BGI) Xuân Cẩm','(HPH
 let VY_BC=(VY_BCS.includes(localStorage.getItem('vy_bc')||''))?localStorage.getItem('vy_bc'):VY_BCS[0];
 const TG_BATON_BOT_CHAT=-5520203386; // group "BOT báo cáo bưu cục bất ổn"
 const VY_DFT_BC={'(BGI) Việt Yên':{trongTuyen:'Xã Hương Mai và Xã Việt Tiến với volume đơn mới về trung bình hàng ngày 180-230 đơn/day',ctvGoi:'Có',ctvGoiChiTiet:'Đang sử dụng 1 ID CTV gọi - Để NVXL gọi các đơn quá hạn, khách từ chối'}};
+const VY_TAG={'(BGI) Việt Yên':'@thangquada','(BGI) Lạng Giang':'@SUBG92','(BGI) Xuân Cẩm':'@SUBG92','(HPH) Phù Liễn':'@QuangBX_3098460','(HPH) An Hải':'@QuangBX_3098460'};
+const VY_AMNAME={'(BGI) Việt Yên':'Phạm Đức Thắng','(BGI) Lạng Giang':'Giáp Hải Sự','(BGI) Xuân Cẩm':'Giáp Hải Sự','(HPH) Phù Liễn':'Bùi Xuân Quang','(HPH) An Hải':'Bùi Xuân Quang'};
 function _vyShort(bc){return (bc||'').replace(/^\([^)]*\)\s*/,'');}
 function _vyPickBC(bc){if(!VY_BCS.includes(bc))return;VY_BC=bc;localStorage.setItem('vy_bc',bc);buildVietYenPage();}
 function _vyNum(v){v=(v||'').toString().trim().replace(/,/g,'');const n=parseFloat(v);return isNaN(n)?0:n;}
@@ -5749,7 +5751,7 @@ function _vyBuildText(bc,A,m){
  const gv=(k,d)=>m[k]!==undefined&&m[k]!==''?m[k]:(d||'—');
  const ic=(bc==='(BGI) Việt Yên'); // Việt Yên giữ icon; Lạng Giang/Xuân Cẩm bỏ
  const p=e=>ic?e+' ':'';
- return `${p('🏢')}<b>BÁO CÁO BƯU CỤC — ${bc.toUpperCase()}</b>\n📅 Ngày: ${dLbl}\n\n`+
+ return `${p('🏢')}<b>BÁO CÁO BƯU CỤC — ${bc.toUpperCase()}</b>\n📅 Ngày: ${dLbl}\n👤 AM ${VY_AMNAME[bc]||''}: ${VY_TAG[bc]||''}\n\n`+
   `${p('👷')}<b>Nhân sự</b>: ${fmt(A.nhanSu)} NV\n\n`+
   `${p('📦')}<b>Volume</b>\n`+
   `• Vol mới: ${gv('volMoi')} đơn\n`+
