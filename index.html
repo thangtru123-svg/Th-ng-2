@@ -226,7 +226,7 @@ tr.tot td{background:#FFF0EB!important;font-weight:800!important;border-top:2px 
  <button class="nav-item" onclick="show('p29',this)" style="background:linear-gradient(135deg,rgba(22,101,52,0.14),rgba(34,197,94,0.08));border:1px solid rgba(22,101,52,0.3);font-weight:700"><span class="icon">🎁</span>Thưởng Năng Suất NV Mới</button>
  <button class="nav-item" onclick="show('p30',this)" style="background:linear-gradient(135deg,rgba(220,38,38,0.16),rgba(241,93,41,0.08));border:1px solid rgba(220,38,38,0.32);font-weight:700"><span class="icon">🔒</span>Khoá ID vi phạm</button>
  <button class="nav-item" onclick="show('p32',this)" style="background:linear-gradient(135deg,rgba(37,99,235,0.14),rgba(59,130,246,0.08));border:1px solid rgba(37,99,235,0.3);font-weight:700"><span class="icon">📑</span>Báo Cáo Tồn / LC / 48H</button>
- <button class="nav-item" onclick="show('p34',this)" style="background:linear-gradient(135deg,rgba(22,101,52,0.16),rgba(34,197,94,0.08));border:1px solid rgba(22,101,52,0.32);font-weight:700"><span class="icon">🏢</span>Báo Cáo Bưu Cục (VY/LG/XC)</button>
+ <button class="nav-item" onclick="show('p34',this)" style="background:linear-gradient(135deg,rgba(22,101,52,0.16),rgba(34,197,94,0.08));border:1px solid rgba(22,101,52,0.32);font-weight:700"><span class="icon">🏢</span>Báo Cáo Bưu Cục</button>
  <div class="nav-section">GTC</div>
  <button class="nav-item" onclick="show('p1',this)"><span class="icon">📦</span>Tổng quan GTC Total</button>
  <button class="nav-item" onclick="show('p2',this)"><span class="icon">🎯</span>Tổng quan GTC TTS</button>
@@ -5617,7 +5617,7 @@ async function sendBaoCaoToTelegram(){
 }
 
 /* ===== p34 — BÁO CÁO BƯU CỤC (Việt Yên / Lạng Giang / Xuân Cẩm) ===== */
-const VY_BCS=['(BGI) Việt Yên','(BGI) Lạng Giang','(BGI) Xuân Cẩm'];
+const VY_BCS=['(BGI) Việt Yên','(BGI) Lạng Giang','(BGI) Xuân Cẩm','(HPH) Phù Liễn','(HPH) An Hải'];
 let VY_BC=(VY_BCS.includes(localStorage.getItem('vy_bc')||''))?localStorage.getItem('vy_bc'):VY_BCS[0];
 const TG_BATON_BOT_CHAT=-5520203386; // group "BOT báo cáo bưu cục bất ổn"
 const VY_DFT_BC={'(BGI) Việt Yên':{trongTuyen:'Xã Hương Mai và Xã Việt Tiến với volume đơn mới về trung bình hàng ngày 180-230 đơn/day',ctvGoi:'Có',ctvGoiChiTiet:'Đang sử dụng 1 ID CTV gọi - Để NVXL gọi các đơn quá hạn, khách từ chối'}};
@@ -5672,7 +5672,7 @@ async function buildVietYenPage(){
   const S=await _vyFetchAll();window._vyS=S;
   const A=_vyCompute(VY_BC,S);window._vyAuto=A;
   el.innerHTML=_vyRender(A);
-  injectTgBtn('p34',()=>sendVietYenToTelegram(),'Bắn 3 BC TG');
+  injectTgBtn('p34',()=>sendVietYenToTelegram(),'Bắn '+VY_BCS.length+' BC TG');
  }catch(e){el.innerHTML=errPage('Không thể tải '+_vyShort(VY_BC)+': '+e.message);}
 }
 
@@ -5787,8 +5787,8 @@ async function sendVietYenToTelegram(){
    if(!res||!res.ok)okAll=false;
    await new Promise(r=>setTimeout(r,600));
   }
-  if(btn){btn.innerHTML=okAll?'✅ Đã gửi 3 BC':'⚠️ Có lỗi 1 phần';setTimeout(()=>{btn.disabled=false;btn.innerHTML='📤 Bắn 3 BC TG';},2800);}
- }catch(e){alert('Lỗi gửi Telegram: '+e.message);if(btn){btn.disabled=false;btn.innerHTML='📤 Bắn 3 BC TG';}}
+  if(btn){btn.innerHTML=okAll?('✅ Đã gửi '+VY_BCS.length+' BC'):'⚠️ Có lỗi 1 phần';setTimeout(()=>{btn.disabled=false;btn.innerHTML='📤 Bắn '+VY_BCS.length+' BC TG';},2800);}
+ }catch(e){alert('Lỗi gửi Telegram: '+e.message);if(btn){btn.disabled=false;btn.innerHTML='📤 Bắn '+VY_BCS.length+' BC TG';}}
 }
 
 async function buildCODPage(){
