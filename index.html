@@ -5630,41 +5630,49 @@ function _vyLatest(rows,dcol,bccol,bcname){let best='';for(const r of rows){if(b
 function _vyStore(){try{return JSON.parse(localStorage.getItem('vy_data')||'{}');}catch(e){return{};}}
 function _vySaveStore(o){localStorage.setItem('vy_data',JSON.stringify(o));}
 
+async function _vyFetchAll(){
+ const [nsT,gtcT,odrT,oprT,fdT,volCSV]=await Promise.all([
+  fetchSheet('Năng suất NV').catch(()=>''),
+  fetchSheet('GTC Total theo Bưu Cục').catch(()=>''),
+  fetchSheet('ODR TTS - Bưu Cục').catch(()=>''),
+  fetchSheet('OPR TTS - Bưu Cục').catch(()=>''),
+  fetchSheet('FD Total theo Bưu Cục').catch(()=>''),
+  (typeof _getVolCSV==='function'?_getVolCSV().catch(()=>''):Promise.resolve(''))
+ ]);
+ let agRows=[];
+ try{const resp=await fetch(`https://docs.google.com/spreadsheets/d/${AGING_SHEET_ID}/export?format=csv&gid=${AGING_GID}`);
+  agRows=(typeof parseCsvRaw==='function'?parseCsvRaw(await resp.text()):_vwParseCSV(await resp.text())).slice(1);}catch(e){}
+ return {nsT,gtcT,odrT,oprT,fdT,volCSV,agRows};
+}
+function _vyCompute(bc,S){
+ const A={date:'',nhanSu:0,nsTB:0,volTotal:0,volGTC:0,volTon:0,volGTC_N1:0,volCK:0,aging5:0,odr:0,opr:0,fd:0,bc};
+ try{const rows=(S.nsT||[]).slice(1);const d=_vyLatest(rows,2,0,bc);const day=rows.filter(r=>(r[0]||'').includes(bc)&&_vyDate(r[2])===d);
+  A.nhanSu=day.filter(r=>_vyNum(r[4])>10).length;
+  const sumG=day.reduce((s,r)=>s+_vyNum(r[4]),0);A.nsTB=day.length?Math.round(sumG/day.length):0;if(d)A.date=d;}catch(e){}
+ try{const rows=(S.gtcT||[]).slice(1);const d=_vyLatest(rows,2,1,bc);const row=rows.filter(r=>(r[1]||'').includes(bc)&&_vyDate(r[2])===d);
+  const vol=row.reduce((s,r)=>s+_vyNum(r[3]),0),gtc=row.reduce((s,r)=>s+_vyNum(r[6]),0);
+  A.volTotal=vol;A.volGTC=gtc;A.volTon=Math.max(0,vol-gtc);A.volGTC_N1=gtc;if(d&&!A.date)A.date=d;}catch(e){}
+ try{const rows=(S.odrT||[]).slice(1);const d=_vyLatest(rows,2,1,bc);const row=rows.filter(r=>(r[1]||'').includes(bc)&&_vyDate(r[2])===d);
+  let sv=0,so=0;row.forEach(r=>{const v=_vyNum(r[3]);sv+=v;so+=_vyPct(r[4])/100*v;});A.odr=sv?Math.round(so/sv*1000)/10:0;}catch(e){}
+ try{const rows=(S.oprT||[]).slice(1);const d=_vyLatest(rows,2,1,bc);const row=rows.filter(r=>(r[1]||'').includes(bc)&&_vyDate(r[2])===d);
+  let sv=0,so=0;row.forEach(r=>{const v=_vyNum(r[3]);sv+=v;so+=_vyPct(r[4])/100*v;});A.opr=sv?Math.round(so/sv*1000)/10:0;}catch(e){}
+ try{const rows=(S.fdT||[]).slice(1);const d=_vyLatest(rows,1,0,bc);const row=rows.filter(r=>(r[0]||'').includes(bc)&&_vyDate(r[1])===d);
+  let sw=0,sf=0;row.forEach(r=>{const w=_vyPct(r[2]);sw+=w;sf+=_vyPct(r[3])*w;});A.fd=sw?Math.round(sf/sw*100)/100:0;}catch(e){}
+ try{const rows=_vwParseCSV(S.volCSV).slice(1);const CK=['2. 5-10Kg','3. 10-15Kg','4. >=15Kg'];
+  const vy=rows.filter(r=>(r[1]||'').includes(bc)&&CK.includes((r[3]||'').trim()));
+  const d=_vyLatest(vy,4,1,bc);A.volCK=vy.filter(r=>_vyDate(r[4])===d).reduce((s,r)=>s+_vyNum(r[5]),0);}catch(e){}
+ try{const sn=_vyShort(bc);const vy=(S.agRows||[]).filter(r=>(r[2]||'').includes(sn));const d=_vyLatest(vy,11,2,sn);
+  A.aging5=vy.filter(r=>_vyDate(r[11])===d).length;}catch(e){}
+ return A;
+}
 async function buildVietYenPage(){
  const el=document.getElementById('p34'); if(!el)return;
  el.innerHTML='<div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu '+_vyShort(VY_BC)+'...</div></div>';
- const A={date:'',nhanSu:0,nsTB:0,volTotal:0,volGTC:0,volTon:0,volGTC_N1:0,volCK:0,aging5:0,odr:0,opr:0,fd:0};
  try{
-  const [nsT,gtcT,odrT,oprT,fdT,volCSV]=await Promise.all([
-   fetchSheet('Năng suất NV').catch(()=>''),
-   fetchSheet('GTC Total theo Bưu Cục').catch(()=>''),
-   fetchSheet('ODR TTS - Bưu Cục').catch(()=>''),
-   fetchSheet('OPR TTS - Bưu Cục').catch(()=>''),
-   fetchSheet('FD Total theo Bưu Cục').catch(()=>''),
-   (typeof _getVolCSV==='function'?_getVolCSV().catch(()=>''):Promise.resolve(''))
-  ]);
-  try{const rows=(nsT||[]).slice(1);const d=_vyLatest(rows,2,0,VY_BC);const day=rows.filter(r=>(r[0]||'').includes(VY_BC)&&_vyDate(r[2])===d);
-   const elig=day.filter(r=>_vyNum(r[4])>10);A.nhanSu=elig.length;
-   const sumG=day.reduce((s,r)=>s+_vyNum(r[4]),0);A.nsTB=day.length?Math.round(sumG/day.length):0;if(d)A.date=d;}catch(e){}
-  try{const rows=(gtcT||[]).slice(1);const d=_vyLatest(rows,2,1,VY_BC);const row=rows.filter(r=>(r[1]||'').includes(VY_BC)&&_vyDate(r[2])===d);
-   const vol=row.reduce((s,r)=>s+_vyNum(r[3]),0),gtc=row.reduce((s,r)=>s+_vyNum(r[6]),0);
-   A.volTotal=vol;A.volGTC=gtc;A.volTon=Math.max(0,vol-gtc);A.volGTC_N1=gtc;if(d&&!A.date)A.date=d;}catch(e){}
-  try{const rows=(odrT||[]).slice(1);const d=_vyLatest(rows,2,1,VY_BC);const row=rows.filter(r=>(r[1]||'').includes(VY_BC)&&_vyDate(r[2])===d);
-   let sv=0,so=0;row.forEach(r=>{const v=_vyNum(r[3]);sv+=v;so+=_vyPct(r[4])/100*v;});A.odr=sv?Math.round(so/sv*1000)/10:0;}catch(e){}
-  try{const rows=(oprT||[]).slice(1);const d=_vyLatest(rows,2,1,VY_BC);const row=rows.filter(r=>(r[1]||'').includes(VY_BC)&&_vyDate(r[2])===d);
-   let sv=0,so=0;row.forEach(r=>{const v=_vyNum(r[3]);sv+=v;so+=_vyPct(r[4])/100*v;});A.opr=sv?Math.round(so/sv*1000)/10:0;}catch(e){}
-  try{const rows=(fdT||[]).slice(1);const d=_vyLatest(rows,1,0,VY_BC);const row=rows.filter(r=>(r[0]||'').includes(VY_BC)&&_vyDate(r[1])===d);
-   let sw=0,sf=0;row.forEach(r=>{const w=_vyPct(r[2]);sw+=w;sf+=_vyPct(r[3])*w;});A.fd=sw?Math.round(sf/sw*100)/100:0;}catch(e){}
-  try{const rows=_vwParseCSV(volCSV).slice(1);const CK=['2. 5-10Kg','3. 10-15Kg','4. >=15Kg'];
-   const vy=rows.filter(r=>(r[1]||'').includes(VY_BC)&&CK.includes((r[3]||'').trim()));
-   const d=_vyLatest(vy,4,1,VY_BC);A.volCK=vy.filter(r=>_vyDate(r[4])===d).reduce((s,r)=>s+_vyNum(r[5]),0);}catch(e){}
-  try{const resp=await fetch(`https://docs.google.com/spreadsheets/d/${AGING_SHEET_ID}/export?format=csv&gid=${AGING_GID}`);
-   const rows=(typeof parseCsvRaw==='function'?parseCsvRaw(await resp.text()):_vwParseCSV(await resp.text())).slice(1);
-   const sn=_vyShort(VY_BC);const vy=rows.filter(r=>(r[2]||'').includes(sn));const d=_vyLatest(vy,11,2,sn);
-   A.aging5=vy.filter(r=>_vyDate(r[11])===d).length;}catch(e){}
-  window._vyAuto=A;
+  const S=await _vyFetchAll();window._vyS=S;
+  const A=_vyCompute(VY_BC,S);window._vyAuto=A;
   el.innerHTML=_vyRender(A);
-  injectTgBtn('p34',()=>sendVietYenToTelegram(),'Bắn BC Bất Ổn TG');
+  injectTgBtn('p34',()=>sendVietYenToTelegram(),'Bắn 3 BC TG');
  }catch(e){el.innerHTML=errPage('Không thể tải '+_vyShort(VY_BC)+': '+e.message);}
 }
 
@@ -5735,40 +5743,52 @@ function _vyOnChange(inpEl){
  st[key]=m;_vySaveStore(st);
 }
 
+function _vyBuildText(bc,A,m){
+ const dLbl=A.date?A.date.split('-').reverse().join('/'):'—';
+ const fmt=n=>(n||0).toLocaleString('vi-VN');
+ const gv=(k,d)=>m[k]!==undefined&&m[k]!==''?m[k]:(d||'—');
+ const ic=(bc==='(BGI) Việt Yên'); // Việt Yên giữ icon; Lạng Giang/Xuân Cẩm bỏ
+ const p=e=>ic?e+' ':'';
+ return `${p('🏢')}<b>BÁO CÁO BƯU CỤC — ${bc.toUpperCase()}</b>\n📅 Ngày: ${dLbl}\n\n`+
+  `${p('👷')}<b>Nhân sự</b> (GTC&gt;10): ${fmt(A.nhanSu)} NV\n\n`+
+  `${p('📦')}<b>Volume</b>\n`+
+  `• Vol mới: ${gv('volMoi')} đơn\n`+
+  `• Vol tồn cuối ngày: ${fmt(A.volTon)} đơn (Tổng ${fmt(A.volTotal)} − GTC ${fmt(A.volGTC)})\n`+
+  `• Vol hàng CK tồn đọng: ${fmt(A.volCK)} đơn\n`+
+  `• Vol GTC ngày N-1: ${fmt(A.volGTC_N1)} đơn\n`+
+  `• Lý do tăng/giảm: ${gv('lyDo')}\n\n`+
+  `${p('📈')}<b>Năng suất & Chỉ số</b>\n`+
+  `• NS GTC TB/NV: ${fmt(A.nsTB)} đơn\n`+
+  `• Aging &gt;5 ngày: ${fmt(A.aging5)} đơn\n`+
+  `• ODR: ${A.odr}%  ·  OPR: ${A.opr}%  ·  FD: ${A.fd}%\n\n`+
+  `${p('🕐')}<b>Giờ giấc</b>\n`+
+  `• Tải sáng ca 1: ${gv('gioTaiCa1','5h45')}  ·  NV check-in: ${gv('gioCheckin','7h')}\n`+
+  `• NV rời BC: ${gv('gioRoiBC')} (còn ${gv('nvChuaRoi')} NV chưa rời)\n`+
+  `• Đơn GTC đầu tiên: ${gv('donGTCDau')}\n\n`+
+  `${p('⚙️')}<b>Hành động điều tiết</b>\n`+
+  `• NVPTTT hỗ trợ: ${gv('nvpttt','Không')}\n`+
+  `• Sử dụng CTV: ${gv('ctvSuDung','Không')}\n`+
+  `• Trống tuyến: ${gv('trongTuyen')}\n`+
+  `• CTV gọi điện: ${gv('ctvGoi','Có')} — ${gv('ctvGoiChiTiet')}\n`+
+  `• FL/CTV lọc phân hàng: ${gv('flLoc','Không')}`;
+}
 async function sendVietYenToTelegram(){
  const btn=document.getElementById('tgInpage_p34'); if(btn){btn.disabled=true;btn.innerHTML='⏳ Đang gửi...';}
  try{
-  _vyOnChange();
-  const A=window._vyAuto||{};const key=VY_BC+'|'+(A.date||'today');const m=(_vyStore()[key])||{};
-  const dLbl=A.date?A.date.split('-').reverse().join('/'):'—';
-  const fmt=n=>(n||0).toLocaleString('vi-VN');
-  const gv=(k,d)=>m[k]!==undefined&&m[k]!==''?m[k]:(d||'—');
-  const txt=`🏢 <b>BÁO CÁO BƯU CỤC — ${VY_BC.toUpperCase()}</b>\n📅 Ngày: ${dLbl}\n\n`+
-   `👷 <b>Nhân sự</b> (GTC&gt;10): ${fmt(A.nhanSu)} NV\n\n`+
-   `📦 <b>Volume</b>\n`+
-   `• Vol mới: ${gv('volMoi')} đơn\n`+
-   `• Vol tồn cuối ngày: ${fmt(A.volTon)} đơn (Tổng ${fmt(A.volTotal)} − GTC ${fmt(A.volGTC)})\n`+
-   `• Vol hàng CK tồn đọng: ${fmt(A.volCK)} đơn\n`+
-   `• Vol GTC ngày N-1: ${fmt(A.volGTC_N1)} đơn\n`+
-   `• Lý do tăng/giảm: ${gv('lyDo')}\n\n`+
-   `📈 <b>Năng suất & Chỉ số</b>\n`+
-   `• NS GTC TB/NV: ${fmt(A.nsTB)} đơn\n`+
-   `• Aging &gt;5 ngày: ${fmt(A.aging5)} đơn\n`+
-   `• ODR: ${A.odr}%  ·  OPR: ${A.opr}%  ·  FD: ${A.fd}%\n\n`+
-   `🕐 <b>Giờ giấc</b>\n`+
-   `• Tải sáng ca 1: ${gv('gioTaiCa1','5h45')}  ·  NV check-in: ${gv('gioCheckin','7h')}\n`+
-   `• NV rời BC: ${gv('gioRoiBC')} (còn ${gv('nvChuaRoi')} NV chưa rời)\n`+
-   `• Đơn GTC đầu tiên: ${gv('donGTCDau')}\n\n`+
-   `⚙️ <b>Hành động điều tiết</b>\n`+
-   `• NVPTTT hỗ trợ: ${gv('nvpttt','Không')}\n`+
-   `• Sử dụng CTV: ${gv('ctvSuDung','Không')}\n`+
-   `• Trống tuyến: ${gv('trongTuyen')}\n`+
-   `• CTV gọi điện: ${gv('ctvGoi','Có')} — ${gv('ctvGoiChiTiet')}\n`+
-   `• FL/CTV lọc phân hàng: ${gv('flLoc','Không')}`;
-  const res=await _tgSend(TG_BATON_BOT_CHAT,undefined,txt);
-  if(!res||!res.ok)throw new Error((res&&res.description)||'gửi thất bại');
-  if(btn){btn.innerHTML='✅ Đã gửi';setTimeout(()=>{btn.disabled=false;btn.innerHTML='📤 Bắn BC Bất Ổn TG';},2500);}
- }catch(e){alert('Lỗi gửi Telegram: '+e.message);if(btn){btn.disabled=false;btn.innerHTML='📤 Bắn BC Bất Ổn TG';}}
+  _vyOnChange(); // lưu input BC đang mở trước khi bắn
+  const S=(window._vyS)?window._vyS:await _vyFetchAll();
+  const st=_vyStore();let okAll=true;
+  for(let i=0;i<VY_BCS.length;i++){
+   const bc=VY_BCS[i];
+   if(btn)btn.innerHTML=`⏳ ${i+1}/${VY_BCS.length}: ${_vyShort(bc)}`;
+   const A=_vyCompute(bc,S);
+   const m=(st[bc+'|'+(A.date||'today')])||{};
+   const res=await _tgSend(TG_BATON_BOT_CHAT,undefined,_vyBuildText(bc,A,m));
+   if(!res||!res.ok)okAll=false;
+   await new Promise(r=>setTimeout(r,600));
+  }
+  if(btn){btn.innerHTML=okAll?'✅ Đã gửi 3 BC':'⚠️ Có lỗi 1 phần';setTimeout(()=>{btn.disabled=false;btn.innerHTML='📤 Bắn 3 BC TG';},2800);}
+ }catch(e){alert('Lỗi gửi Telegram: '+e.message);if(btn){btn.disabled=false;btn.innerHTML='📤 Bắn 3 BC TG';}}
 }
 
 async function buildCODPage(){
