@@ -5750,7 +5750,7 @@ function _vyBuildText(bc,A,m){
  const ic=(bc==='(BGI) Việt Yên'); // Việt Yên giữ icon; Lạng Giang/Xuân Cẩm bỏ
  const p=e=>ic?e+' ':'';
  return `${p('🏢')}<b>BÁO CÁO BƯU CỤC — ${bc.toUpperCase()}</b>\n📅 Ngày: ${dLbl}\n\n`+
-  `${p('👷')}<b>Nhân sự</b> (GTC&gt;10): ${fmt(A.nhanSu)} NV\n\n`+
+  `${p('👷')}<b>Nhân sự</b>: ${fmt(A.nhanSu)} NV\n\n`+
   `${p('📦')}<b>Volume</b>\n`+
   `• Vol mới: ${gv('volMoi')} đơn\n`+
   `• Vol tồn cuối ngày: ${fmt(A.volTon)} đơn (Tổng ${fmt(A.volTotal)} − GTC ${fmt(A.volGTC)})\n`+
