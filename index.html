@@ -437,6 +437,7 @@ function injectAllTgBtns(){
  injectTgBtn('p30',()=>sendKhoaIDToTelegram(),'Bắn Khoá ID TG');
  injectTgBtn('p32',()=>sendBaoCaoToTelegram(),'Bắn Task Thắng TG');
  injectTgBtn('p29',()=>sendThuongToTelegram(),'Bắn KTNS Bắc Giang TG');
+ injectTgBtn('p35',()=>sendQuaHanToTelegram(),'Bắn Quá Hạn TG');
 }
 function fmt(n){return(+n||0).toLocaleString('vi-VN');}
 function isoD(d){return(d||'').match(/\d{4}-\d{2}-\d{2}/)?.[0]||'';}
@@ -5862,24 +5863,60 @@ async function buildQuaHanPage(){
   const shBlank=shData.filter(x=>(x[11]===undefined||(''+x[11]).trim()==='')).length;
   const shCnt=_qhPivot(shData,x=>_qhAmName(x[8]),x=>(x[6]||'').trim(),x=>{const n=(''+(x[11]||'')).trim();return n!==''?QH_BUCKETS[+n]:'';},null);
   const dstr=new Date().toLocaleDateString('vi-VN');
+  const linkTTS=`https://docs.google.com/spreadsheets/d/${QH_TTS_ID}/edit?gid=0`;
+  const linkSH=`https://docs.google.com/spreadsheets/d/${QH_SHOPEE_ID}/edit?gid=186957621`;
+  const srcLine=(url)=>`<div style="margin:8px 0 2px;font-size:12.5px">🔗 <a href="${url}" target="_blank" rel="noopener" style="color:#1a56db;font-weight:700;text-decoration:underline">Link nguồn — AM bấm để tra cứu chi tiết đơn</a></div>`;
   el.innerHTML=`
    <div class="page-header"><div><div class="page-title">🚨 Quá Hạn / Truy Thu — Backlog XBG</div>
     <div class="page-meta"><span style="color:var(--text-sub);font-size:13px">Cập nhật: ${dstr} · TTS ${ttsData.length} đơn · Shopee ${shData.length-shBlank} đơn</span>
     <button onclick="buildQuaHanPage()" style="padding:6px 13px;background:rgba(241,93,41,0.12);border:1px solid rgba(241,93,41,0.35);color:var(--orange-dark);border-radius:20px;font-size:12px;font-weight:700;cursor:pointer">🔄 Cập nhật</button></div></div></div>
-   <div style="max-width:1080px">
-    ${_qhBanner('TTS')}
-    <div style="font-weight:700;margin:12px 0 5px;color:var(--text)">📦 Theo AM — Số đơn hàng</div>
-    ${_qhTableHTML(ttsCnt,false)}
-    <div style="font-weight:700;margin:16px 0 5px;color:var(--text)">💰 Theo AM — Giá trị đơn hàng (đ)</div>
-    ${_qhTableHTML(ttsVal,true)}
+   <div style="max-width:1120px">
+    <div id="qhCap1" style="background:#fff;padding:8px 8px 12px;border-radius:6px">
+     ${_qhBanner('TTS')}
+     <div style="font-weight:700;margin:12px 0 5px;color:var(--text)">📦 Theo AM — Số đơn hàng</div>
+     ${_qhTableHTML(ttsCnt,false)}
+     ${srcLine(linkTTS)}
+    </div>
+    <div id="qhCap2" style="background:#fff;padding:8px 8px 12px;border-radius:6px;margin-top:16px">
+     ${_qhBanner('TTS')}
+     <div style="font-weight:700;margin:12px 0 5px;color:var(--text)">💰 Theo AM — Giá trị đơn hàng (đ)</div>
+     ${_qhTableHTML(ttsVal,true)}
+     ${srcLine(linkTTS)}
+    </div>
     <div style="height:22px"></div>
-    ${_qhBanner('SHOPEE')}
-    <div style="font-weight:700;margin:12px 0 5px;color:var(--text)">📦 Theo AM — Số đơn hàng</div>
-    ${_qhTableHTML(shCnt,false)}
-    <div style="color:var(--text-sub);font-size:12px;margin-top:6px">* Bỏ qua ${shBlank} đơn Shopee chưa phân loại mức SLA (ô trống).</div>
+    <div id="qhCap3" style="background:#fff;padding:8px 8px 12px;border-radius:6px">
+     ${_qhBanner('SHOPEE')}
+     <div style="font-weight:700;margin:12px 0 5px;color:var(--text)">📦 Theo AM — Số đơn hàng</div>
+     ${_qhTableHTML(shCnt,false)}
+     <div style="color:var(--text-sub);font-size:12px;margin-top:6px">* Bỏ qua ${shBlank} đơn Shopee chưa phân loại mức SLA (ô trống).</div>
+     ${srcLine(linkSH)}
+    </div>
    </div>`;
   el.querySelectorAll('#qhDate').forEach(e=>e.textContent=dstr);
  }catch(e){el.innerHTML=`<div class="page-header"><div class="page-title">🚨 Quá Hạn / Truy Thu</div></div><div style="padding:20px;color:var(--red)">Lỗi tải dữ liệu: ${e.message}. Kiểm tra quyền truy cập 2 sheet nguồn (cần chia sẻ "bất kỳ ai có link" hoặc đăng nhập Google có quyền).</div>`;}
+}
+async function sendQuaHanToTelegram(){
+ const btn=document.getElementById('tgInpage_p35');
+ if(!document.getElementById('qhCap1')){alert('Trang chưa tải xong dữ liệu Quá Hạn.');return;}
+ const linkTTS=`https://docs.google.com/spreadsheets/d/${QH_TTS_ID}/edit?gid=0`;
+ const linkSH=`https://docs.google.com/spreadsheets/d/${QH_SHOPEE_ID}/edit?gid=186957621`;
+ const jobs=[
+  {id:'qhCap1',cap:`🚨 <b>QUÁ HẠN / TRUY THU — TTS</b>\n📦 Số đơn theo AM\n🔗 Link tra cứu chi tiết đơn: ${linkTTS}`},
+  {id:'qhCap2',cap:`🚨 <b>QUÁ HẠN / TRUY THU — TTS</b>\n💰 Giá trị đơn theo AM\n🔗 Link tra cứu chi tiết đơn: ${linkTTS}`},
+  {id:'qhCap3',cap:`🚨 <b>QUÁ HẠN / TRUY THU — SHOPEE</b>\n📦 Số đơn theo AM\n🔗 Link tra cứu chi tiết đơn: ${linkSH}`}
+ ];
+ try{
+  if(btn)btn.disabled=true;
+  for(let i=0;i<jobs.length;i++){
+   if(btn)btn.innerHTML=`⏳ ${i+1}/${jobs.length}...`;
+   const img=await _captureEl(jobs[i].id);
+   let res=await _tgSendPhoto(TG_AGING_CHAT,TG_VH_THREAD,img,jobs[i].cap);
+   if(!res.ok&&/dimension|PHOTO/i.test(res.description||''))res=await _tgSendDoc(TG_AGING_CHAT,TG_VH_THREAD,img,jobs[i].cap);
+   if(!res.ok)throw new Error(res.description||JSON.stringify(res));
+   await new Promise(r=>setTimeout(r,700));
+  }
+  if(btn){btn.innerHTML='✅ Đã gửi 3 ảnh';setTimeout(()=>{btn.disabled=false;btn.innerHTML='📤 Bắn Quá Hạn TG';},2800);}
+ }catch(e){alert('Lỗi gửi Telegram: '+e.message);if(btn){btn.disabled=false;btn.innerHTML='📤 Bắn Quá Hạn TG';}}
 }
 
 async function buildCODPage(){
