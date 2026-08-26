@@ -227,6 +227,7 @@ tr.tot td{background:#FFF0EB!important;font-weight:800!important;border-top:2px 
  <button class="nav-item" onclick="show('p30',this)" style="background:linear-gradient(135deg,rgba(220,38,38,0.16),rgba(241,93,41,0.08));border:1px solid rgba(220,38,38,0.32);font-weight:700"><span class="icon">🔒</span>Khoá ID vi phạm</button>
  <button class="nav-item" onclick="show('p32',this)" style="background:linear-gradient(135deg,rgba(37,99,235,0.14),rgba(59,130,246,0.08));border:1px solid rgba(37,99,235,0.3);font-weight:700"><span class="icon">📑</span>Báo Cáo Tồn / LC / 48H</button>
  <button class="nav-item" onclick="show('p34',this)" style="background:linear-gradient(135deg,rgba(22,101,52,0.16),rgba(34,197,94,0.08));border:1px solid rgba(22,101,52,0.32);font-weight:700"><span class="icon">🏢</span>Báo Cáo Bưu Cục</button>
+ <button class="nav-item" onclick="show('p35',this)" style="background:linear-gradient(135deg,rgba(220,38,38,0.16),rgba(241,93,41,0.08));border:1px solid rgba(220,38,38,0.32);font-weight:700"><span class="icon">🚨</span>Quá Hạn / Truy Thu</button>
  <div class="nav-section">GTC</div>
  <button class="nav-item" onclick="show('p1',this)"><span class="icon">📦</span>Tổng quan GTC Total</button>
  <button class="nav-item" onclick="show('p2',this)"><span class="icon">🎯</span>Tổng quan GTC TTS</button>
@@ -284,6 +285,7 @@ tr.tot td{background:#FFF0EB!important;font-weight:800!important;border-top:2px 
 <div class="page" id="p28"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
 <div class="page" id="p33"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
 <div class="page" id="p34"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
+<div class="page" id="p35"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
 <div class="page" id="p29"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
 <div class="page" id="p30"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
 <div class="page" id="p31"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
@@ -3597,6 +3599,8 @@ async function init(){
  await buildBatOnPage();
  // p34 — Báo cáo BC Việt Yên
  await buildVietYenPage();
+ // p35 — Quá hạn / Truy thu (TTS + Shopee)
+ await buildQuaHanPage();
  // p22 — Kinh Doanh XBG
  await buildKinhDoanhPage();
  // p0 — Tổng quan (sau khi có đủ data)
@@ -5791,6 +5795,89 @@ async function sendVietYenToTelegram(){
   }
   if(btn){btn.innerHTML=okAll?('✅ Đã gửi '+VY_BCS.length+' BC'):'⚠️ Có lỗi 1 phần';setTimeout(()=>{btn.disabled=false;btn.innerHTML='📤 Bắn '+VY_BCS.length+' BC TG';},2800);}
  }catch(e){alert('Lỗi gửi Telegram: '+e.message);if(btn){btn.disabled=false;btn.innerHTML='📤 Bắn '+VY_BCS.length+' BC TG';}}
+}
+
+/* ===== p35 — QUÁ HẠN / TRUY THU (TTS + Shopee) ===== */
+const QH_TTS_ID='11hgHBTqUw8pjeMqCG-JrEvlaY9uFbeekbTCL9Uh61uQ'; // sheet "All backlog" (TTS backlog XBG)
+const QH_SHOPEE_ID='1ForpJsiXwPKlc98QpBTryCc4KuR8hi-JqC4b0nb6b-E'; // sheet "XBG" (Shopee backlog)
+const QH_BUCKETS=['0. Đã quá hạn','1. Còn 1 ngày','2. Còn 2 ngày','3. Còn 3 ngày','4. Còn 4 ngày'];
+const QH_PFX={BGI:'Bắc Giang',HDU:'Hải Dương',HPH:'Hải Phòng',QNI:'Quảng Ninh',BNI:'Bắc Ninh',LSO:'Lạng Sơn'};
+function _qhTinhBC(bc){const m=(bc||'').match(/\(([A-Z]{3})\)/);return m?(QH_PFX[m[1]]||''):'';}
+function _qhParse(s){const rs=[];let row=[],cur='',q=false;for(let i=0;i<s.length;i++){const c=s[i];if(q){if(c==='"'){if(s[i+1]==='"'){cur+='"';i++;}else q=false;}else cur+=c;}else{if(c==='"')q=true;else if(c===','){row.push(cur);cur='';}else if(c==='\n'){row.push(cur);rs.push(row);row=[];cur='';}else if(c==='\r'){}else cur+=c;}}if(cur!==''||row.length){row.push(cur);rs.push(row);}return rs;}
+async function _qhFetchCSV(id,sheet,retry=2){for(let i=0;i<=retry;i++){try{const r=await fetch(`https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheet)}`);if(!r.ok)throw new Error('HTTP '+r.status);return _qhParse(await r.text());}catch(e){if(i===retry)throw e;await new Promise(res=>setTimeout(res,1400*(i+1)));}}}
+function _qhNum(x){x=(''+(x||'')).replace(/[^0-9.\-]/g,'');const n=parseFloat(x);return isNaN(n)?0:n;}
+function _qhAmName(s){return (''+(s||'')).split('-').slice(1).join('-').split(',')[0].trim()||(''+(s||'')).split(',')[0].trim();}
+function _qhFmt(v){return v?Math.round(v).toLocaleString('vi-VN'):'';}
+function _qhPivot(rows,amFn,tinhFn,buckFn,valFn){const M={};rows.forEach(x=>{const am=amFn(x);if(!am)return;const bi=QH_BUCKETS.indexOf(buckFn(x));if(bi<0)return;if(!M[am])M[am]={tinh:'',c:[0,0,0,0,0]};if(!M[am].tinh)M[am].tinh=tinhFn(x);M[am].c[bi]+=valFn?valFn(x):1;});return M;}
+function _qhHeat(v,mn,mx){const t=(mx>mn)?(v-mn)/(mx-mn):0.5;const hue=120*(1-t);return `hsl(${hue.toFixed(0)},62%,72%)`;}
+function _qhTableHTML(M,isMoney){
+ const rows=Object.entries(M).map(([am,o])=>({am,tinh:o.tinh,c:o.c,tot:o.c.reduce((a,b)=>a+b,0)})).sort((a,b)=>b.tot-a.tot);
+ const tots=rows.map(r=>r.tot);const mx=Math.max(...tots,1),mn=Math.min(...tots,0);
+ const colSum=[0,0,0,0,0];rows.forEach(r=>r.c.forEach((v,i)=>colSum[i]+=v));const gTot=colSum.reduce((a,b)=>a+b,0);
+ const hb=['background:#FF0000;color:#fff','background:#FF0000;color:#fff','background:#FCE4D6;color:#000','background:#FDEADA;color:#000','background:#E2EFDA;color:#000'];
+ const cellStyle='border:1px solid #d0d0d0;padding:6px 10px;text-align:center;white-space:nowrap;font-size:13px';
+ let h=`<div style="overflow-x:auto"><table style="border-collapse:collapse;width:auto;font-family:inherit;background:#fff">`;
+ h+=`<thead><tr>`
+  +`<th style="${cellStyle};background:#fff;color:#000;font-weight:800">Tỉnh</th>`
+  +`<th style="${cellStyle};background:#fff;color:#000;font-weight:800;min-width:150px">AM</th>`;
+ QH_BUCKETS.forEach((b,i)=>{h+=`<th style="${cellStyle};${hb[i]};font-weight:800">${b}</th>`;});
+ h+=`<th style="${cellStyle};background:#00E000;color:#000;font-weight:800">Tổng</th></tr></thead><tbody>`;
+ rows.forEach(r=>{
+  h+=`<tr><td style="${cellStyle};text-align:left">${r.tinh||''}</td><td style="${cellStyle};text-align:left;font-weight:600">${r.am}</td>`;
+  r.c.forEach((v,i)=>{const red=(i<=1);h+=`<td style="${cellStyle}${red?';color:#C00000;font-weight:700':''}">${isMoney?_qhFmt(v):(v||'')}</td>`;});
+  h+=`<td style="${cellStyle};font-weight:800;background:${_qhHeat(r.tot,mn,mx)}">${isMoney?_qhFmt(r.tot):r.tot}</td></tr>`;
+ });
+ h+=`<tr><td style="${cellStyle};background:#f2f2f2;font-weight:800" colspan="2">Tổng</td>`;
+ colSum.forEach((v,i)=>{const red=(i<=1);h+=`<td style="${cellStyle};background:#f2f2f2;font-weight:800${red?';color:#C00000':''}">${isMoney?_qhFmt(v):(v||0)}</td>`;});
+ h+=`<td style="${cellStyle};background:#c9f0c9;font-weight:800">${isMoney?_qhFmt(gTot):gTot}</td></tr>`;
+ h+=`</tbody></table></div>`;
+ return h;
+}
+function _qhBanner(group){
+ return `<div style="background:#FFF200;text-align:center;font-weight:800;font-size:17px;padding:8px;border:1px solid #333">QUÁ HẠN - TRUY THU</div>`
+  +`<div style="display:flex;background:#1a1aff;color:#fff;font-weight:800;font-size:14px;padding:7px 12px;border:1px solid #333;border-top:none;gap:18px"><span>Nhóm khách hàng: ${group}</span><span id="qhDate"></span></div>`;
+}
+async function buildQuaHanPage(){
+ const el=document.getElementById('p35');if(!el)return;
+ try{
+  const [tts,shopee,gtcBC]=await Promise.all([
+   _qhFetchCSV(QH_TTS_ID,'All backlog'),
+   _qhFetchCSV(QH_SHOPEE_ID,'XBG'),
+   fetchSheet('GTC Total theo Bưu Cục').catch(()=>[])
+  ]);
+  // BC -> AM: từ GTC BC (first-name) rồi override bằng cột am của Shopee (single)
+  const bc2am={};
+  (gtcBC||[]).slice(1).forEach(x=>{const bc=(x[1]||'').trim(),am=_qhAmName(x[0]);if(bc&&am&&!bc2am[bc])bc2am[bc]=am;});
+  // shopee data: tìm header row (order_code)
+  let sh0=shopee.findIndex(r=>(r[0]||'').trim()==='order_code');if(sh0<0)sh0=1;const shData=shopee.slice(sh0+1).filter(x=>x[0]);
+  const shTally={};shData.forEach(x=>{const bc=(x[5]||'').trim(),am=_qhAmName(x[8]);if(bc&&am){shTally[bc]=shTally[bc]||{};shTally[bc][am]=(shTally[bc][am]||0)+1;}});
+  for(const bc in shTally){bc2am[bc]=Object.entries(shTally[bc]).sort((a,b)=>b[1]-a[1])[0][0];}
+  // ===== TTS pivots (bucket = Tuổi Backlog col7) =====
+  const ttsData=tts.slice(1).filter(x=>x[0]);
+  const ttsCnt=_qhPivot(ttsData,x=>bc2am[(x[3]||'').trim()]||'',x=>_qhTinhBC(x[3]),x=>(x[7]||'').trim(),null);
+  const ttsVal=_qhPivot(ttsData,x=>bc2am[(x[3]||'').trim()]||'',x=>_qhTinhBC(x[3]),x=>(x[7]||'').trim(),x=>_qhNum(x[13]));
+  // ===== Shopee pivot (bucket = col11 số 0-4; bỏ ô trống) =====
+  const shBlank=shData.filter(x=>(x[11]===undefined||(''+x[11]).trim()==='')).length;
+  const shCnt=_qhPivot(shData,x=>_qhAmName(x[8]),x=>(x[6]||'').trim(),x=>{const n=(''+(x[11]||'')).trim();return n!==''?QH_BUCKETS[+n]:'';},null);
+  const dstr=new Date().toLocaleDateString('vi-VN');
+  el.innerHTML=`
+   <div class="page-header"><div><div class="page-title">🚨 Quá Hạn / Truy Thu — Backlog XBG</div>
+    <div class="page-meta"><span style="color:var(--text-sub);font-size:13px">Cập nhật: ${dstr} · TTS ${ttsData.length} đơn · Shopee ${shData.length-shBlank} đơn</span>
+    <button onclick="buildQuaHanPage()" style="padding:6px 13px;background:rgba(241,93,41,0.12);border:1px solid rgba(241,93,41,0.35);color:var(--orange-dark);border-radius:20px;font-size:12px;font-weight:700;cursor:pointer">🔄 Cập nhật</button></div></div></div>
+   <div style="max-width:1080px">
+    ${_qhBanner('TTS')}
+    <div style="font-weight:700;margin:12px 0 5px;color:var(--text)">📦 Theo AM — Số đơn hàng</div>
+    ${_qhTableHTML(ttsCnt,false)}
+    <div style="font-weight:700;margin:16px 0 5px;color:var(--text)">💰 Theo AM — Giá trị đơn hàng (đ)</div>
+    ${_qhTableHTML(ttsVal,true)}
+    <div style="height:22px"></div>
+    ${_qhBanner('SHOPEE')}
+    <div style="font-weight:700;margin:12px 0 5px;color:var(--text)">📦 Theo AM — Số đơn hàng</div>
+    ${_qhTableHTML(shCnt,false)}
+    <div style="color:var(--text-sub);font-size:12px;margin-top:6px">* Bỏ qua ${shBlank} đơn Shopee chưa phân loại mức SLA (ô trống).</div>
+   </div>`;
+  el.querySelectorAll('#qhDate').forEach(e=>e.textContent=dstr);
+ }catch(e){el.innerHTML=`<div class="page-header"><div class="page-title">🚨 Quá Hạn / Truy Thu</div></div><div style="padding:20px;color:var(--red)">Lỗi tải dữ liệu: ${e.message}. Kiểm tra quyền truy cập 2 sheet nguồn (cần chia sẻ "bất kỳ ai có link" hoặc đăng nhập Google có quyền).</div>`;}
 }
 
 async function buildCODPage(){
