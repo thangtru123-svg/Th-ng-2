@@ -5810,7 +5810,7 @@ async function sendVietYenToTelegram(){
 
 /* ===== p35 — QUÁ HẠN / TRUY THU (TTS + Shopee) ===== */
 const QH_TTS_ID='11hgHBTqUw8pjeMqCG-JrEvlaY9uFbeekbTCL9Uh61uQ'; // sheet "All backlog" (TTS backlog XBG)
-const QH_SHOPEE_ID='1ForpJsiXwPKlc98QpBTryCc4KuR8hi-JqC4b0nb6b-E'; // sheet "XBG" (Shopee backlog)
+const QH_SHOPEE_ID='11hgHBTqUw8pjeMqCG-JrEvlaY9uFbeekbTCL9Uh61uQ'; // sheet "Shopee" (gid=1869789258) — cùng file với TTS
 const QH_BUCKETS=['0. Đã quá hạn','1. Còn 1 ngày','2. Còn 2 ngày','3. Còn 3 ngày','4. Còn 4 ngày'];
 const QH_PFX={BGI:'Bắc Giang',HDU:'Hải Dương',HPH:'Hải Phòng',QNI:'Quảng Ninh',BNI:'Bắc Ninh',LSO:'Lạng Sơn'};
 function _qhTinhBC(bc){const m=(bc||'').match(/\(([A-Z]{3})\)/);return m?(QH_PFX[m[1]]||''):'';}
@@ -5855,7 +5855,7 @@ async function buildQuaHanPage(){
  try{
   const [tts,shopee,gtcBC]=await Promise.all([
    _qhFetchCSV(QH_TTS_ID,0),          // gid=0 → tab "All backlog"
-   _qhFetchCSV(QH_SHOPEE_ID,186957621), // gid → tab "XBG"
+   _qhFetchCSV(QH_SHOPEE_ID,1869789258), // gid → tab "Shopee"
    fetchSheet('GTC Total theo Bưu Cục').catch(()=>[])
   ]);
   // BC -> AM: từ GTC BC (first-name) rồi override bằng cột am của Shopee (single)
@@ -5874,7 +5874,7 @@ async function buildQuaHanPage(){
   const shCnt=_qhPivot(shData,x=>_qhAmName(x[8]),x=>(x[6]||'').trim(),x=>{const n=(''+(x[11]||'')).trim();return n!==''?QH_BUCKETS[+n]:'';},null);
   const dstr=new Date().toLocaleDateString('vi-VN');
   const linkTTS=`https://docs.google.com/spreadsheets/d/${QH_TTS_ID}/edit?gid=0`;
-  const linkSH=`https://docs.google.com/spreadsheets/d/${QH_SHOPEE_ID}/edit?gid=186957621`;
+  const linkSH=`https://docs.google.com/spreadsheets/d/${QH_SHOPEE_ID}/edit?gid=1869789258`;
   const srcLine=(url)=>`<div style="margin:8px 0 2px;font-size:12.5px">🔗 <a href="${url}" target="_blank" rel="noopener" style="color:#1a56db;font-weight:700;text-decoration:underline">Link nguồn — AM bấm để tra cứu chi tiết đơn</a></div>`;
   el.innerHTML=`
    <div class="page-header"><div><div class="page-title">🚨 Quá Hạn / Truy Thu — Backlog XBG</div>
@@ -5909,7 +5909,7 @@ async function sendQuaHanToTelegram(){
  const btn=document.getElementById('tgInpage_p35');
  if(!document.getElementById('qhCap1')){alert('Trang chưa tải xong dữ liệu Quá Hạn.');return;}
  const linkTTS=`https://docs.google.com/spreadsheets/d/${QH_TTS_ID}/edit?gid=0`;
- const linkSH=`https://docs.google.com/spreadsheets/d/${QH_SHOPEE_ID}/edit?gid=186957621`;
+ const linkSH=`https://docs.google.com/spreadsheets/d/${QH_SHOPEE_ID}/edit?gid=1869789258`;
  const jobs=[
   {id:'qhCap1',cap:`🚨 <b>QUÁ HẠN / TRUY THU — TTS</b>\n📦 Số đơn theo AM\n🔗 Link tra cứu chi tiết đơn: ${linkTTS}`},
   {id:'qhCap2',cap:`🚨 <b>QUÁ HẠN / TRUY THU — TTS</b>\n💰 Giá trị đơn theo AM\n🔗 Link tra cứu chi tiết đơn: ${linkTTS}`},
@@ -5940,7 +5940,7 @@ function _qhBucketTTS(x){const m=(''+(x[7]||'')).trim().match(/^(\d)\./);return 
 function _qhBucketSHP(x){const n=(''+(x[11]||'')).trim();return n!==''?+n:-1;}
 async function _qhLoadXLSX(){if(window.XLSX)return;await new Promise((res,rej)=>{const s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';s.onload=res;s.onerror=()=>rej(new Error('XLSX load lỗi'));setTimeout(()=>rej(new Error('XLSX timeout')),12000);document.head.appendChild(s);});}
 async function _qhFetchBacklog(){
- const [tts,shp]=await Promise.all([_qhFetchCSV(QH_TTS_ID,0),_qhFetchCSV(QH_SHOPEE_ID,186957621)]);
+ const [tts,shp]=await Promise.all([_qhFetchCSV(QH_TTS_ID,0),_qhFetchCSV(QH_SHOPEE_ID,1869789258)]);
  let s0=shp.findIndex(r=>(r[0]||'').trim()==='order_code');if(s0<0)s0=1;
  return {tts:tts.slice(1).filter(x=>x[0]),shp:shp.slice(s0+1).filter(x=>x[0])};
 }
