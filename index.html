@@ -5933,7 +5933,7 @@ async function sendQuaHanToTelegram(){
 const T1_AGING_ID='1jCWPRvfGA7d2uHL6_xT8ZxU3tgpOdlBK1-c4QT961ew', T1_AGING_GID='1424919323';
 const T1_BCS=[['Hải Dương','Phú Thái'],['Hải Dương','Chu Văn An'],['Hải Dương','Kẻ Sặt'],['Hải Dương','Nam Sách'],['Hải Dương','Tứ Kỳ'],['Bắc Giang','Lạng Giang'],['Bắc Giang','Lục Nam'],['Bắc Giang','Việt Yên'],['Bắc Giang','Chũ'],['Bắc Giang','Hiệp Hoà']];
 const T1_TG_CHAT=-1003237202833; // "Bưu Cục Bất Ổn - Bắc Giang + Hải Dương" (group thường, không topic)
-const T2_TG_CHAT=-5408557263;    // "Xử lý đơn sắp quá hạn - Shopee - TTS" (group thường, không topic)
+const T2_TG_CHAT=-1003278143195; // "Xử lý đơn sắp quá hạn - Shopee - TTS" (supergroup, không topic)
 function _qhNorm(s){return (''+(s||'')).normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/đ/gi,'d').toLowerCase().replace(/\s+/g,' ').trim();}
 function _qhBcName(s){return _qhNorm((''+(s||'')).replace(/^\(\w+\)\s*/,''));}
 function _qhBucketTTS(x){const m=(''+(x[7]||'')).trim().match(/^(\d)\./);return m?+m[1]:-1;}
