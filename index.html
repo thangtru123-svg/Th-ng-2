@@ -5804,7 +5804,9 @@ const QH_BUCKETS=['0. Đã quá hạn','1. Còn 1 ngày','2. Còn 2 ngày','3. C
 const QH_PFX={BGI:'Bắc Giang',HDU:'Hải Dương',HPH:'Hải Phòng',QNI:'Quảng Ninh',BNI:'Bắc Ninh',LSO:'Lạng Sơn'};
 function _qhTinhBC(bc){const m=(bc||'').match(/\(([A-Z]{3})\)/);return m?(QH_PFX[m[1]]||''):'';}
 function _qhParse(s){const rs=[];let row=[],cur='',q=false;for(let i=0;i<s.length;i++){const c=s[i];if(q){if(c==='"'){if(s[i+1]==='"'){cur+='"';i++;}else q=false;}else cur+=c;}else{if(c==='"')q=true;else if(c===','){row.push(cur);cur='';}else if(c==='\n'){row.push(cur);rs.push(row);row=[];cur='';}else if(c==='\r'){}else cur+=c;}}if(cur!==''||row.length){row.push(cur);rs.push(row);}return rs;}
-async function _qhFetchCSV(id,sheet,retry=2){for(let i=0;i<=retry;i++){try{const r=await fetch(`https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(sheet)}`);if(!r.ok)throw new Error('HTTP '+r.status);return _qhParse(await r.text());}catch(e){if(i===retry)throw e;await new Promise(res=>setTimeout(res,1400*(i+1)));}}}
+// Fetch theo GID (không theo tên tab): app monkeypatch window.fetch → Sheets API v4 cần tiêu đề tab CHÍNH XÁC,
+// nên để _gidToTitle tự tra đúng tên từ gid (tránh lỗi 400 "Unable to parse range").
+async function _qhFetchCSV(id,gid,retry=2){for(let i=0;i<=retry;i++){try{const r=await fetch(`https://docs.google.com/spreadsheets/d/${id}/gviz/tq?tqx=out:csv&gid=${gid}`);if(!r.ok)throw new Error('HTTP '+r.status);return _qhParse(await r.text());}catch(e){if(i===retry)throw e;await new Promise(res=>setTimeout(res,1400*(i+1)));}}}
 function _qhNum(x){x=(''+(x||'')).replace(/[^0-9.\-]/g,'');const n=parseFloat(x);return isNaN(n)?0:n;}
 function _qhAmName(s){return (''+(s||'')).split('-').slice(1).join('-').split(',')[0].trim()||(''+(s||'')).split(',')[0].trim();}
 function _qhFmt(v){return v?Math.round(v).toLocaleString('vi-VN'):'';}
@@ -5841,8 +5843,8 @@ async function buildQuaHanPage(){
  const el=document.getElementById('p35');if(!el)return;
  try{
   const [tts,shopee,gtcBC]=await Promise.all([
-   _qhFetchCSV(QH_TTS_ID,'All backlog'),
-   _qhFetchCSV(QH_SHOPEE_ID,'XBG'),
+   _qhFetchCSV(QH_TTS_ID,0),          // gid=0 → tab "All backlog"
+   _qhFetchCSV(QH_SHOPEE_ID,186957621), // gid → tab "XBG"
    fetchSheet('GTC Total theo Bưu Cục').catch(()=>[])
   ]);
   // BC -> AM: từ GTC BC (first-name) rồi override bằng cột am của Shopee (single)
