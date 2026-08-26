@@ -5972,7 +5972,7 @@ function _t1TableDays(rows){
  h+=`<thead><tr><th rowspan="2" style="${cs};background:#1F3864;color:#fff">Tỉnh</th><th rowspan="2" style="${cs};background:#1F3864;color:#fff;min-width:110px">Bưu Cục</th>`
   +`<th colspan="3" style="${cs};background:#C55A11;color:#fff;font-weight:800">TTS sắp quá hạn</th>`
   +`<th colspan="3" style="${cs};background:#7A3FB8;color:#fff;font-weight:800">Shopee sắp quá hạn</th>`
-  +`<th rowspan="2" style="${cs};background:#C00000;color:#fff">Aging&gt;8</th><th rowspan="2" style="${cs};background:#00A000;color:#fff">Tổng</th></tr><tr>`
+  +`<th rowspan="2" style="${cs};background:#C00000;color:#fff">Aging≥8</th><th rowspan="2" style="${cs};background:#00A000;color:#fff">Tổng</th></tr><tr>`
   +`<th style="${cs};background:#FF0000;color:#fff">Còn 1 ngày</th><th style="${cs};background:#E8863D;color:#fff">Còn 2 ngày</th><th style="${cs};background:#8a4d16;color:#fff">Σ</th>`
   +`<th style="${cs};background:#FF0000;color:#fff">Còn 1 ngày</th><th style="${cs};background:#E8863D;color:#fff">Còn 2 ngày</th><th style="${cs};background:#5a2d8a;color:#fff">Σ</th></tr></thead><tbody>`;
  rows.forEach(r=>{const t=r.tts+r.shp+r.ag;
@@ -5998,7 +5998,7 @@ async function buildXuLyBatOnPage(){
   const detTTS=[],detSHP=[],detAG=[];
   tts.forEach(x=>{const i=idxOf(x[3]);if(i<0)return;const b=_qhBucketTTS(x);if(b!==1&&b!==2)return;if(b===1)rows[i].d1t++;else rows[i].d2t++;rows[i].tts++;detTTS.push([rows[i].tinh,rows[i].bc,x[0],'Còn '+b+' ngày',x[4],x[8],x[13],x[1],x[12]]);});
   shp.forEach(x=>{const i=idxOf(x[5]);if(i<0)return;const b=_qhBucketSHP(x);if(b!==1&&b!==2)return;if(b===1)rows[i].d1s++;else rows[i].d2s++;rows[i].shp++;detSHP.push([rows[i].tinh,rows[i].bc,x[0],'Còn '+b+' ngày',_qhAmName(x[8]),x[2],x[10],x[9],x[1]]);});
-  ag.slice(1).forEach(x=>{if((x[11]||'').slice(0,10)!==lastD)return;if(!(parseFloat(x[6])>8))return;const i=idxOf(x[2]);if(i<0)return;rows[i].ag++;detAG.push([rows[i].tinh,rows[i].bc,x[3],x[6],x[10],x[5],x[8],x[9]]);});
+  ag.slice(1).forEach(x=>{if((x[11]||'').slice(0,10)!==lastD)return;if(!(parseFloat(x[6])>=8))return;const i=idxOf(x[2]);if(i<0)return;rows[i].ag++;detAG.push([rows[i].tinh,rows[i].bc,x[3],x[6],x[10],x[5],x[8],x[9]]);});
   window._t1Data={rows,detTTS,detSHP,detAG,lastD};
   el.innerHTML=`
    <div class="page-header"><div><div class="page-title">🛠️ Xử lý Bưu Cục Bất Ổn — Bắc Giang + Hải Dương</div>
@@ -6007,11 +6007,11 @@ async function buildXuLyBatOnPage(){
      <button onclick="exportT1Excel()" style="padding:6px 13px;background:rgba(22,101,52,0.12);border:1px solid rgba(22,101,52,0.4);color:#166534;border-radius:20px;font-size:12px;font-weight:700;cursor:pointer">📥 Xuất Excel (3 sheet)</button></div></div></div>
    <div id="t1CapTable" style="background:#fff;padding:10px;border-radius:6px">
     <div style="background:#FFF200;text-align:center;font-weight:800;font-size:16px;padding:7px;border:1px solid #333">XỬ LÝ BƯU CỤC BẤT ỔN — BẮC GIANG + HẢI DƯƠNG</div>
-    <div style="background:#1a1aff;color:#fff;font-weight:700;font-size:13px;padding:6px 12px;border:1px solid #333;border-top:none">Số đơn sắp quá hạn (còn 1–2 ngày) TTS/Shopee & Aging &gt; 8 ngày · ${new Date().toLocaleDateString('vi-VN')}</div>
+    <div style="background:#1a1aff;color:#fff;font-weight:700;font-size:13px;padding:6px 12px;border:1px solid #333;border-top:none">Số đơn sắp quá hạn (còn 1–2 ngày) TTS/Shopee & Aging ≥ 8 ngày · ${new Date().toLocaleDateString('vi-VN')}</div>
     <div style="height:8px"></div>
     ${_t1TableDays(rows)}
    </div>
-   <div style="color:var(--text-sub);font-size:12px;margin-top:8px;max-width:1000px">• "Sắp quá hạn" = đơn còn 1 ngày & 2 ngày tới hạn (bỏ đơn đã quá hạn và còn 3–4 ngày). • Σ = tổng đơn còn 1–2 ngày. • Aging &gt; 8 ngày lấy snapshot ${lastD}. • Bấm <b>Xuất Excel</b> để tải chi tiết mã đơn (3 sheet: TTS / Shopee đơn còn 1–2 ngày · Aging &gt; 8 ngày).</div>`;
+   <div style="color:var(--text-sub);font-size:12px;margin-top:8px;max-width:1000px">• "Sắp quá hạn" = đơn còn 1 ngày & 2 ngày tới hạn (bỏ đơn đã quá hạn và còn 3–4 ngày). • Σ = tổng đơn còn 1–2 ngày. • Aging ≥ 8 ngày lấy snapshot ${lastD}. • Bấm <b>Xuất Excel</b> để tải chi tiết mã đơn (3 sheet: TTS / Shopee đơn còn 1–2 ngày · Aging ≥ 8 ngày).</div>`;
  }catch(e){el.innerHTML=`<div class="page-header"><div class="page-title">🛠️ Xử lý Bưu Cục Bất Ổn</div></div><div style="padding:20px;color:var(--red)">Lỗi tải dữ liệu: ${e.message}</div>`;}
 }
 async function exportT1Excel(){
@@ -6021,7 +6021,7 @@ async function exportT1Excel(){
  const wb=XLSX.utils.book_new();
  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([['Tỉnh','Bưu Cục','Mã đơn','Số ngày còn lại','Loại (Giao/Trả)','Deadline SLA','Giá trị đơn','Trạng thái','Client ID'],...detTTS]),'Đơn quá hạn TTS');
  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([['Tỉnh','Bưu Cục','Mã đơn','Số ngày còn lại','AM','Trạng thái','Loại KH','COD','Ngày'],...detSHP]),'Đơn quá hạn Shopee');
- XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([['Tỉnh','Bưu Cục','Mã đơn','Số ngày','AM','Ngày nhập','SL giao','Nhóm BL'],...detAG]),'Đơn aging > 8 ngày');
+ XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([['Tỉnh','Bưu Cục','Mã đơn','Số ngày','AM','Ngày nhập','SL giao','Nhóm BL'],...detAG]),'Đơn aging từ 8 ngày');
  XLSX.writeFile(wb,`XuLy_BatOn_BG-HD_${lastD||new Date().toISOString().slice(0,10)}.xlsx`);
 }
 async function sendT1ToTelegram(){
@@ -6030,7 +6030,7 @@ async function sendT1ToTelegram(){
  try{if(btn){btn.disabled=true;btn.innerHTML='⏳ Đang gửi...';}
   const img=await _captureEl('t1CapTable');
   const {rows,lastD}=window._t1Data;const s=rows.reduce((a,r)=>({t:a.t+r.tts,s:a.s+r.shp,a:a.a+r.ag}),{t:0,s:0,a:0});
-  const cap=`🛠️ <b>XỬ LÝ BƯU CỤC BẤT ỔN — Bắc Giang + Hải Dương</b>\n📅 ${new Date().toLocaleDateString('vi-VN')}\nTTS quá hạn: <b>${s.t}</b> · Shopee: <b>${s.s}</b> · Aging&gt;8 ngày: <b>${s.a}</b> (ngày ${lastD})`;
+  const cap=`🛠️ <b>XỬ LÝ BƯU CỤC BẤT ỔN — Bắc Giang + Hải Dương</b>\n📅 ${new Date().toLocaleDateString('vi-VN')}\nTTS quá hạn: <b>${s.t}</b> · Shopee: <b>${s.s}</b> · Aging≥8 ngày: <b>${s.a}</b> (ngày ${lastD})`;
   let res=await _tgSendPhoto(T1_TG_CHAT,undefined,img,cap);
   if(!res.ok&&/dimension|PHOTO/i.test(res.description||''))res=await _tgSendDoc(T1_TG_CHAT,undefined,img,cap);
   if(!res.ok)throw new Error(res.description||JSON.stringify(res));
