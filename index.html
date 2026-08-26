@@ -6073,17 +6073,16 @@ function _qhCntTableT2(rows){
 function _t2Msgs(){
  const M=window._t2Data;const bcs=Object.keys(M).filter(bc=>M[bc].urg.length).sort((a,b)=>M[b].urg.length-M[a].urg.length);
  const dstr=new Date().toLocaleDateString('vi-VN');
- const head=`🚨 <b>ĐƠN SẮP QUÁ HẠN (còn ≤2 ngày) — TỈNH BẮC GIANG</b>\n📅 ${dstr}\n`;
- const msgs=[];let cur=head;
- if(!bcs.length)return [head+'\n✅ Không có đơn nào còn 1–2 ngày.'];
- bcs.forEach(bc=>{
+ if(!bcs.length)return [`🚨 <b>ĐƠN SẮP QUÁ HẠN (còn ≤2 ngày) — TỈNH BẮC GIANG</b>\n📅 ${dstr}\n\n✅ Không có đơn nào còn 1–2 ngày.`];
+ const msgs=[];
+ bcs.forEach(bc=>{ // MỖI BƯU CỤC = 1 TIN (tự tách nếu 1 BC quá dài)
   const o=M[bc];o.urg.sort((a,b)=>a.d-b.d);
-  let block=`\n🏢 <b>${bc}</b> — ${o.urg.length} đơn gần hạn (TTS ${o.tts} · Shopee ${o.shp} backlog)\n`;
-  o.urg.forEach(u=>{block+=`  • ${u.src} ${u.ma} — còn ${u.d} ngày\n`;});
-  if((cur+block).length>3900){msgs.push(cur);cur='';}
-  cur+=block;
+  const head=`🚨 <b>ĐƠN SẮP QUÁ HẠN (còn ≤2 ngày)</b> · ${dstr}\n🏢 <b>${bc}</b> — ${o.urg.length} đơn gần hạn (TTS ${o.tts} · Shopee ${o.shp} backlog)\n`;
+  let cur=head;
+  o.urg.forEach(u=>{const line=`• ${u.src} ${u.ma} — còn ${u.d} ngày\n`;if((cur+line).length>3900){msgs.push(cur);cur=head+'(tiếp)\n';}cur+=line;});
+  msgs.push(cur);
  });
- if(cur.trim())msgs.push(cur);return msgs;
+ return msgs;
 }
 async function sendT2ToTelegram(){
  const btn=document.getElementById('tgInpage_p37');
