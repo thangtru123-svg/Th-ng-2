@@ -228,6 +228,8 @@ tr.tot td{background:#FFF0EB!important;font-weight:800!important;border-top:2px 
  <button class="nav-item" onclick="show('p32',this)" style="background:linear-gradient(135deg,rgba(37,99,235,0.14),rgba(59,130,246,0.08));border:1px solid rgba(37,99,235,0.3);font-weight:700"><span class="icon">📑</span>Báo Cáo Tồn / LC / 48H</button>
  <button class="nav-item" onclick="show('p34',this)" style="background:linear-gradient(135deg,rgba(22,101,52,0.16),rgba(34,197,94,0.08));border:1px solid rgba(22,101,52,0.32);font-weight:700"><span class="icon">🏢</span>Báo Cáo Bưu Cục</button>
  <button class="nav-item" onclick="show('p35',this)" style="background:linear-gradient(135deg,rgba(220,38,38,0.16),rgba(241,93,41,0.08));border:1px solid rgba(220,38,38,0.32);font-weight:700"><span class="icon">🚨</span>Quá Hạn / Truy Thu</button>
+ <button class="nav-item" onclick="show('p36',this)" style="background:linear-gradient(135deg,rgba(220,38,38,0.16),rgba(241,93,41,0.08));border:1px solid rgba(220,38,38,0.32);font-weight:700"><span class="icon">🛠️</span>Xử lý BC Bất Ổn (BG+HD)</button>
+ <button class="nav-item" onclick="show('p37',this)" style="background:linear-gradient(135deg,rgba(220,38,38,0.16),rgba(241,93,41,0.08));border:1px solid rgba(220,38,38,0.32);font-weight:700"><span class="icon">📮</span>Đơn TTS · Shopee (BG)</button>
  <div class="nav-section">GTC</div>
  <button class="nav-item" onclick="show('p1',this)"><span class="icon">📦</span>Tổng quan GTC Total</button>
  <button class="nav-item" onclick="show('p2',this)"><span class="icon">🎯</span>Tổng quan GTC TTS</button>
@@ -286,6 +288,8 @@ tr.tot td{background:#FFF0EB!important;font-weight:800!important;border-top:2px 
 <div class="page" id="p33"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
 <div class="page" id="p34"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
 <div class="page" id="p35"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
+<div class="page" id="p36"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
+<div class="page" id="p37"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
 <div class="page" id="p29"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
 <div class="page" id="p30"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
 <div class="page" id="p31"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
@@ -438,6 +442,8 @@ function injectAllTgBtns(){
  injectTgBtn('p32',()=>sendBaoCaoToTelegram(),'Bắn Task Thắng TG');
  injectTgBtn('p29',()=>sendThuongToTelegram(),'Bắn KTNS Bắc Giang TG');
  injectTgBtn('p35',()=>sendQuaHanToTelegram(),'Bắn Quá Hạn TG');
+ injectTgBtn('p36',()=>sendT1ToTelegram(),'Bắn Telegram');
+ injectTgBtn('p37',()=>sendT2ToTelegram(),'Bắn text TG');
 }
 function fmt(n){return(+n||0).toLocaleString('vi-VN');}
 function isoD(d){return(d||'').match(/\d{4}-\d{2}-\d{2}/)?.[0]||'';}
@@ -3602,6 +3608,10 @@ async function init(){
  await buildVietYenPage();
  // p35 — Quá hạn / Truy thu (TTS + Shopee)
  await buildQuaHanPage();
+ // p36 — Xử lý BC bất ổn (BG+HD)
+ await buildXuLyBatOnPage();
+ // p37 — Đơn TTS/Shopee Bắc Giang
+ await buildTTSShopeeBGPage();
  // p22 — Kinh Doanh XBG
  await buildKinhDoanhPage();
  // p0 — Tổng quan (sau khi có đủ data)
@@ -5917,6 +5927,150 @@ async function sendQuaHanToTelegram(){
   }
   if(btn){btn.innerHTML='✅ Đã gửi 3 ảnh';setTimeout(()=>{btn.disabled=false;btn.innerHTML='📤 Bắn Quá Hạn TG';},2800);}
  }catch(e){alert('Lỗi gửi Telegram: '+e.message);if(btn){btn.disabled=false;btn.innerHTML='📤 Bắn Quá Hạn TG';}}
+}
+
+/* ===== p36 — XỬ LÝ BC BẤT ỔN (BG+HD) & p37 — ĐƠN TTS/SHOPEE BẮC GIANG ===== */
+const T1_AGING_ID='1jCWPRvfGA7d2uHL6_xT8ZxU3tgpOdlBK1-c4QT961ew', T1_AGING_GID='1424919323';
+const T1_BCS=[['Hải Dương','Phú Thái'],['Hải Dương','Chu Văn An'],['Hải Dương','Kẻ Sặt'],['Hải Dương','Nam Sách'],['Hải Dương','Tứ Kỳ'],['Bắc Giang','Lạng Giang'],['Bắc Giang','Lục Nam'],['Bắc Giang','Việt Yên'],['Bắc Giang','Chũ'],['Bắc Giang','Hiệp Hoà']];
+const T1_TG_CHAT=-1003237202833; // "Bưu Cục Bất Ổn - Bắc Giang + Hải Dương" (group thường, không topic)
+const T2_TG_CHAT=-5408557263;    // "Xử lý đơn sắp quá hạn - Shopee - TTS" (group thường, không topic)
+function _qhNorm(s){return (''+(s||'')).normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/đ/gi,'d').toLowerCase().replace(/\s+/g,' ').trim();}
+function _qhBcName(s){return _qhNorm((''+(s||'')).replace(/^\(\w+\)\s*/,''));}
+function _qhBucketTTS(x){const m=(''+(x[7]||'')).trim().match(/^(\d)\./);return m?+m[1]:-1;}
+function _qhBucketSHP(x){const n=(''+(x[11]||'')).trim();return n!==''?+n:-1;}
+async function _qhLoadXLSX(){if(window.XLSX)return;await new Promise((res,rej)=>{const s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';s.onload=res;s.onerror=()=>rej(new Error('XLSX load lỗi'));setTimeout(()=>rej(new Error('XLSX timeout')),12000);document.head.appendChild(s);});}
+async function _qhFetchBacklog(){
+ const [tts,shp]=await Promise.all([_qhFetchCSV(QH_TTS_ID,0),_qhFetchCSV(QH_SHOPEE_ID,186957621)]);
+ let s0=shp.findIndex(r=>(r[0]||'').trim()==='order_code');if(s0<0)s0=1;
+ return {tts:tts.slice(1).filter(x=>x[0]),shp:shp.slice(s0+1).filter(x=>x[0])};
+}
+function _qhCntTable(rows,cols){ // cols:[{key,label,head,red}], rows có .tinh?/.bc + số
+ const cs='border:1px solid #d0d0d0;padding:6px 12px;text-align:center;white-space:nowrap;font-size:13px';
+ const totals=rows.map(r=>cols.filter(c=>c.key!=='tot'&&!c.text).reduce((a,c)=>a+(r[c.key]||0),0));
+ const mx=Math.max(...totals,1),mn=Math.min(...totals,0);
+ let h='<div style="overflow-x:auto"><table style="border-collapse:collapse;background:#fff">';
+ h+='<thead><tr>'+cols.map(c=>`<th style="${cs};background:${c.head};color:#fff;font-weight:800${c.min?';min-width:'+c.min+'px':''}">${c.label}</th>`).join('')+'</tr></thead><tbody>';
+ rows.forEach((r,ri)=>{h+='<tr>'+cols.map(c=>{
+   if(c.key==='tot'){const t=totals[ri];return `<td style="${cs};font-weight:800;background:${_qhHeat(t,mn,mx)}">${t}</td>`;}
+   if(c.text)return `<td style="${cs};text-align:left;font-weight:${c.key==='bc'?600:400}">${r[c.key]||''}</td>`;
+   return `<td style="${cs}${c.red?';color:#C00000;font-weight:700':''}">${r[c.key]||''}</td>`;
+ }).join('')+'</tr>';});
+ // footer
+ const sums={};cols.forEach(c=>{if(c.key!=='tot'&&!c.text)sums[c.key]=rows.reduce((a,r)=>a+(r[c.key]||0),0);});
+ const gtot=Object.values(sums).reduce((a,b)=>a+b,0);
+ h+='<tr>'+cols.map((c,ci)=>{
+   if(c.text)return ci===0?`<td style="${cs};background:#f2f2f2;font-weight:800" colspan="${cols.filter(x=>x.text).length}">Tổng</td>`:'';
+   if(c.key==='tot')return `<td style="${cs};background:#c9f0c9;font-weight:800">${gtot}</td>`;
+   return `<td style="${cs};background:#f2f2f2;font-weight:800${c.red?';color:#C00000':''}">${sums[c.key]||0}</td>`;
+ }).join('')+'</tr>';
+ h+='</tbody></table></div>';return h;
+}
+async function buildXuLyBatOnPage(){
+ const el=document.getElementById('p36');if(!el)return;
+ try{
+  const [{tts,shp},ag]=await Promise.all([_qhFetchBacklog(),_qhFetchCSV(T1_AGING_ID,T1_AGING_GID)]);
+  const key=T1_BCS.map(t=>_qhNorm(t[1]));const idxOf=nm=>key.indexOf(_qhBcName(nm));
+  let lastD='';ag.slice(1).forEach(x=>{const d=(x[11]||'').slice(0,10);if(d>lastD)lastD=d;});
+  const rows=T1_BCS.map(t=>({tinh:t[0],bc:t[1],tts:0,shp:0,ag:0}));
+  const detTTS=[],detSHP=[],detAG=[];
+  tts.forEach(x=>{const i=idxOf(x[3]);if(i<0)return;rows[i].tts++;detTTS.push([rows[i].tinh,rows[i].bc,x[0],x[4],x[7],x[8],x[13],x[1],x[12]]);});
+  shp.forEach(x=>{const i=idxOf(x[5]);if(i<0)return;rows[i].shp++;detSHP.push([rows[i].tinh,rows[i].bc,x[0],_qhAmName(x[8]),x[2],x[11],x[10],x[9],x[1]]);});
+  ag.slice(1).forEach(x=>{if((x[11]||'').slice(0,10)!==lastD)return;if(!(parseFloat(x[6])>8))return;const i=idxOf(x[2]);if(i<0)return;rows[i].ag++;detAG.push([rows[i].tinh,rows[i].bc,x[3],x[6],x[10],x[5],x[8],x[9]]);});
+  window._t1Data={rows,detTTS,detSHP,detAG,lastD};
+  const cols=[{key:'tinh',label:'Tỉnh',head:'#1F3864',text:1},{key:'bc',label:'Bưu Cục',head:'#1F3864',text:1,min:130},{key:'tts',label:'TTS quá hạn',head:'#C55A11'},{key:'shp',label:'Shopee quá hạn',head:'#C55A11'},{key:'ag',label:'Aging &gt; 8 ngày',head:'#C00000',red:1},{key:'tot',label:'Tổng',head:'#00A000'}];
+  el.innerHTML=`
+   <div class="page-header"><div><div class="page-title">🛠️ Xử lý Bưu Cục Bất Ổn — Bắc Giang + Hải Dương</div>
+    <div class="page-meta"><span style="color:var(--text-sub);font-size:13px">Cập nhật: ${new Date().toLocaleDateString('vi-VN')} · Aging ngày ${lastD}</span>
+     <button onclick="buildXuLyBatOnPage()" style="padding:6px 13px;background:rgba(241,93,41,0.12);border:1px solid rgba(241,93,41,0.35);color:var(--orange-dark);border-radius:20px;font-size:12px;font-weight:700;cursor:pointer">🔄 Cập nhật</button>
+     <button onclick="exportT1Excel()" style="padding:6px 13px;background:rgba(22,101,52,0.12);border:1px solid rgba(22,101,52,0.4);color:#166534;border-radius:20px;font-size:12px;font-weight:700;cursor:pointer">📥 Xuất Excel (3 sheet)</button></div></div></div>
+   <div id="t1CapTable" style="background:#fff;padding:10px;border-radius:6px;max-width:900px">
+    <div style="background:#FFF200;text-align:center;font-weight:800;font-size:16px;padding:7px;border:1px solid #333">XỬ LÝ BƯU CỤC BẤT ỔN — BẮC GIANG + HẢI DƯƠNG</div>
+    <div style="background:#1a1aff;color:#fff;font-weight:700;font-size:13px;padding:6px 12px;border:1px solid #333;border-top:none">Số đơn quá hạn TTS/Shopee & Aging &gt; 8 ngày · ${new Date().toLocaleDateString('vi-VN')}</div>
+    <div style="height:8px"></div>
+    ${_qhCntTable(rows,cols)}
+   </div>
+   <div style="color:var(--text-sub);font-size:12px;margin-top:8px;max-width:900px">• "Quá hạn" = toàn bộ đơn backlog TTS/Shopee của BC. • Aging &gt; 8 ngày lấy snapshot ${lastD}. • Bấm <b>Xuất Excel</b> để tải chi tiết mã đơn (3 sheet).</div>`;
+ }catch(e){el.innerHTML=`<div class="page-header"><div class="page-title">🛠️ Xử lý Bưu Cục Bất Ổn</div></div><div style="padding:20px;color:var(--red)">Lỗi tải dữ liệu: ${e.message}</div>`;}
+}
+async function exportT1Excel(){
+ if(!window._t1Data){alert('Trang chưa tải xong dữ liệu.');return;}
+ try{await _qhLoadXLSX();}catch(e){alert('Không tải được thư viện Excel: '+e.message);return;}
+ const {detTTS,detSHP,detAG,lastD}=window._t1Data;
+ const wb=XLSX.utils.book_new();
+ XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([['Tỉnh','Bưu Cục','Mã đơn','Loại (Giao/Trả)','Tuổi Backlog','Deadline SLA','Giá trị đơn','Trạng thái','Client ID'],...detTTS]),'Đơn quá hạn TTS');
+ XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([['Tỉnh','Bưu Cục','Mã đơn','AM','Trạng thái','Mức SLA','Loại KH','COD','Ngày'],...detSHP]),'Đơn quá hạn Shopee');
+ XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([['Tỉnh','Bưu Cục','Mã đơn','Số ngày','AM','Ngày nhập','SL giao','Nhóm BL'],...detAG]),'Đơn aging > 8 ngày');
+ XLSX.writeFile(wb,`XuLy_BatOn_BG-HD_${lastD||new Date().toISOString().slice(0,10)}.xlsx`);
+}
+async function sendT1ToTelegram(){
+ const btn=document.getElementById('tgInpage_p36');
+ if(!window._t1Data||!document.getElementById('t1CapTable')){alert('Trang chưa tải xong.');return;}
+ try{if(btn){btn.disabled=true;btn.innerHTML='⏳ Đang gửi...';}
+  const img=await _captureEl('t1CapTable');
+  const {rows,lastD}=window._t1Data;const s=rows.reduce((a,r)=>({t:a.t+r.tts,s:a.s+r.shp,a:a.a+r.ag}),{t:0,s:0,a:0});
+  const cap=`🛠️ <b>XỬ LÝ BƯU CỤC BẤT ỔN — Bắc Giang + Hải Dương</b>\n📅 ${new Date().toLocaleDateString('vi-VN')}\nTTS quá hạn: <b>${s.t}</b> · Shopee: <b>${s.s}</b> · Aging&gt;8 ngày: <b>${s.a}</b> (ngày ${lastD})`;
+  let res=await _tgSendPhoto(T1_TG_CHAT,undefined,img,cap);
+  if(!res.ok&&/dimension|PHOTO/i.test(res.description||''))res=await _tgSendDoc(T1_TG_CHAT,undefined,img,cap);
+  if(!res.ok)throw new Error(res.description||JSON.stringify(res));
+  if(btn){btn.innerHTML='✅ Đã gửi';setTimeout(()=>{btn.disabled=false;btn.innerHTML='📤 Bắn Telegram';},2600);}
+ }catch(e){alert('Lỗi gửi Telegram: '+e.message);if(btn){btn.disabled=false;btn.innerHTML='📤 Bắn Telegram';}}
+}
+async function buildTTSShopeeBGPage(){
+ const el=document.getElementById('p37');if(!el)return;
+ try{
+  const {tts,shp}=await _qhFetchBacklog();
+  const isBGI=k=>/^\(BGI\)/.test(k||'');
+  const M={};const ens=bc=>{if(!M[bc])M[bc]={bc,tts:0,shp:0,urg:[]};return M[bc];};
+  tts.forEach(x=>{if(!isBGI(x[3]))return;const bc=(x[3]||'').replace(/^\(\w+\)\s*/,'').trim();const o=ens(bc);o.tts++;const b=_qhBucketTTS(x);if(b===1||b===2)o.urg.push({src:'TTS',ma:x[0],d:b});});
+  shp.forEach(x=>{if(!isBGI(x[5]))return;const bc=(x[5]||'').replace(/^\(\w+\)\s*/,'').trim();const o=ens(bc);o.shp++;const b=_qhBucketSHP(x);if(b===1||b===2)o.urg.push({src:'SHP',ma:x[0],d:b});});
+  const rows=Object.values(M).map(o=>({bc:o.bc,tts:o.tts,shp:o.shp,urg:o.urg.length})).sort((a,b)=>(b.tts+b.shp)-(a.tts+a.shp));
+  window._t2Data=M;
+  const cols=[{key:'bc',label:'Bưu Cục',head:'#1F3864',text:1,min:150},{key:'tts',label:'TTS backlog',head:'#C55A11'},{key:'shp',label:'Shopee backlog',head:'#C55A11'},{key:'urg',label:'Gần hạn (còn ≤2 ngày)',head:'#C00000',red:1},{key:'tot',label:'Tổng backlog',head:'#00A000'}];
+  // tot chỉ tính tts+shp (không cộng urg/tot) → dùng cols riêng cho totals
+  const totCols=[{key:'bc',text:1},{key:'tts'},{key:'shp'}];
+  el.innerHTML=`
+   <div class="page-header"><div><div class="page-title">📮 Đơn TTS · Shopee — Tỉnh Bắc Giang</div>
+    <div class="page-meta"><span style="color:var(--text-sub);font-size:13px">Cập nhật: ${new Date().toLocaleDateString('vi-VN')} · ${rows.length} Bưu Cục</span>
+     <button onclick="buildTTSShopeeBGPage()" style="padding:6px 13px;background:rgba(241,93,41,0.12);border:1px solid rgba(241,93,41,0.35);color:var(--orange-dark);border-radius:20px;font-size:12px;font-weight:700;cursor:pointer">🔄 Cập nhật</button></div></div></div>
+   <div style="max-width:820px">
+    ${_qhCntTableT2(rows)}
+    <div style="color:var(--text-sub);font-size:12px;margin-top:8px">• Cột "Gần hạn (còn ≤2 ngày)" = đơn còn 1–2 ngày (bỏ đơn đã quá hạn). • Nút <b>Bắn text TG</b> gửi danh sách mã đơn gần hạn theo từng Bưu Cục.</div>
+   </div>`;
+ }catch(e){el.innerHTML=`<div class="page-header"><div class="page-title">📮 Đơn TTS · Shopee — Bắc Giang</div></div><div style="padding:20px;color:var(--red)">Lỗi tải dữ liệu: ${e.message}</div>`;}
+}
+function _qhCntTableT2(rows){
+ const cs='border:1px solid #d0d0d0;padding:6px 12px;text-align:center;white-space:nowrap;font-size:13px';
+ const tots=rows.map(r=>r.tts+r.shp);const mx=Math.max(...tots,1),mn=Math.min(...tots,0);
+ let h='<div style="overflow-x:auto"><table style="border-collapse:collapse;background:#fff">';
+ h+=`<thead><tr><th style="${cs};background:#1F3864;color:#fff;min-width:150px">Bưu Cục</th><th style="${cs};background:#C55A11;color:#fff">TTS backlog</th><th style="${cs};background:#C55A11;color:#fff">Shopee backlog</th><th style="${cs};background:#C00000;color:#fff">Gần hạn (còn ≤2 ngày)</th><th style="${cs};background:#00A000;color:#fff">Tổng backlog</th></tr></thead><tbody>`;
+ rows.forEach(r=>{const t=r.tts+r.shp;h+=`<tr><td style="${cs};text-align:left;font-weight:600">${r.bc}</td><td style="${cs}">${r.tts||''}</td><td style="${cs}">${r.shp||''}</td><td style="${cs};color:#C00000;font-weight:700">${r.urg||''}</td><td style="${cs};font-weight:800;background:${_qhHeat(t,mn,mx)}">${t}</td></tr>`;});
+ const st=rows.reduce((a,r)=>a+r.tts,0),ss=rows.reduce((a,r)=>a+r.shp,0),su=rows.reduce((a,r)=>a+r.urg,0);
+ h+=`<tr><td style="${cs};background:#f2f2f2;font-weight:800">Tổng</td><td style="${cs};background:#f2f2f2;font-weight:800">${st}</td><td style="${cs};background:#f2f2f2;font-weight:800">${ss}</td><td style="${cs};background:#f2f2f2;font-weight:800;color:#C00000">${su}</td><td style="${cs};background:#c9f0c9;font-weight:800">${st+ss}</td></tr>`;
+ h+='</tbody></table></div>';return h;
+}
+function _t2Msgs(){
+ const M=window._t2Data;const bcs=Object.keys(M).filter(bc=>M[bc].urg.length).sort((a,b)=>M[b].urg.length-M[a].urg.length);
+ const dstr=new Date().toLocaleDateString('vi-VN');
+ const head=`🚨 <b>ĐƠN SẮP QUÁ HẠN (còn ≤2 ngày) — TỈNH BẮC GIANG</b>\n📅 ${dstr}\n`;
+ const msgs=[];let cur=head;
+ if(!bcs.length)return [head+'\n✅ Không có đơn nào còn 1–2 ngày.'];
+ bcs.forEach(bc=>{
+  const o=M[bc];o.urg.sort((a,b)=>a.d-b.d);
+  let block=`\n🏢 <b>${bc}</b> — ${o.urg.length} đơn gần hạn (TTS ${o.tts} · Shopee ${o.shp} backlog)\n`;
+  o.urg.forEach(u=>{block+=`  • ${u.src} ${u.ma} — còn ${u.d} ngày\n`;});
+  if((cur+block).length>3900){msgs.push(cur);cur='';}
+  cur+=block;
+ });
+ if(cur.trim())msgs.push(cur);return msgs;
+}
+async function sendT2ToTelegram(){
+ const btn=document.getElementById('tgInpage_p37');
+ if(!window._t2Data){alert('Trang chưa tải xong.');return;}
+ try{if(btn)btn.disabled=true;
+  const msgs=_t2Msgs();
+  for(let i=0;i<msgs.length;i++){if(btn)btn.innerHTML=`⏳ ${i+1}/${msgs.length}...`;const res=await _tgSend(T2_TG_CHAT,undefined,msgs[i]);if(!res.ok)throw new Error(res.description||JSON.stringify(res));await new Promise(r=>setTimeout(r,500));}
+  if(btn){btn.innerHTML='✅ Đã gửi';setTimeout(()=>{btn.disabled=false;btn.innerHTML='📤 Bắn text TG';},2600);}
+ }catch(e){alert('Lỗi gửi Telegram: '+e.message);if(btn){btn.disabled=false;btn.innerHTML='📤 Bắn text TG';}}
 }
 
 async function buildCODPage(){
