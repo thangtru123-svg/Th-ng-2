@@ -5965,31 +5965,53 @@ function _qhCntTable(rows,cols){ // cols:[{key,label,head,red}], rows có .tinh?
  }).join('')+'</tr>';
  h+='</tbody></table></div>';return h;
 }
+function _t1TableDays(rows){
+ const cs='border:1px solid #d0d0d0;padding:6px 10px;text-align:center;white-space:nowrap;font-size:13px';
+ const tots=rows.map(r=>r.tts+r.shp+r.ag);const mx=Math.max(...tots,1),mn=Math.min(...tots,0);
+ let h='<div style="overflow-x:auto"><table style="border-collapse:collapse;background:#fff">';
+ h+=`<thead><tr><th rowspan="2" style="${cs};background:#1F3864;color:#fff">Tỉnh</th><th rowspan="2" style="${cs};background:#1F3864;color:#fff;min-width:110px">Bưu Cục</th>`
+  +`<th colspan="3" style="${cs};background:#C55A11;color:#fff;font-weight:800">TTS sắp quá hạn</th>`
+  +`<th colspan="3" style="${cs};background:#7A3FB8;color:#fff;font-weight:800">Shopee sắp quá hạn</th>`
+  +`<th rowspan="2" style="${cs};background:#C00000;color:#fff">Aging&gt;8</th><th rowspan="2" style="${cs};background:#00A000;color:#fff">Tổng</th></tr><tr>`
+  +`<th style="${cs};background:#FF0000;color:#fff">Còn 1 ngày</th><th style="${cs};background:#E8863D;color:#fff">Còn 2 ngày</th><th style="${cs};background:#8a4d16;color:#fff">Σ</th>`
+  +`<th style="${cs};background:#FF0000;color:#fff">Còn 1 ngày</th><th style="${cs};background:#E8863D;color:#fff">Còn 2 ngày</th><th style="${cs};background:#5a2d8a;color:#fff">Σ</th></tr></thead><tbody>`;
+ rows.forEach(r=>{const t=r.tts+r.shp+r.ag;
+  h+=`<tr><td style="${cs};text-align:left">${r.tinh}</td><td style="${cs};text-align:left;font-weight:600">${r.bc}</td>`
+   +`<td style="${cs};color:#C00000;font-weight:700">${r.d1t||''}</td><td style="${cs};color:#C55A11;font-weight:700">${r.d2t||''}</td><td style="${cs};font-weight:800;background:#f6ead9">${r.tts||''}</td>`
+   +`<td style="${cs};color:#C00000;font-weight:700">${r.d1s||''}</td><td style="${cs};color:#C55A11;font-weight:700">${r.d2s||''}</td><td style="${cs};font-weight:800;background:#efe6f7">${r.shp||''}</td>`
+   +`<td style="${cs};color:#C00000;font-weight:700">${r.ag||''}</td><td style="${cs};font-weight:800;background:${_qhHeat(t,mn,mx)}">${t}</td></tr>`;});
+ let d1t=0,d2t=0,d1s=0,d2s=0,sT=0,pT=0,aT=0;
+ rows.forEach(r=>{d1t+=r.d1t;d2t+=r.d2t;d1s+=r.d1s;d2s+=r.d2s;sT+=r.tts;pT+=r.shp;aT+=r.ag;});
+ h+=`<tr><td colspan="2" style="${cs};background:#f2f2f2;font-weight:800">Tổng</td>`
+  +`<td style="${cs};background:#f2f2f2;font-weight:800;color:#C00000">${d1t}</td><td style="${cs};background:#f2f2f2;font-weight:800;color:#C55A11">${d2t}</td><td style="${cs};background:#e8d6bd;font-weight:800">${sT}</td>`
+  +`<td style="${cs};background:#f2f2f2;font-weight:800;color:#C00000">${d1s}</td><td style="${cs};background:#f2f2f2;font-weight:800;color:#C55A11">${d2s}</td><td style="${cs};background:#ddc9ef;font-weight:800">${pT}</td>`
+  +`<td style="${cs};background:#f2f2f2;font-weight:800;color:#C00000">${aT}</td><td style="${cs};background:#c9f0c9;font-weight:800">${sT+pT+aT}</td></tr></tbody></table></div>`;return h;
+}
 async function buildXuLyBatOnPage(){
  const el=document.getElementById('p36');if(!el)return;
  try{
   const [{tts,shp},ag]=await Promise.all([_qhFetchBacklog(),_qhFetchCSV(T1_AGING_ID,T1_AGING_GID)]);
   const key=T1_BCS.map(t=>_qhNorm(t[1]));const idxOf=nm=>key.indexOf(_qhBcName(nm));
   let lastD='';ag.slice(1).forEach(x=>{const d=(x[11]||'').slice(0,10);if(d>lastD)lastD=d;});
-  const rows=T1_BCS.map(t=>({tinh:t[0],bc:t[1],tts:0,shp:0,ag:0}));
+  // Chỉ lấy đơn còn 1 ngày (bucket 1) và 2 ngày (bucket 2)
+  const rows=T1_BCS.map(t=>({tinh:t[0],bc:t[1],d1t:0,d2t:0,d1s:0,d2s:0,tts:0,shp:0,ag:0}));
   const detTTS=[],detSHP=[],detAG=[];
-  tts.forEach(x=>{const i=idxOf(x[3]);if(i<0)return;rows[i].tts++;detTTS.push([rows[i].tinh,rows[i].bc,x[0],x[4],x[7],x[8],x[13],x[1],x[12]]);});
-  shp.forEach(x=>{const i=idxOf(x[5]);if(i<0)return;rows[i].shp++;detSHP.push([rows[i].tinh,rows[i].bc,x[0],_qhAmName(x[8]),x[2],x[11],x[10],x[9],x[1]]);});
+  tts.forEach(x=>{const i=idxOf(x[3]);if(i<0)return;const b=_qhBucketTTS(x);if(b!==1&&b!==2)return;if(b===1)rows[i].d1t++;else rows[i].d2t++;rows[i].tts++;detTTS.push([rows[i].tinh,rows[i].bc,x[0],'Còn '+b+' ngày',x[4],x[8],x[13],x[1],x[12]]);});
+  shp.forEach(x=>{const i=idxOf(x[5]);if(i<0)return;const b=_qhBucketSHP(x);if(b!==1&&b!==2)return;if(b===1)rows[i].d1s++;else rows[i].d2s++;rows[i].shp++;detSHP.push([rows[i].tinh,rows[i].bc,x[0],'Còn '+b+' ngày',_qhAmName(x[8]),x[2],x[10],x[9],x[1]]);});
   ag.slice(1).forEach(x=>{if((x[11]||'').slice(0,10)!==lastD)return;if(!(parseFloat(x[6])>8))return;const i=idxOf(x[2]);if(i<0)return;rows[i].ag++;detAG.push([rows[i].tinh,rows[i].bc,x[3],x[6],x[10],x[5],x[8],x[9]]);});
   window._t1Data={rows,detTTS,detSHP,detAG,lastD};
-  const cols=[{key:'tinh',label:'Tỉnh',head:'#1F3864',text:1},{key:'bc',label:'Bưu Cục',head:'#1F3864',text:1,min:130},{key:'tts',label:'TTS quá hạn',head:'#C55A11'},{key:'shp',label:'Shopee quá hạn',head:'#C55A11'},{key:'ag',label:'Aging &gt; 8 ngày',head:'#C00000',red:1},{key:'tot',label:'Tổng',head:'#00A000'}];
   el.innerHTML=`
    <div class="page-header"><div><div class="page-title">🛠️ Xử lý Bưu Cục Bất Ổn — Bắc Giang + Hải Dương</div>
     <div class="page-meta"><span style="color:var(--text-sub);font-size:13px">Cập nhật: ${new Date().toLocaleDateString('vi-VN')} · Aging ngày ${lastD}</span>
      <button onclick="buildXuLyBatOnPage()" style="padding:6px 13px;background:rgba(241,93,41,0.12);border:1px solid rgba(241,93,41,0.35);color:var(--orange-dark);border-radius:20px;font-size:12px;font-weight:700;cursor:pointer">🔄 Cập nhật</button>
      <button onclick="exportT1Excel()" style="padding:6px 13px;background:rgba(22,101,52,0.12);border:1px solid rgba(22,101,52,0.4);color:#166534;border-radius:20px;font-size:12px;font-weight:700;cursor:pointer">📥 Xuất Excel (3 sheet)</button></div></div></div>
-   <div id="t1CapTable" style="background:#fff;padding:10px;border-radius:6px;max-width:900px">
+   <div id="t1CapTable" style="background:#fff;padding:10px;border-radius:6px;display:inline-block;min-width:100%">
     <div style="background:#FFF200;text-align:center;font-weight:800;font-size:16px;padding:7px;border:1px solid #333">XỬ LÝ BƯU CỤC BẤT ỔN — BẮC GIANG + HẢI DƯƠNG</div>
-    <div style="background:#1a1aff;color:#fff;font-weight:700;font-size:13px;padding:6px 12px;border:1px solid #333;border-top:none">Số đơn quá hạn TTS/Shopee & Aging &gt; 8 ngày · ${new Date().toLocaleDateString('vi-VN')}</div>
+    <div style="background:#1a1aff;color:#fff;font-weight:700;font-size:13px;padding:6px 12px;border:1px solid #333;border-top:none">Số đơn sắp quá hạn (còn 1–2 ngày) TTS/Shopee & Aging &gt; 8 ngày · ${new Date().toLocaleDateString('vi-VN')}</div>
     <div style="height:8px"></div>
-    ${_qhCntTable(rows,cols)}
+    ${_t1TableDays(rows)}
    </div>
-   <div style="color:var(--text-sub);font-size:12px;margin-top:8px;max-width:900px">• "Quá hạn" = toàn bộ đơn backlog TTS/Shopee của BC. • Aging &gt; 8 ngày lấy snapshot ${lastD}. • Bấm <b>Xuất Excel</b> để tải chi tiết mã đơn (3 sheet).</div>`;
+   <div style="color:var(--text-sub);font-size:12px;margin-top:8px;max-width:1000px">• "Sắp quá hạn" = đơn còn 1 ngày & 2 ngày tới hạn (bỏ đơn đã quá hạn và còn 3–4 ngày). • Σ = tổng đơn còn 1–2 ngày. • Aging &gt; 8 ngày lấy snapshot ${lastD}. • Bấm <b>Xuất Excel</b> để tải chi tiết mã đơn (3 sheet: TTS / Shopee đơn còn 1–2 ngày · Aging &gt; 8 ngày).</div>`;
  }catch(e){el.innerHTML=`<div class="page-header"><div class="page-title">🛠️ Xử lý Bưu Cục Bất Ổn</div></div><div style="padding:20px;color:var(--red)">Lỗi tải dữ liệu: ${e.message}</div>`;}
 }
 async function exportT1Excel(){
@@ -5997,8 +6019,8 @@ async function exportT1Excel(){
  try{await _qhLoadXLSX();}catch(e){alert('Không tải được thư viện Excel: '+e.message);return;}
  const {detTTS,detSHP,detAG,lastD}=window._t1Data;
  const wb=XLSX.utils.book_new();
- XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([['Tỉnh','Bưu Cục','Mã đơn','Loại (Giao/Trả)','Tuổi Backlog','Deadline SLA','Giá trị đơn','Trạng thái','Client ID'],...detTTS]),'Đơn quá hạn TTS');
- XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([['Tỉnh','Bưu Cục','Mã đơn','AM','Trạng thái','Mức SLA','Loại KH','COD','Ngày'],...detSHP]),'Đơn quá hạn Shopee');
+ XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([['Tỉnh','Bưu Cục','Mã đơn','Số ngày còn lại','Loại (Giao/Trả)','Deadline SLA','Giá trị đơn','Trạng thái','Client ID'],...detTTS]),'Đơn quá hạn TTS');
+ XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([['Tỉnh','Bưu Cục','Mã đơn','Số ngày còn lại','AM','Trạng thái','Loại KH','COD','Ngày'],...detSHP]),'Đơn quá hạn Shopee');
  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([['Tỉnh','Bưu Cục','Mã đơn','Số ngày','AM','Ngày nhập','SL giao','Nhóm BL'],...detAG]),'Đơn aging > 8 ngày');
  XLSX.writeFile(wb,`XuLy_BatOn_BG-HD_${lastD||new Date().toISOString().slice(0,10)}.xlsx`);
 }
