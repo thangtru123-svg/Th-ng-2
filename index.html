@@ -3369,7 +3369,7 @@ function _lowCompute(){
  // NS AM min (2 ngày gần nhất)
  let nsMinAM=null,nsMinVal=null;
  const nsRaw=window._nsRaw;
- if(nsRaw&&nsRaw.length){const nd=[...new Set(nsRaw.map(r=>r[2]).filter(Boolean))].sort().slice(-2);const byAM={};nsRaw.forEach(r=>{if(!nd.includes(r[2]))return;const core=_coreBC(r[0]||'');const am=bcAM[core];if(!am)return;byAM[am]=byAM[am]||{nv:new Set(),gtc:0};byAM[am].nv.add((r[1]||'').trim());byAM[am].gtc+=(+r[4]||0);});const arr=Object.entries(byAM).map(([am,d])=>({am,ns:d.nv.size?Math.round(d.gtc/d.nv.size/nd.length):0})).filter(x=>x.ns>0);if(arr.length){const w=arr.reduce((a,b)=>a.ns<b.ns?a:b);nsMinAM=w.am;nsMinVal=w.ns;addAM(w.am,`NS ${w.ns} đơn/NV/ngày (thấp nhất)`);}}
+ if(nsRaw&&nsRaw.length){const nd=[...new Set(nsRaw.map(r=>r[2]).filter(Boolean))].sort().slice(-2);const byAM={};nsRaw.forEach(r=>{if(!nd.includes(r[2]))return;const core=_coreBC(r[0]||'');const am=bcAM[core];if(!am)return;byAM[am]=byAM[am]||{nv:new Set(),gtc:0};if((+r[4]||0)>0)byAM[am].nv.add((r[1]||'').trim());byAM[am].gtc+=(+r[4]||0);});const arr=Object.entries(byAM).map(([am,d])=>({am,ns:d.nv.size?Math.round(d.gtc/d.nv.size/nd.length):0})).filter(x=>x.ns>0);if(arr.length){const w=arr.reduce((a,b)=>a.ns<b.ns?a:b);nsMinAM=w.am;nsMinVal=w.ns;addAM(w.am,`NS ${w.ns} đơn/NV/ngày (thấp nhất)`);}}
  const ams=Object.entries(amFlags).map(([am,rs])=>({am,reasons:rs})).sort((a,b)=>b.reasons.length-a.reasons.length);
  // ----- KPI -----
  const kpi=[
@@ -4543,7 +4543,7 @@ async function buildNangSuatPage(){
     const t=(r[6]||'Khác').trim();
     const gan=parseFloat(r[3])||0,gtc=parseFloat(r[4])||0;
     if(!bT[t])bT[t]={nvs:new Set(),gan:0,gtc:0,vol:0};
-    bT[t].nvs.add((r[1]||'').trim());
+    if(gtc>0)bT[t].nvs.add((r[1]||'').trim()); // NS TB chỉ đếm NV có GTC>0 (loại ID gán nhưng giao 0)
     bT[t].gan+=gan;bT[t].gtc+=gtc;
    });
    selDates.forEach(d=>{Object.keys(bT).forEach(t=>{bT[t].vol+=(volPD[t+'|'+d]||0);});});
@@ -4554,7 +4554,7 @@ async function buildNangSuatPage(){
     const gan=parseFloat(r[3])||0,gtc=parseFloat(r[4])||0;
     if(!bc)return;
     if(!bB[bc])bB[bc]={t,nvs:new Set(),gan:0,gtc:0,vol:0};
-    bB[bc].nvs.add((r[1]||'').trim());
+    if(gtc>0)bB[bc].nvs.add((r[1]||'').trim()); // NS TB chỉ đếm NV có GTC>0
     bB[bc].gan+=gan;bB[bc].gtc+=gtc;
    });
    selDates.forEach(d=>{Object.keys(bB).forEach(bc=>{bB[bc].vol+=(volBCPD[bc+'|'+d]||0);});});
@@ -4562,7 +4562,7 @@ async function buildNangSuatPage(){
    const bA=Object.entries(bB).sort((a,b)=>(a[1].nvs.size>0?a[1].gtc/a[1].nvs.size:0)-(b[1].nvs.size>0?b[1].gtc/b[1].nvs.size:0));
    // Tổng hợp theo AM (r[7]=AM)
    const bcAM={};f.forEach(r=>{const bc=(r[0]||'').trim(),am=(r[7]||'').trim();if(bc&&am)bcAM[bc]=am;});
-   const bAM={};f.forEach(r=>{const am=(r[7]||'Khác').trim();const gan=parseFloat(r[3])||0,gtc=parseFloat(r[4])||0;if(!bAM[am])bAM[am]={nvs:new Set(),gan:0,gtc:0,vol:0};bAM[am].nvs.add((r[1]||'').trim());bAM[am].gan+=gan;bAM[am].gtc+=gtc;});
+   const bAM={};f.forEach(r=>{const am=(r[7]||'Khác').trim();const gan=parseFloat(r[3])||0,gtc=parseFloat(r[4])||0;if(!bAM[am])bAM[am]={nvs:new Set(),gan:0,gtc:0,vol:0};if(gtc>0)bAM[am].nvs.add((r[1]||'').trim());bAM[am].gan+=gan;bAM[am].gtc+=gtc;});
    Object.entries(volBCPD).forEach(([key,vol])=>{const sep=key.lastIndexOf('|');const bc=key.substring(0,sep),dt=key.substring(sep+1);if(!selDates.includes(dt))return;const am=bcAM[bc];if(am&&bAM[am])bAM[am].vol+=vol;});
    const amA=Object.entries(bAM).filter(([am])=>am&&am!=='Khác').sort((a,b)=>(a[1].nvs.size>0?a[1].gtc/a[1].nvs.size:0)-(b[1].nvs.size>0?b[1].gtc/b[1].nvs.size:0));
    // Bộ lọc compact: 2 dropdown
