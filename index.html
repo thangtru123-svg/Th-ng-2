@@ -5631,13 +5631,13 @@ async function sendBaoCaoToTelegram(){
  }catch(e){ alert('Lỗi gửi Telegram: '+e.message); if(btn){btn.disabled=false;btn.innerHTML='📤 Bắn Task Thắng TG';} }
 }
 
-/* ===== p34 — BÁO CÁO BƯU CỤC (Việt Yên / Lạng Giang / Lục Nam / An Hải / Hải An 1) ===== */
-const VY_BCS=['(BGI) Việt Yên','(BGI) Lạng Giang','(BGI) Lục Nam','(HPH) An Hải','(HPH) Hải An 1'];
+/* ===== p34 — BÁO CÁO BƯU CỤC (Việt Yên / Lạng Giang / Lục Nam / Chũ / Hiệp Hòa / An Hải / Hải An 1) ===== */
+const VY_BCS=['(BGI) Việt Yên','(BGI) Lạng Giang','(BGI) Lục Nam','(BGI) Chũ','(BGI) Hiệp Hòa','(HPH) An Hải','(HPH) Hải An 1'];
 let VY_BC=(VY_BCS.includes(localStorage.getItem('vy_bc')||''))?localStorage.getItem('vy_bc'):VY_BCS[0];
 const TG_BATON_BOT_CHAT=-5520203386; // group "BOT báo cáo bưu cục bất ổn"
 const VY_DFT_BC={'(BGI) Việt Yên':{trongTuyen:'Xã Hương Mai và Xã Việt Tiến với volume đơn mới về trung bình hàng ngày 180-230 đơn/day',ctvGoi:'Có',ctvGoiChiTiet:'Đang sử dụng 1 ID CTV gọi - Để NVXL gọi các đơn quá hạn, khách từ chối'}};
-const VY_TAG={'(BGI) Việt Yên':'@thangquada','(BGI) Lạng Giang':'@SUBG92','(BGI) Lục Nam':'@longlucngan','(HPH) An Hải':'@QuangBX_3098460','(HPH) Hải An 1':'@TuanNB0'};
-const VY_AMNAME={'(BGI) Việt Yên':'Phạm Đức Thắng','(BGI) Lạng Giang':'Giáp Hải Sự','(BGI) Lục Nam':'Nguyễn Văn Long','(HPH) An Hải':'Bùi Xuân Quang','(HPH) Hải An 1':'Nguyễn Bá Tuấn'};
+const VY_TAG={'(BGI) Việt Yên':'@thangquada','(BGI) Lạng Giang':'@SUBG92','(BGI) Lục Nam':'@longlucngan','(BGI) Chũ':'@longlucngan','(BGI) Hiệp Hòa':'@SUBG92','(HPH) An Hải':'@QuangBX_3098460','(HPH) Hải An 1':'@TuanNB0'};
+const VY_AMNAME={'(BGI) Việt Yên':'Phạm Đức Thắng','(BGI) Lạng Giang':'Giáp Hải Sự','(BGI) Lục Nam':'Nguyễn Văn Long','(BGI) Chũ':'Nguyễn Văn Long','(BGI) Hiệp Hòa':'Giáp Hải Sự','(HPH) An Hải':'Bùi Xuân Quang','(HPH) Hải An 1':'Nguyễn Bá Tuấn'};
 function _vyShort(bc){return (bc||'').replace(/^\([^)]*\)\s*/,'');}
 function _vyPickBC(bc){if(!VY_BCS.includes(bc))return;VY_BC=bc;localStorage.setItem('vy_bc',bc);buildVietYenPage();}
 function _vyNum(v){v=(v||'').toString().trim().replace(/,/g,'');const n=parseFloat(v);return isNaN(n)?0:n;}
