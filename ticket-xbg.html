@@ -105,6 +105,8 @@ thead th{position:sticky;top:0;background:var(--panel2);text-align:left;padding:
 tbody td{padding:11px 14px;border-bottom:1px solid var(--border);white-space:nowrap}
 tbody tr:hover{background:var(--panel2)}
 td.num,th.num{text-align:right}
+table.listtbl th,table.listtbl td{text-align:center}
+table.listtbl th.lft,table.listtbl td.lft{text-align:left}
 .badge{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;font-size:12px;font-weight:700;border:1px solid transparent}
 .badge .d{width:8px;height:8px;border-radius:50%}
 .b-red{background:rgba(214,90,74,.13);color:var(--red)} .b-red .d{background:var(--red)}
@@ -222,7 +224,14 @@ const REGION='XBG';
 /* Telegram */
 const TG_TOKEN='7471088067:AAGje2KrjUTzlkIiU05h1bm21IUkB0J2J0s';
 const TG_ROOM_AM={chat:'-1003802272887'};             // room theo AM (toàn XBG) — topic General
-const TG_ROOM_BC={chat:'-1001653214092'};             // room Bưu cục tỉnh Bắc Giang (cần thêm bot @thangtru_bot vào nhóm)
+const TG_ROOM_BC={chat:'-1001653214092'};             // room Bưu cục tỉnh Bắc Giang
+// Danh sách ĐẦY ĐỦ Bưu cục tỉnh Bắc Giang thuộc Vùng XBG (mã - (BGI) Tên) — để báo cáo liệt kê cả BC 0 ticket
+const BGI_MASTER=[
+ '21318000 - (BGI) Bắc Giang','20771000 - (BGI) Bố Hạ','22837000 - (BGI) Chũ','22734000 - (BGI) Hiệp Hòa',
+ '21430000 - (BGI) Kép','20860000 - (BGI) Lạng Giang','21332000 - (BGI) Lục Nam','20396000 - (BGI) Nhã Nam',
+ '20879000 - (BGI) Nếnh','22693000 - (BGI) Sơn Động','22603000 - (BGI) Trường Sơn','21977000 - (BGI) Tân Yên',
+ '20179000 - (BGI) Việt Yên','21436000 - (BGI) Xuân Cẩm','21999000 - (BGI) Yên Dũng','20471000 - (BGI) Yên Thế',
+ '23009000 - (BGI) Đa Mai'];
 
 let ALL=[];            // all XBG rows (objects)
 let updatedText='';    // timestamp from sheet
@@ -382,8 +391,8 @@ function renderList(){
   const arrow=k=>state.sortKey===k?(state.sortDir>0?' ▲':' ▼'):'';
   const body=arr.slice(0,400).map(r=>`<tr>
     <td>${esc(r.maTicket)}</td><td>${esc(r.maDon)}</td>
-    <td>${esc(r.am)}</td><td>${esc(r.tenBc)}</td><td>${esc(r.loai)}</td>
-    <td class="num money">${r.phat>0?vnnum(r.phat)+'đ':'<span class=muted>0đ</span>'}</td>
+    <td class="lft">${esc(r.am)}</td><td class="lft">${esc(r.tenBc)}</td><td>${esc(r.loai)}</td>
+    <td class="money">${r.phat>0?vnnum(r.phat)+'đ':'<span class=muted>0đ</span>'}</td>
     <td><span class="badge ${statusClass(r.tt)}"><span class="d"></span>${esc(r.tt)}</span></td>
     <td>${esc(r.hanDisp)}</td>
     <td>${r.url?`<a href="${esc(r.url)}" target="_blank" rel="noopener">Mở ↗</a>`:''}</td></tr>`).join('');
@@ -392,11 +401,11 @@ function renderList(){
       <div><div class="panel-title">Danh sách phiếu tồn</div><div class="panel-sub">Bấm tiêu đề cột để sắp xếp · hiển thị tối đa 400 dòng${state.q?` · lọc "${esc(state.q)}"`:''}</div></div>
     </div>
     <div class="muted" style="margin-bottom:10px">${vnnum(arr.length)} phiếu · tổng phạt ${vnnum(arr.reduce((s,r)=>s+r.phat,0))}đ</div>
-    <div class="table-wrap"><table>
+    <div class="table-wrap"><table class="listtbl">
     <thead><tr>
       <th data-s="maTicket">Mã ticket${arrow('maTicket')}</th><th data-s="maDon">Mã đơn${arrow('maDon')}</th>
-      <th data-s="am">AM${arrow('am')}</th><th data-s="tenBc">Bưu cục${arrow('tenBc')}</th><th data-s="loai">Loại${arrow('loai')}</th>
-      <th class="num" data-s="phat">Phạt${arrow('phat')}</th><th data-s="tt">Trạng thái${arrow('tt')}</th>
+      <th class="lft" data-s="am">AM${arrow('am')}</th><th class="lft" data-s="tenBc">Bưu cục${arrow('tenBc')}</th><th data-s="loai">Loại${arrow('loai')}</th>
+      <th data-s="phat">Phạt${arrow('phat')}</th><th data-s="tt">Trạng thái${arrow('tt')}</th>
       <th data-s="han">Hạn đóng${arrow('han')}</th><th>Mở</th>
     </tr></thead><tbody>${body||'<tr><td colspan=9 class=muted style="padding:24px">Không có phiếu phù hợp.</td></tr>'}</tbody></table></div>`;
   document.querySelectorAll('#tabPanel thead th[data-s]').forEach(th=>{
@@ -445,6 +454,15 @@ function aggBy(rows,keyFn){
   const tot=arr.reduce((s,a)=>({kk:s.kk+a.kk,cuu:s.cuu+a.cuu,chua:s.chua+a.chua,phat:s.phat+a.phat}),{kk:0,cuu:0,chua:0,phat:0});
   return{arr,tot};
 }
+// gộp BC Bắc Giang theo tên đầy đủ + liệt kê ĐỦ 17 BC (0-fill)
+function bcAgg(){
+  const m={};
+  ALL.filter(r=>/\(BGI\)/.test(r.tenBc)).forEach(r=>{const k=r.tenBc;const o=m[k]=m[k]||{kk:0,cuu:0,chua:0,phat:0};o[ttBucket(r.tt)]++;o.phat+=r.phat;});
+  const arr=BGI_MASTER.map(name=>({k:name,...(m[name]||{kk:0,cuu:0,chua:0,phat:0})}));
+  Object.keys(m).forEach(k=>{if(!BGI_MASTER.includes(k))arr.push({k,...m[k]});});
+  const tot=arr.reduce((s,a)=>({kk:s.kk+a.kk,cuu:s.cuu+a.cuu,chua:s.chua+a.chua,phat:s.phat+a.phat}),{kk:0,cuu:0,chua:0,phat:0});
+  return{arr,tot};
+}
 /* ---- Render bảng thành ẢNH đẹp (html2canvas) ---- */
 function tblHTML(headers,rows){
   const th=headers.map(h=>`<th style="background:#1F3864;color:#fff;padding:10px 14px;text-align:${h.a||'left'};font-size:13.5px;font-weight:700">${esc(h.t)}</th>`).join('');
@@ -456,7 +474,7 @@ function buildReportImage(title,nameLabel,agg,width){
   const {arr,tot}=agg;
   const t1=[...arr].sort((a,b)=>b.kk-a.kk||b.phat-a.phat);
   const t2=[...arr].sort((a,b)=>b.phat-a.phat);
-  const RA='text-align:right';
+  const RA='text-align:center';
   const rows1=t1.map(a=>[{v:esc(a.k)},{v:a.kk,s:RA+';color:#D65A4A;font-weight:700'},{v:a.cuu,s:RA+';color:#C9821F;font-weight:700'},{v:a.chua,s:RA+';color:#2E9B5F;font-weight:700'}]);
   rows1.push([{v:'TỔNG',s:'font-weight:800;background:#EAF1E6'},{v:tot.kk,s:RA+';font-weight:800;background:#EAF1E6'},{v:tot.cuu,s:RA+';font-weight:800;background:#EAF1E6'},{v:tot.chua,s:RA+';font-weight:800;background:#EAF1E6'}]);
   const rows2=t2.map(a=>[{v:esc(a.k)},{v:vnnum(a.phat)+'đ',s:RA+';font-weight:700'+(a.phat>0?'':';color:#9aa8a0')}]);
@@ -471,9 +489,9 @@ function buildReportImage(title,nameLabel,agg,width){
       <span style="color:#C9821F;font-weight:800">■</span> Trễ hạn còn cứu được &nbsp;&nbsp;
       <span style="color:#2E9B5F;font-weight:800">■</span> Chưa trễ hạn</div>
     <div style="font-size:15px;font-weight:800;margin:0 0 9px">Bảng 1 — Số phiếu theo mức</div>
-    ${tblHTML([{t:nameLabel},{t:'Phạt kịch khung',a:'right'},{t:'Còn cứu được',a:'right'},{t:'Chưa trễ hạn',a:'right'}],rows1)}
+    ${tblHTML([{t:nameLabel},{t:'Phạt kịch khung',a:'center'},{t:'Còn cứu được',a:'center'},{t:'Chưa trễ hạn',a:'center'}],rows1)}
     <div style="font-size:15px;font-weight:800;margin:22px 0 9px">Bảng 2 — Tiền phạt trong tháng</div>
-    ${tblHTML([{t:nameLabel},{t:'Tiền phạt (tính đến hiện tại)',a:'right'}],rows2)}
+    ${tblHTML([{t:nameLabel},{t:'Tiền phạt (tính đến hiện tại)',a:'center'}],rows2)}
     <div style="margin-top:20px;padding-top:14px;border-top:1px solid #E4EDE0;font-size:13px;color:#1f7a4d;font-weight:700">🔗 Chi tiết tra cứu tại link: ${esc(DASH_URL)}</div>`;
   document.body.appendChild(el);
   return el;
@@ -503,8 +521,7 @@ async function sendAllTelegram(){
   }
   try{
     const r1=await one(TG_ROOM_AM,'TICKET TỒN — VÙNG XBG (theo AM)','AM',aggBy(ALL,r=>r.am),940);
-    const bgi=ALL.filter(r=>/\(BGI\)/.test(r.tenBc));
-    const r2=await one(TG_ROOM_BC,'TICKET TỒN — TỈNH BẮC GIANG (theo Bưu cục)','Bưu cục',aggBy(bgi,r=>r.tenBc.replace(/^.*\(BGI\)\s*/,'')),820);
+    const r2=await one(TG_ROOM_BC,'TICKET TỒN — TỈNH BẮC GIANG (theo Bưu cục)','Bưu cục',bcAgg(),900);
     const s1=r1.ok?'✓':'✗ '+(r1.description||'lỗi');
     const s2=r2.ok?'✓':'✗ '+(r2.description||'lỗi');
     toast(`Room AM ${s1}  ·  Room Bắc Giang ${s2}`,(r1.ok&&r2.ok)?'ok':'err');
