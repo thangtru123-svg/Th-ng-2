@@ -447,7 +447,7 @@ function aggBy(rows,keyFn){
 }
 /* ---- Render bảng thành ẢNH đẹp (html2canvas) ---- */
 function tblHTML(headers,rows){
-  const th=headers.map(h=>`<th style="background:#1F3864;color:#fff;padding:10px 14px;text-align:${h.a||'left'};font-size:13.5px;font-weight:700;white-space:nowrap">${esc(h.t)}</th>`).join('');
+  const th=headers.map(h=>`<th style="background:#1F3864;color:#fff;padding:10px 14px;text-align:${h.a||'left'};font-size:13.5px;font-weight:700">${esc(h.t)}</th>`).join('');
   const tr=rows.map((cells,i)=>`<tr style="background:${i%2?'#F4F8F1':'#ffffff'}">`
     +cells.map(c=>`<td style="padding:8px 14px;font-size:13.5px;border-bottom:1px solid #E4EDE0;${c.s||''}">${c.v}</td>`).join('')+'</tr>').join('');
   return `<table style="border-collapse:collapse;width:100%;border:1px solid #DDE7D9;border-radius:10px;overflow:hidden"><thead><tr>${th}</tr></thead><tbody>${tr}</tbody></table>`;
@@ -479,7 +479,7 @@ function buildReportImage(title,nameLabel,agg,width){
   return el;
 }
 function blobFromEl(el){return new Promise((res,rej)=>{
-  html2canvas(el,{scale:2,backgroundColor:'#ffffff',logging:false}).then(c=>c.toBlob(b=>res(b),'image/png',0.95)).catch(rej);});}
+  html2canvas(el,{scale:2,backgroundColor:'#ffffff',logging:false,scrollX:0,scrollY:0}).then(c=>c.toBlob(b=>res(b),'image/png',0.95)).catch(rej);});}
 async function tgSendPhoto(room,blob,caption){
   const fd=new FormData();
   fd.append('chat_id',room.chat);
@@ -502,9 +502,9 @@ async function sendAllTelegram(){
     try{const blob=await blobFromEl(el);return await tgSendPhoto(room,blob,`<b>${esc(title)}</b>\n${link}`);}finally{el.remove();}
   }
   try{
-    const r1=await one(TG_ROOM_AM,'TICKET TỒN — VÙNG XBG (theo AM)','AM',aggBy(ALL,r=>r.am),720);
+    const r1=await one(TG_ROOM_AM,'TICKET TỒN — VÙNG XBG (theo AM)','AM',aggBy(ALL,r=>r.am),940);
     const bgi=ALL.filter(r=>/\(BGI\)/.test(r.tenBc));
-    const r2=await one(TG_ROOM_BC,'TICKET TỒN — TỈNH BẮC GIANG (theo Bưu cục)','Bưu cục',aggBy(bgi,r=>r.tenBc.replace(/^.*\(BGI\)\s*/,'')),660);
+    const r2=await one(TG_ROOM_BC,'TICKET TỒN — TỈNH BẮC GIANG (theo Bưu cục)','Bưu cục',aggBy(bgi,r=>r.tenBc.replace(/^.*\(BGI\)\s*/,'')),820);
     const s1=r1.ok?'✓':'✗ '+(r1.description||'lỗi');
     const s2=r2.ok?'✓':'✗ '+(r2.description||'lỗi');
     toast(`Room AM ${s1}  ·  Room Bắc Giang ${s2}`,(r1.ok&&r2.ok)?'ok':'err');
