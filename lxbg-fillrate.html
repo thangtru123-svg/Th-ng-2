@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="vi"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>LXBG · Tỷ lệ Lấp Đầy Linehaul</title>
+<style>
+:root{--bg:#eef4ee;--panel:#fff;--panel2:#f4f8f3;--ink:#1e2a23;--muted:#6b7a70;--line:#dce7db;
+ --green:#1f7a4d;--green2:#2e9b5f;--amber:#e08a1e;--red:#c0432f;--dred:#9b1c1c;--navy:#1F3864;--accent:#1f7a4d;
+ --b0:#B4232A;--b1:#D65A4A;--b2:#E08A1E;--b3:#7FB069;--b4:#1f7a4d;--b5:#9aa8a0}
+:root[data-theme=dark]{--bg:#0f1613;--panel:#16201b;--panel2:#1c2822;--ink:#e7efe9;--muted:#9fb0a6;--line:#26332c;--navy:#22304e}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif}
+.hero{background:linear-gradient(120deg,#173a2b,#1f7a4d);color:#fff;padding:26px 22px 30px}
+.hero h1{margin:0;font-size:26px;font-weight:800;letter-spacing:.3px}
+.hero .sub{opacity:.9;margin-top:6px;font-size:13.5px}
+main{max-width:1180px;margin:0 auto;padding:18px 16px 60px}
+.bar{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin:4px 0 14px}
+.bar .meta{color:var(--muted);font-size:12.5px}
+.btns{display:flex;gap:8px;flex-wrap:wrap}
+.btn{border:1px solid var(--line);background:var(--panel);color:var(--ink);padding:8px 13px;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer}
+.btn.primary{background:var(--green);color:#fff;border-color:var(--green)}
+.btn:hover{filter:brightness(.97)}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:16px}
+.kpi{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:15px 16px}
+.kpi .t{color:var(--muted);font-size:12.5px;font-weight:600}
+.kpi .v{font-size:27px;font-weight:800;margin-top:4px}
+.kpi .f{color:var(--muted);font-size:12px;margin-top:3px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px 18px;margin-bottom:16px}
+.card h3{margin:0 0 3px;font-size:16px}.card .s{color:var(--muted);font-size:12.5px;margin-bottom:12px}
+.bands{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.bcell{border-radius:12px;padding:12px 14px;color:#fff}
+.bcell .bn{font-size:12.5px;font-weight:700;opacity:.95}.bcell .bv{font-size:24px;font-weight:800}.bcell .bf{font-size:11.5px;opacity:.9}
+.tabs{display:flex;gap:8px;flex-wrap:wrap;margin:20px 0 14px}
+.tab{padding:8px 14px;border-radius:999px;border:1px solid var(--line);background:var(--panel);cursor:pointer;font-weight:600;font-size:13px}
+.tab.active{background:var(--green);color:#fff;border-color:var(--green)}
+.table-wrap{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:center;white-space:nowrap}
+th{background:var(--navy);color:#fff;font-weight:700;position:sticky;top:0;cursor:pointer}
+td.l,th.l{text-align:left}
+tr.tot{font-weight:800;background:var(--panel2)}
+.b0{color:var(--b0);font-weight:700}.b1{color:var(--b1);font-weight:700}.b2{color:var(--b2);font-weight:700}
+.pill{display:inline-block;padding:2px 8px;border-radius:999px;font-size:12px;font-weight:700;color:#fff}
+input.search{border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:10px;padding:8px 12px;min-width:260px;font-size:13px}
+#toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(30px);opacity:0;pointer-events:none;background:#1f2a24;color:#fff;padding:12px 20px;border-radius:12px;font-size:13.5px;font-weight:600;box-shadow:0 10px 34px rgba(0,0,0,.35);transition:.25s;max-width:92vw;text-align:center;z-index:99}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}#toast.ok{background:#1f7a4d}#toast.err{background:#c0432f}
+.note{background:#FFF7ED;border-left:3px solid var(--amber);color:#7a4a12;padding:10px 13px;border-radius:8px;font-size:12.5px;margin-bottom:14px}
+:root[data-theme=dark] .note{background:#2a2113;color:#e7c98f}
+</style></head>
+<body>
+<div class="hero">
+  <h1>LXBG · Tỷ lệ Lấp Đầy Linehaul</h1>
+  <div class="sub">Xe luân chuyển Vùng XBG — theo mốc lấp đầy · tỉnh xuất phát · ngày · tuần. Tập trung mốc thấp (0-30%) gây thiệt hại chi phí.</div>
+</div>
+<main>
+  <div class="bar">
+    <div class="meta" id="meta">Đang tải…</div>
+    <div class="btns">
+      <button class="btn" id="themeBtn">🌙 Chế độ tối</button>
+      <button class="btn" id="csvBtn">⬇ Tải CSV (346 chuyến)</button>
+      <button class="btn primary" id="tgBtn">✈️ Bắn Telegram (room KCT)</button>
+    </div>
+  </div>
+  <div class="note" id="snapNote"></div>
+  <div class="kpis" id="kpis"></div>
+  <div class="card">
+    <h3>Phân bố theo mốc tỷ lệ lấp đầy</h3><div class="s">Toàn bộ chuyến LXBG trong kỳ</div>
+    <div class="bands" id="bands"></div>
+  </div>
+  <div class="tabs" id="tabs">
+    <div class="tab active" data-tab="prov">Theo tỉnh xuất phát</div>
+    <div class="tab" data-tab="day">Theo ngày</div>
+    <div class="tab" data-tab="week">Theo tuần</div>
+    <div class="tab" data-tab="det">Chi tiết 346 chuyến 0-30%</div>
+  </div>
+  <div class="card" id="panel"></div>
+</main>
+<div id="toast"></div>
+<script src="lxbg_data.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script>
+const $=id=>document.getElementById(id);
+const TG_TOKEN='7471088067:AAGje2KrjUTzlkIiU05h1bm21IUkB0J2J0s';
+const DASH_URL='https://th-ng-2.vercel.app/lxbg-fillrate.html';
+const OUT=window.LXBG_OUT, DET=window.LXBG_DET, KCT=window.LXBG_KCT;
+const BLABEL=['0-10%','10-20%','20-30%','30-50%','>50%','Khác'];
+const BCOL=['#B4232A','#D65A4A','#E08A1E','#7FB069','#1f7a4d','#9aa8a0'];
+const vn=n=>Math.round(n).toLocaleString('vi-VN');
+const esc=s=>String(s==null?'':s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+const ddmm=s=>{const m=/(\d{4})-(\d{2})-(\d{2})/.exec(s);return m?m[3]+'/'+m[2]:s;};
+let state={tab:'prov',q:'',sortK:7,sortDir:1};
+
+/* ---- KPI + bands ---- */
+function head(){
+  const m=OUT.meta, b=OUT.bands;
+  const low=b[0].trips+b[1].trips+b[2].trips, tot=m.total;
+  $('meta').textContent=`Dữ liệu 30 ngày · ${ddmm(m.from)}–${ddmm(m.to)}/2026 · chốt lúc ${new Date(m.generatedAt).toLocaleString('vi-VN')}`;
+  $('snapNote').innerHTML='⚠️ <b>Bản snapshot</b> — nguồn Metabase (token cấp động) không đọc live được. Muốn số mới nhất: báo để con trích lại & cập nhật.';
+  $('kpis').innerHTML=[
+    ['Tổng số chuyến',vn(tot),'chuyến LXBG'],
+    ['Tổng khối lượng',vn(m.tanTot)+' tấn','đã luân chuyển'],
+    ['Chuyến lấp đầy thấp (0-30%)','<span style=color:var(--red)>'+vn(low)+'</span>',(low/tot*100).toFixed(1)+'% tổng chuyến · thiệt hại chi phí'],
+    ['Chuyến đầy tốt (>50%)','<span style=color:var(--green)>'+vn(b[4].trips)+'</span>',(b[4].trips/tot*100).toFixed(1)+'% tổng chuyến']
+  ].map(k=>`<div class="kpi"><div class="t">${k[0]}</div><div class="v">${k[1]}</div><div class="f">${k[2]}</div></div>`).join('');
+  $('bands').innerHTML=b.map((x,i)=>`<div class="bcell" style="background:${BCOL[i]}"><div class="bn">${i<5?'Mốc ':''}${BLABEL[i]}</div><div class="bv">${vn(x.trips)}</div><div class="bf">${vn(x.tan)} tấn · ${(x.trips/OUT.meta.total*100).toFixed(1)}%</div></div>`).join('');
+}
+
+/* ---- aggregate table (prov/day/week) ---- */
+function aggRows(kind){
+  const src=kind==='prov'?OUT.byProv:kind==='day'?OUT.byDay:OUT.byWeek;
+  const rows=src.map(r=>{const b=r.b, total=b.reduce((s,x)=>s+x,0), low=b[0]+b[1]+b[2];
+    return {key:r.k, b, total, low, lowPct:total?low/total*100:0, tan:r.tan};});
+  const tot={key:'TỔNG', b:[0,0,0,0,0,0], total:0, low:0, tan:0};
+  rows.forEach(r=>{r.b.forEach((v,i)=>tot.b[i]+=v);tot.total+=r.total;tot.low+=r.low;tot.tan+=r.tan;});
+  tot.lowPct=tot.total?tot.low/tot.total*100:0;
+  return {rows,tot};
+}
+function fmtKey(kind,k){ if(kind==='prov')return k; if(kind==='day')return ddmm(k); if(kind==='week')return 'Tuần '+ddmm(k); return k; }
+function renderAgg(kind){
+  const {rows,tot}=aggRows(kind);
+  if(kind==='prov')rows.sort((a,b)=>b.low-a.low); else rows.sort((a,b)=>a.key.localeCompare(b.key));
+  const label=kind==='prov'?'Tỉnh xuất phát':kind==='day'?'Ngày':'Tuần (bắt đầu)';
+  const rowHtml=r=>`<tr${r.key==='TỔNG'?' class=tot':''}>
+    <td class="l">${esc(fmtKey(kind,r.key))}</td>
+    <td class="b0">${r.b[0]||''}</td><td class="b1">${r.b[1]||''}</td><td class="b2">${r.b[2]||''}</td>
+    <td>${r.b[3]||''}</td><td>${r.b[4]||''}</td>
+    <td><b>${r.total}</b></td>
+    <td><span class="pill" style="background:${r.lowPct>=25?'#B4232A':r.lowPct>=12?'#E08A1E':'#7FB069'}">${r.lowPct.toFixed(1)}%</span></td>
+    <td>${vn(r.tan)}</td></tr>`;
+  $('panel').innerHTML=`<h3>Thống kê theo ${label.toLowerCase()}</h3>
+    <div class="s">Số chuyến theo mốc lấp đầy. Cột "% thấp" = tỉ lệ chuyến 0-30% (càng cao càng lãng phí).</div>
+    <div class="table-wrap"><table><thead><tr>
+      <th class="l">${label}</th><th class="b0">0-10%</th><th class="b1">10-20%</th><th class="b2">20-30%</th>
+      <th>30-50%</th><th>&gt;50%</th><th>Tổng</th><th>% thấp<br>(0-30)</th><th>Tấn</th>
+    </tr></thead><tbody>${rows.map(rowHtml).join('')}${rowHtml(tot)}</tbody></table></div>`;
+}
+
+/* ---- detail 346 ---- */
+function detData(){
+  let d=DET.map(r=>({code:r[0],day:r[1],band:r[3],prov:r[4],cap:r[5],picked:r[6],fill:r[7],plate:r[8],sched:r[9],route:r[10]}));
+  const q=state.q.trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/đ/g,'d');
+  if(q){const w=q.split(/\s+/);d=d.filter(x=>{const h=(x.code+' '+x.prov+' '+x.plate+' '+x.sched+' '+x.route).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/đ/g,'d');return w.every(t=>h.includes(t));});}
+  const keys=['code','day','band','prov','cap','picked','fill','plate','sched','route'];
+  const k=keys[state.sortK]||'fill';
+  d.sort((a,b)=>{let x=a[k],y=b[k];if(typeof x==='number')return state.sortDir*(x-y);return state.sortDir*String(x).localeCompare(String(y),'vi');});
+  return d;
+}
+function renderDet(){
+  const d=detData();
+  const rowH=x=>`<tr>
+    <td class="l">${esc(x.code)}</td><td>${ddmm(x.day)}</td>
+    <td class="b${x.band}">${BLABEL[x.band]}</td><td class="l">${esc(x.prov)}</td>
+    <td>${vn(x.cap)}</td><td>${vn(x.picked)}</td>
+    <td><b class="b${x.band}">${x.fill}%</b></td>
+    <td>${esc(x.plate)}</td><td class="l">${esc(x.sched)}</td><td class="l" style="white-space:normal;min-width:210px">${esc(x.route)}</td></tr>`;
+  const heads=[['code','Mã chuyến'],['day','Ngày'],['band','Mốc'],['prov','Tỉnh XP'],['cap','Tải trọng'],['picked','Đã xếp(kg)'],['fill','% Lấp đầy'],['plate','Biển số'],['sched','Điều phối'],['route','Tuyến']];
+  $('panel').innerHTML=`<div class="bar" style="margin-top:0">
+      <div><h3 style="margin:0">Chi tiết 346 chuyến lấp đầy thấp (0-30%)</h3><div class="s">Bấm tiêu đề cột để sắp xếp · sắp theo % lấp đầy tăng dần</div></div>
+      <input class="search" id="detSearch" placeholder="Tìm mã chuyến, tỉnh, biển số, điều phối, tuyến…" value="${esc(state.q)}">
+    </div>
+    <div class="s" style="margin-bottom:8px">${d.length} chuyến</div>
+    <div class="table-wrap"><table><thead><tr>${heads.map((h,i)=>`<th class="${i===0||i===3||i===8||i===9?'l':''}" data-i="${i}">${h[1]}${state.sortK===i?(state.sortDir>0?' ▲':' ▼'):''}</th>`).join('')}</tr></thead>
+    <tbody>${d.map(rowH).join('')||'<tr><td colspan=10 style="padding:22px">Không có chuyến phù hợp.</td></tr>'}</tbody></table></div>`;
+  const sb=$('detSearch');
+  sb.oninput=e=>{state.q=e.target.value;const p=sb.selectionStart;renderDet();const n=$('detSearch');if(n){n.focus();n.setSelectionRange(p,p);}};
+  document.querySelectorAll('#panel thead th[data-i]').forEach(th=>th.onclick=()=>{const i=+th.dataset.i;if(state.sortK===i)state.sortDir*=-1;else{state.sortK=i;state.sortDir=1;}renderDet();});
+}
+function render(){ if(state.tab==='det')renderDet(); else renderAgg(state.tab); }
+
+/* ---- wiring ---- */
+document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));t.classList.add('active');state.tab=t.dataset.tab;render();});
+const themeBtn=$('themeBtn');
+function applyTheme(t){document.documentElement.setAttribute('data-theme',t);themeBtn.textContent=t==='dark'?'☀️ Chế độ sáng':'🌙 Chế độ tối';try{localStorage.setItem('lxbg_theme',t)}catch(e){}}
+themeBtn.onclick=()=>applyTheme(document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark');
+try{const s=localStorage.getItem('lxbg_theme');if(s)applyTheme(s);}catch(e){}
+$('csvBtn').onclick=()=>{
+  const head=['ma_chuyen','ngay','muc','tinh_xuat_phat','tai_trong_kg','da_xep_kg','pct_lap_day','bien_so','dieu_phoi','tuyen'];
+  const lines=[head.join(',')];
+  DET.forEach(r=>{const o=[r[0],r[1],BLABEL[r[3]],r[4],r[5],r[6],r[7],r[8],r[9],r[10]];lines.push(o.map(x=>`"${String(x==null?'':x).replace(/"/g,'""')}"`).join(','));});
+  const blob=new Blob(['﻿'+lines.join('\n')],{type:'text/csv;charset=utf-8'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='LXBG_lapday_thap_346.csv';a.click();URL.revokeObjectURL(a.href);
+};
+
+/* ---- Telegram images ---- */
+let _tt;function toast(m,k){const e=$('toast');e.textContent=m;e.className='show'+(k?' '+k:'');clearTimeout(_tt);_tt=setTimeout(()=>e.className='',k==='err'?7000:3800);}
+function tblHTML(headers,rows){
+  const th=headers.map(h=>`<th style="background:#1F3864;color:#fff;padding:9px 12px;text-align:${h.a||'center'};font-size:13px;font-weight:700">${esc(h.t)}</th>`).join('');
+  const tr=rows.map((cells,i)=>`<tr style="background:${cells._tot?'#EAF1E6':(i%2?'#F4F8F1':'#fff')}">`+cells.c.map(c=>`<td style="padding:7px 12px;font-size:13px;border-bottom:1px solid #E4EDE0;text-align:${c.a||'center'};${cells._tot?'font-weight:800;':''}${c.s||''}">${c.v}</td>`).join('')+'</tr>').join('');
+  return `<table style="border-collapse:collapse;width:100%;border:1px solid #DDE7D9"><thead><tr>${th}</tr></thead><tbody>${tr}</tbody></table>`;
+}
+function aggImageEl(kind,title){
+  const {rows,tot}=aggRows(kind);
+  if(kind==='prov')rows.sort((a,b)=>b.low-a.low); else rows.sort((a,b)=>a.key.localeCompare(b.key));
+  const label=kind==='prov'?'Tỉnh xuất phát':kind==='day'?'Ngày':'Tuần';
+  const bc=['#B4232A','#D65A4A','#E08A1E','#2f7d4f','#1f7a4d'];
+  const mk=r=>({_tot:r.key==='TỔNG',c:[
+    {v:esc(fmtKey(kind,r.key)),a:'left'},
+    {v:r.b[0]||0,s:'color:#B4232A;font-weight:700'},{v:r.b[1]||0,s:'color:#D65A4A;font-weight:700'},{v:r.b[2]||0,s:'color:#E08A1E;font-weight:700'},
+    {v:r.b[3]||0},{v:r.b[4]||0},{v:r.total},
+    {v:r.lowPct.toFixed(1)+'%',s:'font-weight:800;color:'+(r.lowPct>=25?'#B4232A':r.lowPct>=12?'#E08A1E':'#2f7d4f')},
+    {v:vn(r.tan)}]});
+  const el=document.createElement('div');
+  el.style.cssText='position:fixed;left:-99999px;top:0;width:'+(kind==='day'?760:820)+'px;background:#fff;padding:26px 28px;box-sizing:border-box;font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;color:#1e2a23';
+  el.innerHTML=`<div style="font-size:21px;font-weight:800;color:#1f7a4d">${esc(title)}</div>
+    <div style="font-size:12.5px;color:#6b7a70;margin:5px 0 3px">LXBG · 30 ngày ${ddmm(OUT.meta.from)}–${ddmm(OUT.meta.to)}/2026 · ${vn(OUT.meta.total)} chuyến</div>
+    <div style="font-size:12px;color:#6b7a70;margin-bottom:14px">Số chuyến theo mốc tỷ lệ lấp đầy · "% thấp" = tỉ lệ chuyến 0-30% (càng cao càng lãng phí chi phí)</div>
+    ${tblHTML([{t:label,a:'left'},{t:'0-10%'},{t:'10-20%'},{t:'20-30%'},{t:'30-50%'},{t:'>50%'},{t:'Tổng'},{t:'% thấp'},{t:'Tấn'}], rows.map(mk).concat([mk(tot)]))}
+    <div style="margin-top:16px;padding-top:12px;border-top:1px solid #E4EDE0;font-size:12.5px;color:#1f7a4d;font-weight:700">🔗 Chi tiết tra cứu tại link: ${esc(DASH_URL)}</div>`;
+  document.body.appendChild(el);return el;
+}
+function blobFromEl(el){return new Promise((res,rej)=>html2canvas(el,{scale:2,backgroundColor:'#fff',logging:false}).then(c=>c.toBlob(b=>res(b),'image/png',.95)).catch(rej));}
+async function tgSendPhoto(blob,caption){
+  const fd=new FormData();fd.append('chat_id',KCT);fd.append('caption',caption);fd.append('parse_mode','HTML');fd.append('photo',blob,'lxbg.png');
+  return fetch(`https://api.telegram.org/bot${TG_TOKEN}/sendPhoto`,{method:'POST',body:fd}).then(r=>r.json());
+}
+async function sendTelegram(){
+  if(typeof html2canvas==='undefined'){toast('Thư viện ảnh chưa tải xong, thử lại sau vài giây','err');return;}
+  if(!confirm('Bắn báo cáo Tỷ lệ lấp đầy LXBG (ảnh: theo tỉnh · theo ngày · theo tuần) lên room KCT vùng XBG?'))return;
+  toast('Đang tạo ảnh & bắn Telegram…');
+  const link=`🔗 Chi tiết: ${DASH_URL}`;
+  const jobs=[['prov','TỶ LỆ LẤP ĐẦY LXBG — THEO TỈNH XUẤT PHÁT'],['day','TỶ LỆ LẤP ĐẦY LXBG — THEO NGÀY'],['week','TỶ LỆ LẤP ĐẦY LXBG — THEO TUẦN']];
+  try{
+    let ok=0;
+    for(const [kind,title] of jobs){
+      const el=aggImageEl(kind,title);
+      try{const b=await blobFromEl(el);const r=await tgSendPhoto(b,`<b>${esc(title)}</b>\n${link}`);if(r.ok)ok++;else{toast('Lỗi: '+(r.description||'?'),'err');}}finally{el.remove();}
+    }
+    if(ok===3)toast('Đã bắn 3 ảnh lên room KCT vùng XBG ✓','ok');
+  }catch(e){toast('Lỗi bắn Telegram: '+e.message,'err');}
+}
+$('tgBtn').onclick=sendTelegram;
+
+head();render();
+</script>
+</body></html>
