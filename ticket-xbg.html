@@ -114,6 +114,11 @@ td.num,th.num{text-align:right}
 .money{font-variant-numeric:tabular-nums;font-weight:700}
 .muted{color:var(--muted)}
 .loading{padding:60px;text-align:center;color:var(--muted)}
+#toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(30px);opacity:0;pointer-events:none;
+  background:#1f2a24;color:#fff;padding:12px 20px;border-radius:12px;font-size:13.5px;font-weight:600;box-shadow:0 10px 34px rgba(0,0,0,.35);
+  transition:.25s;max-width:90vw;text-align:center;z-index:99}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+#toast.ok{background:#1f7a4d} #toast.err{background:#c0432f}
 .err{padding:22px;color:var(--red);font-weight:600}
 @media(max-width:1000px){.kpi-grid{grid-template-columns:repeat(2,1fr)}.grid2{grid-template-columns:1fr}.hero h1{font-size:38px}.barrow{grid-template-columns:130px 1fr 40px}}
 @media(max-width:560px){.kpi-grid{grid-template-columns:1fr}}
@@ -153,8 +158,10 @@ td.num,th.num{text-align:right}
       <div class="meta" id="dataMeta">Đang tải dữ liệu…</div>
     </div>
     <div class="btns">
+      <button class="btn" id="refreshBtn">🔄 Cập nhật dữ liệu</button>
       <button class="btn" id="themeBtn">🌙 Chế độ tối</button>
-      <button class="btn primary" id="csvBtn">⬇ Tải CSV</button>
+      <button class="btn" id="csvBtn">⬇ Tải CSV</button>
+      <button class="btn primary" id="tgBtn">✈️ Bắn Telegram</button>
     </div>
   </div>
 
@@ -200,12 +207,17 @@ td.num,th.num{text-align:right}
 
   <div class="card pad" id="tabPanel"><div class="loading">Đang tải dữ liệu…</div></div>
 </main>
+<div id="toast"></div>
 
 <script>
 const SHEET_ID='1YmFgYyARiFh5vu63My24Sx0ffcy-RsxddEvVWSCgDds';
 const GID='0';
 const CSV_URL=`https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&gid=${GID}`;
 const REGION='XBG';
+/* Telegram */
+const TG_TOKEN='7471088067:AAGje2KrjUTzlkIiU05h1bm21IUkB0J2J0s';
+const TG_ROOM_AM={chat:'-1003802272887'};             // room theo AM (toàn XBG) — topic General
+const TG_ROOM_BC={chat:'-1001653214092'};             // room Bưu cục tỉnh Bắc Giang (cần thêm bot @thangtru_bot vào nhóm)
 
 let ALL=[];            // all XBG rows (objects)
 let updatedText='';    // timestamp from sheet
@@ -410,6 +422,58 @@ function applyTheme(t){document.documentElement.setAttribute('data-theme',t);
   themeBtn.textContent=t==='dark'?'☀️ Chế độ sáng':'🌙 Chế độ tối';try{localStorage.setItem('xbg_theme',t);}catch(e){}}
 themeBtn.onclick=()=>applyTheme(document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark');
 try{const sv=localStorage.getItem('xbg_theme');if(sv)applyTheme(sv);}catch(e){}
+
+/* ---------- Telegram reports ---------- */
+function padE(s,n){s=String(s);return s.length>=n?s.slice(0,n):s+' '.repeat(n-s.length);}
+function padS(s,n){s=String(s);return s.length>=n?s:' '.repeat(n-s.length)+s;}
+function ttBucket(t){return /kịch khung/.test(t)?'kk':(/còn cứu/.test(t)?'cuu':'chua');}
+function aggBy(rows,keyFn){
+  const m={};rows.forEach(r=>{const k=keyFn(r)||'(trống)';const o=m[k]=m[k]||{kk:0,cuu:0,chua:0,phat:0};o[ttBucket(r.tt)]++;o.phat+=r.phat;});
+  const arr=Object.entries(m).map(([k,v])=>({k,...v}));
+  const tot=arr.reduce((s,a)=>({kk:s.kk+a.kk,cuu:s.cuu+a.cuu,chua:s.chua+a.chua,phat:s.phat+a.phat}),{kk:0,cuu:0,chua:0,phat:0});
+  return{arr,tot};
+}
+function reportText(title,scopeRows,keyFn,nameW){
+  const {arr,tot}=aggBy(scopeRows,keyFn);
+  const t1=[...arr].sort((a,b)=>b.kk-a.kk||b.phat-a.phat);
+  const t2=[...arr].sort((a,b)=>b.phat-a.phat);
+  let b1=padE('Tên',nameW)+padS('P.KK',5)+padS('Cứu',6)+padS('Chưa',7)+'\n';
+  t1.forEach(a=>{b1+=padE(a.k,nameW)+padS(a.kk,5)+padS(a.cuu,6)+padS(a.chua,7)+'\n';});
+  b1+=padE('TỔNG',nameW)+padS(tot.kk,5)+padS(tot.cuu,6)+padS(tot.chua,7);
+  let b2=padE('Tên',nameW)+padS('Tiền phạt',15)+'\n';
+  t2.forEach(a=>{b2+=padE(a.k,nameW)+padS(vnnum(a.phat)+'đ',15)+'\n';});
+  b2+=padE('TỔNG',nameW)+padS(vnnum(tot.phat)+'đ',15);
+  return `<b>${esc(title)}</b>\nDữ liệu lúc ${esc(updatedText)}\nP.KK=phạt kịch khung · Cứu=còn cứu được · Chưa=chưa trễ hạn\n`
+    +`\n<b>Bảng 1 — Số phiếu theo mức</b>\n<pre>${esc(b1)}</pre>`
+    +`\n<b>Bảng 2 — Tiền phạt trong tháng</b>\n<pre>${esc(b2)}</pre>`;
+}
+function tgAMReport(){return reportText('TICKET TỒN — VÙNG XBG (theo AM)', ALL, r=>r.am, 20);}
+function tgBCReport(){
+  const bgi=ALL.filter(r=>/\(BGI\)/.test(r.tenBc));
+  return reportText('TICKET TỒN — TỈNH BẮC GIANG (theo Bưu cục)', bgi, r=>r.tenBc.replace(/^.*\(BGI\)\s*/,''), 16);
+}
+async function tgSend(room,html){
+  const body={chat_id:room.chat,text:html,parse_mode:'HTML',disable_web_page_preview:true};
+  if(room.thread)body.message_thread_id=room.thread;
+  const r=await fetch(`https://api.telegram.org/bot${TG_TOKEN}/sendMessage`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  return r.json();
+}
+let _toastT;
+function toast(msg,kind){const el=$('toast');el.textContent=msg;el.className='show'+(kind?' '+kind:'');clearTimeout(_toastT);_toastT=setTimeout(()=>el.className='',kind==='err'?6000:3500);}
+async function sendAllTelegram(){
+  if(!ALL.length){toast('Chưa có dữ liệu để bắn','err');return;}
+  if(!confirm('Bắn báo cáo ticket tồn lên 2 room Telegram (theo AM & theo Bưu cục Bắc Giang)?'))return;
+  toast('Đang bắn Telegram…');
+  try{
+    const r1=await tgSend(TG_ROOM_AM,tgAMReport());
+    const r2=await tgSend(TG_ROOM_BC,tgBCReport());
+    const s1=r1.ok?'✓':'✗('+(r1.description||'lỗi')+')';
+    const s2=r2.ok?'✓':'✗('+(r2.description||'lỗi')+')';
+    toast(`Room AM ${s1} · Room Bắc Giang ${s2}`, (r1.ok&&r2.ok)?'ok':'err');
+  }catch(e){toast('Lỗi bắn Telegram: '+e.message,'err');}
+}
+$('refreshBtn').onclick=async()=>{toast('Đang cập nhật dữ liệu…');await load();toast('Đã cập nhật · '+updatedText,'ok');};
+$('tgBtn').onclick=sendAllTelegram;
 
 load();
 setInterval(load,5*60*1000); // tự làm mới mỗi 5 phút
