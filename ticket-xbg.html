@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="vi" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Xử lý ticket Vùng XBG</title>
+<style>
+:root{
+  --bg:#eaf1e6; --panel:#ffffff; --panel2:#f6faf3; --text:#1e2a23; --muted:#6b7a70;
+  --border:#dde7d9; --brand:#1f7a4d; --green:#2e9b5f; --amber:#e2a53c; --blue:#3f86c6;
+  --red:#d65a4a; --shadow:0 8px 30px rgba(20,50,30,.08);
+  --heroA:#22503a; --heroB:#2f7d54; --heroC:#3f9668;
+}
+:root[data-theme="dark"]{
+  --bg:#0e1512; --panel:#16211c; --panel2:#1b2621; --text:#e7efe9; --muted:#92a89b;
+  --border:#27352e; --brand:#43c586; --green:#3fbb78; --amber:#e6b055; --blue:#5aa0da;
+  --red:#e2705f; --shadow:0 10px 34px rgba(0,0,0,.45);
+  --heroA:#0f271c; --heroB:#164231; --heroC:#1f5a3f;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;font-size:14px;line-height:1.45}
+.serif{font-family:Georgia,"Times New Roman",serif}
+a{color:var(--brand);text-decoration:none}
+.wrap{max-width:1440px;margin:0 auto;padding:0 22px}
+
+/* HERO */
+.hero{position:relative;overflow:hidden;color:#fff;padding:54px 0 88px;text-align:center;
+  background:linear-gradient(160deg,var(--heroA),var(--heroB) 55%,var(--heroC))}
+.hero .mtn{position:absolute;left:0;right:0;bottom:-1px;width:100%;height:180px;display:block;opacity:.55}
+.hero .glow{position:absolute;top:-120px;left:50%;transform:translateX(-50%);width:680px;height:340px;border-radius:50%;background:radial-gradient(closest-side,rgba(255,255,255,.18),transparent);pointer-events:none}
+.hero .tags{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-bottom:14px;position:relative;z-index:2}
+.tag{background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.28);color:#eefaf1;
+  padding:7px 15px;border-radius:999px;font-size:12px;letter-spacing:2px;text-transform:uppercase;font-weight:600}
+.hero h1{position:relative;z-index:2;margin:6px 0 12px;font-size:52px;font-weight:600;letter-spacing:.5px;text-shadow:0 2px 18px rgba(0,0,0,.25)}
+.hero p.sub{position:relative;z-index:2;margin:0 auto;max-width:640px;color:#dcefe1;font-size:15px}
+
+/* KPI */
+.kpis{position:relative;z-index:3;margin-top:-58px}
+.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:18px}
+.kpi{background:var(--panel);border:1px solid var(--border);border-radius:18px;padding:20px 22px;box-shadow:var(--shadow)}
+.kpi .lbl{color:var(--muted);font-size:13px;font-weight:600;margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.kpi .val{font-size:38px;font-weight:800;letter-spacing:-.5px;line-height:1}
+.kpi .foot{margin-top:10px;color:var(--muted);font-size:12.5px}
+.kpi.accent-amber .val{color:var(--amber)} .kpi.accent-red .val{color:var(--red)} .kpi.accent-green .val{color:var(--green)}
+.dotk{width:9px;height:9px;border-radius:50%;display:inline-block}
+
+/* SECTION */
+.board{margin-top:34px;padding-bottom:60px}
+.board-head{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:14px}
+.board-head h2{margin:0;font-size:21px;font-weight:800}
+.board-head .meta{color:var(--muted);font-size:13px;margin-top:3px}
+.btns{display:flex;gap:10px}
+.btn{background:var(--panel);border:1px solid var(--border);color:var(--text);border-radius:12px;
+  padding:10px 15px;font-size:13.5px;font-weight:600;cursor:pointer;display:inline-flex;gap:7px;align-items:center;box-shadow:var(--shadow)}
+.btn:hover{border-color:var(--brand)}
+.btn.primary{background:var(--brand);border-color:var(--brand);color:#fff}
+
+.card{background:var(--panel);border:1px solid var(--border);border-radius:18px;box-shadow:var(--shadow)}
+.filters{padding:18px 20px;margin-bottom:22px}
+.filters .row{display:flex;flex-wrap:wrap;gap:16px 20px;align-items:flex-end}
+.field{display:flex;flex-direction:column;gap:6px}
+.field label{font-size:12px;font-weight:700;color:var(--muted)}
+select,input[type=date],input[type=text]{background:var(--panel2);border:1px solid var(--border);color:var(--text);
+  border-radius:10px;padding:9px 11px;font-size:13.5px;min-width:150px;font-family:inherit}
+select:focus,input:focus{outline:2px solid var(--brand);outline-offset:0}
+.chip-clear{align-self:flex-end;background:transparent;border:1px dashed var(--border);color:var(--muted);
+  border-radius:10px;padding:9px 12px;cursor:pointer;font-weight:600;font-size:13px}
+.filter-count{align-self:flex-end;color:var(--muted);font-size:13px;padding-bottom:9px}
+
+.grid2{display:grid;grid-template-columns:1.35fr 1fr;gap:22px}
+.panel-title{font-size:17px;font-weight:800;margin:0 0 3px}
+.panel-sub{color:var(--muted);font-size:12.5px;margin:0 0 16px}
+.pad{padding:20px 22px}
+
+/* Legend */
+.legend{display:flex;gap:16px;flex-wrap:wrap;margin-bottom:14px;font-size:12.5px;color:var(--muted)}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.sw{width:11px;height:11px;border-radius:3px;display:inline-block}
+
+/* Bars */
+.barrow{display:grid;grid-template-columns:180px 1fr 44px;align-items:center;gap:10px;margin-bottom:9px}
+.barrow .nm{font-size:12.5px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bartrack{background:var(--panel2);border-radius:7px;height:20px;display:flex;overflow:hidden;border:1px solid var(--border)}
+.seg{height:100%}
+.barrow .num{font-size:12.5px;font-weight:700;text-align:right}
+
+.statrow{margin-bottom:16px}
+.statrow .top{display:flex;justify-content:space-between;font-size:13px;margin-bottom:5px}
+.statrow .top b{font-weight:800}
+.statbar{height:14px;border-radius:7px;background:var(--panel2);overflow:hidden;border:1px solid var(--border)}
+.statbar > i{display:block;height:100%;border-radius:7px}
+
+/* Tabs */
+.tabs{display:flex;gap:10px;margin:26px 0 16px;flex-wrap:wrap}
+.tab{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:9px 16px;font-weight:700;font-size:13.5px;cursor:pointer;color:var(--muted)}
+.tab.active{background:var(--brand);border-color:var(--brand);color:#fff}
+
+/* Table */
+.tbl-tools{display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:12px}
+.table-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:14px}
+table{border-collapse:collapse;width:100%;font-size:13px;min-width:760px}
+thead th{position:sticky;top:0;background:var(--panel2);text-align:left;padding:12px 14px;font-size:12px;color:var(--muted);
+  font-weight:800;border-bottom:1px solid var(--border);white-space:nowrap;cursor:pointer;user-select:none}
+tbody td{padding:11px 14px;border-bottom:1px solid var(--border);white-space:nowrap}
+tbody tr:hover{background:var(--panel2)}
+td.num,th.num{text-align:right}
+.badge{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;font-size:12px;font-weight:700;border:1px solid transparent}
+.badge .d{width:8px;height:8px;border-radius:50%}
+.b-red{background:rgba(214,90,74,.13);color:var(--red)} .b-red .d{background:var(--red)}
+.b-amber{background:rgba(226,165,60,.15);color:#b9812a} .b-amber .d{background:var(--amber)}
+.b-green{background:rgba(46,155,95,.14);color:var(--green)} .b-green .d{background:var(--green)}
+:root[data-theme="dark"] .b-amber{color:var(--amber)}
+.money{font-variant-numeric:tabular-nums;font-weight:700}
+.muted{color:var(--muted)}
+.loading{padding:60px;text-align:center;color:var(--muted)}
+.err{padding:22px;color:var(--red);font-weight:600}
+@media(max-width:1000px){.kpi-grid{grid-template-columns:repeat(2,1fr)}.grid2{grid-template-columns:1fr}.hero h1{font-size:38px}.barrow{grid-template-columns:130px 1fr 40px}}
+@media(max-width:560px){.kpi-grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="glow"></div>
+  <div class="wrap">
+    <div class="tags">
+      <span class="tag">Xử lý ticket hối G/L/T</span>
+      <span class="tag">Vùng XBG · AM · Trạng thái</span>
+    </div>
+    <h1 class="serif">Xử lý ticket Vùng XBG</h1>
+    <p class="sub">Theo dõi ticket tồn hối giao / hối lấy / hối trả theo Bưu cục, AM và mức độ trễ SLA — chỉ dữ liệu Vùng XBG.</p>
+  </div>
+  <svg class="mtn" viewBox="0 0 1440 180" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+    <path fill="#ffffff" opacity=".10" d="M0 120 L200 60 L360 130 L560 40 L760 120 L980 50 L1180 120 L1440 70 L1440 180 L0 180Z"/>
+    <path fill="#ffffff" opacity=".16" d="M0 150 L260 90 L480 150 L720 80 L960 150 L1200 95 L1440 150 L1440 180 L0 180Z"/>
+  </svg>
+</header>
+
+<div class="wrap kpis">
+  <div class="kpi-grid" id="kpiGrid">
+    <div class="kpi"><div class="lbl">Tổng phiếu tồn</div><div class="val" id="k_total">—</div><div class="foot" id="k_total_f">Đang tải…</div></div>
+    <div class="kpi accent-amber"><div class="lbl">Tiền phạt đang chịu</div><div class="val" id="k_phat">—</div><div class="foot" id="k_phat_f">&nbsp;</div></div>
+    <div class="kpi accent-red"><div class="lbl"><span class="dotk" style="background:var(--red)"></span>Trễ SLA (phạt &gt; 0)</div><div class="val" id="k_tre">—</div><div class="foot" id="k_tre_f">&nbsp;</div></div>
+    <div class="kpi accent-green"><div class="lbl"><span class="dotk" style="background:var(--green)"></span>Chưa Trễ SLA (phạt 0)</div><div class="val" id="k_ok">—</div><div class="foot" id="k_ok_f">&nbsp;</div></div>
+  </div>
+</div>
+
+<main class="wrap board">
+  <div class="board-head">
+    <div>
+      <h2>Dashboard Xử lý Ticket XBG</h2>
+      <div class="meta" id="dataMeta">Đang tải dữ liệu…</div>
+    </div>
+    <div class="btns">
+      <button class="btn" id="themeBtn">🌙 Chế độ tối</button>
+      <button class="btn primary" id="csvBtn">⬇ Tải CSV</button>
+    </div>
+  </div>
+
+  <!-- FILTERS -->
+  <div class="card filters">
+    <div class="row">
+      <div class="field"><label>Vùng</label><select id="f_vung" disabled><option>XBG</option></select></div>
+      <div class="field"><label>AM</label><select id="f_am"><option value="">Tất cả AM</option></select></div>
+      <div class="field"><label>Loại phiếu</label><select id="f_loai"><option value="">Tất cả</option><option>Hối giao</option><option>Hối lấy</option><option>Hối trả</option></select></div>
+      <div class="field"><label>Trạng thái</label><select id="f_tt"><option value="">Tất cả</option><option>Phạt kịch khung</option><option>Trễ hạn còn cứu được</option><option>Chưa trễ hạn</option></select></div>
+      <div class="field"><label>Từ ngày (hạn đóng)</label><input type="date" id="f_from"></div>
+      <div class="field"><label>Đến ngày</label><input type="date" id="f_to"></div>
+      <button class="chip-clear" id="clearBtn">↺ Xoá filter</button>
+      <div class="filter-count" id="fcount"></div>
+    </div>
+  </div>
+
+  <!-- CHARTS -->
+  <div class="grid2">
+    <div class="card pad">
+      <div class="panel-title">Top 15 bưu cục tồn nhiều nhất</div>
+      <div class="panel-sub">Số phiếu tồn, tách theo loại</div>
+      <div class="legend">
+        <span><i class="sw" style="background:var(--green)"></i>Hối giao</span>
+        <span><i class="sw" style="background:var(--amber)"></i>Hối lấy</span>
+        <span><i class="sw" style="background:var(--blue)"></i>Hối trả</span>
+      </div>
+      <div id="topBC"></div>
+    </div>
+    <div class="card pad">
+      <div class="panel-title">Phân bố theo trạng thái</div>
+      <div class="panel-sub">Số phiếu ở từng mức SLA</div>
+      <div id="statDist"></div>
+    </div>
+  </div>
+
+  <!-- TABS -->
+  <div class="tabs">
+    <div class="tab" data-tab="am">Theo AM</div>
+    <div class="tab" data-tab="bc">Bảng bưu cục</div>
+    <div class="tab active" data-tab="list">Danh sách phiếu</div>
+  </div>
+
+  <div class="card pad" id="tabPanel"><div class="loading">Đang tải dữ liệu…</div></div>
+</main>
+
+<script>
+const SHEET_ID='1YmFgYyARiFh5vu63My24Sx0ffcy-RsxddEvVWSCgDds';
+const GID='0';
+const CSV_URL=`https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&gid=${GID}`;
+const REGION='XBG';
+
+let ALL=[];            // all XBG rows (objects)
+let updatedText='';    // timestamp from sheet
+const state={am:'',loai:'',tt:'',from:'',to:'',q:'',tab:'list',sortKey:'han',sortDir:1};
+
+const $=id=>document.getElementById(id);
+const vnnum=n=>Math.round(n||0).toLocaleString('vi-VN');
+const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+/* ---------- CSV parser ---------- */
+function parseCSV(text){
+  const rows=[];let row=[],f='',q=false;
+  for(let i=0;i<text.length;i++){const c=text[i];
+    if(q){ if(c==='"'){ if(text[i+1]==='"'){f+='"';i++;} else q=false;} else f+=c; }
+    else{ if(c==='"')q=true; else if(c===','){row.push(f);f='';} else if(c==='\n'){row.push(f);rows.push(row);row=[];f='';} else if(c==='\r'){} else f+=c; }
+  }
+  if(f.length||row.length){row.push(f);rows.push(row);}
+  return rows;
+}
+function toNum(v){const n=parseFloat(String(v==null?'':v).replace(/[^\d.-]/g,''));return isNaN(n)?0:n;}
+function hanParts(v){ // ISO -> {date:'YYYY-MM-DD', disp:'DD/MM HH:MM', sort:number}
+  const s=String(v||'');const m=s.match(/(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})/);
+  if(!m)return{date:'',disp:s,sort:0};
+  return{date:`${m[1]}-${m[2]}-${m[3]}`,disp:`${m[3]}/${m[2]} ${m[4]}:${m[5]}`,sort:+`${m[1]}${m[2]}${m[3]}${m[4]}${m[5]}`};
+}
+function statusClass(tt){ if(/kịch khung/i.test(tt))return'b-red'; if(/còn cứu/i.test(tt))return'b-amber'; return'b-green'; }
+
+/* ---------- Load ---------- */
+async function load(){
+  try{
+    const res=await fetch(CSV_URL,{cache:'no-store'});
+    const txt=await res.text();
+    const rows=parseCSV(txt);
+    const header=rows[0]||[];
+    const tm=(header[0]||'').match(/Cập nhật lúc:\s*([\d:]+)\s*-\s*([\d/]+)/);
+    updatedText=tm?`${tm[1]} - ${tm[2]}`:new Date().toLocaleString('vi-VN');
+    ALL=rows.slice(1).filter(r=>r&&r[13]===REGION&&r[2]).map(r=>{
+      const hp=hanParts(r[6]);
+      return{maBc:r[0],tenBc:r[1]||r[0],maTicket:r[2],maDon:r[3],loai:r[4]||'',phat:toNum(r[5]),
+        han:r[6],hanDate:hp.date,hanDisp:hp.disp,hanSort:hp.sort,tt:r[7]||'',url:r[8]||'',gdv:r[10]||'',am:r[12]||''};
+    });
+    buildAMOptions();
+    render();
+  }catch(e){
+    $('tabPanel').innerHTML=`<div class="err">Không tải được dữ liệu: ${esc(e.message)}<br><span class="muted">Kiểm tra kết nối / quyền truy cập sheet.</span></div>`;
+    $('dataMeta').textContent='Lỗi tải dữ liệu';
+  }
+}
+function buildAMOptions(){
+  const ams=[...new Set(ALL.map(r=>r.am).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'vi'));
+  const sel=$('f_am');ams.forEach(a=>{const o=document.createElement('option');o.value=a;o.textContent=a;sel.appendChild(o);});
+}
+
+/* ---------- Filter ---------- */
+function filtered(){
+  return ALL.filter(r=>{
+    if(state.am&&r.am!==state.am)return false;
+    if(state.loai&&r.loai!==state.loai)return false;
+    if(state.tt&&r.tt!==state.tt)return false;
+    if(state.from&&(!r.hanDate||r.hanDate<state.from))return false;
+    if(state.to&&(!r.hanDate||r.hanDate>state.to))return false;
+    if(state.q){const q=state.q.toLowerCase();
+      if(!(`${r.maTicket} ${r.maDon} ${r.tenBc} ${r.am} ${r.gdv}`.toLowerCase().includes(q)))return false;}
+    return true;
+  });
+}
+
+/* ---------- Render ---------- */
+function render(){
+  const d=filtered();
+  // KPI
+  const total=d.length;
+  const phatSum=d.reduce((s,r)=>s+r.phat,0);
+  const tre=d.filter(r=>r.phat>0).length;
+  const ok=total-tre;
+  $('k_total').textContent=vnnum(total);
+  $('k_total_f').textContent=`Đang lọc ${vnnum(total)}/${vnnum(ALL.length)} phiếu`;
+  $('k_phat').textContent=vnnum(phatSum)+'đ';
+  $('k_phat_f').textContent=total?`TB ${vnnum(phatSum/total)}đ/phiếu`:'—';
+  $('k_tre').textContent=vnnum(tre);
+  $('k_tre_f').textContent=total?`${Math.round(tre/total*100)}% — cần xử lý`:'—';
+  $('k_ok').textContent=vnnum(ok);
+  $('k_ok_f').textContent=total?`${Math.round(ok/total*100)}% — chưa phát sinh phạt`:'—';
+  $('dataMeta').textContent=`Dữ liệu lúc ${updatedText} · ${vnnum(ALL.length)} phiếu XBG`;
+  $('fcount').textContent=`${vnnum(total)}/${vnnum(ALL.length)} phiếu`;
+  renderTopBC(d);
+  renderStat(d);
+  renderTab(d);
+}
+
+function renderTopBC(d){
+  const map={};
+  d.forEach(r=>{const k=r.tenBc;(map[k]=map[k]||{giao:0,lay:0,tra:0,total:0});
+    if(r.loai==='Hối giao')map[k].giao++;else if(r.loai==='Hối lấy')map[k].lay++;else map[k].tra++;map[k].total++;});
+  const arr=Object.entries(map).map(([k,v])=>({k,...v})).sort((a,b)=>b.total-a.total).slice(0,15);
+  const max=Math.max(1,...arr.map(a=>a.total));
+  const seg=(w,c)=>w?`<div class="seg" style="width:${w/max*100}%;background:${c}"></div>`:'';
+  $('topBC').innerHTML=arr.map(a=>`<div class="barrow">
+    <div class="nm" title="${esc(a.k)}">${esc(a.k)}</div>
+    <div class="bartrack">${seg(a.giao,'var(--green)')}${seg(a.lay,'var(--amber)')}${seg(a.tra,'var(--blue)')}</div>
+    <div class="num">${a.total}</div></div>`).join('')||'<div class="muted">Không có dữ liệu.</div>';
+}
+
+function renderStat(d){
+  const defs=[['Phạt kịch khung','var(--red)'],['Trễ hạn còn cứu được','var(--amber)'],['Chưa trễ hạn','var(--green)']];
+  const total=d.length||1;
+  $('statDist').innerHTML=defs.map(([name,c])=>{
+    const n=d.filter(r=>r.tt===name).length;const pct=Math.round(n/total*100);
+    return `<div class="statrow"><div class="top"><span>${name}</span><b>${vnnum(n)} · ${pct}%</b></div>
+      <div class="statbar"><i style="width:${n/total*100}%;background:${c}"></i></div></div>`;
+  }).join('');
+}
+
+/* ---------- Tabs ---------- */
+function renderTab(d){
+  if(state.tab==='am')return renderAggTable(d,'am','AM');
+  if(state.tab==='bc')return renderAggTable(d,'tenBc','Bưu cục');
+  return renderList(d);
+}
+function renderAggTable(d,key,label){
+  const map={};
+  d.forEach(r=>{const k=r[key]||'(trống)';const o=map[k]=map[k]||{giao:0,lay:0,tra:0,kk:0,cuu:0,chua:0,phat:0,total:0};
+    if(r.loai==='Hối giao')o.giao++;else if(r.loai==='Hối lấy')o.lay++;else o.tra++;
+    if(/kịch khung/.test(r.tt))o.kk++;else if(/còn cứu/.test(r.tt))o.cuu++;else o.chua++;
+    o.phat+=r.phat;o.total++;});
+  const arr=Object.entries(map).map(([k,v])=>({k,...v})).sort((a,b)=>b.total-a.total);
+  const rows=arr.map(a=>`<tr>
+    <td>${esc(a.k)}</td><td class="num">${a.total}</td>
+    <td class="num">${a.giao}</td><td class="num">${a.lay}</td><td class="num">${a.tra}</td>
+    <td class="num" style="color:var(--red)">${a.kk}</td><td class="num" style="color:#b9812a">${a.cuu}</td><td class="num" style="color:var(--green)">${a.chua}</td>
+    <td class="num money">${vnnum(a.phat)}đ</td></tr>`).join('');
+  const tot=arr.reduce((s,a)=>({total:s.total+a.total,giao:s.giao+a.giao,lay:s.lay+a.lay,tra:s.tra+a.tra,kk:s.kk+a.kk,cuu:s.cuu+a.cuu,chua:s.chua+a.chua,phat:s.phat+a.phat}),{total:0,giao:0,lay:0,tra:0,kk:0,cuu:0,chua:0,phat:0});
+  $('tabPanel').innerHTML=`
+    <div class="tbl-tools"><div><div class="panel-title">Tồn theo ${label}</div><div class="panel-sub">${arr.length} ${label} · ${vnnum(tot.total)} phiếu</div></div></div>
+    <div class="table-wrap"><table>
+    <thead><tr><th>${label}</th><th class="num">Tổng</th><th class="num">Hối giao</th><th class="num">Hối lấy</th><th class="num">Hối trả</th><th class="num">Phạt kịch khung</th><th class="num">Còn cứu được</th><th class="num">Chưa trễ</th><th class="num">Tiền phạt</th></tr></thead>
+    <tbody>${rows}
+    <tr style="font-weight:800;background:var(--panel2)"><td>TỔNG</td><td class="num">${tot.total}</td><td class="num">${tot.giao}</td><td class="num">${tot.lay}</td><td class="num">${tot.tra}</td><td class="num">${tot.kk}</td><td class="num">${tot.cuu}</td><td class="num">${tot.chua}</td><td class="num money">${vnnum(tot.phat)}đ</td></tr>
+    </tbody></table></div>`;
+}
+function renderList(d){
+  const arr=[...d].sort((a,b)=>{
+    let x,y;const k=state.sortKey;
+    if(k==='phat'){x=a.phat;y=b.phat;} else if(k==='han'){x=a.hanSort;y=b.hanSort;}
+    else{x=(a[k]||'').toString();y=(b[k]||'').toString();return state.sortDir*x.localeCompare(y,'vi');}
+    return state.sortDir*(x-y);
+  });
+  const arrow=k=>state.sortKey===k?(state.sortDir>0?' ▲':' ▼'):'';
+  const body=arr.slice(0,400).map(r=>`<tr>
+    <td>${esc(r.maTicket)}</td><td>${esc(r.maDon)}</td>
+    <td>${esc(r.am)}</td><td>${esc(r.tenBc)}</td><td>${esc(r.loai)}</td>
+    <td class="num money">${r.phat>0?vnnum(r.phat)+'đ':'<span class=muted>0đ</span>'}</td>
+    <td><span class="badge ${statusClass(r.tt)}"><span class="d"></span>${esc(r.tt)}</span></td>
+    <td>${esc(r.hanDisp)}</td>
+    <td>${r.url?`<a href="${esc(r.url)}" target="_blank" rel="noopener">Mở ↗</a>`:''}</td></tr>`).join('');
+  $('tabPanel').innerHTML=`
+    <div class="tbl-tools">
+      <div><div class="panel-title">Danh sách phiếu tồn</div><div class="panel-sub">Bấm tiêu đề cột để sắp xếp · hiển thị tối đa 400 dòng</div></div>
+      <input type="text" id="searchBox" placeholder="Tìm mã ticket, mã đơn, bưu cục, AM…" value="${esc(state.q)}" style="min-width:280px">
+    </div>
+    <div class="muted" style="margin-bottom:10px">${vnnum(arr.length)} phiếu · tổng phạt ${vnnum(arr.reduce((s,r)=>s+r.phat,0))}đ</div>
+    <div class="table-wrap"><table>
+    <thead><tr>
+      <th data-s="maTicket">Mã ticket${arrow('maTicket')}</th><th data-s="maDon">Mã đơn${arrow('maDon')}</th>
+      <th data-s="am">AM${arrow('am')}</th><th data-s="tenBc">Bưu cục${arrow('tenBc')}</th><th data-s="loai">Loại${arrow('loai')}</th>
+      <th class="num" data-s="phat">Phạt${arrow('phat')}</th><th data-s="tt">Trạng thái${arrow('tt')}</th>
+      <th data-s="han">Hạn đóng${arrow('han')}</th><th>Mở</th>
+    </tr></thead><tbody>${body||'<tr><td colspan=9 class=muted style="padding:24px">Không có phiếu phù hợp.</td></tr>'}</tbody></table></div>`;
+  const sb=$('searchBox');
+  if(sb){sb.oninput=e=>{state.q=e.target.value;const p=sb.selectionStart;render();const nb=$('searchBox');if(nb){nb.focus();nb.setSelectionRange(p,p);}};}
+  document.querySelectorAll('#tabPanel thead th[data-s]').forEach(th=>{
+    th.onclick=()=>{const k=th.getAttribute('data-s');if(state.sortKey===k)state.sortDir*=-1;else{state.sortKey=k;state.sortDir=(k==='han'?1:1);}render();};
+  });
+}
+
+/* ---------- CSV export ---------- */
+function exportCSV(){
+  const d=filtered();
+  const head=['ma_ticket','ma_don','vung','am','buu_cuc','loai','tien_phat','trang_thai','han_dong','url'];
+  const lines=[head.join(',')];
+  d.forEach(r=>{lines.push([r.maTicket,r.maDon,'XBG',r.am,r.tenBc,r.loai,r.phat,r.tt,r.han,r.url]
+    .map(x=>`"${String(x==null?'':x).replace(/"/g,'""')}"`).join(','));});
+  const blob=new Blob(['\ufeff'+lines.join('\n')],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  a.download=`ticket_XBG_${new Date().toISOString().slice(0,10)}.csv`;a.click();URL.revokeObjectURL(a.href);
+}
+
+/* ---------- Wiring ---------- */
+$('f_am').onchange=e=>{state.am=e.target.value;render();};
+$('f_loai').onchange=e=>{state.loai=e.target.value;render();};
+$('f_tt').onchange=e=>{state.tt=e.target.value;render();};
+$('f_from').onchange=e=>{state.from=e.target.value;render();};
+$('f_to').onchange=e=>{state.to=e.target.value;render();};
+$('clearBtn').onclick=()=>{Object.assign(state,{am:'',loai:'',tt:'',from:'',to:'',q:''});
+  f_am.value='';f_loai.value='';f_tt.value='';f_from.value='';f_to.value='';render();};
+$('csvBtn').onclick=exportCSV;
+document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{
+  document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));t.classList.add('active');
+  state.tab=t.getAttribute('data-tab');render();});
+const themeBtn=$('themeBtn');
+function applyTheme(t){document.documentElement.setAttribute('data-theme',t);
+  themeBtn.textContent=t==='dark'?'☀️ Chế độ sáng':'🌙 Chế độ tối';try{localStorage.setItem('xbg_theme',t);}catch(e){}}
+themeBtn.onclick=()=>applyTheme(document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark');
+try{const sv=localStorage.getItem('xbg_theme');if(sv)applyTheme(sv);}catch(e){}
+
+load();
+setInterval(load,5*60*1000); // tự làm mới mỗi 5 phút
+</script>
+</body>
+</html>
