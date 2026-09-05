@@ -382,15 +382,12 @@ async function _startSession(){
   try{
     const ui=await(await _origFetch('https://www.googleapis.com/oauth2/v3/userinfo',{headers:{Authorization:'Bearer '+window._gToken}})).json();
     const email=(ui.email||'').toLowerCase();
-    const text=await(await fetch(`https://docs.google.com/spreadsheets/d/${WHITELIST_SHEET_ID}/export?format=csv`)).text();
-    const list=text.split(/\r?\n/).map(e=>e.replace(/["\s]/g,'').toLowerCase()).filter(Boolean);
     if(ck)ck.style.display='none';
-    if(list.includes(email)){
-      sessionStorage.setItem('_ae',email); sessionStorage.setItem('_an',ui.name||email);
-      document.getElementById('authOverlay').style.display='none';
-      init();
-    }else if(er){ er.innerHTML=`<strong>${ui.email||email}</strong> không có quyền truy cập dashboard này.<br><br>Liên hệ <strong>Phạm Đức Thắng</strong> để được cấp quyền.`; er.style.display='block'; }
-  }catch(e){ if(ck)ck.style.display='none'; _showAuthError('Không thể xác thực / đọc dữ liệu: '+(e&&e.message||e)); }
+    // Nới nội bộ: BỎ whitelist — ai đăng nhập Google là vào. Dữ liệu chỉ hiển thị nếu tài khoản có quyền các sheet nguồn @ghn (người ngoài đăng nhập được nhưng sẽ thấy trống/lỗi tải).
+    sessionStorage.setItem('_ae',email); sessionStorage.setItem('_an',ui.name||email);
+    document.getElementById('authOverlay').style.display='none';
+    init();
+  }catch(e){ if(ck)ck.style.display='none'; _showAuthError('Không thể xác thực: '+(e&&e.message||e)); }
 }
 function _onToken(resp){
   if(!resp||resp.error||!resp.access_token){ if(_silentTry){_silentTry=false;return;} _showAuthError('Đăng nhập thất bại, vui lòng thử lại.'); return; }
