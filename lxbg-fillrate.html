@@ -160,7 +160,7 @@ function renderDet(){
     <td class="l" style="white-space:normal;min-width:220px">${esc(x.route)}</td>
     <td>${x.km==null?'':x.km.toLocaleString('vi-VN')}</td>
     <td style="text-align:right">${x.cuoc==null?'<span style="color:var(--muted)">Nội bộ</span>':'<b>'+vn(x.cuoc)+'</b>'}</td></tr>`;
-  const heads=[['code','Mã chuyến'],['day','Ngày'],['band','Mốc'],['prov','Tỉnh XP'],['cap','Tải trọng'],['picked','Đã xếp(kg)'],['fill','% Lấp đầy'],['plate','Biển số'],['mt','Mã tuyến'],['route','Lộ trình di chuyển'],['km','Tổng QĐ (km)'],['cuoc','Cước TB/chuyến (đ)']];
+  const heads=[['code','Mã chuyến'],['day','Ngày'],['band','Mốc'],['prov','Tỉnh XP'],['cap','Tải trọng'],['picked','Đã xếp(kg)'],['fill','% Lấp đầy'],['plate','Biển số'],['mt','Mã tuyến'],['route','Lộ trình di chuyển'],['km','Tổng QĐ (km)'],['cuoc','Cước (đ)']];
   $('panel').innerHTML=`<div class="bar" style="margin-top:0">
       <div><h3 style="margin:0">Chi tiết ${d.length} chuyến lấp đầy thấp (0-30%)</h3><div class="s">%Lấp đầy = Tỷ lệ lấp đầy thật (cột U sheet, KHỚP mốc — đã bỏ "Tỷ lệ vận chuyển"). Bấm tiêu đề cột để sắp xếp.</div></div>
       <input class="search" id="detSearch" placeholder="Tìm mã chuyến, tỉnh, biển số, mã tuyến, điểm dừng trong lộ trình…" value="${esc(state.q)}">
@@ -194,9 +194,9 @@ function renderCost(){
   const lowT=low.t+mid.t+m3.t, lowC=low.c+mid.c+m3.c;
   // KPI
   const kpi=[
-    ['Chi phí cước NCC / tháng','<span style=color:var(--red)>'+vn(ncc.c)+'đ</span>','Σ giá tháng '+C.routesNCC.length+' tuyến thuê ngoài'],
-    ['Đơn giá bình quân',vn(dpt)+' đ/tấn',vn(ncc.k/1000)+' tấn luân chuyển ('+vn(ncc.t)+' lượt chuyến)'],
-    ['Phân bổ vào chuyến lấp đầy thấp (0-30%)','<span style=color:var(--red)>'+vn(lowC)+'đ</span>',(lowC/ncc.c*100).toFixed(1)+'% chi phí NCC · '+lowT+' chuyến'],
+    ['Chi phí cước NCC (thuê ngoài)','<span style=color:var(--red)>'+vn(ncc.c)+'đ</span>',vn(ncc.t)+' chuyến · kỳ 30 ngày'],
+    ['Đơn giá bình quân',vn(dpt)+' đ/tấn',vn(ncc.k/1000)+' tấn đã luân chuyển'],
+    ['Chi phí chuyến lấp đầy thấp (0-30%)','<span style=color:var(--red)>'+vn(lowC)+'đ</span>',(lowC/ncc.c*100).toFixed(1)+'% chi phí NCC · '+lowT+' chuyến'],
     ['Xe nội bộ GHN (không tính cước)',vn(C.cov.noibo.t)+' chuyến','tự vận hành · '+C.noiboRoutes.length+' tuyến']
   ];
   // band table
@@ -210,7 +210,7 @@ function renderCost(){
   // routesNCC sort
   const rk=['mt','gia','t','c','f','low','pt'][cstate.rsK]||'c';
   const routes=C.routesNCC.slice().sort((a,b)=>{const x=a[rk],y=b[rk];return typeof x==='number'?cstate.rsDir*(x-y):cstate.rsDir*String(x).localeCompare(String(y),'vi');});
-  const rHeads=[['mt','Mã tuyến'],['gia','Giá cước/tháng'],['t','Chuyến'],['c','Chi phí tháng'],['f','%LĐ TB'],['low','Chuyến LĐ thấp'],['pt','đ/tấn']];
+  const rHeads=[['mt','Mã tuyến'],['gia','Giá cước/chuyến'],['t','Chuyến'],['c','Chi phí kỳ'],['f','%LĐ TB'],['low','Chuyến LĐ thấp'],['pt','đ/tấn']];
   const rRow=r=>`<tr>
     <td class="l">${esc(r.mt)}</td>
     <td style="text-align:right">${vn(r.gia)}</td><td>${r.t}</td>
@@ -229,17 +229,17 @@ function renderCost(){
     <td style="text-align:right">${vn(x.cost)}</td></tr>`;
   $('panel').innerHTML=`
     <div class="note" style="border-left-color:var(--red);background:#FDECEA;color:#7a2418">
-      <b>Cách đọc chi phí — quan trọng:</b><br>
-      • <b>Giá cước = CHI PHÍ THÁNG của tuyến</b> (tính riêng theo tháng, KHÔNG cố định theo từng chuyến). Vì vậy <b>Tổng chi phí NCC = Σ giá tháng các tuyến</b> (mỗi tuyến 1 lần), không nhân theo số chuyến.<br>
-      • <b>Chi phí/chuyến</b> ở các bảng dưới (theo nhóm lấp đầy, chi tiết chuyến lãng phí, cột Cước) là <b>PHÂN BỔ TRUNG BÌNH</b> = giá tháng ÷ số chuyến trong kỳ — chỉ để tham khảo, không phải cước thực từng chuyến.<br>
-      • <b>Tuyến CÓ giá = xe NCC</b> (thuê ngoài, ${C.routesNCC.length} tuyến, ${vn(C.cov.ncc.t)} lượt chuyến) → tiền thật GHN trả. <b>Tuyến KHÔNG giá = xe nội bộ GHN</b> (${C.noiboRoutes.length} tuyến, ${vn(C.cov.noibo.t)} chuyến) → không phát sinh cước thuê. Kỳ ${ddmm(C.meta.from)}–${ddmm(C.meta.to)}/2026.
+      <b>Phân loại xe — quan trọng khi đọc chi phí:</b><br>
+      • <b>Tuyến CÓ giá cước = xe NCC</b> (nhà cung cấp GHN thuê chạy ngoài) → chi phí cước là <b>tiền thật GHN trả</b>. Giá cước là <b>giá/CHUYẾN</b>; chi phí tuyến = giá × số chuyến.<br>
+      • <b>Tuyến KHÔNG giá = xe nội bộ GHN</b> (${C.noiboRoutes.length} tuyến, ${vn(C.cov.noibo.t)} chuyến) → xe của GHN tự chạy, <b>không phát sinh cước thuê</b> nên không tính vào chi phí trên.<br>
+      • Toàn bộ số chi phí dưới đây <b>tính trên ${vn(ncc.t)} chuyến NCC</b> (kỳ ${ddmm(C.meta.from)}–${ddmm(C.meta.to)}/2026). Cost tháng của tuyến tính riêng, không cố định — không dùng ở đây.
     </div>
     <div class="kpis" style="margin-top:4px">${kpi.map(k=>`<div class="kpi"><div class="t">${k[0]}</div><div class="v" style="font-size:22px">${k[1]}</div><div class="f">${k[2]}</div></div>`).join('')}</div>
 
     <h3 style="margin-top:20px">Chi phí theo nhóm % lấp đầy (xe NCC)</h3>
-    <div class="s">Chi phí = phân bổ TB từ giá tháng tuyến vào từng chuyến. Nhóm lấp đầy thấp đội đơn giá đ/tấn lên nhiều lần — phần lãng phí cần cắt.</div>
+    <div class="s">Chuyến lấp đầy thấp đội đơn giá đ/tấn lên nhiều lần — đây là phần lãng phí cần cắt.</div>
     <div class="table-wrap"><table><thead><tr>
-      <th class="l">Nhóm lấp đầy</th><th>Số chuyến</th><th>Tấn</th><th style="text-align:right">Chi phí (đ, phân bổ)</th><th style="text-align:right">đ/tấn</th>
+      <th class="l">Nhóm lấp đầy</th><th>Số chuyến</th><th>Tấn</th><th style="text-align:right">Chi phí (đ)</th><th style="text-align:right">đ/tấn</th>
     </tr></thead><tbody>${C.band.map((x,i)=>bandRow(x,i)).join('')}${bandTot}</tbody></table></div>
 
     <h3 style="margin-top:22px">Chi phí theo tuyến — xe NCC (${C.routesNCC.length} tuyến)</h3>
@@ -249,11 +249,11 @@ function renderCost(){
 
     <h3 style="margin-top:22px">Chi tiết chuyến lãng phí (NCC, lấp đầy 0-30%) — có lộ trình di chuyển</h3>
     <div class="bar" style="margin:0 0 8px">
-      <div class="s" style="margin:0">${wf.length} chuyến · Σ chi phí phân bổ ${vn(wf.reduce((s,x)=>s+x.cost,0))}đ · sắp theo % lấp đầy tăng dần</div>
+      <div class="s" style="margin:0">${wf.length} chuyến · tổng chi phí ${vn(wf.reduce((s,x)=>s+x.cost,0))}đ · sắp theo % lấp đầy tăng dần</div>
       <input class="search" id="wfSearch" placeholder="Tìm mã chuyến, mã tuyến, điểm dừng trong lộ trình…" value="${esc(cstate.cq)}">
     </div>
     <div class="table-wrap"><table><thead><tr>
-      <th>Ngày</th><th class="l">Mã chuyến</th><th class="l">Mã tuyến</th><th class="l">Lộ trình di chuyển</th><th>KL (kg)</th><th>%LĐ</th><th style="text-align:right">Chi phí TB/chuyến (đ)</th>
+      <th>Ngày</th><th class="l">Mã chuyến</th><th class="l">Mã tuyến</th><th class="l">Lộ trình di chuyển</th><th>KL (kg)</th><th>%LĐ</th><th style="text-align:right">Chi phí (đ)</th>
     </tr></thead><tbody>${wf.map(wfRow).join('')||'<tr><td colspan=7 style="padding:22px">Không có chuyến phù hợp.</td></tr>'}</tbody></table></div>`;
   // wire route sort
   document.querySelectorAll('#panel thead th[data-ri]').forEach(th=>th.onclick=()=>{const i=+th.dataset.ri;if(cstate.rsK===i)cstate.rsDir*=-1;else{cstate.rsK=i;cstate.rsDir=(i===0||i===4)?1:-1;}renderCost();});
