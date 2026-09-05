@@ -70,11 +70,13 @@ input.search{border:1px solid var(--line);background:var(--panel);color:var(--in
     <div class="tab" data-tab="day">Theo ngày</div>
     <div class="tab" data-tab="week">Theo tuần</div>
     <div class="tab" data-tab="det">Chi tiết 346 chuyến 0-30%</div>
+    <div class="tab" data-tab="cost">💰 Chi phí cước</div>
   </div>
   <div class="card" id="panel"></div>
 </main>
 <div id="toast"></div>
 <script src="lxbg_data.js"></script>
+<script src="lxbg_cost.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script>
 const $=id=>document.getElementById(id);
@@ -163,7 +165,84 @@ function renderDet(){
   sb.oninput=e=>{state.q=e.target.value;const p=sb.selectionStart;renderDet();const n=$('detSearch');if(n){n.focus();n.setSelectionRange(p,p);}};
   document.querySelectorAll('#panel thead th[data-i]').forEach(th=>th.onclick=()=>{const i=+th.dataset.i;if(state.sortK===i)state.sortDir*=-1;else{state.sortK=i;state.sortDir=1;}renderDet();});
 }
-function render(){ if(state.tab==='det')renderDet(); else renderAgg(state.tab); }
+/* ---- Chi phí cước ---- */
+let cstate={cq:'',rsK:3,rsDir:-1};
+const COST=window.LXBG_COST;
+function renderCost(){
+  const C=COST;
+  const ncc=C.cov.ncc, dpt=C.cov.ncc.k?ncc.c/(ncc.k/1000):0;
+  const low=C.band[0], mid=C.band[1], m3=C.band[2];
+  const lowT=low.t+mid.t+m3.t, lowC=low.c+mid.c+m3.c;
+  // KPI
+  const kpi=[
+    ['Chi phí cước NCC (thuê ngoài)','<span style=color:var(--red)>'+vn(ncc.c)+'đ</span>',vn(ncc.t)+' chuyến · 30 ngày'],
+    ['Đơn giá bình quân',vn(dpt)+' đ/tấn',vn(ncc.k/1000)+' tấn đã luân chuyển'],
+    ['Chi phí chuyến lấp đầy thấp (0-30%)','<span style=color:var(--red)>'+vn(lowC)+'đ</span>',(lowC/ncc.c*100).toFixed(1)+'% chi phí NCC · '+lowT+' chuyến'],
+    ['Xe nội bộ GHN (không tính cước)',vn(C.cov.noibo.t)+' chuyến','tự vận hành · '+C.noiboRoutes.length+' tuyến']
+  ];
+  // band table
+  const bt=C.band.reduce((s,x)=>s+x.t,0), bc=C.band.reduce((s,x)=>s+x.c,0), btan=C.band.reduce((s,x)=>s+x.tan,0);
+  const bandRow=(x,i)=>`<tr>
+    <td class="l"><span class="pill" style="background:${BCOL[i]}">${BLABEL[i]}</span></td>
+    <td>${x.t}</td><td>${vn(x.tan)}</td><td style="text-align:right">${vn(x.c)}</td>
+    <td style="text-align:right"><b class="b${i<3?i:''}">${vn(x.pt)}</b></td></tr>`;
+  const bandTot=`<tr class="tot"><td class="l">TỔNG NCC</td><td>${bt}</td><td>${vn(btan)}</td>
+    <td style="text-align:right">${vn(bc)}</td><td style="text-align:right">${vn(btan?bc/btan:0)}</td></tr>`;
+  // routesNCC sort
+  const rk=['mt','gia','t','c','f','low','pt'][cstate.rsK]||'c';
+  const routes=C.routesNCC.slice().sort((a,b)=>{const x=a[rk],y=b[rk];return typeof x==='number'?cstate.rsDir*(x-y):cstate.rsDir*String(x).localeCompare(String(y),'vi');});
+  const rHeads=[['mt','Mã tuyến'],['gia','Giá cước/chuyến'],['t','Chuyến'],['c','Chi phí kỳ'],['f','%LĐ TB'],['low','Chuyến LĐ thấp'],['pt','đ/tấn']];
+  const rRow=r=>`<tr>
+    <td class="l">${esc(r.mt)}</td>
+    <td style="text-align:right">${vn(r.gia)}</td><td>${r.t}</td>
+    <td style="text-align:right">${vn(r.c)}</td>
+    <td><span class="pill" style="background:${r.f<30?'#B4232A':r.f<50?'#E08A1E':r.f>100?'#1f7a4d':'#7FB069'}">${r.f}%</span></td>
+    <td>${r.low?'<b class="b0">'+r.low+'</b>':'0'}</td>
+    <td style="text-align:right"><b>${vn(r.pt)}</b></td></tr>`;
+  // wf detail
+  const q=cstate.cq.trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/đ/g,'d');
+  let wf=C.wf.map(r=>({ngay:r[0],code:r[1],mt:r[2],route:r[3],kl:r[4],fill:r[5],cost:r[6]}));
+  if(q){const w=q.split(/\s+/);wf=wf.filter(x=>{const h=(x.code+' '+x.mt+' '+x.route).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/đ/g,'d');return w.every(t=>h.includes(t));});}
+  const wfRow=x=>`<tr>
+    <td>${esc(x.ngay)}</td><td class="l">${esc(x.code)}</td><td class="l">${esc(x.mt)}</td>
+    <td class="l" style="white-space:normal;min-width:240px">${esc(x.route)}</td>
+    <td>${vn(x.kl)}</td><td><b class="b0">${x.fill}%</b></td>
+    <td style="text-align:right">${vn(x.cost)}</td></tr>`;
+  $('panel').innerHTML=`
+    <div class="note" style="border-left-color:var(--red);background:#FDECEA;color:#7a2418">
+      <b>Phân loại xe — quan trọng khi đọc chi phí:</b><br>
+      • <b>Tuyến CÓ giá cước = xe NCC</b> (nhà cung cấp GHN thuê chạy ngoài) → chi phí cước là <b>tiền thật GHN trả</b>, cần siết lấp đầy để giảm.<br>
+      • <b>Tuyến Hải Phòng KHÔNG giá = xe nội bộ GHN</b> (${C.noiboRoutes.length} tuyến, ${vn(C.cov.noibo.t)} chuyến) → xe của GHN tự chạy, <b>không phát sinh cước thuê</b> nên không tính vào chi phí trên.<br>
+      • Toàn bộ số chi phí dưới đây <b>chỉ tính trên ${vn(ncc.t)} chuyến NCC</b> (kỳ ${ddmm(C.meta.from)}–${ddmm(C.meta.to)}/2026).
+    </div>
+    <div class="kpis" style="margin-top:4px">${kpi.map(k=>`<div class="kpi"><div class="t">${k[0]}</div><div class="v" style="font-size:22px">${k[1]}</div><div class="f">${k[2]}</div></div>`).join('')}</div>
+
+    <h3 style="margin-top:20px">Chi phí theo nhóm % lấp đầy (xe NCC)</h3>
+    <div class="s">Chuyến lấp đầy thấp đội đơn giá đ/tấn lên nhiều lần — đây là phần lãng phí cần cắt.</div>
+    <div class="table-wrap"><table><thead><tr>
+      <th class="l">Nhóm lấp đầy</th><th>Số chuyến</th><th>Tấn</th><th style="text-align:right">Chi phí (đ)</th><th style="text-align:right">đ/tấn</th>
+    </tr></thead><tbody>${C.band.map((x,i)=>bandRow(x,i)).join('')}${bandTot}</tbody></table></div>
+
+    <h3 style="margin-top:22px">Chi phí theo tuyến — xe NCC (${C.routesNCC.length} tuyến)</h3>
+    <div class="s">Bấm tiêu đề cột để sắp xếp · "Chuyến LĐ thấp" = số chuyến 0-30% của tuyến (càng nhiều càng lãng phí). Mặc định sắp theo chi phí kỳ.</div>
+    <div class="table-wrap"><table><thead><tr>${rHeads.map((h,i)=>`<th class="${i===0?'l':''}" data-ri="${i}" style="${i===1||i===3||i===6?'text-align:right':''}">${h[1]}${cstate.rsK===i?(cstate.rsDir>0?' ▲':' ▼'):''}</th>`).join('')}</tr></thead>
+      <tbody>${routes.map(rRow).join('')}</tbody></table></div>
+
+    <h3 style="margin-top:22px">Chi tiết chuyến lãng phí (NCC, lấp đầy 0-30%) — có lộ trình di chuyển</h3>
+    <div class="bar" style="margin:0 0 8px">
+      <div class="s" style="margin:0">${wf.length} chuyến · tổng chi phí ${vn(wf.reduce((s,x)=>s+x.cost,0))}đ · sắp theo % lấp đầy tăng dần</div>
+      <input class="search" id="wfSearch" placeholder="Tìm mã chuyến, mã tuyến, điểm dừng trong lộ trình…" value="${esc(cstate.cq)}">
+    </div>
+    <div class="table-wrap"><table><thead><tr>
+      <th>Ngày</th><th class="l">Mã chuyến</th><th class="l">Mã tuyến</th><th class="l">Lộ trình di chuyển</th><th>KL (kg)</th><th>%LĐ</th><th style="text-align:right">Chi phí (đ)</th>
+    </tr></thead><tbody>${wf.map(wfRow).join('')||'<tr><td colspan=7 style="padding:22px">Không có chuyến phù hợp.</td></tr>'}</tbody></table></div>`;
+  // wire route sort
+  document.querySelectorAll('#panel thead th[data-ri]').forEach(th=>th.onclick=()=>{const i=+th.dataset.ri;if(cstate.rsK===i)cstate.rsDir*=-1;else{cstate.rsK=i;cstate.rsDir=(i===0||i===4)?1:-1;}renderCost();});
+  // wire wf search
+  const sb=$('wfSearch');
+  if(sb)sb.oninput=e=>{cstate.cq=e.target.value;const p=sb.selectionStart;renderCost();const n=$('wfSearch');if(n){n.focus();n.setSelectionRange(p,p);}};
+}
+function render(){ if(state.tab==='det')renderDet(); else if(state.tab==='cost')renderCost(); else renderAgg(state.tab); }
 
 /* ---- wiring ---- */
 document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));t.classList.add('active');state.tab=t.dataset.tab;render();});
