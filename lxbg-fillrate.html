@@ -88,7 +88,7 @@ const BCOL=['#B4232A','#D65A4A','#E08A1E','#7FB069','#1f7a4d','#9aa8a0'];
 const vn=n=>Math.round(n).toLocaleString('vi-VN');
 const esc=s=>String(s==null?'':s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
 const ddmm=s=>{const m=/(\d{4})-(\d{2})-(\d{2})/.exec(s);return m?m[3]+'/'+m[2]:s;};
-let state={tab:'prov',q:'',sortK:7,sortDir:1};
+let state={tab:'prov',q:'',sortK:6,sortDir:1,from:'',to:''};
 
 /* ---- KPI + bands ---- */
 function head(){
@@ -136,33 +136,51 @@ function renderAgg(kind){
 }
 
 /* ---- detail 346 ---- */
+const DET_MIN='2026-08-04', DET_MAX='2026-09-02';
 function detData(){
-  let d=DET.map(r=>({code:r[0],day:r[1],band:r[3],prov:r[4],cap:r[5],picked:r[6],fill:r[7],plate:r[8],sched:r[9],route:r[10]}));
+  let d=DET.map(r=>({code:r[0],day:r[1],band:r[2],prov:r[3],cap:r[4],picked:r[5],fill:r[6],plate:r[7],mt:r[8],route:r[9],cuoc:r[10]}));
+  if(state.from)d=d.filter(x=>x.day>=state.from);
+  if(state.to)d=d.filter(x=>x.day<=state.to);
   const q=state.q.trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/đ/g,'d');
-  if(q){const w=q.split(/\s+/);d=d.filter(x=>{const h=(x.code+' '+x.prov+' '+x.plate+' '+x.sched+' '+x.route).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/đ/g,'d');return w.every(t=>h.includes(t));});}
-  const keys=['code','day','band','prov','cap','picked','fill','plate','sched','route'];
+  if(q){const w=q.split(/\s+/);d=d.filter(x=>{const h=(x.code+' '+x.prov+' '+x.plate+' '+x.mt+' '+x.route).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/đ/g,'d');return w.every(t=>h.includes(t));});}
+  const keys=['code','day','band','prov','cap','picked','fill','plate','mt','route','cuoc'];
   const k=keys[state.sortK]||'fill';
-  d.sort((a,b)=>{let x=a[k],y=b[k];if(typeof x==='number')return state.sortDir*(x-y);return state.sortDir*String(x).localeCompare(String(y),'vi');});
+  d.sort((a,b)=>{let x=a[k],y=b[k];if(k==='cuoc'){x=x==null?-1:x;y=y==null?-1:y;}if(typeof x==='number')return state.sortDir*(x-y);return state.sortDir*String(x).localeCompare(String(y),'vi');});
   return d;
 }
 function renderDet(){
   const d=detData();
+  const totCuoc=d.reduce((s,x)=>s+(x.cuoc||0),0), nNoibo=d.filter(x=>x.cuoc==null).length;
   const rowH=x=>`<tr>
     <td class="l">${esc(x.code)}</td><td>${ddmm(x.day)}</td>
     <td class="b${x.band}">${BLABEL[x.band]}</td><td class="l">${esc(x.prov)}</td>
     <td>${vn(x.cap)}</td><td>${vn(x.picked)}</td>
     <td><b class="b${x.band}">${x.fill}%</b></td>
-    <td>${esc(x.plate)}</td><td class="l">${esc(x.sched)}</td><td class="l" style="white-space:normal;min-width:210px">${esc(x.route)}</td></tr>`;
-  const heads=[['code','Mã chuyến'],['day','Ngày'],['band','Mốc'],['prov','Tỉnh XP'],['cap','Tải trọng'],['picked','Đã xếp(kg)'],['fill','% Lấp đầy'],['plate','Biển số'],['sched','Điều phối'],['route','Tuyến']];
+    <td>${esc(x.plate)}</td><td class="l">${esc(x.mt)}</td>
+    <td class="l" style="white-space:normal;min-width:240px">${esc(x.route)}</td>
+    <td style="text-align:right">${x.cuoc==null?'<span style="color:var(--muted)">Nội bộ</span>':'<b>'+vn(x.cuoc)+'</b>'}</td></tr>`;
+  const heads=[['code','Mã chuyến'],['day','Ngày'],['band','Mốc'],['prov','Tỉnh XP'],['cap','Tải trọng'],['picked','Đã xếp(kg)'],['fill','% Lấp đầy'],['plate','Biển số'],['mt','Mã tuyến'],['route','Lộ trình di chuyển'],['cuoc','Cước (đ)']];
   $('panel').innerHTML=`<div class="bar" style="margin-top:0">
-      <div><h3 style="margin:0">Chi tiết 346 chuyến lấp đầy thấp (0-30%)</h3><div class="s">Bấm tiêu đề cột để sắp xếp · sắp theo % lấp đầy tăng dần</div></div>
-      <input class="search" id="detSearch" placeholder="Tìm mã chuyến, tỉnh, biển số, điều phối, tuyến…" value="${esc(state.q)}">
+      <div><h3 style="margin:0">Chi tiết ${d.length} chuyến lấp đầy thấp (0-30%)</h3><div class="s">%Lấp đầy = Tỷ lệ lấp đầy thật (cột U sheet, KHỚP mốc — đã bỏ "Tỷ lệ vận chuyển"). Bấm tiêu đề cột để sắp xếp.</div></div>
+      <input class="search" id="detSearch" placeholder="Tìm mã chuyến, tỉnh, biển số, mã tuyến, điểm dừng trong lộ trình…" value="${esc(state.q)}">
     </div>
-    <div class="s" style="margin-bottom:8px">${d.length} chuyến</div>
-    <div class="table-wrap"><table><thead><tr>${heads.map((h,i)=>`<th class="${i===0||i===3||i===8||i===9?'l':''}" data-i="${i}">${h[1]}${state.sortK===i?(state.sortDir>0?' ▲':' ▼'):''}</th>`).join('')}</tr></thead>
-    <tbody>${d.map(rowH).join('')||'<tr><td colspan=10 style="padding:22px">Không có chuyến phù hợp.</td></tr>'}</tbody></table></div>`;
+    <div class="bar" style="margin:0 0 8px;gap:8px">
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <span class="s" style="margin:0">Khoảng ngày:</span>
+        <input type="date" id="detFrom" class="search" style="min-width:150px" min="${DET_MIN}" max="${DET_MAX}" value="${state.from||''}">
+        <span class="s" style="margin:0">→</span>
+        <input type="date" id="detTo" class="search" style="min-width:150px" min="${DET_MIN}" max="${DET_MAX}" value="${state.to||''}">
+        <button class="btn" id="detClear" style="padding:6px 10px">Xóa lọc ngày</button>
+      </div>
+      <div class="s" style="margin:0">${d.length} chuyến · cước NCC: <b>${vn(totCuoc)}đ</b>${nNoibo?' · '+nNoibo+' chuyến nội bộ (không cước)':''}</div>
+    </div>
+    <div class="table-wrap"><table><thead><tr>${heads.map((h,i)=>`<th class="${i===0||i===3||i===8||i===9?'l':''}" data-i="${i}" style="${i===10?'text-align:right':''}">${h[1]}${state.sortK===i?(state.sortDir>0?' ▲':' ▼'):''}</th>`).join('')}</tr></thead>
+    <tbody>${d.map(rowH).join('')||'<tr><td colspan=11 style="padding:22px">Không có chuyến phù hợp.</td></tr>'}</tbody></table></div>`;
   const sb=$('detSearch');
   sb.oninput=e=>{state.q=e.target.value;const p=sb.selectionStart;renderDet();const n=$('detSearch');if(n){n.focus();n.setSelectionRange(p,p);}};
+  $('detFrom').onchange=e=>{state.from=e.target.value;renderDet();};
+  $('detTo').onchange=e=>{state.to=e.target.value;renderDet();};
+  $('detClear').onclick=()=>{state.from='';state.to='';renderDet();};
   document.querySelectorAll('#panel thead th[data-i]').forEach(th=>th.onclick=()=>{const i=+th.dataset.i;if(state.sortK===i)state.sortDir*=-1;else{state.sortK=i;state.sortDir=1;}renderDet();});
 }
 /* ---- Chi phí cước ---- */
@@ -251,9 +269,9 @@ function applyTheme(t){document.documentElement.setAttribute('data-theme',t);the
 themeBtn.onclick=()=>applyTheme(document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark');
 try{const s=localStorage.getItem('lxbg_theme');if(s)applyTheme(s);}catch(e){}
 $('csvBtn').onclick=()=>{
-  const head=['ma_chuyen','ngay','muc','tinh_xuat_phat','tai_trong_kg','da_xep_kg','pct_lap_day','bien_so','dieu_phoi','tuyen'];
+  const head=['ma_chuyen','ngay','muc','tinh_xuat_phat','tai_trong_kg','da_xep_kg','pct_lap_day','bien_so','ma_tuyen','lo_trinh','cuoc'];
   const lines=[head.join(',')];
-  DET.forEach(r=>{const o=[r[0],r[1],BLABEL[r[3]],r[4],r[5],r[6],r[7],r[8],r[9],r[10]];lines.push(o.map(x=>`"${String(x==null?'':x).replace(/"/g,'""')}"`).join(','));});
+  DET.forEach(r=>{const o=[r[0],r[1],BLABEL[r[2]],r[3],r[4],r[5],r[6],r[7],r[8],r[9],r[10]==null?'':r[10]];lines.push(o.map(x=>`"${String(x==null?'':x).replace(/"/g,'""')}"`).join(','));});
   const blob=new Blob(['﻿'+lines.join('\n')],{type:'text/csv;charset=utf-8'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='LXBG_lapday_thap_346.csv';a.click();URL.revokeObjectURL(a.href);
 };
 
