@@ -3,23 +3,25 @@
  * Dán vào: file "Vùng XBG - Báo cáo AM" → Tiện ích mở rộng → Apps Script → dán đè → Lưu.
  * Chạy 1 lần hàm  setup()  → cấp quyền + đặt lịch 18:00 mỗi ngày + dọn trùng + nạp lịch sử cũ từ Export.
  * Mỗi chiều 18:00 script tự đọc "Aging> 5 Ngày" và ghi ~90 dòng tổng hợp vào tab "Lịch sử Aging".
+ *
+ * ⚠️ CỘT J "Trạng thái" do CÔNG THỨC ARRAYFORMULA của đại nhân tự điền (tra tab "Bưu Cục bất ổn").
+ *    → Script CHỈ ghi cột A→I, TUYỆT ĐỐI không đụng cột J (tránh phá công thức / lỗi spill).
  * KHÔNG đụng sheet "Export". Rất nhẹ → giữ vài chục năm, không lo vỡ file.
  */
-var SRC_SHEET   = 'Aging> 5 Ngày';
-var BATON_SHEET = 'Bưu Cục bất ổn';
-var HIST_SHEET  = 'Lịch sử Aging';
-var HEADER = ['ngay','bc','am','tinh','total','g1_5_7','g2_8_10','g3_11_15','g4_15plus','bat_on'];
+var SRC_SHEET  = 'Aging> 5 Ngày';
+var HIST_SHEET = 'Lịch sử Aging';
+var HEADER9 = ['ngay','bc','am','tinh','total','g1_5_7','g2_8_10','g3_11_15','g4_15plus']; // A→I (KHÔNG gồm cột J)
+var STATUS_FORMULA = '={"Trạng thái";ARRAYFORMULA(IF(B2:B="","",IFNA(XLOOKUP(B2:B,\'Bưu Cục bất ổn\'!A:A,\'Bưu Cục bất ổn\'!B:B),"")))}';
 
 function setup() {
   ScriptApp.getProjectTriggers().forEach(function (t) {
     if (t.getHandlerFunction() === 'syncAgingHistory') ScriptApp.deleteTrigger(t);
   });
   ScriptApp.newTrigger('syncAgingHistory').timeBased().everyDays(1).atHour(18).nearMinute(0).create();
-  syncAgingHistory();     // ghi/dọn ngày hôm nay
-  backfillFromExport();   // nạp các ngày cũ từ Export (nếu chưa có)
+  syncAgingHistory();
+  backfillFromExport();
 }
 
-// chuẩn hoá 1 ô ngày về chuỗi 'yyyy-MM-dd' (dù ô là Date hay text)
 function _ymd(v, tz) {
   if (v == null || v === '') return '';
   if (Object.prototype.toString.call(v) === '[object Date]') return Utilities.formatDate(v, tz, 'yyyy-MM-dd');
@@ -29,10 +31,19 @@ function _ymd(v, tz) {
 }
 function _histSheet(ss) {
   var hs = ss.getSheetByName(HIST_SHEET);
-  if (!hs) { hs = ss.insertSheet(HIST_SHEET); hs.appendRow(HEADER); }
-  if (hs.getLastRow() === 0) hs.appendRow(HEADER);
-  hs.getRange(1, 1, hs.getMaxRows(), 1).setNumberFormat('@'); // cột ngày = text, tránh Sheets tự đổi Date
+  if (!hs) {
+    hs = ss.insertSheet(HIST_SHEET);
+    hs.getRange(1, 1, 1, 9).setValues([HEADER9]);       // header A1:I1
+    hs.getRange('J1').setFormula(STATUS_FORMULA);        // cột J = công thức tự tra trạng thái
+  }
+  hs.getRange(1, 1, hs.getMaxRows(), 1).setNumberFormat('@'); // cột ngày (A) = text, tránh Sheets tự đổi Date
   return hs;
+}
+// dòng dữ liệu cuối (tính theo cột A — không bị công thức spill ở cột J làm sai)
+function _lastDataRow(hs) {
+  var a = hs.getRange(1, 1, hs.getMaxRows(), 1).getValues();
+  for (var i = a.length - 1; i >= 0; i--) if (String(a[i][0]).trim() !== '') return i + 1;
+  return 0;
 }
 function _blGroup(s) {
   s = String(s || '').toLowerCase();
@@ -52,11 +63,6 @@ function syncAgingHistory() {
   for (var i = 0; i < Math.min(vals.length, 6); i++) {
     if (String(vals[i].join('|')).toLowerCase().indexOf('order_code') >= 0) { hdr = i; break; }
   }
-  var batSet = {};
-  var bs = ss.getSheetByName(BATON_SHEET);
-  if (bs) bs.getDataRange().getValues().forEach(function (r) {
-    var b = String(r[0] || '').trim(); if (b && b.indexOf('(') === 0) batSet[b] = 1;
-  });
   var agg = {};
   for (var r = hdr + 1; r < vals.length; r++) {
     var v = vals[r];
@@ -74,15 +80,16 @@ function syncAgingHistory() {
   var out = [];
   Object.keys(agg).forEach(function (bc) {
     var a = agg[bc], tot = a.g1 + a.g2 + a.g3 + a.g4;
-    if (tot) out.push([snap, bc, a.am, a.tinh, tot, a.g1, a.g2, a.g3, a.g4, batSet[bc] ? 1 : 0]);
+    if (tot) out.push([snap, bc, a.am, a.tinh, tot, a.g1, a.g2, a.g3, a.g4]); // 9 cột A→I
   });
   if (!out.length) throw new Error('Nguồn không có dữ liệu để tổng hợp');
 
   var hs = _histSheet(ss);
-  // dọn TRÙNG: xoá mọi dòng của ngày hôm nay (so bằng _ymd nên bắt cả ô kiểu Date)
-  var data = hs.getDataRange().getValues();
+  // dọn TRÙNG: xoá mọi dòng của ngày hôm nay (so bằng _ymd)
+  var data = hs.getRange(1, 1, hs.getMaxRows(), 1).getValues(); // chỉ đọc cột A
   for (var d = data.length - 1; d >= 1; d--) if (_ymd(data[d][0], tz) === snap) hs.deleteRow(d + 1);
-  hs.getRange(hs.getLastRow() + 1, 1, out.length, HEADER.length).setValues(out);
+  var start = _lastDataRow(hs) + 1;
+  hs.getRange(start, 1, out.length, 9).setValues(out);          // ghi A→I, chừa cột J cho công thức
   Logger.log('Lịch sử Aging: ghi ' + out.length + ' Bưu Cục cho ngày ' + snap);
 }
 
@@ -94,7 +101,7 @@ function backfillFromExport() {
   var tz = ss.getSpreadsheetTimeZone();
   var hs = _histSheet(ss);
   var have = {};
-  hs.getDataRange().getValues().forEach(function (r, i) { if (i > 0) { var k = _ymd(r[0], tz); if (k) have[k] = 1; } });
+  hs.getRange(1, 1, hs.getMaxRows(), 1).getValues().forEach(function (r, i) { if (i > 0) { var k = _ymd(r[0], tz); if (k) have[k] = 1; } });
 
   var vals = ex.getDataRange().getValues();
   var byDate = {};
@@ -105,19 +112,19 @@ function backfillFromExport() {
     var bc = String(v[2] || '').trim(); if (!bc) continue;
     var g = _blGroup(v[9]); if (!g) continue;
     if (!byDate[day]) byDate[day] = {};
-    if (!byDate[day][bc]) byDate[day][bc] = { am: String(v[10] || '').trim(), tinh: String(v[1] || '').trim(), g1: 0, g2: 0, g3: 0, g4: 0, baton: 0 };
+    if (!byDate[day][bc]) byDate[day][bc] = { am: String(v[10] || '').trim(), tinh: String(v[1] || '').trim(), g1: 0, g2: 0, g3: 0, g4: 0 };
     byDate[day][bc][g]++;
-    if (String(v[12] || '').indexOf('bất ổn') >= 0) byDate[day][bc].baton = 1;
   }
   var out = [], days = Object.keys(byDate).sort();
   days.forEach(function (day) {
     var m = byDate[day];
     Object.keys(m).forEach(function (bc) {
       var a = m[bc], tot = a.g1 + a.g2 + a.g3 + a.g4;
-      if (tot) out.push([day, bc, a.am, a.tinh, tot, a.g1, a.g2, a.g3, a.g4, a.baton]);
+      if (tot) out.push([day, bc, a.am, a.tinh, tot, a.g1, a.g2, a.g3, a.g4]); // 9 cột A→I
     });
   });
   if (!out.length) { Logger.log('Backfill: không có ngày mới để nạp'); return; }
-  hs.getRange(hs.getLastRow() + 1, 1, out.length, HEADER.length).setValues(out);
+  var start = _lastDataRow(hs) + 1;
+  hs.getRange(start, 1, out.length, 9).setValues(out);
   Logger.log('Backfill: nạp ' + out.length + ' dòng cho ' + days.length + ' ngày (' + days[0] + ' → ' + days[days.length - 1] + ')');
 }
