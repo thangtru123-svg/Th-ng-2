@@ -1511,12 +1511,41 @@ function buildAgingHTML(rows){
 
  return`<div style="padding:4px 0">${h}</div>`;
 }
+/* Đọc tab "Lịch sử Aging" (bản tổng hợp Apps Script ghi mỗi ngày: ngay,bc,am,tinh,total,g1..g4,bat_on)
+   rồi BUNG số đếm thành các dòng raw để tái dùng toàn bộ buildAgingHTML. Trả null nếu tab trống. */
+const AGING_HIST_SHEET='Lịch sử Aging';
+const _AGBK=['(a) 5 - 6 ngày','(d) 8 - 9 ngày','(g) 11 - 12 ngày','(k) > 15 ngày']; // g1,g2,g3,g4
+async function fetchAgingHistoryRows(){
+ const url=`https://docs.google.com/spreadsheets/d/${AGING_SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(AGING_HIST_SHEET)}`;
+ const resp=await fetch(url);
+ if(!resp.ok)throw new Error(`HTTP ${resp.status}`);
+ const arr=parseCsvRaw(await resp.text());
+ if(!arr||arr.length<2)return null;
+ // bỏ dòng tiêu đề (ngay/bc...), lấy 10 ngày gần nhất để bung
+ const body=arr.filter(r=>r&&/^\d{4}-\d{2}-\d{2}/.test((r[0]||'').trim()));
+ if(!body.length)return null;
+ const dates=[...new Set(body.map(r=>r[0].trim()))].sort().slice(-10);
+ const keep=new Set(dates);
+ const rows=[];
+ body.forEach(r=>{
+  const ngay=r[0].trim();if(!keep.has(ngay))return;
+  const bc=(r[1]||'').trim(),am=(r[2]||'').trim(),baton=(''+(r[9]||'')).trim();
+  const note=(baton==='1'||baton.toLowerCase()==='true'||baton.includes('bất ổn'))?'Bưu Cục bất ổn':'';
+  [5,6,7,8].forEach((ci,gi)=>{const n=parseInt((r[ci]||'0').toString().replace(/[^0-9]/g,''),10)||0;
+   for(let k=0;k<n;k++){const rr=new Array(13).fill('');rr[2]=bc;rr[9]=_AGBK[gi];rr[10]=am;rr[11]=ngay;rr[12]=note;rows.push(rr);}});
+ });
+ return rows.length?rows:null;
+}
 async function buildAgingPage(){
  const el=document.getElementById('p7');
  try{
-  const resp=await fetch(`https://docs.google.com/spreadsheets/d/${AGING_SHEET_ID}/export?format=csv&gid=${AGING_GID}`);
-  if(!resp.ok)throw new Error(`HTTP ${resp.status}`);
-  const rows=parseCsvRaw(await resp.text());
+  let rows=null;
+  try{rows=await fetchAgingHistoryRows();}catch(_){rows=null;} // ưu tiên tab Lịch sử Aging
+  if(!rows){ // fallback: đọc trực tiếp sheet Aging Export như cũ
+   const resp=await fetch(`https://docs.google.com/spreadsheets/d/${AGING_SHEET_ID}/export?format=csv&gid=${AGING_GID}`);
+   if(!resp.ok)throw new Error(`HTTP ${resp.status}`);
+   rows=parseCsvRaw(await resp.text());
+  }
   window._agingRows=rows;
   el.innerHTML=buildAgingHTML(rows);
   addBCSearch(el);
