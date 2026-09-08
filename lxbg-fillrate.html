@@ -71,12 +71,14 @@ input.search{border:1px solid var(--line);background:var(--panel);color:var(--in
     <div class="tab" data-tab="week">Theo tuần</div>
     <div class="tab" data-tab="det">Chi tiết 346 chuyến 0-30%</div>
     <div class="tab" data-tab="cost">💰 Chi phí cước</div>
+    <div class="tab" data-tab="legs">🧭 Chi tiết chặng theo tuyến</div>
   </div>
   <div class="card" id="panel"></div>
 </main>
 <div id="toast"></div>
 <script src="lxbg_data.js"></script>
 <script src="lxbg_cost.js"></script>
+<script src="lxbg_legs.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script>
 const $=id=>document.getElementById(id);
@@ -88,7 +90,8 @@ const BCOL=['#B4232A','#D65A4A','#E08A1E','#7FB069','#1f7a4d','#9aa8a0'];
 const vn=n=>Math.round(n).toLocaleString('vi-VN');
 const esc=s=>String(s==null?'':s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
 const ddmm=s=>{const m=/(\d{4})-(\d{2})-(\d{2})/.exec(s);return m?m[3]+'/'+m[2]:s;};
-let state={tab:'prov',q:'',sortK:6,sortDir:1,from:'',to:''};
+let state={tab:'prov',q:'',sortK:6,sortDir:1,from:'',to:'',legQ:'',legProv:'',legSel:null};
+const n1=x=>Number(x||0).toLocaleString('vi-VN',{maximumFractionDigits:1});
 
 /* ---- KPI + bands ---- */
 function head(){
@@ -261,7 +264,72 @@ function renderCost(){
   const sb=$('wfSearch');
   if(sb)sb.oninput=e=>{cstate.cq=e.target.value;const p=sb.selectionStart;renderCost();const n=$('wfSearch');if(n){n.focus();n.setSelectionRange(p,p);}};
 }
-function render(){ if(state.tab==='det')renderDet(); else if(state.tab==='cost')renderCost(); else renderAgg(state.tab); }
+/* ---- Chi tiết chặng theo tuyến ---- */
+const LEGS=window.LXBG_ROUTES||[];
+function _fillCol(f){return f>=50?'#1f7a4d':f>=30?'#7FB069':f>=20?'#E08A1E':f>=10?'#D65A4A':'#B4232A';}
+function _noacc(s){return String(s==null?'':s).normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/đ/g,'d').replace(/Đ/g,'D').toLowerCase();}
+function renderLegs(){
+  const panel=$('panel');
+  if(state.legSel!=null && LEGS[state.legSel]){renderLegDetail(LEGS[state.legSel]);return;}
+  const q=_noacc(state.legQ);
+  let rows=LEGS.map((r,i)=>({r,i})).filter(({r})=>{
+    if(state.legProv && r.pv!==state.legProv)return false;
+    if(!q)return true;
+    return _noacc((r.mt||'')+' '+r.pv+' '+r.p.map(p=>p.n).join(' ')).includes(q);
+  });
+  rows.sort((a,b)=>b.r.n-a.r.n);
+  const provs=[...new Set(LEGS.map(r=>r.pv))].filter(Boolean).sort();
+  const chips=`<span class="tab${state.legProv===''?' active':''}" data-lp="" style="padding:4px 11px;font-size:12px">Tất cả</span>`+
+    provs.map(p=>`<span class="tab${state.legProv===p?' active':''}" data-lp="${esc(p)}" style="padding:4px 11px;font-size:12px">${esc(p)}</span>`).join('');
+  const rowHtml=({r,i})=>{
+    const nm=r.mt||'(không mã tuyến)';
+    const path=r.p.map(p=>p.n).join(' → ');
+    return `<tr data-legi="${i}" style="cursor:pointer">
+      <td class="l"><b>${esc(nm)}</b><div style="color:var(--muted);font-size:11px;white-space:normal;max-width:540px">${esc(path)}</div></td>
+      <td>${esc(r.pv)}</td><td>${esc(r.ch)}</td><td><b>${r.n}</b></td><td>${n1(r.tk)}</td>
+      <td><span class="pill" style="background:${_fillCol(r.ft)}">${r.ft.toFixed(1)}%</span></td>
+      <td>${r.p.length}</td><td style="color:var(--green);font-weight:700">Xem →</td></tr>`;
+  };
+  panel.innerHTML=`<h3>Chi tiết chặng theo tuyến</h3>
+    <div class="s">Bấm 1 tuyến để xem hành trình từng chặng: km · hàng nhập/trên xe · tỉ lệ lấp đầy mỗi chặng (trung bình qua các chuyến trong kỳ).</div>
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:10px">
+      <input class="search" id="legSearch" placeholder="Tìm mã tuyến / điểm dừng / tỉnh…" value="${esc(state.legQ)}">
+      <span class="meta" style="color:var(--muted);font-size:12px">${rows.length} tuyến</span></div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">${chips}</div>
+    <div class="table-wrap"><table><thead><tr>
+      <th class="l">Tuyến / Hành trình</th><th>Tỉnh</th><th>Chiều</th><th>Số chuyến</th><th>Km TB</th><th>%Lấp đầy TB</th><th>Số điểm</th><th></th>
+    </tr></thead><tbody>${rows.map(rowHtml).join('')||'<tr><td colspan=8 class=l style="color:var(--muted)">Không có tuyến khớp</td></tr>'}</tbody></table></div>`;
+  const sb=$('legSearch');if(sb)sb.oninput=e=>{state.legQ=e.target.value;const p=sb.selectionStart;renderLegs();const n=$('legSearch');if(n){n.focus();n.setSelectionRange(p,p);}};
+  panel.querySelectorAll('[data-lp]').forEach(c=>c.onclick=()=>{state.legProv=c.dataset.lp;renderLegs();});
+  panel.querySelectorAll('tr[data-legi]').forEach(tr=>tr.onclick=()=>{state.legSel=+tr.dataset.legi;renderLegs();});
+}
+function renderLegDetail(r){
+  const panel=$('panel'),pts=r.p,nm=r.mt||'(không mã tuyến)';
+  const rowHtml=(p,i)=>{
+    const kmCell=i===0?'<span style="color:var(--muted)">— (điểm xuất phát)</span>':`<b>${n1(p.km)}</b> km`;
+    const inCell=p.kp>0?`${vn(p.kp)} kg <span style="color:var(--muted)">(${vn(p.dp)} đơn)</span>`:'<span style="color:var(--muted)">—</span>';
+    return `<tr>
+      <td>${i+1}</td><td class="l"><b>${esc(p.n)}</b></td>
+      <td>${kmCell}</td><td>${inCell}</td>
+      <td>${vn(p.kl)} kg <span style="color:var(--muted)">(${vn(p.dn)} đơn)</span></td>
+      <td><span class="pill" style="background:${_fillCol(p.f)}">${p.f.toFixed(1)}%</span></td></tr>`;
+  };
+  panel.innerHTML=`
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+      <h3 style="margin:0">🧭 ${esc(nm)}</h3><button class="btn" id="legBack">← Quay lại danh sách</button></div>
+    <div class="s" style="white-space:normal">${esc(pts.map(p=>p.n).join(' → '))}</div>
+    <div class="kpis" style="margin:6px 0 14px">
+      <div class="kpi"><div class="t">Tỉnh · Chiều</div><div class="v" style="font-size:18px">${esc(r.pv)}</div><div class="f">${esc(r.ch)}</div></div>
+      <div class="kpi"><div class="t">Số chuyến (kỳ)</div><div class="v">${r.n}</div><div class="f">${ddmm(r.dmin)}–${ddmm(r.dmax)}/2026</div></div>
+      <div class="kpi"><div class="t">Quãng đường TB</div><div class="v">${n1(r.tk)}</div><div class="f">km/chuyến</div></div>
+      <div class="kpi"><div class="t">Tỉ lệ lấp đầy TB</div><div class="v" style="color:${_fillCol(r.ft)}">${r.ft.toFixed(1)}%</div><div class="f">toàn tuyến</div></div></div>
+    <div class="table-wrap"><table><thead><tr>
+      <th>#</th><th class="l">Điểm dừng</th><th>Chặng đến điểm</th><th>Nhập tại điểm (bốc lên xe)</th><th>Trên xe khi rời</th><th>%Lấp đầy chặng</th>
+    </tr></thead><tbody>${pts.map(rowHtml).join('')}</tbody></table></div>
+    <div class="note" style="margin-top:12px">Số là <b>trung bình qua ${r.n} chuyến</b> của tuyến. <b>Nhập tại điểm</b> = hàng bốc lên xe tại điểm; <b>Trên xe khi rời</b> = tổng hàng đang chở khi rời điểm; <b>%Lấp đầy chặng</b> = mức đầy xe (theo khối lượng) trên chặng ngay sau điểm (&gt;100% = quá tải). Km mỗi dòng = quãng đường từ điểm liền trước tới điểm đó.</div>`;
+  $('legBack').onclick=()=>{state.legSel=null;renderLegs();};
+}
+function render(){ if(state.tab==='det')renderDet(); else if(state.tab==='cost')renderCost(); else if(state.tab==='legs')renderLegs(); else renderAgg(state.tab); }
 
 /* ---- wiring ---- */
 document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));t.classList.add('active');state.tab=t.dataset.tab;render();});
