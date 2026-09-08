@@ -90,7 +90,7 @@ const BCOL=['#B4232A','#D65A4A','#E08A1E','#7FB069','#1f7a4d','#9aa8a0'];
 const vn=n=>Math.round(n).toLocaleString('vi-VN');
 const esc=s=>String(s==null?'':s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
 const ddmm=s=>{const m=/(\d{4})-(\d{2})-(\d{2})/.exec(s);return m?m[3]+'/'+m[2]:s;};
-let state={tab:'prov',q:'',sortK:6,sortDir:1,from:'',to:'',legQ:'',legProv:'',legSel:null};
+let state={tab:'prov',q:'',sortK:6,sortDir:1,from:'',to:'',legQ:'',legProv:'',legSel:null,legDay:''};
 const n1=x=>Number(x||0).toLocaleString('vi-VN',{maximumFractionDigits:1});
 
 /* ---- KPI + bands ---- */
@@ -301,33 +301,57 @@ function renderLegs(){
     </tr></thead><tbody>${rows.map(rowHtml).join('')||'<tr><td colspan=8 class=l style="color:var(--muted)">Không có tuyến khớp</td></tr>'}</tbody></table></div>`;
   const sb=$('legSearch');if(sb)sb.oninput=e=>{state.legQ=e.target.value;const p=sb.selectionStart;renderLegs();const n=$('legSearch');if(n){n.focus();n.setSelectionRange(p,p);}};
   panel.querySelectorAll('[data-lp]').forEach(c=>c.onclick=()=>{state.legProv=c.dataset.lp;renderLegs();});
-  panel.querySelectorAll('tr[data-legi]').forEach(tr=>tr.onclick=()=>{state.legSel=+tr.dataset.legi;renderLegs();});
+  panel.querySelectorAll('tr[data-legi]').forEach(tr=>tr.onclick=()=>{state.legSel=+tr.dataset.legi;state.legDay='';renderLegs();});
+}
+// gom dd theo ngày → mỗi ngày trung bình các chuyến trong ngày; điểm k đọc từ [1+k*3]=[kl,f,kp]
+function _legDays(r){
+  const m=new Map();
+  (r.dd||[]).forEach(row=>{const d=row[0];if(!m.has(d))m.set(d,[]);m.get(d).push(row);});
+  return [...m.keys()].sort();
+}
+function _dayPts(r,date){
+  const rows=(r.dd||[]).filter(x=>x[0]===date),c=rows.length||1,np=r.p.length;
+  return r.p.map((p,k)=>{let kl=0,f=0,kp=0;const b=1+k*3;rows.forEach(row=>{kl+=row[b]||0;f+=row[b+1]||0;kp+=row[b+2]||0;});
+    return {n:p.n,km:p.km,kl:kl/c,f:f/c,kp:kp/c,day:true};});
 }
 function renderLegDetail(r){
-  const panel=$('panel'),pts=r.p,nm=r.mt||'(không mã tuyến)';
+  const panel=$('panel'),nm=r.mt||'(không mã tuyến)';
+  const days=_legDays(r);
+  const sel=state.legDay&&days.includes(state.legDay)?state.legDay:'';
+  const pts=sel?_dayPts(r,sel):r.p;
+  const nTrips=sel?(r.dd.filter(x=>x[0]===sel).length):r.n;
+  // KPI lấp đầy toàn tuyến của ngày = %lấp đầy TB các điểm có f>0 (hoặc điểm xuất phát)
+  const ftDay=sel?(()=>{const v=pts.filter(p=>p.f>0);return v.length?v.reduce((s,p)=>s+p.f,0)/v.length:0;})():r.ft;
   const rowHtml=(p,i)=>{
     const kmCell=i===0?'<span style="color:var(--muted)">— (điểm xuất phát)</span>':`<b>${n1(p.km)}</b> km`;
-    const inCell=p.kp>0?`${vn(p.kp)} kg <span style="color:var(--muted)">(${vn(p.dp)} đơn)</span>`:'<span style="color:var(--muted)">—</span>';
+    const inCell=p.kp>0?(p.day?`${n1(p.kp)} kg`:`${vn(p.kp)} kg <span style="color:var(--muted)">(${vn(p.dp)} đơn)</span>`):'<span style="color:var(--muted)">—</span>';
+    const onCell=p.day?`${n1(p.kl)} kg`:`${vn(p.kl)} kg <span style="color:var(--muted)">(${vn(p.dn)} đơn)</span>`;
     return `<tr>
       <td>${i+1}</td><td class="l"><b>${esc(p.n)}</b></td>
       <td>${kmCell}</td><td>${inCell}</td>
-      <td>${vn(p.kl)} kg <span style="color:var(--muted)">(${vn(p.dn)} đơn)</span></td>
+      <td>${onCell}</td>
       <td><span class="pill" style="background:${_fillCol(p.f)}">${p.f.toFixed(1)}%</span></td></tr>`;
   };
+  const opts=`<option value="">📊 Trung bình cả kỳ (${r.n} chuyến)</option>`+days.map(d=>`<option value="${d}"${d===sel?' selected':''}>${ddmm(d)}/2026${' · '+(r.dd.filter(x=>x[0]===d).length)+' chuyến'}</option>`).join('');
   panel.innerHTML=`
     <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
       <h3 style="margin:0">🧭 ${esc(nm)}</h3><button class="btn" id="legBack">← Quay lại danh sách</button></div>
-    <div class="s" style="white-space:normal">${esc(pts.map(p=>p.n).join(' → '))}</div>
+    <div class="s" style="white-space:normal">${esc(r.p.map(p=>p.n).join(' → '))}</div>
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:12px 0 4px">
+      <span style="font-size:13px;font-weight:700">📅 Xem theo ngày:</span>
+      <select id="legDaySel" class="search" style="min-width:230px;padding:7px 10px">${opts}</select>
+      ${sel?`<span class="pill" style="background:var(--navy);color:#fff">Đang xem: ${ddmm(sel)}/2026 · ${nTrips} chuyến</span>`:`<span style="font-size:12px;color:var(--muted)">Chọn 1 ngày để xem đúng số liệu ngày đó</span>`}</div>
     <div class="kpis" style="margin:6px 0 14px">
       <div class="kpi"><div class="t">Tỉnh · Chiều</div><div class="v" style="font-size:18px">${esc(r.pv)}</div><div class="f">${esc(r.ch)}</div></div>
-      <div class="kpi"><div class="t">Số chuyến (kỳ)</div><div class="v">${r.n}</div><div class="f">${ddmm(r.dmin)}–${ddmm(r.dmax)}/2026</div></div>
-      <div class="kpi"><div class="t">Quãng đường TB</div><div class="v">${n1(r.tk)}</div><div class="f">km/chuyến</div></div>
-      <div class="kpi"><div class="t">Tỉ lệ lấp đầy TB</div><div class="v" style="color:${_fillCol(r.ft)}">${r.ft.toFixed(1)}%</div><div class="f">toàn tuyến</div></div></div>
+      <div class="kpi"><div class="t">${sel?'Số chuyến ngày này':'Số chuyến (kỳ)'}</div><div class="v">${nTrips}</div><div class="f">${sel?ddmm(sel)+'/2026':ddmm(r.dmin)+'–'+ddmm(r.dmax)+'/2026'}</div></div>
+      <div class="kpi"><div class="t">Quãng đường</div><div class="v">${n1(r.tk)}</div><div class="f">km/chuyến (TB kỳ)</div></div>
+      <div class="kpi"><div class="t">Tỉ lệ lấp đầy ${sel?'ngày này':'TB'}</div><div class="v" style="color:${_fillCol(ftDay)}">${ftDay.toFixed(1)}%</div><div class="f">${sel?'TB các điểm':'toàn tuyến'}</div></div></div>
     <div class="table-wrap"><table><thead><tr>
       <th>#</th><th class="l">Điểm dừng</th><th>Chặng đến điểm</th><th>Nhập tại điểm (bốc lên xe)</th><th>Trên xe khi rời</th><th>%Lấp đầy chặng</th>
     </tr></thead><tbody>${pts.map(rowHtml).join('')}</tbody></table></div>
-    <div class="note" style="margin-top:12px">Số là <b>trung bình qua ${r.n} chuyến</b> của tuyến. <b>Nhập tại điểm</b> = hàng bốc lên xe tại điểm; <b>Trên xe khi rời</b> = tổng hàng đang chở khi rời điểm; <b>%Lấp đầy chặng</b> = mức đầy xe (theo khối lượng) trên chặng ngay sau điểm (&gt;100% = quá tải). Km mỗi dòng = quãng đường từ điểm liền trước tới điểm đó.</div>`;
-  $('legBack').onclick=()=>{state.legSel=null;renderLegs();};
+    <div class="note" style="margin-top:12px">${sel?`Số liệu <b>ngày ${ddmm(sel)}/2026</b>${nTrips>1?` (trung bình ${nTrips} chuyến trong ngày)`:''} — kg thực tế; km lấy theo quãng đường chuẩn của tuyến.`:`Số là <b>trung bình qua ${r.n} chuyến</b> của tuyến (chọn 1 ngày ở trên để xem đúng ngày).`} <b>Nhập tại điểm</b> = hàng bốc lên xe tại điểm; <b>Trên xe khi rời</b> = tổng hàng đang chở khi rời điểm; <b>%Lấp đầy chặng</b> = mức đầy xe (theo khối lượng) trên chặng ngay sau điểm (&gt;100% = quá tải). Dữ liệu ngày có ${days.length} ngày gần nhất (${days.length?ddmm(days[0])+'–'+ddmm(days[days.length-1]):'—'}).</div>`;
+  $('legBack').onclick=()=>{state.legDay='';state.legSel=null;renderLegs();};
+  const ds=$('legDaySel');if(ds)ds.onchange=e=>{state.legDay=e.target.value;renderLegDetail(r);};
 }
 function render(){ if(state.tab==='det')renderDet(); else if(state.tab==='cost')renderCost(); else if(state.tab==='legs')renderLegs(); else renderAgg(state.tab); }
 
