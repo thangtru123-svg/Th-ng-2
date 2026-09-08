@@ -1,0 +1,10 @@
+{
+  "name": "th-ng-xbg",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Dashboard Báo Cáo Vận Hành XBG + API lưu lịch sử Aging (Neon Postgres)",
+  "dependencies": {
+    "@neondatabase/serverless": "^0.10.4"
+  }
+}
