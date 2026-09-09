@@ -3529,6 +3529,7 @@ const TT_CC_SHEET='Cơ cấu AM';
 const TT_CAT1='Backlog Luân Chuyển Trả', TT_CAT2='Mất/Thiếu/Tráo sản phẩm';
 const TT_MIN=1000000;              // chỉ lấy đơn có TỔNG giá trị (gộp mã đơn) > 1.000.000đ
 const TT_TG_THREAD=null;          // topic "Vấn đề chung" = General (link /1/) → PHẢI bỏ message_thread_id (truyền 1 sẽ "thread not found")
+const TT_SRC_URL='https://docs.google.com/spreadsheets/d/1jCWPRvfGA7d2uHL6_xT8ZxU3tgpOdlBK1-c4QT961ew/edit?gid=1544692169#gid=1544692169';
 let _ttState='qty';
 function _ttEsc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 function _ttNum(s){s=(s==null?'':String(s)).replace(/[^\d.\-]/g,'');const v=parseFloat(s);return isFinite(v)?v:0;}
@@ -3621,15 +3622,15 @@ async function sendTruyThuToTelegram(){
  if(!window._TT){alert('Chưa có dữ liệu, bấm Cập nhật trước.');return;}
  if(!confirm('Bắn 2 bảng Truy thu (Số lượng + Giá trị) lên Telegram?'))return;
  const T=window._TT.data.tot;
- const mk=(mode,title)=>{const d=document.createElement('div');d.id='ttCap_'+mode;d.style.cssText='position:fixed;left:-99999px;top:0;width:860px;background:#fff;padding:22px 24px;box-sizing:border-box;font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;color:#1e2530';d.innerHTML=`<div style="font-size:19px;font-weight:800;color:#1F3864">${title}</div><div style="font-size:12px;color:#6b7280;margin:4px 0 12px">Nguồn: ${_ttEsc(TT_SHEET)} · chỉ đơn tổng &gt; 1.000.000đ · ${new Date().toLocaleDateString('vi-VN')}</div>`+_ttTable(window._TT.data,mode);document.body.appendChild(d);return d;};
+ const mk=(mode,title)=>{const d=document.createElement('div');d.id='ttCap_'+mode;d.style.cssText='position:fixed;left:-99999px;top:0;width:860px;background:#fff;padding:22px 24px;box-sizing:border-box;font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;color:#1e2530';d.innerHTML=`<div style="font-size:19px;font-weight:800;color:#1F3864">${title}</div><div style="font-size:12px;color:#6b7280;margin:4px 0 12px">Nguồn: ${_ttEsc(TT_SHEET)} · chỉ đơn tổng &gt; 1.000.000đ · ${new Date().toLocaleDateString('vi-VN')}</div>`+_ttTable(window._TT.data,mode)+`<div style="margin-top:14px;font-size:13px;color:#1F3864;font-weight:700;word-break:break-all">🔗 Chi tiết tra cứu tại link: ${TT_SRC_URL}</div>`;document.body.appendChild(d);return d;};
  try{
   const e1=mk('qty','TRUY THU — SỐ LƯỢNG ĐƠN (Backlog LC Trả &amp; Mất/Thiếu/Tráo SP)');
   const img1=await _captureEl(e1.id,2,true);e1.remove();
-  const r1=await _tgSendPhoto(TG_AGING_CHAT,TT_TG_THREAD,img1,`<b>TRUY THU — SỐ LƯỢNG ĐƠN</b> (đơn &gt;1tr)\nTổng ${_ttVN(T.nTot)} đơn · Backlog ${_ttVN(T.n1)} · Mất/Thiếu/Tráo ${_ttVN(T.n2)}`);
+  const r1=await _tgSendPhoto(TG_AGING_CHAT,TT_TG_THREAD,img1,`<b>TRUY THU — SỐ LƯỢNG ĐƠN</b> (đơn &gt;1tr)\nTổng ${_ttVN(T.nTot)} đơn · Backlog ${_ttVN(T.n1)} · Mất/Thiếu/Tráo ${_ttVN(T.n2)}\n🔗 Chi tiết tra cứu tại link: ${TT_SRC_URL}`);
   if(!r1||!r1.ok)throw new Error('Ảnh Số lượng gửi lỗi: '+((r1&&r1.description)||'?'));
   const e2=mk('val','TRUY THU — GIÁ TRỊ (Cần truy thu · cột P)');
   const img2=await _captureEl(e2.id,2,true);e2.remove();
-  const r2=await _tgSendPhoto(TG_AGING_CHAT,TT_TG_THREAD,img2,`<b>TRUY THU — GIÁ TRỊ</b> (đơn &gt;1tr)\nTổng ${_ttVN(T.mTot)}đ · Backlog ${_ttVN(T.m1)}đ · Mất/Thiếu/Tráo ${_ttVN(T.m2)}đ`);
+  const r2=await _tgSendPhoto(TG_AGING_CHAT,TT_TG_THREAD,img2,`<b>TRUY THU — GIÁ TRỊ</b> (đơn &gt;1tr)\nTổng ${_ttVN(T.mTot)}đ · Backlog ${_ttVN(T.m1)}đ · Mất/Thiếu/Tráo ${_ttVN(T.m2)}đ\n🔗 Chi tiết tra cứu tại link: ${TT_SRC_URL}`);
   if(!r2||!r2.ok)throw new Error('Ảnh Giá trị gửi lỗi: '+((r2&&r2.description)||'?'));
   alert('Đã bắn 2 bảng Truy thu lên Telegram (topic Vấn đề chung) ✓');
  }catch(e){alert('Lỗi bắn Telegram: '+(e&&e.message||e));}
