@@ -3558,15 +3558,16 @@ function _ttCompute(raw,cc){
  const ams=Object.values(byAM).map(A=>({...A,bcList:Object.values(A.bcs).sort((a,b)=>b.mTot-a.mTot)})).sort((a,b)=>b.mTot-a.mTot);
  return {ams,tot,kept,dropped,nBC:ams.reduce((s,A)=>s+A.bcList.length,0)};
 }
-function _ttTable(data,mode){
+function _ttTable(data,mode,ams,showTot){
+ ams=ams||data.ams; showTot=showTot!==false;
  const val=mode==='val', f=val?_ttVN:(n=>_ttVN(n));
  const dash='<span style="color:#b9b9b9">–</span>';
  const cell=v=>`<td style="text-align:center;padding:6px 10px;font-size:13px;color:#1a2230;font-weight:600">${v?f(v):dash}</td>`;
  const maxTot=Math.max(1,...data.ams.flatMap(A=>A.bcList.map(b=>val?b.mTot:b.nTot)));
  const hm=v=>{const t=Math.min(1,(v||0)/maxTot);return `background:rgba(220,38,38,${(0.05+t*0.32).toFixed(2)})`;};
  const T=data.tot;
- let rows=`<tr style="background:#1F3864;color:#fff;font-weight:800"><td style="padding:9px 10px;color:#fff" colspan="2">TỔNG VÙNG XBG</td><td style="text-align:center;color:#fff">${f(val?T.m1:T.n1)}</td><td style="text-align:center;color:#fff">${f(val?T.m2:T.n2)}</td><td style="text-align:center;color:#fff">${f(val?T.mTot:T.nTot)}</td></tr>`;
- data.ams.forEach(A=>{
+ let rows=showTot?`<tr style="background:#1F3864;color:#fff;font-weight:800"><td style="padding:9px 10px;color:#fff" colspan="2">TỔNG VÙNG XBG</td><td style="text-align:center;color:#fff">${f(val?T.m1:T.n1)}</td><td style="text-align:center;color:#fff">${f(val?T.m2:T.n2)}</td><td style="text-align:center;color:#fff">${f(val?T.mTot:T.nTot)}</td></tr>`:'';
+ ams.forEach(A=>{
   rows+=`<tr style="background:#FFE3CF;font-weight:800;color:#3a2414"><td style="padding:7px 10px;color:#3a2414" colspan="2">▸ ${_ttEsc(A.am)} <span style="font-weight:700;color:#8a5a3a;font-size:11.5px">(${A.bcList.length} BC)</span></td><td style="text-align:center;color:#3a2414">${f(val?A.m1:A.n1)}</td><td style="text-align:center;color:#3a2414">${f(val?A.m2:A.n2)}</td><td style="text-align:center;color:#b3271b">${f(val?A.mTot:A.nTot)}</td></tr>`;
   A.bcList.forEach(b=>{const tv=val?b.mTot:b.nTot;rows+=`<tr style="color:#1a2230"><td style="padding:5px 6px"></td><td style="padding:5px 10px;font-size:13px;color:#1a2230">${_ttEsc(b.bc)}</td>${cell(val?b.m1:b.n1)}${cell(val?b.m2:b.n2)}<td style="text-align:center;padding:5px 10px;font-size:13px;font-weight:800;color:#7a1410;${hm(tv)}">${f(tv)}</td></tr>`;});
  });
@@ -3620,19 +3621,25 @@ async function buildTruyThuPage(){
 }
 async function sendTruyThuToTelegram(){
  if(!window._TT){alert('Chưa có dữ liệu, bấm Cập nhật trước.');return;}
- if(!confirm('Bắn 2 bảng Truy thu (Số lượng + Giá trị) lên Telegram?'))return;
- const T=window._TT.data.tot;
- const mk=(mode,title)=>{const d=document.createElement('div');d.id='ttCap_'+mode;d.style.cssText='position:fixed;left:-99999px;top:0;width:860px;background:#fff;padding:22px 24px;box-sizing:border-box;font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;color:#1e2530';d.innerHTML=`<div style="font-size:19px;font-weight:800;color:#1F3864">${title}</div><div style="font-size:12px;color:#6b7280;margin:4px 0 12px">Nguồn: ${_ttEsc(TT_SHEET)} · chỉ đơn tổng &gt; 1.000.000đ · ${new Date().toLocaleDateString('vi-VN')}</div>`+_ttTable(window._TT.data,mode)+`<div style="margin-top:14px;font-size:13px;color:#1F3864;font-weight:700;word-break:break-all">🔗 Chi tiết tra cứu tại link: ${TT_SRC_URL}</div>`;document.body.appendChild(d);return d;};
+ if(!confirm('Bắn 4 ảnh Truy thu (Số lượng ×2 + Giá trị ×2) lên Telegram topic "Vấn đề chung"?'))return;
+ const D=window._TT.data,T=D.tot;
+ // Tách AM thành 2 nửa (theo số dòng) để mỗi ảnh to & rõ hơn
+ const totR=D.ams.reduce((s,A)=>s+A.bcList.length+1,0);let acc=0,cut=D.ams.length;
+ for(let i=0;i<D.ams.length;i++){acc+=D.ams[i].bcList.length+1;if(acc>=totR/2){cut=i+1;break;}}
+ const halves=[D.ams.slice(0,cut),D.ams.slice(cut)];
+ const mk=(mode,title,ams,part)=>{const d=document.createElement('div');d.id='ttCap_'+mode+part;d.style.cssText='position:fixed;left:-99999px;top:0;width:900px;background:#fff;padding:22px 24px;box-sizing:border-box;font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;color:#1e2530';d.innerHTML=`<div style="font-size:19px;font-weight:800;color:#1F3864">${title} — Phần ${part}/2</div><div style="font-size:12px;color:#6b7280;margin:4px 0 12px">Nguồn: ${_ttEsc(TT_SHEET)} · chỉ đơn tổng &gt; 1.000.000đ · ${new Date().toLocaleDateString('vi-VN')}</div>`+_ttTable(D,mode,ams,part===1)+`<div style="margin-top:14px;font-size:13px;color:#1F3864;font-weight:700;word-break:break-all">🔗 Chi tiết tra cứu tại link: ${TT_SRC_URL}</div>`;document.body.appendChild(d);return d;};
+ const cap=(mode,part)=>{const h=mode==='qty'?`<b>TRUY THU — SỐ LƯỢNG ĐƠN</b> (đơn &gt;1tr) — Phần ${part}/2\nTổng ${_ttVN(T.nTot)} đơn · Backlog ${_ttVN(T.n1)} · Mất/Thiếu/Tráo ${_ttVN(T.n2)}`:`<b>TRUY THU — GIÁ TRỊ</b> (đơn &gt;1tr) — Phần ${part}/2\nTổng ${_ttVN(T.mTot)}đ · Backlog ${_ttVN(T.m1)}đ · Mất/Thiếu/Tráo ${_ttVN(T.m2)}đ`;return h+`\n🔗 Chi tiết tra cứu tại link: ${TT_SRC_URL}`;};
+ const jobs=[['qty','TRUY THU — SỐ LƯỢNG ĐƠN',1],['qty','TRUY THU — SỐ LƯỢNG ĐƠN',2],['val','TRUY THU — GIÁ TRỊ (cột P)',1],['val','TRUY THU — GIÁ TRỊ (cột P)',2]];
  try{
-  const e1=mk('qty','TRUY THU — SỐ LƯỢNG ĐƠN (Backlog LC Trả &amp; Mất/Thiếu/Tráo SP)');
-  const img1=await _captureEl(e1.id,2,true);e1.remove();
-  const r1=await _tgSendPhoto(TG_AGING_CHAT,TT_TG_THREAD,img1,`<b>TRUY THU — SỐ LƯỢNG ĐƠN</b> (đơn &gt;1tr)\nTổng ${_ttVN(T.nTot)} đơn · Backlog ${_ttVN(T.n1)} · Mất/Thiếu/Tráo ${_ttVN(T.n2)}\n🔗 Chi tiết tra cứu tại link: ${TT_SRC_URL}`);
-  if(!r1||!r1.ok)throw new Error('Ảnh Số lượng gửi lỗi: '+((r1&&r1.description)||'?'));
-  const e2=mk('val','TRUY THU — GIÁ TRỊ (Cần truy thu · cột P)');
-  const img2=await _captureEl(e2.id,2,true);e2.remove();
-  const r2=await _tgSendPhoto(TG_AGING_CHAT,TT_TG_THREAD,img2,`<b>TRUY THU — GIÁ TRỊ</b> (đơn &gt;1tr)\nTổng ${_ttVN(T.mTot)}đ · Backlog ${_ttVN(T.m1)}đ · Mất/Thiếu/Tráo ${_ttVN(T.m2)}đ\n🔗 Chi tiết tra cứu tại link: ${TT_SRC_URL}`);
-  if(!r2||!r2.ok)throw new Error('Ảnh Giá trị gửi lỗi: '+((r2&&r2.description)||'?'));
-  alert('Đã bắn 2 bảng Truy thu lên Telegram (topic Vấn đề chung) ✓');
+  let ok=0;
+  for(const [mode,title,part] of jobs){
+   const el=mk(mode,title,halves[part-1],part);
+   let img;try{img=await _captureEl(el.id,2,true);}finally{el.remove();}
+   const r=await _tgSendPhoto(TG_AGING_CHAT,TT_TG_THREAD,img,cap(mode,part));
+   if(!r||!r.ok)throw new Error(`${title} P${part} lỗi: `+((r&&r.description)||'?'));
+   ok++;
+  }
+  alert('Đã bắn '+ok+'/4 ảnh Truy thu lên Telegram (topic Vấn đề chung) ✓');
  }catch(e){alert('Lỗi bắn Telegram: '+(e&&e.message||e));}
 }
 
