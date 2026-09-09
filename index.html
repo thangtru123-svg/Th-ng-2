@@ -373,7 +373,8 @@ function _renderRoleBadge(){
             viewer:['👁️ Chỉ xem','rgba(148,163,184,.18)','#64748b']};
  const m=map[window._role()]||map.viewer;
  const email=sessionStorage.getItem('_ae')||'';
- bd.innerHTML=m[0]+(email?'<br><span style="font-weight:400;opacity:.8">'+email+'</span>':'');
+ const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); // escape XSS (Rule 1)
+ bd.innerHTML=m[0]+(email?'<br><span style="font-weight:400;opacity:.8">'+esc(email)+'</span>':'');
  bd.style.background=m[1]; bd.style.color=m[2];
 }
 
