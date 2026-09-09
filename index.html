@@ -3528,7 +3528,7 @@ const TT_SHEET='Quá hạn LC trả + Móc tráo';
 const TT_CC_SHEET='Cơ cấu AM';
 const TT_CAT1='Backlog Luân Chuyển Trả', TT_CAT2='Mất/Thiếu/Tráo sản phẩm';
 const TT_MIN=1000000;              // chỉ lấy đơn có TỔNG giá trị (gộp mã đơn) > 1.000.000đ
-const TT_TG_THREAD=1;             // topic theo link t.me/c/3802272887/1/20348
+const TT_TG_THREAD=null;          // topic "Vấn đề chung" = General (link /1/) → PHẢI bỏ message_thread_id (truyền 1 sẽ "thread not found")
 let _ttState='qty';
 function _ttEsc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 function _ttNum(s){s=(s==null?'':String(s)).replace(/[^\d.\-]/g,'');const v=parseFloat(s);return isFinite(v)?v:0;}
@@ -3625,11 +3625,13 @@ async function sendTruyThuToTelegram(){
  try{
   const e1=mk('qty','TRUY THU — SỐ LƯỢNG ĐƠN (Backlog LC Trả &amp; Mất/Thiếu/Tráo SP)');
   const img1=await _captureEl(e1.id,2,true);e1.remove();
-  await _tgSendPhoto(TG_AGING_CHAT,TT_TG_THREAD,img1,`<b>TRUY THU — SỐ LƯỢNG ĐƠN</b> (đơn &gt;1tr)\nTổng ${_ttVN(T.nTot)} đơn · Backlog ${_ttVN(T.n1)} · Mất/Thiếu/Tráo ${_ttVN(T.n2)}`);
+  const r1=await _tgSendPhoto(TG_AGING_CHAT,TT_TG_THREAD,img1,`<b>TRUY THU — SỐ LƯỢNG ĐƠN</b> (đơn &gt;1tr)\nTổng ${_ttVN(T.nTot)} đơn · Backlog ${_ttVN(T.n1)} · Mất/Thiếu/Tráo ${_ttVN(T.n2)}`);
+  if(!r1||!r1.ok)throw new Error('Ảnh Số lượng gửi lỗi: '+((r1&&r1.description)||'?'));
   const e2=mk('val','TRUY THU — GIÁ TRỊ (Cần truy thu · cột P)');
   const img2=await _captureEl(e2.id,2,true);e2.remove();
-  await _tgSendPhoto(TG_AGING_CHAT,TT_TG_THREAD,img2,`<b>TRUY THU — GIÁ TRỊ</b> (đơn &gt;1tr)\nTổng ${_ttVN(T.mTot)}đ · Backlog ${_ttVN(T.m1)}đ · Mất/Thiếu/Tráo ${_ttVN(T.m2)}đ`);
-  alert('Đã bắn 2 bảng Truy thu lên Telegram ✓');
+  const r2=await _tgSendPhoto(TG_AGING_CHAT,TT_TG_THREAD,img2,`<b>TRUY THU — GIÁ TRỊ</b> (đơn &gt;1tr)\nTổng ${_ttVN(T.mTot)}đ · Backlog ${_ttVN(T.m1)}đ · Mất/Thiếu/Tráo ${_ttVN(T.m2)}đ`);
+  if(!r2||!r2.ok)throw new Error('Ảnh Giá trị gửi lỗi: '+((r2&&r2.description)||'?'));
+  alert('Đã bắn 2 bảng Truy thu lên Telegram (topic Vấn đề chung) ✓');
  }catch(e){alert('Lỗi bắn Telegram: '+(e&&e.message||e));}
 }
 
