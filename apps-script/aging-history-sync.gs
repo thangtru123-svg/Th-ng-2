@@ -1,8 +1,8 @@
 /**
  * LƯU LỊCH SỬ AGING (bản TỔNG HỢP) — Vùng XBG
  * Dán vào: file "Vùng XBG - Báo cáo AM" → Tiện ích mở rộng → Apps Script → dán đè → Lưu.
- * Chạy 1 lần hàm  setup()  → cấp quyền + đặt lịch 18:00 mỗi ngày + dọn trùng + nạp lịch sử cũ từ Export.
- * Mỗi chiều 18:00 script tự đọc "Aging> 5 Ngày" và ghi ~90 dòng tổng hợp vào tab "Lịch sử Aging".
+ * Chạy 1 lần hàm  setup()  → cấp quyền + đặt lịch 08:00 mỗi sáng + dọn trùng + nạp lịch sử cũ từ Export.
+ * Mỗi sáng 08:00 script tự đọc "Aging> 5 Ngày" (nguồn làm mới ~07:01) và ghi ~90 dòng tổng hợp vào tab "Lịch sử Aging".
  *
  * ⚠️ CỘT J "Trạng thái" do CÔNG THỨC ARRAYFORMULA của đại nhân tự điền (tra tab "Bưu Cục bất ổn").
  *    → Script CHỈ ghi cột A→I, TUYỆT ĐỐI không đụng cột J (tránh phá công thức / lỗi spill).
@@ -17,7 +17,7 @@ function setup() {
   ScriptApp.getProjectTriggers().forEach(function (t) {
     if (t.getHandlerFunction() === 'syncAgingHistory') ScriptApp.deleteTrigger(t);
   });
-  ScriptApp.newTrigger('syncAgingHistory').timeBased().everyDays(1).atHour(18).nearMinute(0).create();
+  ScriptApp.newTrigger('syncAgingHistory').timeBased().everyDays(1).atHour(8).nearMinute(0).create();
   syncAgingHistory();
   backfillFromExport();
 }
