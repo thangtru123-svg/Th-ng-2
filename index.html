@@ -313,6 +313,70 @@ const TG_PICKUP_THREAD = 7; // topic "Pickup / Luân chuyển"
 const TG_TTS_THREAD   = 3; // topic "TTS - Vận hành"
 const TG_NSBG_CHAT   = -4931731378; // group "Anh em Bắc Giang" (group thường, không topic)
 
+/* ===== PHÂN QUYỀN (ROLE) =====
+   admin  : xem + bắn báo cáo + chỉnh sửa (lưu key AI, nút "Cập nhật dữ liệu")
+   sender : xem + bắn báo cáo
+   viewer : chỉ xem
+   ⚠️ Dashboard chạy client-side → đây là RÀO CẢN MỀM (ẩn/chặn nút ở giao diện),
+      KHÔNG phải ranh giới bảo mật cứng. Muốn cứng phải chuyển bắn Telegram qua proxy server. */
+const ROLE_ADMINS  = ['thangpd@ghn.vn']; // full quyền: sửa + bắn + xem
+const ROLE_SENDERS = ['hieutq@ghn.vn'];  // thêm quyền bắn báo cáo (không sửa)
+function _roleOf(email){
+ email=(email||'').toLowerCase().trim();
+ if(ROLE_ADMINS.includes(email))  return 'admin';
+ if(ROLE_SENDERS.includes(email)) return 'sender';
+ return 'viewer';
+}
+window._role    = ()=> sessionStorage.getItem('_role')||'viewer';
+window._canSend = ()=>{const r=window._role();return r==='admin'||r==='sender';};
+window._canEdit = ()=> window._role()==='admin';
+function _roleToast(msg){
+ let t=document.getElementById('_roleToast');
+ if(!t){t=document.createElement('div');t.id='_roleToast';
+  t.style.cssText='position:fixed;left:50%;bottom:28px;transform:translateX(-50%);background:#1f2937;color:#fff;padding:11px 18px;border-radius:10px;font-size:13px;font-weight:600;z-index:99999;box-shadow:0 6px 24px rgba(0,0,0,.3);opacity:0;transition:opacity .2s;pointer-events:none;max-width:90vw;text-align:center';
+  document.body.appendChild(t);}
+ t.textContent=msg; t.style.opacity='1';
+ clearTimeout(t._h); t._h=setTimeout(()=>{t.style.opacity='0';},2600);
+}
+// Ẩn nút theo quyền — nút "Bắn" (send) và "Cập nhật"/lưu cấu hình (edit). Tự chạy lại khi trang build lại.
+function applyRoleUI(){
+ const canSend=window._canSend(), canEdit=window._canEdit();
+ document.querySelectorAll('button').forEach(b=>{
+  const t=(b.textContent||'').trim();
+  const oc=b.getAttribute('onclick')||'';
+  let need=null;
+  if(/Bắn/.test(t)||/Telegram/i.test(oc)) need='send';
+  else if(/Cập nhật/.test(t))              need='edit';
+  else if(/saveGroqKey/.test(oc))          need='edit';
+  if(!need) return;
+  const ok = need==='send' ? canSend : canEdit;
+  b.style.display = ok ? '' : 'none';
+ });
+ const gk=document.getElementById('groqKeyInput'); if(gk) gk.disabled=!canEdit; // viewer/sender không sửa key AI
+ _renderRoleBadge();
+}
+let _roleRAF=0;
+function _scheduleRoleUI(){ if(_roleRAF) return; _roleRAF=requestAnimationFrame(()=>{_roleRAF=0;applyRoleUI();}); }
+function _startRoleObserver(){
+ try{ new MutationObserver(_scheduleRoleUI).observe(document.body,{childList:true,subtree:true}); }catch(e){}
+ _scheduleRoleUI();
+}
+// Badge quyền ở sidebar (tiện theo dõi đang đăng nhập quyền gì)
+function _renderRoleBadge(){
+ const lu=document.getElementById('lastUpdate'); if(!lu||!lu.parentNode) return;
+ let bd=document.getElementById('roleBadge');
+ if(!bd){bd=document.createElement('div');bd.id='roleBadge';
+  bd.style.cssText='margin:8px 0 0;font-size:11px;font-weight:700;padding:6px 9px;border-radius:8px;text-align:center;line-height:1.35';
+  lu.parentNode.insertBefore(bd,lu);}
+ const map={admin:['👑 Admin · sửa + bắn','rgba(34,197,94,.15)','#16a34a'],
+            sender:['📤 Được bắn báo cáo','rgba(33,150,243,.15)','#2196f3'],
+            viewer:['👁️ Chỉ xem','rgba(148,163,184,.18)','#64748b']};
+ const m=map[window._role()]||map.viewer;
+ const email=sessionStorage.getItem('_ae')||'';
+ bd.innerHTML=m[0]+(email?'<br><span style="font-weight:400;opacity:.8">'+email+'</span>':'');
+ bd.style.background=m[1]; bd.style.color=m[2];
+}
+
 /* ===== AUTH LOGIC ===== */
 function _decodeJWT(t){try{const b=t.split('.')[1].replace(/-/g,'+').replace(/_/g,'/');return JSON.parse(decodeURIComponent(atob(b).split('').map(c=>'%'+('00'+c.charCodeAt(0).toString(16)).slice(-2)).join('')));}catch{return{};}}
 
@@ -387,7 +451,9 @@ async function _startSession(){
     if(ck)ck.style.display='none';
     // Nới nội bộ: BỎ whitelist — ai đăng nhập Google là vào. Dữ liệu chỉ hiển thị nếu tài khoản có quyền các sheet nguồn @ghn (người ngoài đăng nhập được nhưng sẽ thấy trống/lỗi tải).
     sessionStorage.setItem('_ae',email); sessionStorage.setItem('_an',ui.name||email);
+    sessionStorage.setItem('_role',_roleOf(email)); // gán quyền theo email
     document.getElementById('authOverlay').style.display='none';
+    _startRoleObserver(); // ẩn nút theo quyền + tự áp lại khi trang build lại
     init();
   }catch(e){ if(ck)ck.style.display='none'; _showAuthError('Không thể xác thực: '+(e&&e.message||e)); }
 }
@@ -1556,6 +1622,7 @@ async function buildAgingPage(){
 
 /* ===== TELEGRAM — GỬI AGING ===== */
 async function _tgSend(chatId,threadId,text){
+ if(!window._canSend||!window._canSend()){_roleToast('⛔ Bạn không có quyền bắn báo cáo Telegram');throw new Error('NO_PERMISSION_SEND');}
  const r=await fetch(`https://api.telegram.org/bot${TG_TOKEN}/sendMessage`,{
   method:'POST',headers:{'Content-Type':'application/json'},
   body:JSON.stringify({chat_id:chatId,message_thread_id:threadId,text,parse_mode:'HTML',disable_web_page_preview:true}),
@@ -1564,6 +1631,7 @@ async function _tgSend(chatId,threadId,text){
  return r.json();
 }
 async function _tgSendPhoto(chatId,threadId,blob,caption){
+ if(!window._canSend||!window._canSend()){_roleToast('⛔ Bạn không có quyền bắn báo cáo Telegram');throw new Error('NO_PERMISSION_SEND');}
  const form=new FormData();
  form.append('chat_id',chatId);
  if(threadId!=null&&threadId!=='')form.append('message_thread_id',threadId);
@@ -1573,6 +1641,7 @@ async function _tgSendPhoto(chatId,threadId,blob,caption){
  return r.json();
 }
 async function _tgSendDoc(chatId,threadId,blob,caption){
+ if(!window._canSend||!window._canSend()){_roleToast('⛔ Bạn không có quyền bắn báo cáo Telegram');throw new Error('NO_PERMISSION_SEND');}
  // Dùng sendDocument khi ảnh quá rộng (PHOTO_INVALID_DIMENSIONS)
  const form=new FormData();
  form.append('chat_id',chatId);
@@ -2364,7 +2433,7 @@ function gatherDashboardData(){
  return lines.join('\n')||'(Dữ liệu chưa được tải)';
 }
 function md2html(text){return text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/^### (.+)$/gm,'<h3>$1</h3>').replace(/^## (.+)$/gm,'<h2>$1</h2>').replace(/^# (.+)$/gm,'<h1>$1</h1>').replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>').replace(/\*(.+?)\*/g,'<em>$1</em>').replace(/`(.+?)`/g,'<code>$1</code>').replace(/^---$/gm,'<hr>').replace(/^> (.+)$/gm,'<blockquote>$1</blockquote>').replace(/^[\-\*] (.+)$/gm,'<li>$1</li>').replace(/(<li>.*<\/li>\n?)+/g,'<ul>$&</ul>').replace(/^\d+\. (.+)$/gm,'<li>$1</li>').replace(/\n\n/g,'</p><p>').replace(/^([^<\n].+)$/gm,'<p>$1</p>').replace(/<p><\/p>/g,'').replace(/🟢/g,'<span class="ai-tag-hl">🟢 HL</span>').replace(/🔴/g,'<span class="ai-tag-ll">🔴 LL</span>');}
-function saveGroqKey(){const k=(document.getElementById('groqKeyInput').value||'').trim();localStorage.setItem('groqApiKey',k);document.getElementById('groqKeySaved').textContent=k?'✅ Đã lưu':'';}
+function saveGroqKey(){if(!window._canEdit||!window._canEdit()){_roleToast('⛔ Chỉ admin được lưu cấu hình');return;}const k=(document.getElementById('groqKeyInput').value||'').trim();localStorage.setItem('groqApiKey',k);document.getElementById('groqKeySaved').textContent=k?'✅ Đã lưu':'';}
 async function runAIAnalysis(){
  const key=localStorage.getItem('groqApiKey')||'';
  if(!key){document.getElementById('aiStatus').textContent='⚠️ Chưa nhập Groq API Key';document.getElementById('groqKeyInput').focus();return;}
