@@ -229,6 +229,7 @@ tr.tot td{background:#FFF0EB!important;font-weight:800!important;border-top:2px 
  <button class="nav-item" onclick="show('p34',this)" style="background:linear-gradient(135deg,rgba(22,101,52,0.16),rgba(34,197,94,0.08));border:1px solid rgba(22,101,52,0.32);font-weight:700"><span class="icon">🏢</span>Báo Cáo Bưu Cục</button>
  <button class="nav-item" onclick="show('p35',this)" style="background:linear-gradient(135deg,rgba(220,38,38,0.16),rgba(241,93,41,0.08));border:1px solid rgba(220,38,38,0.32);font-weight:700"><span class="icon">🚨</span>Quá Hạn / Truy Thu</button>
  <button class="nav-item" onclick="show('p38',this)" style="background:linear-gradient(135deg,rgba(220,38,38,0.16),rgba(241,93,41,0.08));border:1px solid rgba(220,38,38,0.32);font-weight:700"><span class="icon">🔁</span>Truy thu LC / Móc tráo</button>
+ <button class="nav-item" onclick="show('p39',this)" style="background:linear-gradient(135deg,rgba(37,99,235,0.14),rgba(59,130,246,0.08));border:1px solid rgba(37,99,235,0.3);font-weight:700"><span class="icon">🏙️</span>Báo cáo GTC khu vực</button>
  <button class="nav-item" onclick="show('p36',this)" style="background:linear-gradient(135deg,rgba(220,38,38,0.16),rgba(241,93,41,0.08));border:1px solid rgba(220,38,38,0.32);font-weight:700"><span class="icon">🛠️</span>Xử lý BC Bất Ổn (BG+HD)</button>
  <button class="nav-item" onclick="show('p37',this)" style="background:linear-gradient(135deg,rgba(220,38,38,0.16),rgba(241,93,41,0.08));border:1px solid rgba(220,38,38,0.32);font-weight:700"><span class="icon">📮</span>Đơn TTS · Shopee (BG)</button>
  <div class="nav-section">GTC</div>
@@ -296,6 +297,7 @@ tr.tot td{background:#FFF0EB!important;font-weight:800!important;border-top:2px 
 <div class="page" id="p31"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
 <div class="page" id="p32"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
 <div class="page" id="p38"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
+<div class="page" id="p39"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
 </main>
 
 <script>
@@ -3717,6 +3719,110 @@ async function sendTruyThuToTelegram(){
  }catch(e){alert('Lỗi bắn Telegram: '+(e&&e.message||e));}
 }
 
+/* ===== p39: BÁO CÁO GTC KHU VỰC 13 BƯU CỤC ===== */
+const GK_SID='1Ec4qUpehq5ruroCTmw20cRDzkQiGmj9GLpS5f18UFE8';
+const GK_NS_GID='1723871284', GK_DB_GID='1185230434';
+const GK_TG=1747498029; // DM @thangquada
+const GK_BCS=['(HPH) An Hải','(HDU) Kẻ Sặt','(HPH) Hồng An','(QNI) Cao Xanh','(HDU) Phú Thái','(HDU) Tân Hưng','(HDU) Tứ Kỳ','(HPH) Hải An 2','(BGI) Tân Yên','(HDU) Chu Văn An','(BGI) Yên Dũng','(HPH) Lưu Kiếm','(BGI) Lục Nam'];
+function _gkEsc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function _gkNum(s){const v=parseFloat((s==null?'':String(s)).replace(/,/g,''));return isFinite(v)?v:0;}
+function _gkIso(s){return((s||'').match(/\d{4}-\d{2}-\d{2}/)||[''])[0];}
+function _gkVN(n){return Math.round(n||0).toLocaleString('vi-VN');}
+function _gkIdeas(t){return(t||'').split(/\n+/).flatMap(x=>x.split(/(?<=\D)\.\s+/)).map(x=>x.replace(/\s+/g,' ').replace(/\.$/,'').trim()).filter(x=>x.length>2);}
+async function _gkFetch(q){const url=`https://docs.google.com/spreadsheets/d/${GK_SID}/gviz/tq?tqx=out:csv&${q}`;const r=await fetch(url);if(!r.ok)throw new Error('HTTP '+r.status);return parseCSV(await r.text());}
+async function _gkCompute(){
+ const [gtc,ns,db]=await Promise.all([
+  _gkFetch('sheet='+encodeURIComponent('GTC Total theo Bưu Cục')),
+  _gkFetch('gid='+GK_NS_GID),
+  _gkFetch('gid='+GK_DB_GID)
+ ]);
+ const G=gtc.slice(1),N=ns.slice(1);
+ const DATE=[...new Set(G.map(r=>_gkIso(r[2])).filter(Boolean))].sort().pop();
+ const dbMap={};db.slice(1).forEach(r=>{const bc=(r[0]||'').trim();if(bc)dbMap[bc]={tuyen:(r[2]||'').trim(),nvThieu:(r[3]||'').trim(),ng:(r[1]||'').trim()};});
+ const R={};GK_BCS.forEach(bc=>R[bc]={bc,vol:0,gtc:0,nvSet:new Set()});
+ G.forEach(r=>{const bc=(r[1]||'').trim();if(!R[bc]||_gkIso(r[2])!==DATE)return;R[bc].vol+=_gkNum(r[3]);R[bc].gtc+=_gkNum(r[6]);});
+ N.forEach(r=>{const bc=(r[0]||'').trim();if(!R[bc]||_gkIso(r[2])!==DATE)return;if(_gkNum(r[4])>0)R[bc].nvSet.add((r[1]||'').trim());});
+ const rows=GK_BCS.map(bc=>{const d=R[bc],nNV=d.nvSet.size,mb=dbMap[bc]||{};return {bc,vol:Math.round(d.vol),gtc:Math.round(d.gtc),pctGTC:d.vol?+(d.gtc/d.vol*100).toFixed(1):0,nNV,ns:nNV?Math.round(d.gtc/nNV):0,tuyen:mb.tuyen||'',nvThieu:mb.nvThieu||'',ng:mb.ng||''};});
+ const tot=rows.reduce((a,d)=>({vol:a.vol+d.vol,gtc:a.gtc+d.gtc,nNV:a.nNV+d.nNV}),{vol:0,gtc:0,nNV:0});
+ return {date:DATE,rows,tot};
+}
+function _gkHeat(p){return p>=35?'rgba(22,163,74,0.18)':p>=28?'rgba(217,119,6,0.16)':'rgba(220,38,38,0.16)';}
+function _gkTable(data){
+ const num=(v,c)=>`<td style="text-align:center;padding:6px 9px;font-size:13px;color:#1a2230;font-weight:600;${c||''}">${_gkVN(v)}</td>`;
+ const T=data.tot;
+ let rows=`<tr style="background:#1F3864;color:#fff;font-weight:800"><td style="padding:8px 9px;color:#fff" colspan="2">TỔNG 13 BC</td><td style="text-align:center;color:#fff">${_gkVN(T.vol)}</td><td style="text-align:center;color:#fff">${_gkVN(T.gtc)}</td><td style="text-align:center;color:#fff">${T.vol?(T.gtc/T.vol*100).toFixed(1):0}%</td><td style="text-align:center;color:#fff">${T.nNV}</td><td style="text-align:center;color:#fff">${T.nNV?Math.round(T.gtc/T.nNV):0}</td><td style="text-align:center;color:#fff">—</td><td style="text-align:center;color:#fff">—</td></tr>`;
+ data.rows.forEach((d,i)=>{rows+=`<tr style="color:#1a2230">
+  <td style="text-align:center;padding:5px 8px;font-size:12.5px;color:#6b7280">${i+1}</td>
+  <td style="padding:5px 10px;font-size:13px;font-weight:700">${_gkEsc(d.bc)}</td>
+  ${num(d.vol)}${num(d.gtc)}<td style="text-align:center;padding:6px 9px;font-size:13px;font-weight:800;color:#1a2230;${_gkHeat(d.pctGTC)?'background:'+_gkHeat(d.pctGTC):''}">${d.pctGTC}%</td>${num(d.nNV)}${num(d.ns)}
+  <td style="text-align:center;padding:5px 9px;font-size:13px;color:#1a2230;font-weight:600">${d.tuyen||'—'}</td>
+  <td style="text-align:center;padding:5px 9px;font-size:13px;font-weight:700;color:${(+d.nvThieu>0)?'#b91c1c':'#1a2230'}">${d.nvThieu||'—'}</td></tr>`;});
+ return `<div class="table-wrap"><table style="border-collapse:collapse;min-width:820px;background:#fff">
+  <thead><tr style="background:#1F3864;color:#fff">
+   <th style="padding:8px 8px;color:#fff">#</th><th style="padding:8px 10px;text-align:left;color:#fff">Bưu Cục</th>
+   <th style="padding:8px 9px;color:#fff">Volume<br>cần giao</th><th style="padding:8px 9px;color:#fff">Số đơn<br>GTC</th><th style="padding:8px 9px;color:#fff">%GTC<br>total</th>
+   <th style="padding:8px 9px;color:#fff">NV<br>đi làm</th><th style="padding:8px 9px;color:#fff">NS<br>/NV</th><th style="padding:8px 9px;color:#fff">Số<br>tuyến</th><th style="padding:8px 9px;color:#fff">NV<br>thiếu</th>
+  </tr></thead><tbody>${rows}</tbody></table></div>`;
+}
+function _gkCauses(data){
+ const cards=data.rows.map(d=>{const ideas=_gkIdeas(d.ng);const li=ideas.length?ideas.map(x=>`<li style="margin:2px 0">${_gkEsc(x)}</li>`).join(''):'<li style="color:#9ca3af">(chưa có)</li>';
+  return `<div style="border:1px solid var(--border);border-radius:12px;padding:11px 14px;background:#fff;box-shadow:var(--shadow-sm)">
+   <div style="font-weight:800;color:#1F3864;font-size:13.5px">${_gkEsc(d.bc)} <span style="font-weight:600;color:#6b7280;font-size:12px">· ${d.tuyen||'—'} tuyến · thiếu ${d.nvThieu||'—'} NV</span></div>
+   <ul style="margin:6px 0 0;padding-left:18px;font-size:12.5px;line-height:1.55;color:#374151">${li}</ul></div>`;}).join('');
+ return `<h3 style="margin:20px 0 10px;font-size:16px">🧩 Tổng quan nguyên nhân từng Bưu Cục</h3><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:12px">${cards}</div>`;
+}
+async function buildGKPage(){
+ const el=document.getElementById('p39');
+ el.innerHTML='<div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải Báo cáo GTC khu vực…</div></div>';
+ try{
+  const data=await _gkCompute();window._GK=data;const T=data.tot,dl=(data.date||'').split('-').reverse().join('/');
+  const kpi=(t,v,s,c)=>`<div style="background:#fff;border:1px solid var(--border);border-radius:14px;padding:14px 16px;min-width:150px;box-shadow:var(--shadow-sm)"><div style="font-size:12px;color:var(--text-sub);font-weight:600">${t}</div><div style="font-size:22px;font-weight:800;color:${c||'var(--text-main)'};margin-top:2px">${v}</div><div style="font-size:11.5px;color:var(--text-sub)">${s}</div></div>`;
+  el.innerHTML=`
+   <div class="page-header">
+    <div class="page-title">🏙️ Báo cáo GTC khu vực — 13 Bưu Cục</div>
+    <div class="page-meta">
+     <span style="background:var(--orange-light);color:var(--orange-dark);padding:3px 10px;border-radius:20px;font-size:12px;font-weight:700">📅 Ngày số liệu: ${dl}</span>
+     <button class="tg-inpage-btn" style="background:#16A34A;border-color:#16A34A" onclick="refreshGK(this)">🔄 Cập nhật dữ liệu</button>
+     <button class="tg-inpage-btn" onclick="sendGKToTelegram(this)">📤 Bắn Telegram (@thangquada)</button>
+    </div>
+   </div>
+   <div class="kpis" style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px">
+    ${kpi('Tổng Volume cần giao',_gkVN(T.vol)+' đơn','13 Bưu Cục','#C8461A')}
+    ${kpi('Tổng GTC',_gkVN(T.gtc)+' đơn',(T.vol?(T.gtc/T.vol*100).toFixed(1):0)+'% GTC total','#DC2626')}
+    ${kpi('NV đi làm',_gkVN(T.nNV)+' NV','NS TB '+(T.nNV?Math.round(T.gtc/T.nNV):0)+' đơn/NV','#1F3864')}
+   </div>
+   <div id="gkTable">${_gkTable(data)}</div>
+   ${_gkCauses(data)}
+   <div class="analysis-box" style="margin-top:16px;padding:12px 14px;font-size:12.5px;line-height:1.7">
+    <b>Nguồn & cách tính:</b><br>
+    • Volume / Số đơn GTC / %GTC total: sheet <b>GTC Total theo Bưu Cục</b> (ngày mới nhất ${dl}).<br>
+    • Số NV đi làm: sheet <b>Năng suất NV</b> — đếm NV có GTC&gt;0. NS/NV = GTC ÷ số NV.<br>
+    • Số tuyến / NV thiếu / Nguyên nhân: sheet <b>Định biên</b> (cột C / D / B).
+   </div>`;
+ }catch(e){el.innerHTML=(typeof errPage==='function'?errPage('Không tải được Báo cáo GTC khu vực: '+(e&&e.message||e)):'<div style="padding:20px;color:#b91c1c">Lỗi: '+(e&&e.message||e)+'</div>');}
+}
+async function refreshGK(btn){if(btn){btn.disabled=true;btn.dataset.t=btn.innerHTML;btn.innerHTML='⏳ Đang cập nhật…';}
+ Object.keys(window._apiCache||{}).forEach(k=>{if(k.indexOf(GK_SID+'|')===0)delete window._apiCache[k];});
+ try{await buildGKPage();}finally{}}
+function _gkReportParts(){const data=window._GK;const dl=(data.date||'').split('-').reverse().join('/');
+ const blk=(i,d)=>{const ideas=_gkIdeas(d.ng);const ngTxt=ideas.length?('\n'+ideas.map(x=>'   • '+_gkEsc(x)).join('\n')):' (chưa có)';
+  return `${i}. <b>${_gkEsc(d.bc)}</b>\n- Tổng volume Total cần giao: ${_gkVN(d.vol)} đơn\n- Số đơn GTC: ${_gkVN(d.gtc)} đơn\n- Tỉ lệ GTC total: ${d.pctGTC}%\n- Số NV đi làm: ${d.nNV} NV\n- NS TB/1 NV: ${d.ns} đơn\n- Số tuyến giao: ${_gkEsc(d.tuyen)||'—'} tuyến\n- Số NV thiếu: ${_gkEsc(d.nvThieu)||'—'} NV\n- Tổng quan nguyên nhân:${ngTxt}`;};
+ const T=data.tot;const tong=`<b>TỔNG 13 BC</b>\n- Volume cần giao: ${_gkVN(T.vol)} đơn\n- GTC: ${_gkVN(T.gtc)} đơn (${T.vol?(T.gtc/T.vol*100).toFixed(1):0}%)\n- Số NV đi làm: ${T.nNV} NV · NS TB: ${T.nNV?Math.round(T.gtc/T.nNV):0} đơn/NV`;
+ const head=`<b>BÁO CÁO GTC KHU VỰC — 13 BƯU CỤC</b>\nNgày số liệu: ${dl}`;
+ const blocks=data.rows.map((d,i)=>blk(i+1,d));const parts=[];let cur=head;
+ for(const b of blocks){if((cur+'\n\n'+b).length>3900){parts.push(cur);cur=b;}else cur+='\n\n'+b;}
+ if((cur+'\n\n'+tong).length>3900){parts.push(cur);cur=tong;}else cur+='\n\n'+tong;parts.push(cur);return parts;}
+async function sendGKToTelegram(btn){
+ if(!window._GK){alert('Chưa có dữ liệu, bấm Cập nhật trước.');return;}
+ if(!confirm('Bắn Báo cáo GTC khu vực 13 BC lên Telegram @thangquada?'))return;
+ if(btn){btn.disabled=true;btn.dataset.t=btn.innerHTML;btn.innerHTML='⏳ Đang gửi…';}
+ try{const parts=_gkReportParts();let ok=0;
+  for(let i=0;i<parts.length;i++){const r=await _tgSend(GK_TG,undefined,parts[i]);if(!r||!r.ok)throw new Error('Phần '+(i+1)+' lỗi: '+((r&&r.description)||'?'));ok++;await new Promise(z=>setTimeout(z,500));}
+  alert('Đã bắn '+ok+'/'+parts.length+' tin Báo cáo GTC khu vực lên @thangquada ✓');
+ }catch(e){alert('Lỗi bắn Telegram: '+(e&&e.message||e));}
+ finally{if(btn){btn.disabled=false;btn.innerHTML=btn.dataset.t||'📤 Bắn Telegram (@thangquada)';}}
+}
+
 /* ===== INIT ===== */
 async function init(){
  window._apiCache={}; // xoá cache Sheets API mỗi đợt cập nhật → lấy số liệu mới
@@ -3790,6 +3896,8 @@ async function init(){
  await buildAgingPage();
  // p38 — Truy thu LC trả + Móc tráo (không chặn init)
  buildTruyThuPage().catch(e=>console.warn('Truy thu LC:',e&&e.message||e));
+ // p39 — Báo cáo GTC khu vực 13 BC (không chặn init)
+ buildGKPage().catch(e=>console.warn('GTC khu vực:',e&&e.message||e));
  // p23 — Báo cáo vận hành khu vực Thắng (cần _D, _FD, _agingRows)
  buildThangPage();
  // p12 — AI
