@@ -859,12 +859,14 @@ function renderFDDay(){
  const lo=dFrom<=dTo?dFrom:dTo,hi=dFrom<=dTo?dTo:dFrom;
  const dates=allD.filter(d=>d>=lo&&d<=hi);
  document.getElementById('fdDayAMTable').innerHTML=buildFDDayTable([fd.totalAM,fd.smeAM,fd.ttsAM,fd.shopeeAM],['Total','SME','TTS','Shopee'],dates,'AM',window._GTC_MAP_AM);
- document.getElementById('fdDayBCTable').innerHTML=buildFDDayTable([fd.totalBC,fd.smeBC,fd.ttsBC,fd.shopeeBC],['Total','SME','TTS','Shopee'],dates,'Bưu Cục',window._GTC_MAP_BC);
+ const bcAM={};(window._D&&window._D.gtcTotalBC||[]).slice(1).forEach(r=>{const am=(r[0]||'').trim(),bc=(r[1]||'').trim();if(bc&&am)bcAM[bc]=am;});
+ document.getElementById('fdDayBCTable').innerHTML=buildFDDayTable([fd.totalBC,fd.smeBC,fd.ttsBC,fd.shopeeBC],['Total','SME','TTS','Shopee'],dates,'Bưu Cục',window._GTC_MAP_BC,bcAM);
  addBCSearch(document.getElementById('fdDayAMTable'));
  addBCSearch(document.getElementById('fdDayBCTable'));
 }
-function buildFDDayTable(sheetArr,labels,dates,nameLabel,gtcMap){
+function buildFDDayTable(sheetArr,labels,dates,nameLabel,gtcMap,amMap){
  if(!dates||!dates.length)return'<p style="padding:16px;color:var(--text-sub)">Chọn khoảng ngày hợp lệ</p>';
+ const _amOf=n=>amMap?(amMap[(n||'').trim()]||'—'):'';
  function getDataD(rows,dISO){
   if(!rows||rows.length<2)return{};
   const res={};
@@ -901,7 +903,7 @@ function buildFDDayTable(sheetArr,labels,dates,nameLabel,gtcMap){
  if(!names.length)return`<p style="padding:16px;color:var(--text-sub)">Không có dữ liệu</p>`;
  const hasGTC=!!gtcMap;
  let h=`<div class="table-wrap" style="overflow-x:auto;max-height:none"><table><thead style="position:sticky;top:0;z-index:4">`;
- h+=`<tr><th rowspan="2" style="${cs}position:sticky;left:0;z-index:5;background:#FEEDE4;width:32px;text-align:center">STT</th><th rowspan="2" style="${cs}position:sticky;left:32px;z-index:5;background:#FEEDE4;min-width:160px;max-width:200px">${nameLabel}</th>`;
+ h+=`<tr><th rowspan="2" style="${cs}position:sticky;left:0;z-index:5;background:#FEEDE4;width:32px;text-align:center">STT</th><th rowspan="2" style="${cs}position:sticky;left:32px;z-index:5;background:#FEEDE4;min-width:160px;max-width:200px">${nameLabel}</th>${amMap?`<th rowspan="2" style="${cs}background:#FEEDE4;min-width:120px;max-width:150px;text-align:left">AM</th>`:''}`;
  dates.forEach((d,di)=>{const bg=DC[di%DC.length];const span=hasGTC?labels.length+1:labels.length;const bad=isBadDay(di);h+=`<th colspan="${span}" style="${cs}text-align:center;border-left:3px solid #D1D5DB;background:${bad?'#FEF3C7':bg}"><strong>${shortDDow(d)}</strong>${bad?` <span title="Dữ liệu chưa đầy đủ" style="color:#D97706;font-size:10px">⚠️ chưa đủ</span>`:''}</th>`;});
  h+='</tr><tr>';
  dates.forEach((d,di)=>{
@@ -914,7 +916,7 @@ function buildFDDayTable(sheetArr,labels,dates,nameLabel,gtcMap){
  h+='</tr></thead><tbody>';
  names.forEach((name,i)=>{
   const isG=isGrand(name);
-  h+=`<tr${isG?' class="tot"':''}><td style="${cs}text-align:center;color:var(--text-sub);font-size:11px;position:sticky;left:0;background:${isG?'#F8F9FA':'#fff'};z-index:2">${isG?'':i+1}</td><td style="${cs}font-weight:${isG?800:600};position:sticky;left:32px;background:${isG?'#F8F9FA':'#fff'};z-index:2;min-width:160px;max-width:200px;word-break:break-word">${name.split(',').map(s=>s.trim()).join('<br>')}</td>`;
+  h+=`<tr${isG?' class="tot"':''}><td style="${cs}text-align:center;color:var(--text-sub);font-size:11px;position:sticky;left:0;background:${isG?'#F8F9FA':'#fff'};z-index:2">${isG?'':i+1}</td><td style="${cs}font-weight:${isG?800:600};position:sticky;left:32px;background:${isG?'#F8F9FA':'#fff'};z-index:2;min-width:160px;max-width:200px;word-break:break-word">${name.split(',').map(s=>s.trim()).join('<br>')}</td>${amMap?`<td style="${cs}font-size:12px;color:var(--text-sub);word-break:break-word">${_amOf(name)}</td>`:''}`;
   dates.forEach((d,di)=>{
    const bg=DC[di%DC.length];
    labels.forEach((_,si)=>{
@@ -929,7 +931,7 @@ function buildFDDayTable(sheetArr,labels,dates,nameLabel,gtcMap){
   h+='</tr>';
  });
  // Grand Total row
- h+=`<tr class="tot"><td style="${cs}position:sticky;left:0;background:#F8F9FA;z-index:2"></td><td style="${cs}font-weight:800;position:sticky;left:32px;background:#F8F9FA;z-index:2">Grand Total</td>`;
+ h+=`<tr class="tot"><td style="${cs}position:sticky;left:0;background:#F8F9FA;z-index:2"></td><td style="${cs}font-weight:800;position:sticky;left:32px;background:#F8F9FA;z-index:2">Grand Total</td>${amMap?`<td style="${cs}background:#F8F9FA"></td>`:''}`;
  dates.forEach((d,di)=>{
   const bg=DC[di%DC.length];
   labels.forEach((_,si)=>{
