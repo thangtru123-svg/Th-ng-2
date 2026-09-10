@@ -3730,38 +3730,43 @@ function _gkIso(s){return((s||'').match(/\d{4}-\d{2}-\d{2}/)||[''])[0];}
 function _gkVN(n){return Math.round(n||0).toLocaleString('vi-VN');}
 function _gkIdeas(t){return(t||'').split(/\n+/).flatMap(x=>x.split(/(?<=\D)\.\s+/)).map(x=>x.replace(/\s+/g,' ').replace(/\.$/,'').trim()).filter(x=>x.length>2);}
 async function _gkFetch(q){const url=`https://docs.google.com/spreadsheets/d/${GK_SID}/gviz/tq?tqx=out:csv&${q}`;const r=await fetch(url);if(!r.ok)throw new Error('HTTP '+r.status);return parseCSV(await r.text());}
+async function _gkFetchAg(){const url=`https://docs.google.com/spreadsheets/d/${AGING_SHEET_ID}/gviz/tq?tqx=out:csv&sheet=`+encodeURIComponent('Aging> 5 Ngày');const r=await fetch(url);if(!r.ok)throw new Error('Aging HTTP '+r.status);return parseCSV(await r.text());}
 async function _gkCompute(){
- const [gtc,ns,db]=await Promise.all([
+ const [gtc,ns,db,ag]=await Promise.all([
   _gkFetch('sheet='+encodeURIComponent('GTC Total theo Bưu Cục')),
   _gkFetch('gid='+GK_NS_GID),
-  _gkFetch('gid='+GK_DB_GID)
+  _gkFetch('gid='+GK_DB_GID),
+  _gkFetchAg().catch(()=>[[]])
  ]);
  const G=gtc.slice(1),N=ns.slice(1);
  const DATE=[...new Set(G.map(r=>_gkIso(r[2])).filter(Boolean))].sort().pop();
  const dbMap={};db.slice(1).forEach(r=>{const bc=(r[0]||'').trim();if(bc)dbMap[bc]={tuyen:(r[2]||'').trim(),nvThieu:(r[3]||'').trim(),ng:(r[1]||'').trim()};});
+ const agMap={};GK_BCS.forEach(bc=>agMap[bc]=0);ag.slice(1).forEach(r=>{const bc=(r[3]||'').trim();if(agMap[bc]!=null)agMap[bc]++;});
  const R={};GK_BCS.forEach(bc=>R[bc]={bc,vol:0,gtc:0,nvSet:new Set()});
  G.forEach(r=>{const bc=(r[1]||'').trim();if(!R[bc]||_gkIso(r[2])!==DATE)return;R[bc].vol+=_gkNum(r[3]);R[bc].gtc+=_gkNum(r[6]);});
  N.forEach(r=>{const bc=(r[0]||'').trim();if(!R[bc]||_gkIso(r[2])!==DATE)return;if(_gkNum(r[4])>0)R[bc].nvSet.add((r[1]||'').trim());});
- const rows=GK_BCS.map(bc=>{const d=R[bc],nNV=d.nvSet.size,mb=dbMap[bc]||{};return {bc,vol:Math.round(d.vol),gtc:Math.round(d.gtc),pctGTC:d.vol?+(d.gtc/d.vol*100).toFixed(1):0,nNV,ns:nNV?Math.round(d.gtc/nNV):0,tuyen:mb.tuyen||'',nvThieu:mb.nvThieu||'',ng:mb.ng||''};});
- const tot=rows.reduce((a,d)=>({vol:a.vol+d.vol,gtc:a.gtc+d.gtc,nNV:a.nNV+d.nNV}),{vol:0,gtc:0,nNV:0});
+ const rows=GK_BCS.map(bc=>{const d=R[bc],nNV=d.nvSet.size,mb=dbMap[bc]||{};return {bc,vol:Math.round(d.vol),gtc:Math.round(d.gtc),pctGTC:d.vol?+(d.gtc/d.vol*100).toFixed(1):0,nNV,ns:nNV?Math.round(d.gtc/nNV):0,aging:agMap[bc]||0,tuyen:mb.tuyen||'',nvThieu:mb.nvThieu||'',ng:mb.ng||''};});
+ const tot=rows.reduce((a,d)=>({vol:a.vol+d.vol,gtc:a.gtc+d.gtc,nNV:a.nNV+d.nNV,aging:a.aging+d.aging}),{vol:0,gtc:0,nNV:0,aging:0});
  return {date:DATE,rows,tot};
 }
 function _gkHeat(p){return p>=35?'rgba(22,163,74,0.18)':p>=28?'rgba(217,119,6,0.16)':'rgba(220,38,38,0.16)';}
 function _gkTable(data){
  const num=(v,c)=>`<td style="text-align:center;padding:6px 9px;font-size:13px;color:#1a2230;font-weight:600;${c||''}">${_gkVN(v)}</td>`;
- const T=data.tot;
- let rows=`<tr style="background:#1F3864;color:#fff;font-weight:800"><td style="padding:8px 9px;color:#fff" colspan="2">TỔNG 13 BC</td><td style="text-align:center;color:#fff">${_gkVN(T.vol)}</td><td style="text-align:center;color:#fff">${_gkVN(T.gtc)}</td><td style="text-align:center;color:#fff">${T.vol?(T.gtc/T.vol*100).toFixed(1):0}%</td><td style="text-align:center;color:#fff">${T.nNV}</td><td style="text-align:center;color:#fff">${T.nNV?Math.round(T.gtc/T.nNV):0}</td><td style="text-align:center;color:#fff">—</td><td style="text-align:center;color:#fff">—</td></tr>`;
+ const T=data.tot;const maxAg=Math.max(1,...data.rows.map(d=>d.aging||0));
+ const agHeat=v=>`background:rgba(220,38,38,${(0.05+Math.min(1,(v||0)/maxAg)*0.4).toFixed(2)})`;
+ let rows=`<tr style="background:#1F3864;color:#fff;font-weight:800"><td style="padding:8px 9px;color:#fff" colspan="2">TỔNG 13 BC</td><td style="text-align:center;color:#fff">${_gkVN(T.vol)}</td><td style="text-align:center;color:#fff">${_gkVN(T.gtc)}</td><td style="text-align:center;color:#fff">${T.vol?(T.gtc/T.vol*100).toFixed(1):0}%</td><td style="text-align:center;color:#fff">${T.nNV}</td><td style="text-align:center;color:#fff">${T.nNV?Math.round(T.gtc/T.nNV):0}</td><td style="text-align:center;color:#fff">${_gkVN(T.aging)}</td><td style="text-align:center;color:#fff">—</td><td style="text-align:center;color:#fff">—</td></tr>`;
  data.rows.forEach((d,i)=>{rows+=`<tr style="color:#1a2230">
   <td style="text-align:center;padding:5px 8px;font-size:12.5px;color:#6b7280">${i+1}</td>
   <td style="padding:5px 10px;font-size:13px;font-weight:700">${_gkEsc(d.bc)}</td>
   ${num(d.vol)}${num(d.gtc)}<td style="text-align:center;padding:6px 9px;font-size:13px;font-weight:800;color:#1a2230;${_gkHeat(d.pctGTC)?'background:'+_gkHeat(d.pctGTC):''}">${d.pctGTC}%</td>${num(d.nNV)}${num(d.ns)}
+  <td style="text-align:center;padding:6px 9px;font-size:13px;font-weight:800;color:#7a1410;${agHeat(d.aging)}">${_gkVN(d.aging)}</td>
   <td style="text-align:center;padding:5px 9px;font-size:13px;color:#1a2230;font-weight:600">${d.tuyen||'—'}</td>
   <td style="text-align:center;padding:5px 9px;font-size:13px;font-weight:700;color:${(+d.nvThieu>0)?'#b91c1c':'#1a2230'}">${d.nvThieu||'—'}</td></tr>`;});
- return `<div class="table-wrap"><table style="border-collapse:collapse;min-width:820px;background:#fff">
+ return `<div class="table-wrap"><table style="border-collapse:collapse;min-width:880px;background:#fff">
   <thead><tr style="background:#1F3864;color:#fff">
    <th style="padding:8px 8px;color:#fff">#</th><th style="padding:8px 10px;text-align:left;color:#fff">Bưu Cục</th>
    <th style="padding:8px 9px;color:#fff">Volume<br>cần giao</th><th style="padding:8px 9px;color:#fff">Số đơn<br>GTC</th><th style="padding:8px 9px;color:#fff">%GTC<br>total</th>
-   <th style="padding:8px 9px;color:#fff">NV<br>đi làm</th><th style="padding:8px 9px;color:#fff">NS<br>/NV</th><th style="padding:8px 9px;color:#fff">Số<br>tuyến</th><th style="padding:8px 9px;color:#fff">NV<br>thiếu</th>
+   <th style="padding:8px 9px;color:#fff">NV<br>đi làm</th><th style="padding:8px 9px;color:#fff">NS<br>/NV</th><th style="padding:8px 9px;color:#fff">Aging<br>&gt;5N</th><th style="padding:8px 9px;color:#fff">Số<br>tuyến</th><th style="padding:8px 9px;color:#fff">NV<br>thiếu</th>
   </tr></thead><tbody>${rows}</tbody></table></div>`;
 }
 function _gkCauses(data){
@@ -3790,6 +3795,7 @@ async function buildGKPage(){
     ${kpi('Tổng Volume cần giao',_gkVN(T.vol)+' đơn','13 Bưu Cục','#C8461A')}
     ${kpi('Tổng GTC',_gkVN(T.gtc)+' đơn',(T.vol?(T.gtc/T.vol*100).toFixed(1):0)+'% GTC total','#DC2626')}
     ${kpi('NV đi làm',_gkVN(T.nNV)+' NV','NS TB '+(T.nNV?Math.round(T.gtc/T.nNV):0)+' đơn/NV','#1F3864')}
+    ${kpi('Đơn Aging >5 ngày',_gkVN(T.aging)+' đơn','13 BC · hiện tại','#B45309')}
    </div>
    <div id="gkTable">${_gkTable(data)}</div>
    ${_gkCauses(data)}
@@ -3797,7 +3803,8 @@ async function buildGKPage(){
     <b>Nguồn & cách tính:</b><br>
     • Volume / Số đơn GTC / %GTC total: sheet <b>GTC Total theo Bưu Cục</b> (ngày mới nhất ${dl}).<br>
     • Số NV đi làm: sheet <b>Năng suất NV</b> — đếm NV có GTC&gt;0. NS/NV = GTC ÷ số NV.<br>
-    • Số tuyến / NV thiếu / Nguyên nhân: sheet <b>Định biên</b> (cột C / D / B).
+    • Số tuyến / NV thiếu / Nguyên nhân: sheet <b>Định biên</b> (cột C / D / B).<br>
+    • Đơn Aging &gt;5 ngày: tab <b>Aging&gt; 5 Ngày</b> (đếm đơn theo BC, hiện tại).
    </div>`;
  }catch(e){el.innerHTML=(typeof errPage==='function'?errPage('Không tải được Báo cáo GTC khu vực: '+(e&&e.message||e)):'<div style="padding:20px;color:#b91c1c">Lỗi: '+(e&&e.message||e)+'</div>');}
 }
@@ -3806,8 +3813,8 @@ async function refreshGK(btn){if(btn){btn.disabled=true;btn.dataset.t=btn.innerH
  try{await buildGKPage();}finally{}}
 function _gkReportParts(){const data=window._GK;const dl=(data.date||'').split('-').reverse().join('/');
  const blk=(i,d)=>{const ideas=_gkIdeas(d.ng);const ngTxt=ideas.length?('\n'+ideas.map(x=>'   • '+_gkEsc(x)).join('\n')):' (chưa có)';
-  return `${i}. <b>${_gkEsc(d.bc)}</b>\n- Tổng volume Total cần giao: ${_gkVN(d.vol)} đơn\n- Số đơn GTC: ${_gkVN(d.gtc)} đơn\n- Tỉ lệ GTC total: ${d.pctGTC}%\n- Số NV đi làm: ${d.nNV} NV\n- NS TB/1 NV: ${d.ns} đơn\n- Số tuyến giao: ${_gkEsc(d.tuyen)||'—'} tuyến\n- Số NV thiếu: ${_gkEsc(d.nvThieu)||'—'} NV\n- Tổng quan nguyên nhân:${ngTxt}`;};
- const T=data.tot;const tong=`<b>TỔNG 13 BC</b>\n- Volume cần giao: ${_gkVN(T.vol)} đơn\n- GTC: ${_gkVN(T.gtc)} đơn (${T.vol?(T.gtc/T.vol*100).toFixed(1):0}%)\n- Số NV đi làm: ${T.nNV} NV · NS TB: ${T.nNV?Math.round(T.gtc/T.nNV):0} đơn/NV`;
+  return `${i}. <b>${_gkEsc(d.bc)}</b>\n- Tổng volume Total cần giao: ${_gkVN(d.vol)} đơn\n- Số đơn GTC: ${_gkVN(d.gtc)} đơn\n- Tỉ lệ GTC total: ${d.pctGTC}%\n- Số NV đi làm: ${d.nNV} NV\n- NS TB/1 NV: ${d.ns} đơn\n- Đơn Aging >5 ngày: ${_gkVN(d.aging)} đơn\n- Số tuyến giao: ${_gkEsc(d.tuyen)||'—'} tuyến\n- Số NV thiếu: ${_gkEsc(d.nvThieu)||'—'} NV\n- Tổng quan nguyên nhân:${ngTxt}`;};
+ const T=data.tot;const tong=`<b>TỔNG 13 BC</b>\n- Volume cần giao: ${_gkVN(T.vol)} đơn\n- GTC: ${_gkVN(T.gtc)} đơn (${T.vol?(T.gtc/T.vol*100).toFixed(1):0}%)\n- Số NV đi làm: ${T.nNV} NV · NS TB: ${T.nNV?Math.round(T.gtc/T.nNV):0} đơn/NV\n- Đơn Aging >5 ngày: ${_gkVN(T.aging)} đơn`;
  const head=`<b>BÁO CÁO GTC KHU VỰC — 13 BƯU CỤC</b>\nNgày số liệu: ${dl}`;
  const blocks=data.rows.map((d,i)=>blk(i+1,d));const parts=[];let cur=head;
  for(const b of blocks){if((cur+'\n\n'+b).length>3900){parts.push(cur);cur=b;}else cur+='\n\n'+b;}
