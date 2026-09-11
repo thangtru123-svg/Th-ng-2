@@ -6006,8 +6006,9 @@ async function _vyFetchAll(){
   (typeof _getVolCSV==='function'?_getVolCSV().catch(()=>''):Promise.resolve(''))
  ]);
  let agRows=[];
- try{const resp=await fetch(`https://docs.google.com/spreadsheets/d/${AGING_SHEET_ID}/export?format=csv&gid=${AGING_GID}`);
-  agRows=(typeof parseCsvRaw==='function'?parseCsvRaw(await resp.text()):_vwParseCSV(await resp.text())).slice(1);}catch(e){}
+ // Aging đọc tab "Lịch sử Aging" (Export đã xoá) — cột: ngay(0) bc(1) am(2) tinh(3) total(4)
+ try{const resp=await fetch(`https://docs.google.com/spreadsheets/d/${AGING_SHEET_ID}/gviz/tq?tqx=out:csv&sheet=`+encodeURIComponent('Lịch sử Aging'));
+  agRows=parseCSV(await resp.text()).slice(1);}catch(e){}
  return {nsT,gtcT,odrT,oprT,fdT,volCSV,agRows};
 }
 function _vyCompute(bc,S){
@@ -6028,8 +6029,10 @@ function _vyCompute(bc,S){
  try{const rows=_vwParseCSV(S.volCSV).slice(1);const CK=['2. 5-10Kg','3. 10-15Kg','4. >=15Kg'];
   const vy=rows.filter(r=>(r[1]||'').includes(bc)&&CK.includes((r[3]||'').trim()));
   const d=_vyLatest(vy,4,1,bc);A.volCK=vy.filter(r=>_vyDate(r[4])===d).reduce((s,r)=>s+_vyNum(r[5]),0);}catch(e){}
- try{const sn=_vyShort(bc);const vy=(S.agRows||[]).filter(r=>(r[2]||'').includes(sn));const d=_vyLatest(vy,11,2,sn);
-  A.aging5=vy.filter(r=>_vyDate(r[11])===d).length;}catch(e){}
+ try{const sn=_vyShort(bc);const vy=(S.agRows||[]).filter(r=>{const b=(r[1]||'').trim();return b===bc||b.includes(sn);});
+  const dates=[...new Set(vy.map(r=>_vyDate(r[0])).filter(Boolean))].sort();
+  const useD=(A.date&&dates.includes(A.date))?A.date:dates[dates.length-1];
+  A.aging5=vy.filter(r=>_vyDate(r[0])===useD).reduce((s,r)=>s+_vyNum(r[4]),0);}catch(e){}
  return A;
 }
 async function buildVietYenPage(){
