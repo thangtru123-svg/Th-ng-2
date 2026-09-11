@@ -3604,7 +3604,8 @@ async function sendLowlightToTelegram(btn){
 
 
 /* ===== p38: TỔNG QUAN TRUY THU VÙNG XBG ===== */
-const TT_SHEET='Quá hạn LC trả + Móc tráo';
+const TT_SHEET='Truy thu XBG';   // tên hiển thị (đọc theo TT_GID nên đổi tên tab không lỗi)
+const TT_GID='1544692169';
 const TT_SID='1jCWPRvfGA7d2uHL6_xT8ZxU3tgpOdlBK1-c4QT961ew';
 const TT_CC_SHEET='Cơ cấu AM';
 const TT_TG_CHAT=TG_AGING_CHAT;   // nhóm aging, topic "Vấn đề chung" (thread null)
@@ -3613,7 +3614,7 @@ let _ttTab='am';
 function _ttEsc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 function _ttInt(s){const v=parseInt((s==null?'':String(s)).replace(/[^\d-]/g,''),10);return isFinite(v)?v:0;}
 function _ttVN(n){return Math.round(n||0).toLocaleString('vi-VN');}
-async function _ttFetch(name){const url=`https://docs.google.com/spreadsheets/d/${TT_SID}/gviz/tq?tqx=out:csv&sheet=`+encodeURIComponent(name);const r=await fetch(url);if(!r.ok)throw new Error('HTTP '+r.status);return parseCSV(await r.text());}
+async function _ttFetch(q){const p=/^gid=/.test(q)?q:('sheet='+encodeURIComponent(q));const url=`https://docs.google.com/spreadsheets/d/${TT_SID}/gviz/tq?tqx=out:csv&`+p;const r=await fetch(url);if(!r.ok)throw new Error('HTTP '+r.status);return parseCSV(await r.text());}
 // Cột: C(2)=Nhóm lý do · F(5)=Kho(BC) · G(6)=Tỉnh · M(12)=Cần truy thu · N(13)=Đã truy thu · P(15)=Còn phải thu
 function _ttCompute(raw,cc){
  const bcAM={};cc.slice(1).forEach(r=>{const bc=(r[1]||'').trim(),am=(r[3]||'').trim();if(bc&&am){(bcAM[bc]=bcAM[bc]||[]);if(!bcAM[bc].includes(am))bcAM[bc].push(am);}});
@@ -3651,7 +3652,7 @@ async function buildTruyThuPage(){
  const el=document.getElementById('p38');
  el.innerHTML='<div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải Tổng quan truy thu…</div></div>';
  try{
-  const [raw,cc]=await Promise.all([_ttFetch(TT_SHEET),_ttFetch(TT_CC_SHEET)]);
+  const [raw,cc]=await Promise.all([_ttFetch('gid='+TT_GID),_ttFetch(TT_CC_SHEET)]);
   const data=_ttCompute(raw,cc);window._TT={data};const T=data.tot;
   const kpi=(t,v,s,col)=>`<div style="background:#fff;border:1px solid var(--border);border-radius:14px;padding:14px 16px;min-width:160px;box-shadow:var(--shadow-sm)"><div style="font-size:12px;color:var(--text-sub);font-weight:600">${t}</div><div style="font-size:21px;font-weight:800;color:${col||'var(--text-main)'};margin-top:2px">${v}</div><div style="font-size:11.5px;color:var(--text-sub)">${s}</div></div>`;
   const pctThu=T.can?((T.da/T.can)*100).toFixed(1):0;
