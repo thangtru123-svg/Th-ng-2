@@ -3985,7 +3985,7 @@ async function buildVolWarnPage(){
  try{
   const [volTxt,agTxt]=await Promise.all([
    _getVolCSV(),
-   fetch(`https://docs.google.com/spreadsheets/d/${AGING_SHEET_ID}/export?format=csv&gid=${AGING_GID}`).then(r=>r.text())
+   fetch(`https://docs.google.com/spreadsheets/d/${AGING_SHEET_ID}/gviz/tq?tqx=out:csv&sheet=`+encodeURIComponent('Lịch sử Aging')).then(r=>r.text())
   ]);
   const rows=_vwParseCSV(volTxt);
   // gộp theo BC|loại|ngày: vol + Σ(vol×gtc) — bỏ qua Nhóm hàng
@@ -3999,9 +3999,10 @@ async function buildVolWarnPage(){
   const fmtd=x=>x.getFullYear()+'-'+String(x.getMonth()+1).padStart(2,'0')+'-'+String(x.getDate()).padStart(2,'0');
   const w1=[];for(let k=0;k<7;k++){const x=new Date(monPrev);x.setDate(monPrev.getDate()+k);w1.push(fmtd(x));}
   const last7=allDates.slice(-8,-1).reverse(); // 7 ngày liền TRƯỚC ngày gần nhất, xếp giảm dần (mới→cũ), KHÔNG gồm ngày gần nhất
-  // bất ổn từ aging (col M index12)
-  const ag=_vwParseCSV(agTxt);const batOn=new Set();
-  for(let i=1;i<ag.length;i++){if(ag[i][12]&&ag[i][12].includes('bất ổn'))batOn.add((ag[i][2]||'').trim());}
+  // bất ổn từ "Lịch sử Aging": bc(1) · Trạng thái(9) · ngày(0) — lấy ngày mới nhất
+  const agAll=_vwParseCSV(agTxt).slice(1);const _agd=s=>((s||'').match(/\d{4}-\d{2}-\d{2}/)||[''])[0];
+  const agLd=[...new Set(agAll.map(r=>_agd(r[0])).filter(Boolean))].sort().pop();
+  const batOn=new Set();agAll.forEach(r=>{if(_agd(r[0])===agLd&&(r[9]||'').includes('bất ổn'))batOn.add((r[1]||'').trim());});
   // per BC
   const bcs=new Set();Object.keys(agg).forEach(k=>bcs.add(k.split('|')[0]));
   const getV=(bc,l,d)=>agg[bc+'|'+l+'|'+d]?.vol||0;
@@ -5747,21 +5748,21 @@ async function buildBatOnPage(){
  const el=document.getElementById('p31');if(!el)return;
  try{
   const [agTxt,nsTxt,volTxt]=await Promise.all([
-   fetch(`https://docs.google.com/spreadsheets/d/${AGING_SHEET_ID}/export?format=csv&gid=${AGING_GID}&_=${Date.now()}`).then(r=>r.text()),
+   fetch(`https://docs.google.com/spreadsheets/d/${AGING_SHEET_ID}/gviz/tq?tqx=out:csv&sheet=`+encodeURIComponent('Lịch sử Aging')+`&_=${Date.now()}`).then(r=>r.text()),
    fetch(`https://docs.google.com/spreadsheets/d/${SID}/gviz/tq?tqx=out:csv&gid=1723871284&_=${Date.now()}`).then(r=>r.text()),
    _getVolCSV()
   ]);
-  // ── Aging: xác định BC bất ổn ngày mới nhất ──
-  const ag=_vwParseCSV(agTxt).slice(1).filter(r=>r.length>12);
-  const agDates=[...new Set(ag.map(r=>r[11]).filter(d=>d&&d.startsWith('2026')))].sort();
+  // ── Aging từ "Lịch sử Aging" (tổng hợp): ngay0·bc1·am2·tinh3·total4·g1_5_7(5)·g2(6)·g3(7)·g4(8)·Trạng thái(9) ──
+  const ag=_vwParseCSV(agTxt).slice(1).filter(r=>r.length>4);
+  const _agd=s=>((s||'').match(/\d{4}-\d{2}-\d{2}/)||[''])[0];
+  const agDates=[...new Set(ag.map(r=>_agd(r[0])).filter(Boolean))].sort();
   if(!agDates.length){el.innerHTML=errPage('Không có dữ liệu Aging');return;}
   const agLatest=agDates[agDates.length-1],agPrev=agDates[agDates.length-2];
   const bcAg={};   // bc -> {bc,tinh,am,cnt,prev,g:{g1..g4}}
-  ag.filter(r=>r[11]===agLatest&&(r[12]||'').includes('bất ổn')).forEach(r=>{
-   const bc=(r[2]||'').trim();if(!bc)return;
-   if(!bcAg[bc])bcAg[bc]={bc,tinh:(r[1]||'').trim(),am:(r[10]||'').trim(),cnt:0,prev:0,g:{g1:0,g2:0,g3:0,g4:0}};
-   bcAg[bc].cnt++;bcAg[bc].g[_agBLGroup(r)]++;});
-  if(agPrev)ag.filter(r=>r[11]===agPrev).forEach(r=>{const bc=(r[2]||'').trim();if(bcAg[bc])bcAg[bc].prev++;});
+  ag.filter(r=>_agd(r[0])===agLatest&&(r[9]||'').includes('bất ổn')).forEach(r=>{
+   const bc=(r[1]||'').trim();if(!bc)return;
+   bcAg[bc]={bc,tinh:(r[3]||'').trim(),am:(r[2]||'').trim(),cnt:_vwNum(r[4]),prev:0,g:{g1:_vwNum(r[5]),g2:_vwNum(r[6]),g3:_vwNum(r[7]),g4:_vwNum(r[8])}};});
+  if(agPrev)ag.filter(r=>_agd(r[0])===agPrev).forEach(r=>{const bc=(r[1]||'').trim();if(bcAg[bc])bcAg[bc].prev=_vwNum(r[4]);});
   const arr=Object.values(bcAg).sort((a,b)=>b.cnt-a.cnt);
   if(!arr.length){el.innerHTML=`<div class="page-header"><div class="page-title">🚨 Bưu Cục Bất Ổn — Vùng XBG</div></div><div class="card"><p style="padding:16px;color:var(--green)">🟢 Ngày ${agingFmtDate(agLatest)}: không có Bưu Cục bất ổn nào trong Vùng XBG.</p></div>`;return;}
   // ── Năng suất NV (chỉ giữ BC bất ổn) ──
@@ -6340,10 +6341,22 @@ function _t1TableDays(rows){
   +`<td style="${cs};background:#f2f2f2;font-weight:800;color:#C00000">${d1s}</td><td style="${cs};background:#f2f2f2;font-weight:800;color:#C55A11">${d2s}</td><td style="${cs};background:#ddc9ef;font-weight:800">${pT}</td>`
   +`<td style="${cs};background:#f2f2f2;font-weight:800;color:#C00000">${aT}</td><td style="${cs};background:#c9f0c9;font-weight:800">${sT+pT+aT}</td></tr></tbody></table></div>`;return h;
 }
+// Aging per-đơn từ tab live "Aging> 5 Ngày" (Export đã xoá), reshape về cột Export cũ mà trang này dùng
+async function _t1FetchAgLive(){
+ const r=await fetch(`https://docs.google.com/spreadsheets/d/${T1_AGING_ID}/gviz/tq?tqx=out:csv&sheet=`+encodeURIComponent('Aging> 5 Ngày'));
+ if(!r.ok)throw new Error('Aging HTTP '+r.status);
+ const raw=_qhParse(await r.text());
+ const _d=s=>((s||'').match(/\d{4}-\d{2}-\d{2}/)||[''])[0];
+ const today=new Date().toLocaleDateString('en-CA');
+ // live: vung0·tinh1·id_bc2·bc3·mã đơn4·nhóm KH5·tg nhập6·Aging7·updated8·SL giao9·AM10·Nhóm11·Ngày Aging12
+ // → Export-like: r1=tinh·r2=bc·r3=mã đơn·r5=ngày nhập·r6=số ngày·r8=SL giao·r9=Nhóm BL·r10=AM·r11=ngày
+ const shaped=raw.slice(1).map(x=>{const a=new Array(13).fill('');a[1]=x[1];a[2]=x[3];a[3]=x[4];a[5]=x[6];a[6]=x[7];a[8]=x[9];a[9]=x[11];a[10]=x[10];a[11]=today;return a;}); // snapshot live = hôm nay (đồng nhất → không bị lọc mất)
+ return [new Array(13).fill('h'),...shaped];
+}
 async function buildXuLyBatOnPage(){
  const el=document.getElementById('p36');if(!el)return;
  try{
-  const [{tts,shp},ag]=await Promise.all([_qhFetchBacklog(),_qhFetchCSV(T1_AGING_ID,T1_AGING_GID)]);
+  const [{tts,shp},ag]=await Promise.all([_qhFetchBacklog(),_t1FetchAgLive()]);
   const key=T1_BCS.map(t=>_qhNorm(t[1]));const idxOf=nm=>key.indexOf(_qhBcName(nm));
   let lastD='';ag.slice(1).forEach(x=>{const d=(x[11]||'').slice(0,10);if(d>lastD)lastD=d;});
   // Chỉ lấy đơn còn 1 ngày (bucket 1) và 2 ngày (bucket 2)
