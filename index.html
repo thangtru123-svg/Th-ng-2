@@ -1766,8 +1766,10 @@ async function sendAgingToTelegram(){
  if(wasHidden){
   const navItem=document.querySelector('[onclick="show(\'p7\',this)"]');
   if(navItem)navItem.click();
-  await new Promise(r=>setTimeout(r,600));
+  await new Promise(r=>setTimeout(r,1200));
  }
+ // chờ thêm cho các bảng (aging-tbl-am/batOn/bc) render xong trước khi chụp
+ await new Promise(r=>setTimeout(r,500));
 
  try{
   // ── Tính caption cho từng ảnh (dùng hàm chung buildAgingCaps) ──
@@ -1781,15 +1783,25 @@ async function sendAgingToTelegram(){
   // Thứ tự: Tổng quan → Theo AM → BC Bất Ổn → Theo BC
   let sentCount=0;
   const _sendOne=async(elId,cap,extraFn)=>{
-   try{
-    if(extraFn)extraFn(true);
-    const img=await _captureEl(elId);
-    const res=await _tgSendPhoto(TG_AGING_CHAT,TG_AGING_THREAD,img,cap);
-    if(!res.ok)throw new Error(`TG lỗi: ${res.description||JSON.stringify(res)}`);
-    sentCount++;
-    await new Promise(r=>setTimeout(r,700));
-   }catch(e){console.error('[TG Aging] Lỗi ảnh',elId,':',e.message);}
-   finally{if(extraFn)extraFn(false);}
+   for(let attempt=1;attempt<=3;attempt++){
+    try{
+     if(extraFn)extraFn(true);
+     const elw=document.getElementById(elId);
+     if(elw){elw.scrollIntoView({block:'nearest'});await new Promise(r=>setTimeout(r,attempt===1?250:700));}
+     const img=await _captureEl(elId);
+     if(!img||!img.size)throw new Error('ảnh rỗng (bảng chưa render kịp)');
+     const res=await _tgSendPhoto(TG_AGING_CHAT,TG_AGING_THREAD,img,cap);
+     if(!res||!res.ok){const ra=res&&res.parameters&&res.parameters.retry_after;throw new Error(`TG lỗi: ${(res&&res.description)||JSON.stringify(res)}${ra?` (retry_after ${ra})`:''}`);}
+     sentCount++;
+     await new Promise(r=>setTimeout(r,900));
+     return;
+    }catch(e){
+     console.error('[TG Aging] Lỗi ảnh',elId,'lần',attempt,'/3:',e.message);
+     const m=/retry_after (\d+)/.exec(e.message);
+     await new Promise(r=>setTimeout(r,m?(+m[1]*1000+500):1200*attempt));
+    }finally{if(extraFn)extraFn(false);}
+   }
+   console.error('[TG Aging] BỎ QUA ảnh sau 3 lần thử:',elId);
   };
   await _sendOne('aging-cards',cap1);
   await _sendOne('aging-tbl-am',cap2);
@@ -1937,12 +1949,22 @@ async function sendAllToTelegram(){
   if(btn)btn.innerHTML=`⏳ Đang gửi: ${label}...`;
   const el=document.getElementById(elId);
   if(!el){console.warn('[TG] element not found:',elId);return;}
-  try{
-   const img=await _captureEl(elId);
-   const res=await _tgSendPhoto(chatId,threadId,img,cap);
-   if(!res||!res.ok)console.warn(`[${label}] TG lỗi:`,res&&res.description);
-  }catch(e){console.warn(`[${label}] lỗi:`,e&&e.message);}
-  await new Promise(r=>setTimeout(r,600));
+  for(let attempt=1;attempt<=3;attempt++){
+   try{
+    if(attempt>1){el.scrollIntoView({block:'nearest'});await new Promise(r=>setTimeout(r,600));}
+    const img=await _captureEl(elId);
+    if(!img||!img.size)throw new Error('ảnh rỗng (chưa render kịp)');
+    const res=await _tgSendPhoto(chatId,threadId,img,cap);
+    if(!res||!res.ok){const ra=res&&res.parameters&&res.parameters.retry_after;throw new Error(`TG lỗi: ${(res&&res.description)||JSON.stringify(res)}${ra?` (retry_after ${ra})`:''}`);}
+    await new Promise(r=>setTimeout(r,700));
+    return;
+   }catch(e){
+    console.warn(`[${label}] lần ${attempt}/3:`,e&&e.message);
+    const m=/retry_after (\d+)/.exec((e&&e.message)||'');
+    await new Promise(r=>setTimeout(r,m?(+m[1]*1000+500):1000*attempt));
+   }
+  }
+  console.warn(`[${label}] BỎ QUA sau 3 lần thử`);
  }
 
  /* ── Caption: P16 Vận Hành Ngày ── */
