@@ -1114,7 +1114,7 @@ function buildOntimePage(rowsAM,rowsBC,title,volLabel,countLabel,greenThr,yellow
     <th rowspan="2" style="${cs}width:200px">AM</th>
     ${dates.map(d=>`<th colspan="2" style="${cs}text-align:center;border-left:2px solid #E5E7EB"><strong>${shortD(d)}</strong></th>`).join('')}
     <th rowspan="2" style="${cs}text-align:center;border-left:2px solid var(--red);${_failTh}">Đơn fail<br><span style="font-size:10px;font-weight:400">${shortD(latest)}</span></th>
-    <th rowspan="2" style="${cs}text-align:center;${_failTh}">% fail<br>Vùng</th>
+    <th rowspan="2" style="${cs}text-align:center;${_failTh}">% Tỉ trọng<br>Vùng</th>
    </tr>
    <tr>${dates.map(()=>`<th style="${cs}text-align:center;border-left:2px solid #E5E7EB">${volLabel}</th><th style="${cs}text-align:center">%Ontime</th>`).join('')}</tr>
   </thead><tbody>`;
@@ -1169,7 +1169,7 @@ function buildOntimePage(rowsAM,rowsBC,title,volLabel,countLabel,greenThr,yellow
     <th rowspan="2" style="${cs}min-width:80px;position:sticky;left:170px;z-index:5;background:#FEEDE4">AM</th>
     ${dates.map(d=>`<th colspan="2" style="${cs}text-align:center;border-left:2px solid #E5E7EB"><strong>${shortD(d)}</strong></th>`).join('')}
     <th rowspan="2" style="${cs}text-align:center;border-left:2px solid var(--red);${_failTh}">Đơn fail<br><span style="font-size:10px;font-weight:400">${shortD(latest)}</span></th>
-    <th rowspan="2" style="${cs}text-align:center;${_failTh}">% fail<br>Vùng</th>
+    <th rowspan="2" style="${cs}text-align:center;${_failTh}">% Tỉ trọng<br>Vùng</th>
    </tr>
    <tr>${dates.map(()=>`<th style="${cs}text-align:center;border-left:2px solid #E5E7EB">${volLabel}</th><th style="${cs}text-align:center">%Ontime</th>`).join('')}</tr>
   </thead><tbody>`;
@@ -1213,6 +1213,7 @@ function buildOntimePage(rowsAM,rowsBC,title,volLabel,countLabel,greenThr,yellow
   const alertBC=Object.keys(pivot).filter(bc=>{const v=pivot[bc][latest]?.vol??0;return (pivot[bc][latest]?.pct??100)<80&&v>minVol&&v<maxVol;});
   if(!alertBC.length)return`<p style="padding:16px;color:var(--green)">✅ Không có Bưu Cục nào có ${rangeLabel} &amp; %Ontime &lt; 80% hôm nay.</p>`;
   alertBC.sort((a,b)=>(pivot[b][latest]?.vol??0)-(pivot[a][latest]?.vol??0));
+  const _regFail=Object.values(pivot).reduce((s,r)=>s+(r[latest]?Math.max(0,(r[latest].vol||0)-(r[latest].cnt||0)):0),0);
   const cs='padding:5px 8px;';
   let h=`<div class="table-wrap" style="overflow-x:auto"><table><thead style="position:sticky;top:0;z-index:4;background:#FEF2F2">
    <tr>
@@ -1221,6 +1222,8 @@ function buildOntimePage(rowsAM,rowsBC,title,volLabel,countLabel,greenThr,yellow
     <th rowspan="2" style="${cs}min-width:80px;position:sticky;left:170px;z-index:5;background:#FEF2F2">AM</th>
     ${dates.map(d=>`<th colspan="2" style="${cs}text-align:center;border-left:2px solid #E5E7EB"><strong>${shortD(d)}</strong></th>`).join('')}
     <th rowspan="2" style="${cs}text-align:center;background:#FEF2F2;white-space:nowrap">TB %Ontime</th>
+    <th rowspan="2" style="${cs}text-align:center;border-left:2px solid var(--red);background:#FEF2F2;white-space:nowrap">Đơn fail<br><span style="font-size:10px;font-weight:400">${shortD(latest)}</span></th>
+    <th rowspan="2" style="${cs}text-align:center;background:#FEF2F2;white-space:nowrap">% Tỉ trọng<br>Vùng</th>
    </tr>
    <tr>${dates.map(()=>`<th style="${cs}text-align:center;border-left:2px solid #E5E7EB">${volLabel}</th><th style="${cs}text-align:center">%Ontime</th>`).join('')}</tr>
   </thead><tbody>`;
@@ -1232,7 +1235,8 @@ function buildOntimePage(rowsAM,rowsBC,title,volLabel,countLabel,greenThr,yellow
    h+=`<tr><td style="${cs}text-align:center;color:var(--text-sub);font-size:11px;position:sticky;left:0;background:#fff;z-index:2">${i+1}</td><td style="${cs}font-weight:700;white-space:nowrap;position:sticky;left:30px;background:#fff;z-index:2">${bc}</td><td style="${cs}color:var(--text-sub);font-size:11px;position:sticky;left:170px;background:#fff;z-index:2">${row.am||''}</td>`;
    dates.forEach(d=>{const c=row[d];if(c){const gc=c.pct>=greenThr?'g':c.pct>=yellowThr?'m':'b';const bgBad=c.pct<yellowThr?'background:#FFF1F2':'';h+=`<td style="${cs}text-align:center;border-left:2px solid #F3F4F6;${bgBad}">${fmt(c.vol)}</td><td style="${cs}text-align:center;${bgBad}"><span class="pct ${gc}">${c.pct.toFixed(1)}%</span></td>`;}else{h+=`<td style="${cs}text-align:center;border-left:2px solid #F3F4F6;color:var(--text-sub)">—</td><td>—</td>`;}});
    const ac=avgPct>=greenThr?'var(--green)':avgPct>=yellowThr?'var(--yellow)':'var(--red)';
-   h+=`<td style="${cs}text-align:center;font-weight:800;color:${ac};white-space:nowrap">${avgPct.toFixed(1)}% <span style="font-size:10px;color:var(--text-sub)">(${countBelow}/7 ngày)</span></td></tr>`;
+   const _cl=row[latest];const _fl=_cl?Math.max(0,_cl.vol-_cl.cnt):0;const _shr=_regFail>0?_fl/_regFail*100:0;
+   h+=`<td style="${cs}text-align:center;font-weight:800;color:${ac};white-space:nowrap">${avgPct.toFixed(1)}% <span style="font-size:10px;color:var(--text-sub)">(${countBelow}/7 ngày)</span></td><td style="${cs}text-align:center;border-left:2px solid var(--red);font-weight:700;color:${_fl>0?'var(--red)':'var(--text-sub)'};background:#FFF7F7">${_cl?fmt(_fl):'—'}</td><td style="${cs}text-align:center;font-weight:700;background:#FFF7F7">${_cl?_shr.toFixed(1)+'%':'—'}</td></tr>`;
   });
   h+='</tbody></table></div>';
   h+=`<div class="analysis-box" style="margin-top:0">🚨 <strong>${alertBC.length} Bưu Cục</strong> có ${rangeLabel} nhưng %Ontime &lt; 80% ngày ${shortD(latest)}. Sắp xếp theo Vol LTC cao nhất.</div>`;
@@ -1535,7 +1539,7 @@ function buildAgingHTML(rows){
   const _amTd=n=>_amCol?`<td style="padding:9px 14px;font-size:12px;color:var(--text-sub);white-space:nowrap">${_bcAM[n]||''}</td>`:'';
   let t=`<div style="background:var(--card);border-radius:12px;box-shadow:var(--shadow-sm);margin-bottom:20px;overflow:hidden"><div style="padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap"><div style="display:flex;align-items:center;gap:8px;flex-shrink:0"><span style="font-size:18px">${icon}</span><span style="font-weight:700;font-size:14px">${title}</span><span style="background:var(--orange);color:#fff;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px">${badge}</span></div>${ana?`<div style="font-size:12px;color:var(--text-main);line-height:1.6;text-align:center">${ana}</div>`:''}</div><div class="table-wrap" style="overflow-x:auto;overflow-y:auto;max-height:${maxHeight}"><table style="width:${30+170+(_amCol?140:0)+last7.length*82+72+280+72}px;border-collapse:collapse;font-size:13px"><thead><tr style="background:var(--bg);position:sticky;top:0;z-index:2"><th style="padding:10px 14px;text-align:left;font-weight:700;font-size:11px;color:var(--text-sub);text-transform:uppercase;letter-spacing:.5px;border-bottom:2px solid var(--border);white-space:nowrap;background:var(--bg)">#</th><th style="padding:10px 14px;text-align:left;font-weight:700;font-size:11px;color:var(--text-sub);text-transform:uppercase;letter-spacing:.5px;border-bottom:2px solid var(--border);white-space:nowrap;background:var(--bg)">${keyField==='am'?'AM':'Bưu Cục'}</th>${_amCol?`<th style="padding:10px 14px;text-align:left;font-weight:700;font-size:11px;color:var(--text-sub);text-transform:uppercase;letter-spacing:.5px;border-bottom:2px solid var(--border);white-space:nowrap;background:var(--bg)">AM</th>`:''}`;
   last7.forEach((d,i)=>{const isLast=i===last7.length-1;const bg=isLast?'background:#FFF0EB;color:var(--orange-dark,#C8461A);font-size:12px':'color:var(--text-sub);background:var(--bg)';t+=`<th style="padding:10px 14px;text-align:center;font-weight:800;font-size:11px;text-transform:uppercase;letter-spacing:.3px;border-bottom:2px solid var(--border);white-space:nowrap;${bg}">${agingFmtDate(d)}</th>`;});
-  t+=`<th style="padding:10px 14px;text-align:center;font-weight:700;font-size:11px;color:var(--text-sub);text-transform:uppercase;border-bottom:2px solid var(--border);background:var(--bg)">Trend</th><th style="padding:10px 14px;text-align:center;font-weight:700;font-size:11px;color:#6B7280;text-transform:uppercase;border-bottom:2px solid var(--border);background:#F9FAFB;border-left:2px solid var(--border)">5-7 ngày</th><th style="padding:10px 14px;text-align:center;font-weight:700;font-size:11px;color:#D97706;text-transform:uppercase;border-bottom:2px solid var(--border);background:#FFFBEB">8-10 ngày</th><th style="padding:10px 14px;text-align:center;font-weight:700;font-size:11px;color:#DC2626;text-transform:uppercase;border-bottom:2px solid var(--border);background:#FEF2F2">11-15 ngày</th><th style="padding:10px 14px;text-align:center;font-weight:700;font-size:11px;color:#7F1D1D;text-transform:uppercase;border-bottom:2px solid var(--border);background:#FEE2E2">&gt;15 ngày</th><th style="padding:10px 14px;text-align:center;font-weight:700;font-size:11px;color:var(--orange-dark,#C8461A);text-transform:uppercase;border-bottom:2px solid var(--border);background:#FFF0EB;border-left:2px solid var(--orange);white-space:nowrap">% Vùng</th></tr></thead><tbody>`;
+  t+=`<th style="padding:10px 14px;text-align:center;font-weight:700;font-size:11px;color:var(--text-sub);text-transform:uppercase;border-bottom:2px solid var(--border);background:var(--bg)">Trend</th><th style="padding:10px 14px;text-align:center;font-weight:700;font-size:11px;color:#6B7280;text-transform:uppercase;border-bottom:2px solid var(--border);background:#F9FAFB;border-left:2px solid var(--border)">5-7 ngày</th><th style="padding:10px 14px;text-align:center;font-weight:700;font-size:11px;color:#D97706;text-transform:uppercase;border-bottom:2px solid var(--border);background:#FFFBEB">8-10 ngày</th><th style="padding:10px 14px;text-align:center;font-weight:700;font-size:11px;color:#DC2626;text-transform:uppercase;border-bottom:2px solid var(--border);background:#FEF2F2">11-15 ngày</th><th style="padding:10px 14px;text-align:center;font-weight:700;font-size:11px;color:#7F1D1D;text-transform:uppercase;border-bottom:2px solid var(--border);background:#FEE2E2">&gt;15 ngày</th><th style="padding:10px 14px;text-align:center;font-weight:700;font-size:11px;color:var(--orange-dark,#C8461A);text-transform:uppercase;border-bottom:2px solid var(--border);background:#FFF0EB;border-left:2px solid var(--orange);white-space:nowrap">% Tỉ trọng Vùng</th></tr></thead><tbody>`;
   arr.forEach((row,idx)=>{
    const name=row[keyField]||'—';const isUnstable=unstableBCSet.has(name);
    const rankColor=idx<3?'color:var(--orange);font-weight:800;font-size:14px':'color:var(--text-sub);font-weight:600';
