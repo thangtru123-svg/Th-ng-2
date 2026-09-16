@@ -3650,12 +3650,12 @@ async function _ttFetch(q){const p=/^gid=/.test(q)?q:('sheet='+encodeURIComponen
 function _ttCompute(raw,cc){
  const bcAM={};cc.slice(1).forEach(r=>{const bc=(r[1]||'').trim(),am=(r[3]||'').trim();if(bc&&am){(bcAM[bc]=bcAM[bc]||[]);if(!bcAM[bc].includes(am))bcAM[bc].push(am);}});
  const amOf=bc=>(bcAM[(bc||'').trim()]||[]).join(', ')||'(chưa map AM)';
- const A={},B={};const tot={can:0,da:0,con:0};
- raw.slice(1).forEach(r=>{const bc=(r[5]||'').trim();if(!bc)return;const can=_ttInt(r[12]),da=_ttInt(r[13]),con=_ttInt(r[15]);
+ const A={},B={};const tot={db:0,can:0,da:0,con:0};
+ raw.slice(1).forEach(r=>{const bc=(r[5]||'').trim();if(!bc)return;const db=_ttInt(r[11]),can=_ttInt(r[12]),da=_ttInt(r[13]),con=_ttInt(r[15]);
   const am=amOf(bc);
-  (A[am]=A[am]||{am,can:0,da:0,con:0});A[am].can+=can;A[am].da+=da;A[am].con+=con;
-  (B[bc]=B[bc]||{bc,am,can:0,da:0,con:0});B[bc].can+=can;B[bc].da+=da;B[bc].con+=con;
-  tot.can+=can;tot.da+=da;tot.con+=con;});
+  (A[am]=A[am]||{am,db:0,can:0,da:0,con:0});A[am].db+=db;A[am].can+=can;A[am].da+=da;A[am].con+=con;
+  (B[bc]=B[bc]||{bc,am,db:0,can:0,da:0,con:0});B[bc].db+=db;B[bc].can+=can;B[bc].da+=da;B[bc].con+=con;
+  tot.db+=db;tot.can+=can;tot.da+=da;tot.con+=con;});
  return {t1:Object.values(A).sort((a,b)=>b.con-a.con),t2:Object.values(B).sort((a,b)=>b.con-a.con),tot};
 }
 const _ttReasonCol={'Quá hạn giao/trả':'#B4232A','Khiếu nại/Sai SOP/Giao trễ':'#E08A1E','Mất/Thiếu/Tráo hàng':'#7C3AED','Hàng hư hỏng':'#2563EB'};
@@ -3664,12 +3664,12 @@ function _ttTable(rows,withBC,limit){
  const data=limit?rows.slice(0,limit):rows;
  const maxCon=Math.max(1,...rows.map(r=>r.con));
  const hm=v=>`background:rgba(180,35,42,${(0.05+Math.min(1,(v||0)/maxCon)*0.4).toFixed(2)})`;
- const T=rows.reduce((a,r)=>({can:a.can+r.can,da:a.da+r.da,con:a.con+r.con}),{can:0,da:0,con:0});
+ const T=rows.reduce((a,r)=>({db:a.db+r.db,can:a.can+r.can,da:a.da+r.da,con:a.con+r.con}),{db:0,can:0,da:0,con:0});
  const money=v=>`<td style="text-align:right;padding:6px 12px;font-size:13px;color:#1a2230;font-weight:600">${_ttVN(v)}</td>`;
- let body=`<tr style="background:#1F3864;color:#fff;font-weight:800"><td style="padding:9px 8px;color:#fff"></td><td style="padding:9px 12px;color:#fff" colspan="${withBC?2:1}">TỔNG VÙNG XBG</td><td style="text-align:right;color:#fff">${_ttVN(T.can)}</td><td style="text-align:right;color:#fff">${_ttVN(T.da)}</td><td style="text-align:right;color:#fff">${_ttVN(T.con)}</td></tr>`;
- data.forEach((r,i)=>{body+=`<tr style="color:#1a2230"><td style="text-align:center;padding:6px 8px;font-size:12px;color:#6b7280">${i+1}</td>${withBC?`<td style="padding:6px 12px;font-size:13px;font-weight:700">${_ttEsc(r.bc)}</td>`:''}<td style="padding:6px 12px;font-size:13px;${withBC?'color:#6b7280':'font-weight:700'}">${_ttEsc(r.am)}</td>${money(r.can)}${money(r.da)}<td style="text-align:right;padding:6px 12px;font-size:13px;font-weight:800;color:#7a1410;${hm(r.con)}">${_ttVN(r.con)}</td></tr>`;});
- return `<div class="table-wrap"><table style="border-collapse:collapse;min-width:${withBC?660:540}px;background:#fff">
-  <thead><tr style="background:#1F3864;color:#fff"><th style="padding:9px 8px;color:#fff">#</th>${withBC?'<th style="padding:9px 12px;text-align:left;color:#fff">Bưu Cục</th>':''}<th style="padding:9px 12px;text-align:left;color:#fff">AM</th><th style="padding:9px 12px;text-align:right;color:#fff">Cần truy thu</th><th style="padding:9px 12px;text-align:right;color:#fff">Đã truy thu</th><th style="padding:9px 12px;text-align:right;color:#fff">Còn phải thu</th></tr></thead><tbody>${body}</tbody></table></div>`;
+ let body=`<tr style="background:#1F3864;color:#fff;font-weight:800"><td style="padding:9px 8px;color:#fff"></td><td style="padding:9px 12px;color:#fff" colspan="${withBC?2:1}">TỔNG VÙNG XBG</td><td style="text-align:right;color:#fff">${_ttVN(T.db)}</td><td style="text-align:right;color:#fff">${_ttVN(T.can)}</td><td style="text-align:right;color:#fff">${_ttVN(T.da)}</td><td style="text-align:right;color:#fff">${_ttVN(T.con)}</td></tr>`;
+ data.forEach((r,i)=>{body+=`<tr style="color:#1a2230"><td style="text-align:center;padding:6px 8px;font-size:12px;color:#6b7280">${i+1}</td>${withBC?`<td style="padding:6px 12px;font-size:13px;font-weight:700">${_ttEsc(r.bc)}</td>`:''}<td style="padding:6px 12px;font-size:13px;${withBC?'color:#6b7280':'font-weight:700'}">${_ttEsc(r.am)}</td>${money(r.db)}${money(r.can)}${money(r.da)}<td style="text-align:right;padding:6px 12px;font-size:13px;font-weight:800;color:#7a1410;${hm(r.con)}">${_ttVN(r.con)}</td></tr>`;});
+ return `<div class="table-wrap"><table style="border-collapse:collapse;min-width:${withBC?780:660}px;background:#fff">
+  <thead><tr style="background:#1F3864;color:#fff"><th style="padding:9px 8px;color:#fff">#</th>${withBC?'<th style="padding:9px 12px;text-align:left;color:#fff">Bưu Cục</th>':''}<th style="padding:9px 12px;text-align:left;color:#fff">AM</th><th style="padding:9px 12px;text-align:right;color:#fff">Tổng đền bù</th><th style="padding:9px 12px;text-align:right;color:#fff">Cần truy thu</th><th style="padding:9px 12px;text-align:right;color:#fff">Đã truy thu</th><th style="padding:9px 12px;text-align:right;color:#fff">Còn phải thu</th></tr></thead><tbody>${body}</tbody></table></div>`;
 }
 function _ttTabBtn(m,label){const on=_ttTab===m;return `<button class="tt-tab" onclick="ttSwitch('${m}')" style="border:1px solid ${on?'#1F3864':'#d9d9d9'};background:${on?'#1F3864':'#fff'};color:${on?'#fff':'#333'};padding:8px 16px;border-radius:9px;font-weight:700;cursor:pointer;font-size:13px">${label}</button>`;}
 function _ttRender(){const c=document.getElementById('ttTable');if(!c||!window._TT)return;const d=window._TT.data;
@@ -3697,14 +3697,15 @@ async function buildTruyThuPage(){
     </div>
    </div>
    <div class="kpis" style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px">
-    ${kpi('Cần truy thu',_ttVN(T.can)+'đ','toàn Vùng','#C8461A')}
-    ${kpi('Đã truy thu',_ttVN(T.da)+'đ',pctThu+'% đã thu','#16A34A')}
-    ${kpi('Còn phải thu',_ttVN(T.con)+'đ','chưa thu','#DC2626')}
+    ${kpi('Tổng đền bù',_ttVN(T.db)+'đ','GHN đã đền khách','#6B7280')}
+    ${kpi('Cần truy thu',_ttVN(T.can)+'đ','mục tiêu truy thu','#C8461A')}
+    ${kpi('Đã truy thu',_ttVN(T.da)+'đ',pctThu+'% / Cần','#16A34A')}
+    ${kpi('Còn phải thu',_ttVN(T.con)+'đ','= Tổng đền bù − Đã','#DC2626')}
    </div>
    <div id="ttTabs" style="display:flex;gap:8px;margin-bottom:12px"></div>
    <div id="ttTable"></div>
    <div class="analysis-box" style="margin-top:14px;padding:12px 14px;font-size:12.5px;line-height:1.7">
-    <b>Cách tính:</b> gộp theo <b>Nhóm lý do đền bù</b> × (AM/Bưu Cục), cộng <b>Cần truy thu</b> (cột M), <b>Đã truy thu</b> (N), <b>Còn phải thu</b> (P). AM lấy theo Kho "Chịu trách nhiệm" ghép tab "Cơ cấu AM" (1 BC có thể nhiều AM). Sắp xếp theo Còn phải thu giảm dần.
+    <b>Cách tính:</b> gộp theo (AM/Bưu Cục), cộng <b>Tổng đền bù</b> (cột L), <b>Cần truy thu</b> (M), <b>Đã truy thu</b> (N), <b>Còn phải thu</b> (P) — đọc thẳng từ sheet. ⚠️ <b>Còn phải thu = Tổng đền bù − Đã truy thu</b> (theo gốc số tiền GHN đã đền khách), <b>KHÔNG</b> phải Cần − Đã. "Cần truy thu" là mục tiêu truy thu (gốc khác, thường lớn hơn Tổng đền bù). AM lấy theo Kho "Chịu trách nhiệm" ghép tab "Cơ cấu AM" (1 BC có thể nhiều AM). Sắp xếp theo Còn phải thu giảm dần.
    </div>`;
   _ttRender();
  }catch(e){el.innerHTML=(typeof errPage==='function'?errPage('Không tải được Tổng quan truy thu: '+(e&&e.message||e)):'<div style="padding:20px;color:#b91c1c">Lỗi: '+(e&&e.message||e)+'</div>');}
@@ -3718,7 +3719,7 @@ async function sendTruyThuToTelegram(btn){
  try{
   const e1=mk('ttCapAM','TỔNG QUAN TRUY THU VÙNG XBG — THEO AM','Nguồn: '+TT_SHEET+' · '+dateL,_ttTable(d.t1,false),false);
   const i1=await _captureEl(e1.id,2,true);e1.remove();
-  const r1=await _tgSendPhoto(TT_TG_CHAT,null,i1,`<b>TỔNG QUAN TRUY THU VÙNG XBG — THEO AM</b>\nCần ${_ttVN(T.can)}đ · Đã ${_ttVN(T.da)}đ · Còn ${_ttVN(T.con)}đ\n🔗 ${TT_SRC_URL}`);
+  const r1=await _tgSendPhoto(TT_TG_CHAT,null,i1,`<b>TỔNG QUAN TRUY THU VÙNG XBG — THEO AM</b>\nĐền bù ${_ttVN(T.db)}đ · Cần ${_ttVN(T.can)}đ · Đã ${_ttVN(T.da)}đ · Còn ${_ttVN(T.con)}đ (=Đền bù−Đã)\n🔗 ${TT_SRC_URL}`);
   if(!r1||!r1.ok)throw new Error('Bảng AM lỗi: '+((r1&&r1.description)||'?'));
   const e2=mk('ttCapBC','TỔNG QUAN TRUY THU VÙNG XBG — THEO BƯU CỤC (Top 40 Còn phải thu)','Nguồn: '+TT_SHEET+' · '+dateL,_ttTable(d.t2,true,40),true);
   const i2=await _captureEl(e2.id,2,true);e2.remove();
