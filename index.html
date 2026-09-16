@@ -1722,6 +1722,9 @@ function buildAgingCaps(){
  const amCur=amArr.reduce((s,r)=>s+(r[latest]||0),0),amPrv=amArr.reduce((s,r)=>s+(r[prev]||0),0);
  const d2=delta<0?`▼ giảm ${num(Math.abs(delta))} đơn`:delta>0?`▲ tăng ${num(delta)} đơn`:'Không đổi';
  const trimCap=s=>s.length>1020?s.slice(0,1017)+'...':s;
+ const shortD=d=>{if(!d)return'';const p=(d||'').split('-');return p.length===3?`${p[2]}/${p[1]}`:d;};
+ const pctV=n=>latestTotal>0?(n/latestTotal*100).toLocaleString('vi-VN',{minimumFractionDigits:1,maximumFractionDigits:1}):'0,0';
+ const anaLine=(i,name,cur,dv)=>`${i+1}. ${name}: <b>${num(cur)}</b> đơn (chiếm ${pctV(cur)}% tỉ trọng của Vùng) - ${dv>0?`tăng ▲+${num(dv)}`:dv<0?`giảm ▼${num(dv)}`:'không đổi'} so với ngày ${shortD(prev)}\n`;
  const pctBatOn=latestTotal>0?(unstableCur/latestTotal*100).toFixed(1):0;
  const pctOk=latestTotal>0?((latestTotal-unstableCur)/latestTotal*100).toFixed(1):0;
  const topAM=amArr[0];
@@ -1746,14 +1749,14 @@ function buildAgingCaps(){
  let cap2=`👤 <b>THEO AM — ${fmt(latest)}</b> (${amArr.length} AM)\n`;
  cap2+=`Tổng: <b>${num(amCur)} đơn</b> · N-1: ${num(amPrv)} · <b>${amCur<amPrv?`▼ giảm ${num(amPrv-amCur)} đơn`:amCur>amPrv?`▲ tăng ${num(amCur-amPrv)} đơn`:'Không đổi'}</b>\n\n`;
  cap2+=`📝 <b>Phân tích:</b>\n`;
- amArr.slice(0,5).forEach((r,i)=>{const dv=(r[latest]||0)-(r[prev]||0);cap2+=`${i+1}. ${r.am}: <b>${num(r[latest]||0)}</b> đơn ${dv>0?`▲+${num(dv)}`:dv<0?`▼${num(dv)}`:'–'}\n`;});
+ amArr.slice(0,5).forEach((r,i)=>{const dv=(r[latest]||0)-(r[prev]||0);cap2+=anaLine(i,r.am,r[latest]||0,dv);});
  if(amUp){const dv=(amUp[latest]||0)-(amUp[prev]||0);if(dv>0)cap2+=`⚠️ Tăng mạnh nhất: ${amUp.am} (+${num(dv)}).\n`;}
  if(amDn){const dv=(amDn[latest]||0)-(amDn[prev]||0);if(dv<0)cap2+=`✅ Giảm mạnh nhất: ${amDn.am} (${num(dv)}).\n`;}
  cap2=trimCap(cap2);
  let cap3=`⚠️ <b>BC BẤT ỔN — ${fmt(latest)}</b> (${unstableArr.length} BC)\n`;
  cap3+=`Tổng: <b>${num(unstableCur)} đơn</b> · N-1: ${num(unstablePrv)} · <b>${unstableCur<unstablePrv?`▼ giảm ${num(unstablePrv-unstableCur)} đơn`:unstableCur>unstablePrv?`▲ tăng ${num(unstableCur-unstablePrv)} đơn`:'Không đổi'}</b>\n\n`;
  cap3+=`📝 <b>Phân tích:</b>\n`;
- unstableArr.slice(0,5).forEach((r,i)=>{const dv=(r[latest]||0)-(r[prev]||0);cap3+=`${i+1}. ${r.bc}: <b>${num(r[latest]||0)}</b> đơn ${dv>0?`▲+${num(dv)}`:dv<0?`▼${num(dv)}`:'–'}\n`;});
+ unstableArr.slice(0,5).forEach((r,i)=>{const dv=(r[latest]||0)-(r[prev]||0);cap3+=anaLine(i,r.bc,r[latest]||0,dv);});
  if(uUp){const dv=(uUp[latest]||0)-(uUp[prev]||0);if(dv>0)cap3+=`🔴 Tăng mạnh nhất: ${uUp.bc} (+${num(dv)} đơn).\n`;}
  cap3+=unstableCur<unstablePrv?`✅ Bất ổn giảm ${num(unstablePrv-unstableCur)} đơn — đang được cải thiện.\n`:unstableCur>unstablePrv?`🔴 Bất ổn tăng ${num(unstableCur-unstablePrv)} đơn — cần can thiệp ngay.\n`:`➡️ Bất ổn không đổi so với hôm qua.\n`;
  cap3=trimCap(cap3);
@@ -1761,7 +1764,7 @@ function buildAgingCaps(){
  let cap4=`🏪 <b>BC ỔN ĐỊNH — ${fmt(latest)}</b> (${bcArr.length} BC)\n`;
  cap4+=`Tổng: <b>${num(stableCur)} đơn</b> · N-1: ${num(stablePrv)} · <b>${stableCur<stablePrv?`▼ giảm ${num(stablePrv-stableCur)} đơn`:stableCur>stablePrv?`▲ tăng ${num(stableCur-stablePrv)} đơn`:'Không đổi'}</b>\n\n`;
  cap4+=`📝 <b>Phân tích:</b>\n`;
- bcArr.slice(0,5).forEach((r,i)=>{const dv=(r[latest]||0)-(r[prev]||0);cap4+=`${i+1}. ${r.bc}: <b>${num(r[latest]||0)}</b> đơn ${dv>0?`▲+${num(dv)}`:dv<0?`▼${num(dv)}`:'–'}\n`;});
+ bcArr.slice(0,5).forEach((r,i)=>{const dv=(r[latest]||0)-(r[prev]||0);cap4+=anaLine(i,r.bc,r[latest]||0,dv);});
  if(bcUp){const dv=(bcUp[latest]||0)-(bcUp[prev]||0);if(dv>0)cap4+=`⚠️ Tăng mạnh nhất (ổn định): ${bcUp.bc} (+${num(dv)} đơn).\n`;}
  cap4+=stableCur<stablePrv?`✅ BC ổn định giảm ${num(stablePrv-stableCur)} đơn — tốt.\n`:stableCur>stablePrv?`⚠️ BC ổn định tăng ${num(stableCur-stablePrv)} đơn — cần chú ý.\n`:`➡️ BC ổn định không đổi.\n`;
  cap4=trimCap(cap4);
