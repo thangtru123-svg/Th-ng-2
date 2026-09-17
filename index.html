@@ -1681,12 +1681,19 @@ function buildTTSSection(rawToday,histRaw){
   t+=`<td style="padding:9px 12px;text-align:center;color:${sD<0?'var(--green)':sD>0?'var(--red)':'var(--text-sub)'};white-space:nowrap">${sD<0?`▼ ${sp-sc}`:sD>0?`▲ ${sc-sp}`:'—'}</td><td style="padding:9px 12px;text-align:center;background:#F0F0F0">${sg('g1')||'—'}</td><td style="padding:9px 12px;text-align:center;color:#D97706;background:#FEF3C7">${sg('g2')||'—'}</td><td style="padding:9px 12px;text-align:center;color:#DC2626;background:#FEE2E2">${sg('g3')||'—'}</td><td style="padding:9px 12px;text-align:center;color:#7F1D1D;background:#FECACA">${sg('g4')||'—'}</td><td style="padding:9px 12px;text-align:center;color:var(--orange-dark,#C8461A);background:#FFE0CC;border-left:2px solid var(--orange)">100%</td></tr>`;
   return t+`</tbody></table></div>`;
  }
- const card=(icon,title,badge,inner)=>`<div style="background:var(--card);border-radius:12px;box-shadow:var(--shadow-sm);margin-bottom:20px;overflow:hidden"><div style="padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px"><span style="font-size:18px">${icon}</span><span style="font-weight:700;font-size:14px">${title}</span><span style="background:var(--orange);color:#fff;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px">${badge}</span></div>${inner}</div>`;
+ const card=(id,icon,title,badge,inner)=>`<div id="${id}" style="background:var(--card);border-radius:12px;box-shadow:var(--shadow-sm);margin-bottom:20px;overflow:hidden"><div style="padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px"><span style="font-size:18px">${icon}</span><span style="font-weight:700;font-size:14px">${title}</span><span style="background:var(--orange);color:#fff;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px">${badge}</span></div>${inner}</div>`;
  const nDay=last7.length;
+ // ── Caption Telegram cho 2 bảng TTS (lưu window._ttsCap để hàm bắn aging dùng) ──
+ const _tcap=(arr,label)=>{const sorted=arr.slice().sort((a,b)=>(b.days[latest]||0)-(a.days[latest]||0));const lt=sorted.reduce((s,r)=>s+(r.days[latest]||0),0)||1;
+  let c=`📦 <b>AGING TTS THEO ${label} — ${agingFmtDate(latest)}</b>\n`;
+  c+=`Tổng TTS: <b>${vn(todayTot)} đơn</b>${allTot>0?` · chiếm ${(todayTot/allTot*100).toFixed(1)}% tổng aging`:''}\n\n📝 <b>Top 5:</b>\n`;
+  sorted.slice(0,5).forEach((r,i)=>{const cur=r.days[latest]||0,prv=prevD?(r.days[prevD]||0):0,dv=prevD?cur-prv:0;c+=`${i+1}. ${r.name}: <b>${vn(cur)}</b> đơn (chiếm ${(cur/lt*100).toFixed(1)}% tỉ trọng TTS)${dv?` ${dv>0?'▲+'+dv:'▼'+dv}`:''}\n`;});
+  return c.length>1020?c.slice(0,1017)+'...':c;};
+ window._ttsCap={am:_tcap(Object.values(byAM),'AM'),bc:_tcap(Object.values(byBC),'BƯU CỤC')};
  let h=`<div style="margin:26px 0 8px;padding-top:10px;border-top:2px dashed var(--border)"><span style="font-size:20px;font-weight:800">📦 Aging đơn TTS <span style="font-size:12px;font-weight:600;color:var(--text-sub)">(${nDay} ngày · hôm nay live + lịch sử tích luỹ dần)</span></span></div>`;
  h+=`<div class="analysis-box" style="margin-bottom:18px">📦 <strong>Tổng đơn TTS aging &gt;5 ngày (hôm nay):</strong> <strong style="color:var(--orange)">${vn(todayTot)} đơn</strong>${allTot>0?` · chiếm <strong>${(todayTot/allTot*100).toFixed(1)}%</strong> tổng aging toàn Vùng (${vn(allTot)} đơn)`:''}<br>Chia theo nhóm ngày (hôm nay): 5-7: <strong>${vn(Object.values(byAM).reduce((s,r)=>s+r.g1,0))}</strong> · 8-10: <strong>${vn(Object.values(byAM).reduce((s,r)=>s+r.g2,0))}</strong> · 11-15: <strong>${vn(Object.values(byAM).reduce((s,r)=>s+r.g3,0))}</strong> · &gt;15: <strong>${vn(Object.values(byAM).reduce((s,r)=>s+r.g4,0))}</strong>${nDay<2?'<br><span style="color:var(--text-sub);font-size:12px">(Lịch sử TTS mới bắt đầu tích luỹ — bảng sẽ đầy dần đủ 7 ngày sau vài hôm.)</span>':''}</div>`;
- h+=card('👤','Đơn TTS Theo AM','7 ngày',tbl(Object.values(byAM),false));
- h+=card('🏪','Đơn TTS Theo Bưu Cục','7 ngày',tbl(Object.values(byBC),true));
+ h+=card('aging-tts-am','👤','Đơn TTS Theo AM','7 ngày',tbl(Object.values(byAM),false));
+ h+=card('aging-tts-bc','🏪','Đơn TTS Theo Bưu Cục','7 ngày',tbl(Object.values(byBC),true));
  return h;
 }
 async function buildAgingPage(){
@@ -1904,6 +1911,15 @@ async function sendAgingToTelegram(){
   const bcTrs=bcTblEl?[...bcTblEl.querySelectorAll('tr')]:[];
   const bcHidden=bcTrs.slice(20,-1);
   await _sendOne('aging-tbl-bc',cap4,show=>{bcHidden.forEach(tr=>tr.style.display=show?'none':'');});
+  // ── 2 bảng TTS (nếu có) ──
+  if(window._ttsCap){
+   await _sendOne('aging-tts-am',window._ttsCap.am);
+   const ttsBcTbl=document.querySelector('#aging-tts-bc .table-wrap>table')||[...document.querySelectorAll('#aging-tts-bc table')].find(t=>t.offsetWidth>0);
+   const ttsBcBody=ttsBcTbl?ttsBcTbl.querySelector('tbody'):null;
+   const ttsTrs=ttsBcBody?[...ttsBcBody.querySelectorAll('tr')]:[];
+   const ttsHidden=ttsTrs.slice(30,-1);
+   await _sendOne('aging-tts-bc',window._ttsCap.bc,show=>{ttsHidden.forEach(tr=>tr.style.display=show?'none':'');});
+  }
 
   if(btn){btn.textContent='✅ Đã gửi!';btn.style.background='#22C55E';}
   if(btnSb){btnSb.innerHTML='<span>✅</span> Đã gửi Telegram!';btnSb.style.background='rgba(34,197,94,0.2)';btnSb.style.borderColor='rgba(34,197,94,0.4)';btnSb.style.color='#4ade80';}
@@ -2440,6 +2456,17 @@ async function sendAllToTelegram(){
    bcHid.forEach(tr=>tr.style.display='none');
    await sendPhoto('Aging Theo BC','aging-tbl-bc',TG_AGING_CHAT,TG_AGING_THREAD,_agc.cap4||`🏪 <b>AGING THEO BƯU CỤC — 7 NGÀY GẦN NHẤT</b>`);
    bcHid.forEach(tr=>tr.style.display='');
+  }
+  // 2 bảng TTS
+  if(window._ttsCap){
+   await sendPhoto('Aging TTS Theo AM','aging-tts-am',TG_AGING_CHAT,TG_AGING_THREAD,window._ttsCap.am);
+   const ttsBcDT=document.querySelector('#aging-tts-bc .table-wrap>table')||[...document.querySelectorAll('#aging-tts-bc table')].find(t=>t.offsetWidth>0);
+   const ttsTb=ttsBcDT?ttsBcDT.querySelector('tbody'):null;
+   const ttsTrsA=ttsTb?[...ttsTb.querySelectorAll('tr')]:[];
+   const ttsHid=ttsTrsA.slice(30,-1);
+   ttsHid.forEach(tr=>tr.style.display='none');
+   await sendPhoto('Aging TTS Theo BC','aging-tts-bc',TG_AGING_CHAT,TG_AGING_THREAD,window._ttsCap.bc);
+   ttsHid.forEach(tr=>tr.style.display='');
   }
 
   /* --- P23: Báo cáo vận hành khu vực Thắng → group riêng (6 bảng) --- */
