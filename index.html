@@ -1617,6 +1617,52 @@ async function fetchAgingHistoryRows(){
  });
  return rows.length?rows:null;
 }
+/* ── Bảng riêng cho đơn TTS (snapshot hôm nay) ──
+   Nguồn: sheet raw "Aging> 5 Ngày" (per-đơn) — cột 3=BC, 5=Nhóm khách, 10=AM, 11=Nhóm ngày.
+   TTS = Nhóm khách bắt đầu "TTS" (gồm TTS / TTS-Bulky / TTS-Reverse).
+   Lưu ý: tab "Lịch sử Aging" (7 ngày) KHÔNG tách theo nhóm khách → bảng TTS chỉ là snapshot 1 thời điểm. */
+const AGING_RAW_SHEET='Aging> 5 Ngày';
+async function fetchTTSRawRows(){
+ const url=`https://docs.google.com/spreadsheets/d/${AGING_SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(AGING_RAW_SHEET)}`;
+ const resp=await fetch(url);if(!resp.ok)throw new Error(`HTTP ${resp.status}`);
+ const arr=parseCsvRaw(await resp.text());
+ return (arr&&arr.length>1)?arr.slice(1):null; // bỏ dòng tiêu đề
+}
+function _ttsBucket(nhom){const s=''+(nhom||'');if(s.includes('5-7'))return 'g1';if(s.includes('8-10'))return 'g2';if(s.includes('11-15'))return 'g3';if(s.includes('15'))return 'g4';return null;}
+function buildTTSSection(raw){
+ if(!raw||!raw.length)return '';
+ const byAM={},byBC={};let ttsTot=0,allTot=0;
+ raw.forEach(r=>{const b=_ttsBucket(r[11]);if(!b)return;allTot++;const nk=''+(r[5]||'');if(!nk.startsWith('TTS'))return;
+  const am=(r[10]||'').trim()||'(chưa map AM)';const bc=(r[3]||'').trim();if(!bc)return;ttsTot++;
+  (byAM[am]=byAM[am]||{name:am,total:0,g1:0,g2:0,g3:0,g4:0});byAM[am].total++;byAM[am][b]++;
+  (byBC[bc]=byBC[bc]||{name:bc,am,total:0,g1:0,g2:0,g3:0,g4:0});byBC[bc].total++;byBC[bc][b]++;
+ });
+ if(!ttsTot)return '';
+ const amArr=Object.values(byAM).sort((a,b)=>b.total-a.total);
+ const bcArr=Object.values(byBC).sort((a,b)=>b.total-a.total);
+ const uns=window._agingRows?new Set(window._agingRows.filter(r=>(r[12]||'').includes('bất ổn')).map(r=>r[2])):new Set();
+ const vn=n=>n.toLocaleString('vi-VN');
+ const th=(t,extra='')=>`<th style="padding:10px 12px;font-weight:700;font-size:11px;color:var(--text-sub);text-transform:uppercase;letter-spacing:.5px;border-bottom:2px solid var(--border);white-space:nowrap;background:var(--bg);${extra}">${t}</th>`;
+ function tbl(arr,withBC){
+  let t=`<div class="table-wrap" style="overflow-x:auto"><table style="border-collapse:collapse;font-size:13px;min-width:${withBC?720:560}px"><thead><tr>`;
+  t+=th('#','text-align:left')+th(withBC?'Bưu Cục':'AM','text-align:left')+(withBC?th('AM','text-align:left'):'');
+  t+=th('Tổng TTS','text-align:center')+th('5-7 ngày','text-align:center;color:#374151')+th('8-10 ngày','text-align:center;color:#D97706')+th('11-15 ngày','text-align:center;color:#DC2626')+th('&gt;15 ngày','text-align:center;color:#7F1D1D')+th('% Tỉ trọng TTS','text-align:center;color:var(--orange-dark,#C8461A);border-left:2px solid var(--orange)');
+  t+=`</tr></thead><tbody>`;
+  arr.forEach((r,i)=>{const rc=i<3?'color:var(--orange);font-weight:800':'color:var(--text-sub);font-weight:600';const isU=withBC&&uns.has(r.name);
+   t+=`<tr style="border-bottom:1px solid var(--border)"><td style="padding:9px 12px;${rc}">${i+1}</td><td style="padding:9px 12px;font-weight:600;white-space:nowrap">${r.name}${isU?'<span style="display:inline-block;background:#FEE2E2;color:var(--red);border:1px solid #FECACA;border-radius:4px;font-size:9px;font-weight:700;padding:1px 5px;margin-left:5px">⚠ bất ổn</span>':''}</td>${withBC?`<td style="padding:9px 12px;font-size:12px;color:var(--text-sub);white-space:nowrap">${r.am}</td>`:''}`;
+   t+=`<td style="padding:9px 12px;text-align:center;font-weight:800;color:var(--orange-dark,#C8461A);background:#FFF7F3">${vn(r.total)}</td><td style="padding:9px 10px;text-align:center;color:${r.g1?'#374151':'var(--border)'};background:#F9FAFB">${r.g1||'—'}</td><td style="padding:9px 10px;text-align:center;font-weight:600;color:${r.g2?'#D97706':'var(--border)'};background:#FFFBEB">${r.g2||'—'}</td><td style="padding:9px 10px;text-align:center;font-weight:700;color:${r.g3?'#DC2626':'var(--border)'};background:#FEF2F2">${r.g3||'—'}</td><td style="padding:9px 10px;text-align:center;font-weight:800;color:${r.g4?'#7F1D1D':'var(--border)'};background:#FEE2E2">${r.g4||'—'}</td><td style="padding:9px 12px;text-align:center;font-weight:800;color:var(--orange-dark,#C8461A);background:#FFF0EB;border-left:2px solid var(--orange)">${(r.total/ttsTot*100).toFixed(1)}%</td></tr>`;
+  });
+  const sg=k=>arr.reduce((s,r)=>s+(r[k]||0),0);
+  t+=`<tr style="background:var(--orange-light,#FFF0EB);border-top:2px solid var(--orange);font-weight:800"><td style="padding:9px 12px;color:var(--orange)"></td><td style="padding:9px 12px;color:var(--orange)">TỔNG CỘNG</td>${withBC?'<td></td>':''}<td style="padding:9px 12px;text-align:center;color:var(--orange-dark,#C8461A);background:#FFE0CC">${vn(ttsTot)}</td><td style="padding:9px 12px;text-align:center;background:#F0F0F0">${sg('g1')||'—'}</td><td style="padding:9px 12px;text-align:center;color:#D97706;background:#FEF3C7">${sg('g2')||'—'}</td><td style="padding:9px 12px;text-align:center;color:#DC2626;background:#FEE2E2">${sg('g3')||'—'}</td><td style="padding:9px 12px;text-align:center;color:#7F1D1D;background:#FECACA">${sg('g4')||'—'}</td><td style="padding:9px 12px;text-align:center;color:var(--orange-dark,#C8461A);background:#FFE0CC;border-left:2px solid var(--orange)">100%</td></tr>`;
+  return t+`</tbody></table></div>`;
+ }
+ const card=(icon,title,badge,inner)=>`<div style="background:var(--card);border-radius:12px;box-shadow:var(--shadow-sm);margin-bottom:20px;overflow:hidden"><div style="padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px"><span style="font-size:18px">${icon}</span><span style="font-weight:700;font-size:14px">${title}</span><span style="background:var(--orange);color:#fff;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px">${badge}</span></div>${inner}</div>`;
+ let h=`<div style="margin:26px 0 8px;padding-top:10px;border-top:2px dashed var(--border)"><span style="font-size:20px;font-weight:800">📦 Aging đơn TTS <span style="font-size:12px;font-weight:600;color:var(--text-sub)">(snapshot hôm nay — nguồn sheet raw "Aging&gt; 5 Ngày")</span></span></div>`;
+ h+=`<div class="analysis-box" style="margin-bottom:18px">📦 <strong>Tổng đơn TTS aging &gt;5 ngày:</strong> <strong style="color:var(--orange)">${vn(ttsTot)} đơn</strong> · chiếm <strong>${allTot>0?(ttsTot/allTot*100).toFixed(1):0}%</strong> tổng aging toàn Vùng (${vn(allTot)} đơn)<br>Chia theo nhóm ngày: 5-7: <strong>${vn(amArr.reduce((s,r)=>s+r.g1,0))}</strong> · 8-10: <strong>${vn(amArr.reduce((s,r)=>s+r.g2,0))}</strong> · 11-15: <strong>${vn(amArr.reduce((s,r)=>s+r.g3,0))}</strong> · &gt;15: <strong>${vn(amArr.reduce((s,r)=>s+r.g4,0))}</strong></div>`;
+ h+=card('👤','Đơn TTS Theo AM','snapshot',tbl(amArr,false));
+ h+=card('🏪','Đơn TTS Theo Bưu Cục','snapshot',tbl(bcArr,true));
+ return h;
+}
 async function buildAgingPage(){
  const el=document.getElementById('p7');
  try{
@@ -1628,7 +1674,8 @@ async function buildAgingPage(){
    rows=parseCsvRaw(await resp.text());
   }
   window._agingRows=rows;
-  el.innerHTML=buildAgingHTML(rows);
+  let ttsRaw=null;try{ttsRaw=await fetchTTSRawRows();window._agingTTSRaw=ttsRaw;}catch(_){ttsRaw=null;}
+  el.innerHTML=buildAgingHTML(rows)+(ttsRaw?buildTTSSection(ttsRaw):'');
   addBCSearch(el);
  }catch(e){el.innerHTML=errPage(`Aging sheet: ${e.message}`);}
 }
