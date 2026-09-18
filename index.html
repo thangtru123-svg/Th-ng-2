@@ -839,8 +839,8 @@ function buildFDDayPage(fd){
  <div class="card" id="p3-card-overview"><div class="card-header"><div class="card-title"><div class="card-icon">📊</div>Tổng quan Tỉ Lệ Trả toàn Vùng</div></div><div id="fdOverview"></div></div>
  <div class="card" id="p3-card-am"><div class="card-header"><div class="card-title"><div class="card-icon">📅</div>Tỉ lệ trả theo AM</div></div><div id="fdDayAMTable"></div></div>
  <div class="card" id="p3-card-bc-baton"><div class="card-header"><div class="card-title"><div class="card-icon">⚠️</div>Bưu Cục Bất Ổn — Tỉ lệ trả</div></div><div id="fdDayBatOnTable"></div></div>
- <details class="card" id="p3-card-bc-ondinh"><summary style="cursor:pointer;font-weight:700;font-size:15px;list-style:none;display:flex;align-items:center;gap:8px"><div class="card-icon">✅</div>Bưu Cục Ổn Định — Tỉ lệ trả <span style="font-size:11px;font-weight:500;color:var(--text-sub)">— bấm để mở/đóng</span></summary><div id="fdDayOnDinhTable" style="margin-top:10px"></div></details>
- <details class="card" id="p3-card-bc"><summary style="cursor:pointer;font-weight:700;font-size:15px;list-style:none;display:flex;align-items:center;gap:8px"><div class="card-icon">🏪</div>B. Theo Bưu Cục (tất cả) <span style="font-size:11px;font-weight:500;color:var(--text-sub)">— bấm để mở/đóng</span></summary><div id="fdDayBCTable" style="margin-top:10px"></div></details>`;
+ <div class="card" id="p3-card-bc-ondinh"><div class="card-header"><div class="card-title"><div class="card-icon">✅</div>Bưu Cục Ổn Định — Tỉ lệ trả</div></div><div id="fdDayOnDinhTable"></div></div>
+ <div class="card" id="p3-card-bc"><div class="card-header"><div class="card-title"><div class="card-icon">🏪</div>B. Theo Bưu Cục (tất cả)</div></div><div id="fdDayBCTable"></div></div>`;
 }
 function renderFDDay(){
  const fd=window._FD;if(!fd.totalAM)return;
