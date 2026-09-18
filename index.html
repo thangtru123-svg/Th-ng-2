@@ -836,8 +836,11 @@ function buildFDDayPage(fd){
   <label>Đến ngày:</label>
   <select id="fdDay_dTo" onchange="renderFDDay()">${mkOpts(dTo)}</select>
  </div>
+ <div class="card" id="p3-card-overview"><div class="card-header"><div class="card-title"><div class="card-icon">📊</div>Tổng quan Tỉ Lệ Trả toàn Vùng</div></div><div id="fdOverview"></div></div>
+ <div class="card" id="p3-card-bc-baton"><div class="card-header"><div class="card-title"><div class="card-icon">⚠️</div>Bưu Cục Bất Ổn — Tỉ lệ trả</div></div><div id="fdDayBatOnTable"></div></div>
+ <div class="card" id="p3-card-bc-ondinh"><div class="card-header"><div class="card-title"><div class="card-icon">✅</div>Bưu Cục Ổn Định — Tỉ lệ trả</div></div><div id="fdDayOnDinhTable"></div></div>
  <div class="card" id="p3-card-am"><div class="card-header"><div class="card-title"><div class="card-icon">📅</div>A. Theo AM</div></div><div id="fdDayAMTable"></div></div>
- <div class="card" id="p3-card-bc"><div class="card-header"><div class="card-title"><div class="card-icon">🏪</div>B. Theo Bưu Cục</div></div><div id="fdDayBCTable"></div></div>`;
+ <div class="card" id="p3-card-bc"><div class="card-header"><div class="card-title"><div class="card-icon">🏪</div>B. Theo Bưu Cục (tất cả)</div></div><div id="fdDayBCTable"></div></div>`;
 }
 function renderFDDay(){
  const fd=window._FD;if(!fd.totalAM)return;
@@ -849,10 +852,34 @@ function renderFDDay(){
  document.getElementById('fdDayAMTable').innerHTML=buildFDDayTable([fd.totalAM,fd.smeAM,fd.ttsAM,fd.shopeeAM],['Total','SME','TTS','Shopee'],dates,'AM',window._GTC_MAP_AM);
  const bcAM={};const _cm=window._CC_BCAM||{};Object.keys(_cm).forEach(bc=>bcAM[bc]=(_cm[bc]||[]).join(', '));
  document.getElementById('fdDayBCTable').innerHTML=buildFDDayTable([fd.totalBC,fd.smeBC,fd.ttsBC,fd.shopeeBC],['Total','SME','TTS','Shopee'],dates,'Bưu Cục',window._GTC_MAP_BC,bcAM);
+ // ===== Nhóm BC bất ổn / ổn định (theo sheet cột E) + Tổng quan =====
+ const baton=window._BC_BATON||new Set();
+ const _isBaton=n=>baton.has((n||'').trim());
+ document.getElementById('fdDayBatOnTable').innerHTML=buildFDDayTable([fd.totalBC,fd.smeBC,fd.ttsBC,fd.shopeeBC],['Total','SME','TTS','Shopee'],dates,'Bưu Cục',window._GTC_MAP_BC,bcAM,n=>_isBaton(n));
+ document.getElementById('fdDayOnDinhTable').innerHTML=buildFDDayTable([fd.totalBC,fd.smeBC,fd.ttsBC,fd.shopeeBC],['Total','SME','TTS','Shopee'],dates,'Bưu Cục',window._GTC_MAP_BC,bcAM,n=>!_isBaton(n));
+ // Tổng quan: toàn Vùng (Total/SME/TTS/Shopee) + nhóm ổn định/bất ổn (Total + Δ so N-1). Mốc = ngày "Đến ngày" (hi).
+ (function(){
+  const latest=hi, prevD=allD.find(d=>d<hi);
+  const _gd=(sheet,dISO)=>{const res={};(sheet||[]).slice(1).forEach(r=>{if(isoD(r[1])!==dISO)return;const n=(r[0]||'').trim();if(!n||n.toLowerCase().includes('grand total'))return;res[n]={vol:parsePct(r[2]),fd:parsePct(r[3])};});return res;};
+  const _grp=(sheet,dISO,pred)=>{const d=_gd(sheet,dISO);let sv=0,sf=0,cnt=0;Object.entries(d).forEach(([n,v])=>{if(pred&&!pred(n))return;if(v.vol==null)return;sv+=v.vol;sf+=(v.fd||0)*v.vol;cnt++;});return{fd:sv>0?sf/sv:null,n:cnt};};
+  const P=x=>x==null?'—':x.toFixed(2)+'%';
+  const dlt=(now,prev)=>{if(now==null||prev==null)return '<span style="color:var(--text-sub);font-size:12px">— chưa có N-1</span>';const d=now-prev;if(Math.abs(d)<0.005)return '<span style="color:var(--text-sub);font-size:12px">▬ không đổi so N-1</span>';const up=d>0;return `<span style="color:${up?'var(--red)':'var(--green)'};font-weight:700;font-size:12px">${up?'▲ tăng':'▼ giảm'} ${Math.abs(d).toFixed(2)} điểm % so N-1</span>`;};
+  const vT=_grp(fd.totalBC,latest,null),vS=_grp(fd.smeBC,latest,null),vTs=_grp(fd.ttsBC,latest,null),vSh=_grp(fd.shopeeBC,latest,null);
+  const odN=_grp(fd.totalBC,latest,n=>!_isBaton(n)),odP=prevD?_grp(fd.totalBC,prevD,n=>!_isBaton(n)):{fd:null};
+  const boN=_grp(fd.totalBC,latest,_isBaton),boP=prevD?_grp(fd.totalBC,prevD,_isBaton):{fd:null};
+  const cardBig=(lbl,val,col)=>`<div style="flex:1;min-width:150px;background:var(--card);border:1px solid var(--border);border-top:3px solid ${col};border-radius:12px;padding:14px 16px;box-shadow:var(--shadow-sm)"><div style="font-size:11px;font-weight:700;color:var(--text-sub);text-transform:uppercase;letter-spacing:.5px">${lbl}</div><div style="font-size:28px;font-weight:800;color:${col};line-height:1.1;margin-top:4px">${val}</div></div>`;
+  const cardGrp=(icon,lbl,g,gp,col)=>`<div style="flex:1;min-width:230px;background:var(--card);border:1px solid var(--border);border-left:4px solid ${col};border-radius:12px;padding:14px 16px;box-shadow:var(--shadow-sm)"><div style="font-size:13px;font-weight:800;color:${col}">${icon} ${lbl}</div><div style="font-size:30px;font-weight:800;color:var(--text-main);line-height:1.1;margin:4px 0 3px">${P(g.fd)}</div><div>${dlt(g.fd,gp.fd)}</div><div style="font-size:11px;color:var(--text-sub);margin-top:3px">${g.n} Bưu Cục · Tỉ lệ trả Total</div></div>`;
+  let h=`<div class="s" style="margin:2px 0 12px">Mốc: <b>${shortDDow(latest)}</b>${prevD?` · so với N-1 (${shortDDow(prevD)})`:''} · %trả gộp weighted theo %Vol</div>`;
+  h+=`<div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:14px"><div style="flex:2;min-width:320px"><div style="font-size:12px;font-weight:700;color:var(--text-sub);margin-bottom:7px">TOÀN VÙNG — theo nhóm khách</div><div style="display:flex;gap:10px;flex-wrap:wrap">${cardBig('Tỉ lệ trả Total',P(vT.fd),'#DC2626')}${cardBig('SME',P(vS.fd),'#6B7280')}${cardBig('TTS',P(vTs.fd),'#D97706')}${cardBig('Shopee',P(vSh.fd),'#7C3AED')}</div></div></div>`;
+  h+=`<div style="display:flex;gap:12px;flex-wrap:wrap">${cardGrp('✅','Nhóm Bưu Cục Ổn Định',odN,odP,'#16A34A')}${cardGrp('⚠️','Nhóm Bưu Cục Bất Ổn',boN,boP,'#DC2626')}</div>`;
+  document.getElementById('fdOverview').innerHTML=h;
+ })();
  addBCSearch(document.getElementById('fdDayAMTable'));
  addBCSearch(document.getElementById('fdDayBCTable'));
+ addBCSearch(document.getElementById('fdDayBatOnTable'));
+ addBCSearch(document.getElementById('fdDayOnDinhTable'));
 }
-function buildFDDayTable(sheetArr,labels,dates,nameLabel,gtcMap,amMap){
+function buildFDDayTable(sheetArr,labels,dates,nameLabel,gtcMap,amMap,nameFilter){
  if(!dates||!dates.length)return'<p style="padding:16px;color:var(--text-sub)">Chọn khoảng ngày hợp lệ</p>';
  const _amOf=n=>amMap?(amMap[(n||'').trim()]||'—'):'';
  function getDataD(rows,dISO){
@@ -865,7 +892,7 @@ function buildFDDayTable(sheetArr,labels,dates,nameLabel,gtcMap,amMap){
  const allNames=new Set();
  dData.forEach(dd=>dd.forEach(d=>Object.keys(d).forEach(n=>allNames.add(n))));
  const isGrand=n=>n.toLowerCase().includes('grand total');
- const regular=[...allNames].filter(n=>!isGrand(n));
+ const regular=[...allNames].filter(n=>!isGrand(n)&&(!nameFilter||nameFilter(n)));
  const grands=[...allNames].filter(n=>isGrand(n));
  const cs='padding:6px 8px;';
  // Số trả = fd/100 × nGTC / (1 - fd/100) — chỉ tính khi fd < 50% (tránh số nổ)
@@ -924,7 +951,7 @@ function buildFDDayTable(sheetArr,labels,dates,nameLabel,gtcMap,amMap){
   const bg=DC[di%DC.length];
   labels.forEach((_,si)=>{
    const dayData=dData[di]?.[si]||{};
-   const vals=Object.entries(dayData).filter(([n])=>!isGrand(n)).map(([,v])=>v);
+   const vals=Object.entries(dayData).filter(([n])=>!isGrand(n)&&(!nameFilter||nameFilter(n))).map(([,v])=>v);
    const sumVol=vals.reduce((s,v)=>s+(v.vol||0),0);
    const sumFdVol=vals.reduce((s,v)=>s+(v.fd||0)*(v.vol||0),0);
    const gtFd=sumVol>0?sumFdVol/sumVol:null;
@@ -932,7 +959,7 @@ function buildFDDayTable(sheetArr,labels,dates,nameLabel,gtcMap,amMap){
    h+=`<td style="${cs}text-align:center;border-left:${si===0?'3px solid #D1D5DB':'1px solid #E5E7EB'};background:${red?'#FEE2E2':bg};color:${red?'#DC2626':'inherit'};font-weight:${red?800:600}">${gtFd!==null?gtFd.toFixed(2)+'%':'—'}</td>`;
    if(si===0&&hasGTC){
     // Tổng số đơn trả = sum từng AM
-    const gtSoTra=Object.entries(dayData).filter(([n])=>!isGrand(n)).reduce((s,[n,v])=>{const st=calcSoTra(n,d,v.fd??null);return s+(st??0);},0);
+    const gtSoTra=Object.entries(dayData).filter(([n])=>!isGrand(n)&&(!nameFilter||nameFilter(n))).reduce((s,[n,v])=>{const st=calcSoTra(n,d,v.fd??null);return s+(st??0);},0);
     h+=`<td style="${cs}text-align:center;border-left:1px solid #E5E7EB;background:${bg};font-weight:700">${gtSoTra>0?fmt(gtSoTra):'—'}</td>`;
    }
   });
@@ -3964,6 +3991,12 @@ async function init(){
   const _m={};_cc.slice(1).forEach(r=>{const bc=(r[1]||'').trim(),am=(r[3]||'').trim();if(bc&&am){(_m[bc]=_m[bc]||[]);if(!_m[bc].includes(am))_m[bc].push(am);}});
   window._CC_BCAM=_m;
  }catch(e){console.warn('Cơ cấu AM:',e&&e.message);}
+ // Danh sách BC bất ổn (sheet "Bưu Cục Bất Ổn - AM báo cáo", gid 1831793685, cột E) → Set tên BC
+ try{
+  const _bo=parseCSV(await(await fetch(`https://docs.google.com/spreadsheets/d/${AGING_SHEET_ID}/gviz/tq?tqx=out:csv&gid=1831793685`)).text());
+  const _s=new Set();_bo.slice(1).forEach(r=>{const bc=(r[4]||'').trim();if(bc)_s.add(bc);});
+  window._BC_BATON=_s;
+ }catch(e){console.warn('BC bất ổn:',e&&e.message);}
  // Save global cache for AI
  window._D={
   gtcTotalAM:R['GTC Total theo AM'],gtcTotalBC:R['GTC Total theo Bưu Cục'],
