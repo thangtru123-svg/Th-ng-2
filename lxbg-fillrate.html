@@ -69,7 +69,7 @@ input.search{border:1px solid var(--line);background:var(--panel);color:var(--in
     <div class="tab active" data-tab="prov">Theo tỉnh xuất phát</div>
     <div class="tab" data-tab="day">Theo ngày</div>
     <div class="tab" data-tab="week">Theo tuần</div>
-    <div class="tab" data-tab="det">Chi tiết <span id="detCount">346</span> chuyến 0-30%</div>
+    <div class="tab" data-tab="det">🔎 Chi tiết chuyến theo mốc</div>
     <div class="tab" data-tab="cost">💰 Chi phí cước</div>
     <div class="tab" data-tab="legs">🧭 Chi tiết chặng theo tuyến</div>
   </div>
@@ -90,7 +90,7 @@ const BCOL=['#B4232A','#D65A4A','#E08A1E','#7FB069','#1f7a4d','#9aa8a0'];
 const vn=n=>Math.round(n).toLocaleString('vi-VN');
 const esc=s=>String(s==null?'':s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
 const ddmm=s=>{const m=/(\d{4})-(\d{2})-(\d{2})/.exec(s);return m?m[3]+'/'+m[2]:s;};
-let state={tab:'prov',q:'',sortK:6,sortDir:1,from:'',to:'',legQ:'',legProv:'',legSel:null,legDay:''};
+let state={tab:'prov',q:'',sortK:6,sortDir:1,from:'',to:'',bandFilter:null,legQ:'',legProv:'',legSel:null,legDay:''};
 const n1=x=>Number(x||0).toLocaleString('vi-VN',{maximumFractionDigits:1});
 
 /* ---- KPI + bands ---- */
@@ -105,7 +105,16 @@ function head(){
     ['Chuyến lấp đầy thấp (0-30%)','<span style=color:var(--red)>'+vn(low)+'</span>',(low/tot*100).toFixed(1)+'% tổng chuyến · thiệt hại chi phí'],
     ['Chuyến đầy tốt (>50%)','<span style=color:var(--green)>'+vn(b[4].trips)+'</span>',(b[4].trips/tot*100).toFixed(1)+'% tổng chuyến']
   ].map(k=>`<div class="kpi"><div class="t">${k[0]}</div><div class="v">${k[1]}</div><div class="f">${k[2]}</div></div>`).join('');
-  $('bands').innerHTML=b.map((x,i)=>`<div class="bcell" style="background:${BCOL[i]}"><div class="bn">${i<5?'Mốc ':''}${BLABEL[i]}</div><div class="bv">${vn(x.trips)}</div><div class="bf">${vn(x.tan)} tấn · ${(x.trips/OUT.meta.total*100).toFixed(1)}%</div></div>`).join('');
+  $('bands').innerHTML=b.map((x,i)=>`<div class="bcell" style="background:${BCOL[i]};cursor:pointer" title="Click để xem toàn bộ chuyến mốc ${BLABEL[i]}" onclick="pickBand(${i})"><div class="bn">${i<5?'Mốc ':''}${BLABEL[i]} <span style="opacity:.75;font-weight:600">›</span></div><div class="bv">${vn(x.trips)}</div><div class="bf">${vn(x.tan)} tấn · ${(x.trips/OUT.meta.total*100).toFixed(1)}%</div></div>`).join('');
+}
+/* Click ô mốc → sang tab Chi tiết, lọc đúng mốc đó */
+function pickBand(i){
+  state.bandFilter=i;
+  const tabEl=document.querySelector('.tab[data-tab="det"]');
+  document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+  if(tabEl)tabEl.classList.add('active');
+  state.tab='det';render();
+  const p=$('panel');if(p&&p.scrollIntoView)p.scrollIntoView({behavior:'smooth',block:'start'});
 }
 
 /* ---- aggregate table (prov/day/week) ---- */
@@ -139,9 +148,12 @@ function renderAgg(kind){
 }
 
 /* ---- detail 346 ---- */
-const DET_MIN='2026-08-04', DET_MAX='2026-09-02';
+const DET_MIN=OUT.meta.from, DET_MAX=OUT.meta.to;
 function detData(){
   let d=DET.map(r=>({code:r[0],day:r[1],band:r[2],prov:r[3],cap:r[4],picked:r[5],fill:r[6],plate:r[7],mt:r[8],route:r[9],cuoc:r[10],km:r[11]}));
+  const bf=state.bandFilter;
+  if(bf==null)d=d.filter(x=>x.band<=2);            // mặc định: 0-30% (lấp đầy thấp)
+  else if(bf!=='all')d=d.filter(x=>x.band===bf);   // 1 mốc cụ thể
   if(state.from)d=d.filter(x=>x.day>=state.from);
   if(state.to)d=d.filter(x=>x.day<=state.to);
   const q=state.q.trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/đ/g,'d');
@@ -164,10 +176,15 @@ function renderDet(){
     <td>${x.km==null?'':x.km.toLocaleString('vi-VN')}</td>
     <td style="text-align:right">${x.cuoc==null?'<span style="color:var(--muted)">Nội bộ</span>':'<b>'+vn(x.cuoc)+'</b>'}</td></tr>`;
   const heads=[['code','Mã chuyến'],['day','Ngày'],['band','Mốc'],['prov','Tỉnh XP'],['cap','Tải trọng'],['picked','Đã xếp(kg)'],['fill','% Lấp đầy'],['plate','Biển số'],['mt','Mã tuyến'],['route','Lộ trình di chuyển'],['km','Tổng QĐ (km)'],['cuoc','Cước (đ)']];
+  const bf=state.bandFilter;
+  const titleTxt=bf==null?`Chi tiết ${d.length} chuyến lấp đầy thấp (0-30%)`:bf==='all'?`Chi tiết TẤT CẢ ${d.length} chuyến`:`Chi tiết ${d.length} chuyến mốc ${BLABEL[bf]}`;
+  const chipDef=[['0-30% (thấp)',null],['Tất cả','all'],['0-10%',0],['10-20%',1],['20-30%',2],['30-50%',3],['>50%',4],['Khác',5]];
+  const chips=chipDef.map(([lbl,v])=>{const on=(bf===v);const col=(typeof v==='number')?BCOL[v]:(v==='all'?'#334155':'#B4232A');return `<button class="bandChip" data-bf="${v==null?'null':v}" style="border:1.5px solid ${col};background:${on?col:'transparent'};color:${on?'#fff':col};padding:5px 12px;border-radius:20px;font-size:12.5px;font-weight:700;cursor:pointer;white-space:nowrap">${lbl}</button>`;}).join('');
   $('panel').innerHTML=`<div class="bar" style="margin-top:0">
-      <div><h3 style="margin:0">Chi tiết ${d.length} chuyến lấp đầy thấp (0-30%)</h3><div class="s">%Lấp đầy = Tỷ lệ lấp đầy thật (cột U sheet, KHỚP mốc — đã bỏ "Tỷ lệ vận chuyển"). Bấm tiêu đề cột để sắp xếp.</div></div>
+      <div><h3 style="margin:0">${titleTxt}</h3><div class="s">%Lấp đầy = Tỷ lệ lấp đầy thật (cột U sheet, KHỚP mốc — đã bỏ "Tỷ lệ vận chuyển"). Bấm tiêu đề cột để sắp xếp.</div></div>
       <input class="search" id="detSearch" placeholder="Tìm mã chuyến, tỉnh, biển số, mã tuyến, điểm dừng trong lộ trình…" value="${esc(state.q)}">
     </div>
+    <div class="bar" style="margin:0 0 10px;gap:7px;flex-wrap:wrap"><span class="s" style="margin:0">Lọc theo mốc:</span>${chips}</div>
     <div class="bar" style="margin:0 0 8px;gap:8px">
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
         <span class="s" style="margin:0">Khoảng ngày:</span>
@@ -186,6 +203,7 @@ function renderDet(){
   $('detTo').onchange=e=>{state.to=e.target.value;renderDet();};
   $('detClear').onclick=()=>{state.from='';state.to='';renderDet();};
   document.querySelectorAll('#panel thead th[data-i]').forEach(th=>th.onclick=()=>{const i=+th.dataset.i;if(state.sortK===i)state.sortDir*=-1;else{state.sortK=i;state.sortDir=1;}renderDet();});
+  document.querySelectorAll('#panel .bandChip').forEach(c=>c.onclick=()=>{const v=c.dataset.bf;state.bandFilter=(v==='null')?null:(v==='all'?'all':+v);renderDet();});
 }
 /* ---- Chi phí cước ---- */
 let cstate={cq:'',rsK:3,rsDir:-1};
@@ -365,7 +383,7 @@ $('csvBtn').onclick=()=>{
   const head=['ma_chuyen','ngay','muc','tinh_xuat_phat','tai_trong_kg','da_xep_kg','pct_lap_day','bien_so','ma_tuyen','lo_trinh','tong_quang_duong_km','cuoc'];
   const lines=[head.join(',')];
   DET.forEach(r=>{const o=[r[0],r[1],BLABEL[r[2]],r[3],r[4],r[5],r[6],r[7],r[8],r[9],r[11]==null?'':r[11],r[10]==null?'':r[10]];lines.push(o.map(x=>`"${String(x==null?'':x).replace(/"/g,'""')}"`).join(','));});
-  const blob=new Blob(['﻿'+lines.join('\n')],{type:'text/csv;charset=utf-8'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='LXBG_lapday_thap_'+DET.length+'.csv';a.click();URL.revokeObjectURL(a.href);
+  const blob=new Blob(['﻿'+lines.join('\n')],{type:'text/csv;charset=utf-8'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='LXBG_tatca_chuyen_'+DET.length+'.csv';a.click();URL.revokeObjectURL(a.href);
 };
 
 /* ---- Telegram images ---- */
