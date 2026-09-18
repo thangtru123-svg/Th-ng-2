@@ -581,7 +581,7 @@ function renderGTCAmTable(rows,dates){
  let h=`<div class="table-wrap" style="overflow-x:auto;max-height:none"><table style="font-size:12px"><thead>
   <tr>
    <th rowspan="2" style="${cs}${sH}width:28px;text-align:center">STT</th>
-   <th rowspan="2" style="${cs}${sH2}min-width:160px;max-width:200px">AM</th>
+   <th rowspan="2" style="${cs}${sH2}min-width:125px;max-width:175px">AM</th>
    ${dates.map(d=>`<th colspan="4" style="${cs}text-align:center;border-left:2px solid #E5E7EB"><strong>${shortDDow(d)}</strong></th>`).join('')}
   </tr>
   <tr>
@@ -589,7 +589,7 @@ function renderGTCAmTable(rows,dates){
   </tr>
  </thead><tbody>`;
  names.forEach((name,i)=>{
-  h+=`<tr><td style="${cs}text-align:center;color:var(--text-sub);font-size:10px;position:sticky;left:0;background:#fff;z-index:2">${i+1}</td><td style="${cs}font-weight:700;position:sticky;left:28px;background:#fff;z-index:2;min-width:160px;max-width:200px;word-break:break-word">${name.split(',').map(s=>s.trim()).join('<br>')}</td>`;
+  h+=`<tr><td style="${cs}text-align:center;color:var(--text-sub);font-size:10px;position:sticky;left:0;background:#fff;z-index:2">${i+1}</td><td style="${cs}font-weight:700;position:sticky;left:28px;background:#fff;z-index:2;min-width:125px;max-width:175px;word-break:break-word">${name.split(',').map(s=>s.trim()).join('<br>')}</td>`;
   dates.forEach(d=>{const c=pivot[name]?.[d];if(c){const gc=c.gtc>=65?'g':c.gtc>=50?'m':'b';h+=`<td style="${cs}text-align:center;border-left:2px solid #F3F4F6">${fmt(c.vol)}</td><td style="${cs}text-align:center">${c.gan.toFixed(1)}%</td><td style="${cs}text-align:center"><span class="pct ${gc}">${c.gtc.toFixed(1)}%</span></td><td style="${cs}text-align:center;color:var(--green);font-weight:600">${fmt(c.nGTC)}</td>`;}else{h+=`<td colspan="4" style="${cs}text-align:center;border-left:2px solid #F3F4F6;color:var(--text-sub)">—</td>`;}});
   h+='</tr>';
  });
@@ -838,9 +838,9 @@ function buildFDDayPage(fd){
  </div>
  <div class="card" id="p3-card-overview"><div class="card-header"><div class="card-title"><div class="card-icon">📊</div>Tổng quan Tỉ Lệ Trả toàn Vùng</div></div><div id="fdOverview"></div></div>
  <div class="card" id="p3-card-bc-baton"><div class="card-header"><div class="card-title"><div class="card-icon">⚠️</div>Bưu Cục Bất Ổn — Tỉ lệ trả</div></div><div id="fdDayBatOnTable"></div></div>
- <div class="card" id="p3-card-bc-ondinh"><div class="card-header"><div class="card-title"><div class="card-icon">✅</div>Bưu Cục Ổn Định — Tỉ lệ trả</div></div><div id="fdDayOnDinhTable"></div></div>
- <div class="card" id="p3-card-am"><div class="card-header"><div class="card-title"><div class="card-icon">📅</div>A. Theo AM</div></div><div id="fdDayAMTable"></div></div>
- <div class="card" id="p3-card-bc"><div class="card-header"><div class="card-title"><div class="card-icon">🏪</div>B. Theo Bưu Cục (tất cả)</div></div><div id="fdDayBCTable"></div></div>`;
+ <details class="card" id="p3-card-bc-ondinh"><summary style="cursor:pointer;font-weight:700;font-size:15px;list-style:none;display:flex;align-items:center;gap:8px"><div class="card-icon">✅</div>Bưu Cục Ổn Định — Tỉ lệ trả <span style="font-size:11px;font-weight:500;color:var(--text-sub)">— bấm để mở/đóng</span></summary><div id="fdDayOnDinhTable" style="margin-top:10px"></div></details>
+ <details class="card" id="p3-card-am"><summary style="cursor:pointer;font-weight:700;font-size:15px;list-style:none;display:flex;align-items:center;gap:8px"><div class="card-icon">📅</div>A. Theo AM <span style="font-size:11px;font-weight:500;color:var(--text-sub)">— bấm để mở/đóng</span></summary><div id="fdDayAMTable" style="margin-top:10px"></div></details>
+ <details class="card" id="p3-card-bc"><summary style="cursor:pointer;font-weight:700;font-size:15px;list-style:none;display:flex;align-items:center;gap:8px"><div class="card-icon">🏪</div>B. Theo Bưu Cục (tất cả) <span style="font-size:11px;font-weight:500;color:var(--text-sub)">— bấm để mở/đóng</span></summary><div id="fdDayBCTable" style="margin-top:10px"></div></details>`;
 }
 function renderFDDay(){
  const fd=window._FD;if(!fd.totalAM)return;
@@ -894,7 +894,7 @@ function buildFDDayTable(sheetArr,labels,dates,nameLabel,gtcMap,amMap,nameFilter
  const isGrand=n=>n.toLowerCase().includes('grand total');
  const regular=[...allNames].filter(n=>!isGrand(n)&&(!nameFilter||nameFilter(n)));
  const grands=[...allNames].filter(n=>isGrand(n));
- const cs='padding:6px 8px;';
+ const cs='padding:3px 6px;font-size:11.5px;line-height:1.25;';
  // Số trả = fd/100 × nGTC / (1 - fd/100) — chỉ tính khi fd < 50% (tránh số nổ)
  const calcSoTra=(name,d,fd)=>{
   if(!gtcMap||fd===null||fd>=50)return null;
@@ -918,7 +918,7 @@ function buildFDDayTable(sheetArr,labels,dates,nameLabel,gtcMap,amMap,nameFilter
  if(!names.length)return`<p style="padding:16px;color:var(--text-sub)">Không có dữ liệu</p>`;
  const hasGTC=!!gtcMap;
  let h=`<div class="table-wrap" style="overflow-x:auto;max-height:none"><table><thead style="position:sticky;top:0;z-index:4">`;
- h+=`<tr><th rowspan="2" style="${cs}position:sticky;left:0;z-index:5;background:#FEEDE4;width:32px;text-align:center">STT</th><th rowspan="2" style="${cs}position:sticky;left:32px;z-index:5;background:#FEEDE4;min-width:160px;max-width:200px">${nameLabel}</th>${amMap?`<th rowspan="2" style="${cs}background:#FEEDE4;min-width:120px;max-width:150px;text-align:left">AM</th>`:''}`;
+ h+=`<tr><th rowspan="2" style="${cs}position:sticky;left:0;z-index:5;background:#FEEDE4;width:32px;text-align:center">STT</th><th rowspan="2" style="${cs}position:sticky;left:32px;z-index:5;background:#FEEDE4;min-width:125px;max-width:175px">${nameLabel}</th>${amMap?`<th rowspan="2" style="${cs}background:#FEEDE4;min-width:90px;max-width:130px;text-align:left">AM</th>`:''}`;
  dates.forEach((d,di)=>{const bg=DC[di%DC.length];const span=hasGTC?labels.length+1:labels.length;const bad=isBadDay(di);h+=`<th colspan="${span}" style="${cs}text-align:center;border-left:3px solid #D1D5DB;background:${bad?'#FEF3C7':bg}"><strong>${shortDDow(d)}</strong>${bad?` <span title="Dữ liệu chưa đầy đủ" style="color:#D97706;font-size:10px">⚠️ chưa đủ</span>`:''}</th>`;});
  h+='</tr><tr>';
  dates.forEach((d,di)=>{
@@ -931,7 +931,7 @@ function buildFDDayTable(sheetArr,labels,dates,nameLabel,gtcMap,amMap,nameFilter
  h+='</tr></thead><tbody>';
  names.forEach((name,i)=>{
   const isG=isGrand(name);
-  h+=`<tr${isG?' class="tot"':''}><td style="${cs}text-align:center;color:var(--text-sub);font-size:11px;position:sticky;left:0;background:${isG?'#F8F9FA':'#fff'};z-index:2">${isG?'':i+1}</td><td style="${cs}font-weight:${isG?800:600};position:sticky;left:32px;background:${isG?'#F8F9FA':'#fff'};z-index:2;min-width:160px;max-width:200px;word-break:break-word">${name.split(',').map(s=>s.trim()).join('<br>')}</td>${amMap?`<td style="${cs}font-size:12px;color:var(--text-sub);word-break:break-word">${_amOf(name)}</td>`:''}`;
+  h+=`<tr${isG?' class="tot"':''}><td style="${cs}text-align:center;color:var(--text-sub);font-size:11px;position:sticky;left:0;background:${isG?'#F8F9FA':'#fff'};z-index:2">${isG?'':i+1}</td><td style="${cs}font-weight:${isG?800:600};position:sticky;left:32px;background:${isG?'#F8F9FA':'#fff'};z-index:2;min-width:125px;max-width:175px;word-break:break-word">${name.split(',').map(s=>s.trim()).join('<br>')}</td>${amMap?`<td style="${cs}font-size:12px;color:var(--text-sub);word-break:break-word">${_amOf(name)}</td>`:''}`;
   dates.forEach((d,di)=>{
    const bg=DC[di%DC.length];
    labels.forEach((_,si)=>{
@@ -2048,12 +2048,47 @@ async function sendTLTToTelegram(){
    cap+=sorted.slice(-3).reverse().map(n=>`• ${n}: ${(data[n]||0).toFixed(1)}%`).join('\n');
    return trimCap(cap);
   }
-  // Gửi ảnh AM
-  {const amCard=document.getElementById('p3-card-am');
-   if(amCard){const cl=amCard.cloneNode(true);cl.querySelectorAll('.table-wrap>div').forEach(e=>e.remove());cl.querySelectorAll('thead,th').forEach(el=>{el.style.position='';el.style.top='';el.style.zIndex='';});const tmp=document.createElement('div');tmp.id='tg-am-fd';tmp.style.cssText='position:fixed;top:-9999px;left:0;z-index:-1;width:960px;padding:0';tmp.appendChild(cl);document.body.appendChild(tmp);await new Promise(r=>setTimeout(r,300));try{const img=await _captureEl('tg-am-fd');const res=await _tgSendPhoto(TG_AGING_CHAT,TG_FD_THREAD,img,capFD('am'));if(!res.ok)throw new Error('TLT AM: '+(res.description||JSON.stringify(res)));}catch(_e){console.warn('TG bước lỗi:',_e&&_e.message);}finally{tmp.remove();}await new Promise(r=>setTimeout(r,600));}}
-  // Gửi ảnh BC top 15
-  {const bcCard=document.getElementById('p3-card-bc');const bcTbl=document.querySelector('#fdDayBCTable table[data-bc-srch]');
-   if(bcCard&&bcTbl){const cl=bcCard.cloneNode(true);cl.querySelectorAll('.table-wrap>div:not(.analysis-box)').forEach(e=>e.remove());cl.querySelectorAll('thead,th').forEach(el=>{el.style.position='';el.style.top='';el.style.zIndex='';});const mainTbl=cl.querySelector('table[data-bc-srch]');if(mainTbl){const tb=mainTbl.querySelector('tbody');if(tb){let k=0;[...tb.querySelectorAll('tr')].forEach(tr=>{const isTot=tr.classList.contains('tot');if(!isTot){if(k>=15)tr.remove();else k++;}});}}const titleEl=cl.querySelector('.card-title');if(titleEl)titleEl.innerHTML='<div class="card-icon">🏪</div>B. Theo Bưu Cục — Top 15 FD Total cao nhất';const tmp=document.createElement('div');tmp.id='tg-bc-top15';tmp.style.cssText='position:fixed;top:-9999px;left:0;z-index:-1;width:1200px;padding:0';tmp.appendChild(cl);document.body.appendChild(tmp);await new Promise(r=>setTimeout(r,300));try{const img=await _captureEl('tg-bc-top15');const res=await _tgSendPhoto(TG_AGING_CHAT,TG_FD_THREAD,img,capFD('bc'));if(!res.ok)throw new Error('TLT BC: '+(res.description||JSON.stringify(res)));}catch(_e){console.warn('TG bước lỗi:',_e&&_e.message);}finally{tmp.remove();}await new Promise(r=>setTimeout(r,600));}}
+  // ĐẢM BẢO các bảng đã render
+  if(typeof renderFDDay==='function'){try{renderFDDay();}catch(_){}await new Promise(r=>setTimeout(r,500));}
+  // ===== Tính nhóm ổn định / bất ổn + Tổng quan =====
+  const baton=window._BC_BATON||new Set();const _isB=n=>baton.has((n||'').trim());
+  const allD=[...new Set(fd.totalBC.slice(1).map(r=>isoD(r[1])).filter(Boolean))].sort((a,b)=>b.localeCompare(a));
+  const latest=allD[0],prev=allD[1];
+  const _gd=(sheet,dd)=>{const res={};(sheet||[]).slice(1).forEach(r=>{if(isoD(r[1])!==dd)return;const n=(r[0]||'').trim();if(!n||n.toLowerCase().includes('grand total'))return;res[n]={vol:parsePct(r[2]),fd:parsePct(r[3])};});return res;};
+  const grp=(sheet,dd,pred)=>{const o=_gd(sheet,dd);let sv=0,sf=0,c=0;Object.entries(o).forEach(([n,v])=>{if(pred&&!pred(n))return;sv+=v.vol||0;sf+=(v.fd||0)*(v.vol||0);c++;});return{fd:sv?sf/sv:null,n:c};};
+  const P=x=>x==null?'—':x.toFixed(2)+'%';
+  const dtxt=(now,prv)=>{if(now==null||prv==null)return '';const d=now-prv;if(Math.abs(d)<0.005)return ' (không đổi so N-1)';return ` (${d>0?'▲ tăng':'▼ giảm'} ${Math.abs(d).toFixed(2)} điểm % so N-1)`;};
+  const vT=grp(fd.totalBC,latest,null),vS=grp(fd.smeBC,latest,null),vTs=grp(fd.ttsBC,latest,null),vSh=grp(fd.shopeeBC,latest,null);
+  const odN=grp(fd.totalBC,latest,n=>!_isB(n)),odP=grp(fd.totalBC,prev,n=>!_isB(n));
+  const boN=grp(fd.totalBC,latest,_isB),boP=grp(fd.totalBC,prev,_isB);
+  let capOv=`📊 <b>TỔNG QUAN TỈ LỆ TRẢ TOÀN VÙNG — ${fD(latest)}</b>\n`;
+  capOv+=`Toàn Vùng: Total <b>${P(vT.fd)}</b>`+(vS.fd!=null?` · SME ${P(vS.fd)}`:'')+` · TTS ${P(vTs.fd)} · Shopee ${P(vSh.fd)}\n`;
+  capOv+=`✅ Nhóm ổn định (${odN.n} BC): <b>${P(odN.fd)}</b>${dtxt(odN.fd,odP.fd)}\n`;
+  capOv+=`⚠️ Nhóm bất ổn (${boN.n} BC): <b>${P(boN.fd)}</b>${dtxt(boN.fd,boP.fd)}\n\n📝 <b>Nhận định:</b>\n`;
+  if(boN.fd!=null&&odN.fd!=null){const gap=boN.fd-odN.fd,ratio=odN.fd>0?boN.fd/odN.fd:0;capOv+=`• Nhóm bất ổn cao hơn ổn định ${gap.toFixed(2)} điểm %${ratio>=1.3?` (gấp ~${ratio.toFixed(1)} lần)`:''}.\n`;}
+  if(boN.fd!=null&&boP.fd!=null){const d=boN.fd-boP.fd;capOv+=d>0.05?`• Nhóm bất ổn ĐANG XẤU ĐI (▲ ${d.toFixed(2)} điểm %) — cần can thiệp.\n`:d<-0.05?`• Nhóm bất ổn cải thiện (▼ ${Math.abs(d).toFixed(2)} điểm %).\n`:`• Nhóm bất ổn gần như đứng yên so N-1.\n`;}
+  if(vT.fd!=null)capOv+=`• Mục tiêu toàn Vùng ≤ 8% — hiện ${P(vT.fd)}${vT.fd>8?' (VƯỢT mục tiêu).':' (đạt).'}\n`;
+  capOv=trimCap(capOv);
+  const bd=_gd(fd.totalBC,latest);
+  const bList=Object.entries(bd).filter(([n])=>_isB(n)&&bd[n].fd!=null).map(([n,v])=>({n,fd:v.fd})).sort((a,b)=>b.fd-a.fd);
+  let capBaton=`⚠️ <b>BƯU CỤC BẤT ỔN — TỈ LỆ TRẢ ${fD(latest)}</b>\nNhóm ${boN.n} BC · %trả gộp <b>${P(boN.fd)}</b>${dtxt(boN.fd,boP.fd)}\n\n📝 Top FD cao nhất:\n`+bList.slice(0,5).map((x,i)=>`${i+1}. ${x.n}: ${x.fd.toFixed(2)}%`).join('\n');
+  capBaton=trimCap(capBaton);
+  const capOndinh=trimCap(`✅ <b>BƯU CỤC ỔN ĐỊNH — TỈ LỆ TRẢ ${fD(latest)}</b>\nNhóm ${odN.n} BC · %trả gộp <b>${P(odN.fd)}</b>${dtxt(odN.fd,odP.fd)}\n(ảnh Top 15 FD cao nhất trong nhóm)`);
+  // Helper chụp + gửi 1 card (mở details, bỏ search bar, trim tuỳ chọn)
+  const sendCard=async(cardId,cap,width,trimN)=>{
+   const card=document.getElementById(cardId);if(!card)return;
+   const cl=card.cloneNode(true);if(cl.tagName==='DETAILS')cl.open=true;cl.querySelectorAll('details').forEach(d=>d.open=true);
+   cl.querySelectorAll('.table-wrap>div:not(.analysis-box)').forEach(e=>e.remove());
+   cl.querySelectorAll('thead,th').forEach(el=>{el.style.position='';el.style.top='';el.style.zIndex='';});
+   if(trimN){const mt=cl.querySelector('table');const tb=mt&&mt.querySelector('tbody');if(tb){let k=0;[...tb.querySelectorAll('tr')].forEach(tr=>{if(!tr.classList.contains('tot')){if(k>=trimN)tr.remove();else k++;}});}}
+   const tmp=document.createElement('div');tmp.id='tg-fd-tmp';tmp.style.cssText='position:fixed;top:-9999px;left:0;z-index:-1;width:'+width+'px;padding:0;background:#fff';tmp.appendChild(cl);document.body.appendChild(tmp);
+   await new Promise(r=>setTimeout(r,350));
+   try{const img=await _captureEl('tg-fd-tmp');const res=await _tgSendPhoto(TG_AGING_CHAT,TG_FD_THREAD,img,cap);if(!res||!res.ok)throw new Error((res&&res.description)||'?');}catch(e){console.warn('TG FD:',e&&e.message);}finally{tmp.remove();}
+   await new Promise(r=>setTimeout(r,800));
+  };
+  await sendCard('p3-card-overview',capOv,920);
+  await sendCard('p3-card-bc-baton',capBaton,1200);
+  await sendCard('p3-card-bc-ondinh',capOndinh,1200,15);
   if(btn){btn.disabled=false;btn.textContent='✅ Đã gửi!';btn.style.background='rgba(34,197,94,0.15)';btn.style.borderColor='rgba(34,197,94,0.4)';btn.style.color='#4ade80';setTimeout(()=>{btn.textContent='📤 Bắn TLT Ngày TG';btn.style.background='';btn.style.borderColor='';btn.style.color='';},3000);}
  }catch(e){
   console.error('TG TLT Error:',e);
@@ -2371,6 +2406,7 @@ async function sendAllToTelegram(){
    const amCard=document.getElementById('p3-card-am');
    if(amCard){
     const cl=amCard.cloneNode(true);
+    if(cl.tagName==='DETAILS')cl.open=true;cl.querySelectorAll('details').forEach(d=>d.open=true);
     cl.querySelectorAll('.table-wrap>div').forEach(e=>e.remove());
     // Fix sticky header: thead/th bị sticky ngoài vùng capture → unstick
     cl.querySelectorAll('thead,th').forEach(el=>{el.style.position='';el.style.top='';el.style.zIndex='';});
@@ -2397,6 +2433,7 @@ async function sendAllToTelegram(){
    const bcTbl=document.querySelector('#fdDayBCTable table[data-bc-srch]');
    if(bcCard&&bcTbl){
     const cl=bcCard.cloneNode(true);
+    if(cl.tagName==='DETAILS')cl.open=true;cl.querySelectorAll('details').forEach(d=>d.open=true);
     // Ẩn search bar (div trước table trong .table-wrap)
     cl.querySelectorAll('.table-wrap>div:not(.analysis-box)').forEach(e=>e.remove());
     // Fix sticky header: thead/th bị sticky ngoài vùng capture → unstick
