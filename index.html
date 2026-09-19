@@ -2051,7 +2051,7 @@ async function _fdSendAll(){
  const sendCard=async(cardId,cap,width,trimN)=>{
   const card=document.getElementById(cardId);if(!card)return;
   const cl=card.cloneNode(true);if(cl.tagName==='DETAILS')cl.open=true;cl.querySelectorAll('details').forEach(d=>d.open=true);
-  cl.querySelectorAll('.table-wrap>div:not(.analysis-box)').forEach(e=>e.remove());
+  cl.querySelectorAll('.table-wrap>div:not(.analysis-box)').forEach(e=>e.remove());cl.querySelectorAll('.analysis-box').forEach(e=>e.remove());
   cl.querySelectorAll('thead,th').forEach(el=>{el.style.position='';el.style.top='';el.style.zIndex='';});
   if(trimN){const mt=cl.querySelector('table');const tb=mt&&mt.querySelector('tbody');if(tb){let k=0;[...tb.querySelectorAll('tr')].forEach(tr=>{if(!tr.classList.contains('tot')){if(k>=trimN)tr.remove();else k++;}});}}
   const tmp=document.createElement('div');tmp.id='tg-fd-tmp';tmp.style.cssText='position:fixed;top:-9999px;left:0;z-index:-1;width:'+width+'px;padding:0;background:#fff';tmp.appendChild(cl);document.body.appendChild(tmp);
@@ -2128,7 +2128,7 @@ async function sendTLTToTelegram(){
   const sendCard=async(cardId,cap,width,trimN)=>{
    const card=document.getElementById(cardId);if(!card)return;
    const cl=card.cloneNode(true);if(cl.tagName==='DETAILS')cl.open=true;cl.querySelectorAll('details').forEach(d=>d.open=true);
-   cl.querySelectorAll('.table-wrap>div:not(.analysis-box)').forEach(e=>e.remove());
+   cl.querySelectorAll('.table-wrap>div:not(.analysis-box)').forEach(e=>e.remove());cl.querySelectorAll('.analysis-box').forEach(e=>e.remove());
    cl.querySelectorAll('thead,th').forEach(el=>{el.style.position='';el.style.top='';el.style.zIndex='';});
    if(trimN){const mt=cl.querySelector('table');const tb=mt&&mt.querySelector('tbody');if(tb){let k=0;[...tb.querySelectorAll('tr')].forEach(tr=>{if(!tr.classList.contains('tot')){if(k>=trimN)tr.remove();else k++;}});}}
    const tmp=document.createElement('div');tmp.id='tg-fd-tmp';tmp.style.cssText='position:fixed;top:-9999px;left:0;z-index:-1;width:'+width+'px;padding:0;background:#fff';tmp.appendChild(cl);document.body.appendChild(tmp);
