@@ -2014,6 +2014,56 @@ async function sendGTCTotalToTelegram(){
 }
 
 /* ===== TELEGRAM: TLT NGÀY (P3) ===== */
+/* ── Gửi báo cáo TLT (FD) — format MỚI: Tổng quan + AM + Bất Ổn + Ổn Định, dùng chung cho nút "Bắn TLT Ngày" & "Bắn tất cả" ── */
+async function _fdSendAll(){
+ const fd=window._FD;if(!fd?.totalBC)return;
+ const trimCap=s=>s.length>1020?s.slice(0,1017)+'...':s;
+ const fD=d=>{if(!d)return'';const p=d.split('-');return p.length===3?`${p[2]}/${p[1]}/${p[0]}`:d;};
+ if(typeof renderFDDay==='function'){try{renderFDDay();}catch(_){}await new Promise(r=>setTimeout(r,500));}
+ const baton=window._BC_BATON||new Set();const _isB=n=>baton.has((n||'').trim());
+ const allD=[...new Set(fd.totalBC.slice(1).map(r=>isoD(r[1])).filter(Boolean))].sort((a,b)=>b.localeCompare(a));
+ const latest=allD[0],prev=allD[1];
+ const _gd=(sheet,dd)=>{const res={};(sheet||[]).slice(1).forEach(r=>{if(isoD(r[1])!==dd)return;const n=(r[0]||'').trim();if(!n||n.toLowerCase().includes('grand total'))return;res[n]={vol:parsePct(r[2]),fd:parsePct(r[3])};});return res;};
+ const grp=(sheet,dd,pred)=>{const o=_gd(sheet,dd);let sv=0,sf=0,c=0;Object.entries(o).forEach(([n,v])=>{if(pred&&!pred(n))return;sv+=v.vol||0;sf+=(v.fd||0)*(v.vol||0);c++;});return{fd:sv?sf/sv:null,n:c};};
+ const P=x=>x==null?'—':x.toFixed(2)+'%';
+ const dtxt=(now,prv)=>{if(now==null||prv==null)return '';const d=now-prv;if(Math.abs(d)<0.005)return ' (không đổi so N-1)';return ` (${d>0?'▲ tăng':'▼ giảm'} ${Math.abs(d).toFixed(2)} điểm % so N-1)`;};
+ const vT=grp(fd.totalBC,latest,null),vS=grp(fd.smeBC,latest,null),vTs=grp(fd.ttsBC,latest,null),vSh=grp(fd.shopeeBC,latest,null);
+ const odN=grp(fd.totalBC,latest,n=>!_isB(n)),odP=grp(fd.totalBC,prev,n=>!_isB(n));
+ const boN=grp(fd.totalBC,latest,_isB),boP=grp(fd.totalBC,prev,_isB);
+ let capOv=`📊 <b>TỔNG QUAN TỈ LỆ TRẢ TOÀN VÙNG — ${fD(latest)}</b>\n`;
+ capOv+=`Toàn Vùng: Total <b>${P(vT.fd)}</b>`+(vS.fd!=null?` · SME ${P(vS.fd)}`:'')+` · TTS ${P(vTs.fd)} · Shopee ${P(vSh.fd)}\n`;
+ capOv+=`✅ Nhóm ổn định (${odN.n} BC): <b>${P(odN.fd)}</b>${dtxt(odN.fd,odP.fd)}\n`;
+ capOv+=`⚠️ Nhóm bất ổn (${boN.n} BC): <b>${P(boN.fd)}</b>${dtxt(boN.fd,boP.fd)}\n\n📝 <b>Nhận định:</b>\n`;
+ if(boN.fd!=null&&odN.fd!=null){const gap=boN.fd-odN.fd,ratio=odN.fd>0?boN.fd/odN.fd:0;capOv+=`• Nhóm bất ổn cao hơn ổn định ${gap.toFixed(2)} điểm %${ratio>=1.3?` (gấp ~${ratio.toFixed(1)} lần)`:''}.\n`;}
+ if(boN.fd!=null&&boP.fd!=null){const d=boN.fd-boP.fd;capOv+=d>0.05?`• Nhóm bất ổn ĐANG XẤU ĐI (▲ ${d.toFixed(2)} điểm %) — cần can thiệp.\n`:d<-0.05?`• Nhóm bất ổn cải thiện (▼ ${Math.abs(d).toFixed(2)} điểm %).\n`:`• Nhóm bất ổn gần như đứng yên so N-1.\n`;}
+ if(vT.fd!=null)capOv+=`• Mục tiêu toàn Vùng ≤ 8% — hiện ${P(vT.fd)}${vT.fd>8?' (VƯỢT mục tiêu).':' (đạt).'}\n`;
+ capOv=trimCap(capOv);
+ const bd=_gd(fd.totalBC,latest);
+ const bList=Object.entries(bd).filter(([n])=>_isB(n)&&bd[n].fd!=null).map(([n,v])=>({n,fd:v.fd})).sort((a,b)=>b.fd-a.fd);
+ let capBaton=`⚠️ <b>BƯU CỤC BẤT ỔN — TỈ LỆ TRẢ ${fD(latest)}</b>\nNhóm ${boN.n} BC · %trả gộp <b>${P(boN.fd)}</b>${dtxt(boN.fd,boP.fd)}\n\n📝 Top FD cao nhất:\n`+bList.slice(0,5).map((x,i)=>`${i+1}. ${x.n}: ${x.fd.toFixed(2)}%`).join('\n');
+ capBaton=trimCap(capBaton);
+ const capOndinh=trimCap(`✅ <b>BƯU CỤC ỔN ĐỊNH — TỈ LỆ TRẢ ${fD(latest)}</b>\nNhóm ${odN.n} BC · %trả gộp <b>${P(odN.fd)}</b>${dtxt(odN.fd,odP.fd)}\n(ảnh Top 15 FD cao nhất trong nhóm)`);
+ // caption bảng AM: Top FD cao/thấp
+ const amD=_gd(fd.totalAM,latest);const amList=Object.entries(amD).filter(([n])=>amD[n].fd!=null).map(([n,v])=>({n,fd:v.fd})).sort((a,b)=>b.fd-a.fd);
+ const amGT=grp(fd.totalAM,latest,null),amGP=grp(fd.totalAM,prev,null);
+ let capAM=`📊 <b>TỈ LỆ TRẢ THEO AM — ${fD(latest)}</b>\nToàn Vùng (theo AM): <b>${P(amGT.fd)}</b>${dtxt(amGT.fd,amGP.fd)}\n\n📝 Top FD cao nhất:\n`+amList.slice(0,3).map((x,i)=>`${i+1}. ${x.n}: ${x.fd.toFixed(2)}%`).join('\n')+`\nTop FD thấp nhất:\n`+amList.slice(-3).reverse().map((x,i)=>`${i+1}. ${x.n}: ${x.fd.toFixed(2)}%`).join('\n');
+ capAM=trimCap(capAM);
+ const sendCard=async(cardId,cap,width,trimN)=>{
+  const card=document.getElementById(cardId);if(!card)return;
+  const cl=card.cloneNode(true);if(cl.tagName==='DETAILS')cl.open=true;cl.querySelectorAll('details').forEach(d=>d.open=true);
+  cl.querySelectorAll('.table-wrap>div:not(.analysis-box)').forEach(e=>e.remove());
+  cl.querySelectorAll('thead,th').forEach(el=>{el.style.position='';el.style.top='';el.style.zIndex='';});
+  if(trimN){const mt=cl.querySelector('table');const tb=mt&&mt.querySelector('tbody');if(tb){let k=0;[...tb.querySelectorAll('tr')].forEach(tr=>{if(!tr.classList.contains('tot')){if(k>=trimN)tr.remove();else k++;}});}}
+  const tmp=document.createElement('div');tmp.id='tg-fd-tmp';tmp.style.cssText='position:fixed;top:-9999px;left:0;z-index:-1;width:'+width+'px;padding:0;background:#fff';tmp.appendChild(cl);document.body.appendChild(tmp);
+  await new Promise(r=>setTimeout(r,350));
+  try{const img=await _captureEl('tg-fd-tmp');const res=await _tgSendPhoto(TG_AGING_CHAT,TG_FD_THREAD,img,cap);if(!res||!res.ok)throw new Error((res&&res.description)||'?');}catch(e){console.warn('TG FD:',e&&e.message);}finally{tmp.remove();}
+  await new Promise(r=>setTimeout(r,800));
+ };
+ await sendCard('p3-card-overview',capOv,920);
+ await sendCard('p3-card-am',capAM,980);
+ await sendCard('p3-card-bc-baton',capBaton,1200);
+ await sendCard('p3-card-bc-ondinh',capOndinh,1200,15);
+}
 async function sendTLTToTelegram(){
  const fd=window._FD;
  if(!fd?.totalAM||fd.totalAM.length<2){alert('Chưa có dữ liệu TLT! Vui lòng chờ trang tải xong.');return;}
@@ -2399,68 +2449,10 @@ async function sendAllToTelegram(){
    }
   }
 
-  /* --- P3: Tỉ Lệ Trả Ngày → FD thread --- */
+  /* --- P3: Tỉ Lệ Trả Ngày → FD thread (format MỚI: Tổng quan + AM + Bất Ổn + Ổn Định + phân tích) --- */
   await navTo('p3');
-  /* AM: clone card, ẩn search bar, width vừa đủ */
-  {
-   if(btn)btn.innerHTML='⏳ Đang gửi: TLT Theo AM...';
-   const amCard=document.getElementById('p3-card-am');
-   if(amCard){
-    const cl=amCard.cloneNode(true);
-    if(cl.tagName==='DETAILS')cl.open=true;cl.querySelectorAll('details').forEach(d=>d.open=true);
-    cl.querySelectorAll('.table-wrap>div').forEach(e=>e.remove());
-    // Fix sticky header: thead/th bị sticky ngoài vùng capture → unstick
-    cl.querySelectorAll('thead,th').forEach(el=>{el.style.position='';el.style.top='';el.style.zIndex='';});
-    const tmp=document.createElement('div');
-    tmp.id='tg-am-fd';
-    tmp.style.cssText='position:fixed;top:-9999px;left:0;z-index:-1;width:960px;padding:0';
-    tmp.appendChild(cl);
-    document.body.appendChild(tmp);
-    await new Promise(r=>setTimeout(r,300));
-    try{
-     const img=await _captureEl('tg-am-fd');
-     const res=await _tgSendPhoto(TG_AGING_CHAT,TG_FD_THREAD,img,capFD('am'));
-     if(!res.ok)throw new Error('TLT AM loi: '+(res.description||JSON.stringify(res)));
-    }catch(_e){console.warn('TG bước lỗi:',_e&&_e.message);}finally{tmp.remove();}
-    await new Promise(r=>setTimeout(r,600));
-   }else{
-    await sendPhoto('TLT Theo AM','p3-card-am',TG_AGING_CHAT,TG_FD_THREAD,capFD('am'));
-   }
-  }
-  /* BC: chụp Top 15 FD total + analysis, clone card đầy đủ */
-  {
-   if(btn)btn.innerHTML='⏳ Đang gửi: TLT Theo BC Top 15...';
-   const bcCard=document.getElementById('p3-card-bc');
-   const bcTbl=document.querySelector('#fdDayBCTable table[data-bc-srch]');
-   if(bcCard&&bcTbl){
-    const cl=bcCard.cloneNode(true);
-    if(cl.tagName==='DETAILS')cl.open=true;cl.querySelectorAll('details').forEach(d=>d.open=true);
-    // Ẩn search bar (div trước table trong .table-wrap)
-    cl.querySelectorAll('.table-wrap>div:not(.analysis-box)').forEach(e=>e.remove());
-    // Fix sticky header: thead/th bị sticky ngoài vùng capture → unstick
-    cl.querySelectorAll('thead,th').forEach(el=>{el.style.position='';el.style.top='';el.style.zIndex='';});
-    // Trim tbody xuống 15 rows BC (giữ grand total)
-    const mainTbl=cl.querySelector('table[data-bc-srch]');
-    if(mainTbl){const tb=mainTbl.querySelector('tbody');if(tb){let k=0;[...tb.querySelectorAll('tr')].forEach(tr=>{const isTot=tr.classList.contains('tot');if(!isTot){if(k>=15)tr.remove();else k++;}});}}
-    // Sửa title card
-    const titleEl=cl.querySelector('.card-title');
-    if(titleEl)titleEl.innerHTML='<div class="card-icon">🏪</div>B. Theo Bưu Cục — Top 15 FD Total cao nhất';
-    const tmp=document.createElement('div');
-    tmp.id='tg-bc-top15';
-    tmp.style.cssText='position:fixed;top:-9999px;left:0;z-index:-1;width:1200px;padding:0';
-    tmp.appendChild(cl);
-    document.body.appendChild(tmp);
-    await new Promise(r=>setTimeout(r,300));
-    try{
-     const img=await _captureEl('tg-bc-top15');
-     const res=await _tgSendPhoto(TG_AGING_CHAT,TG_FD_THREAD,img,capFD('bc'));
-     if(!res.ok)throw new Error(`TLT BC lỗi: ${res.description||JSON.stringify(res)}`);
-    }catch(_e){console.warn('TG bước lỗi:',_e&&_e.message);}finally{tmp.remove();}
-    await new Promise(r=>setTimeout(r,600));
-   }else{
-    await sendPhoto('TLT Theo BC','p3-card-bc',TG_AGING_CHAT,TG_FD_THREAD,capFD('bc'));
-   }
-  }
+  if(btn)btn.innerHTML='⏳ Đang gửi: Tỉ Lệ Trả (Tổng quan + nhóm)...';
+  await _fdSendAll();
 
   /* --- P6: OPR TTS → Pickup/Luân chuyển thread --- */
   await navTo('p6');
