@@ -127,24 +127,40 @@ function aggRows(kind){
   tot.lowPct=tot.total?tot.low/tot.total*100:0;
   return {rows,tot};
 }
-function fmtKey(kind,k){ if(kind==='prov')return k; if(kind==='day')return ddmm(k); if(kind==='week')return 'Tuần '+ddmm(k); return k; }
+function addDays(iso,n){const d=new Date(iso+'T00:00:00Z');d.setUTCDate(d.getUTCDate()+n);return d.toISOString().slice(0,10);}
+function fmtKey(kind,k){ if(kind==='prov')return k; if(kind==='day')return ddmm(k); if(kind==='week')return /^\d{4}-\d{2}-\d{2}$/.test(k)?'Tuần '+ddmm(k)+' → '+ddmm(addDays(k,6))+'/2026':'Tuần '+k; return k; }
 function renderAgg(kind){
   const {rows,tot}=aggRows(kind);
   if(kind==='prov')rows.sort((a,b)=>b.low-a.low); else rows.sort((a,b)=>a.key.localeCompare(b.key));
   const label=kind==='prov'?'Tỉnh xuất phát':kind==='day'?'Ngày':'Tuần (bắt đầu)';
+  const clickable=(kind==='week'||kind==='day'||kind==='prov');
+  const bcell=(r,i,cls)=>{const v=r.b[i]||0;if(!v||r.key==='TỔNG'||!clickable)return `<td class="${cls}">${v||''}</td>`;
+    return `<td class="${cls} clk" data-key="${esc(r.key)}" data-b="${i}" title="Xem ${v} chuyến mốc ${BLABEL[i]}${kind==='week'?' trong tuần này':kind==='day'?' trong ngày này':' của tỉnh này'}" style="cursor:pointer;text-decoration:underline dotted 1px;text-underline-offset:2px">${v}</td>`;};
   const rowHtml=r=>`<tr${r.key==='TỔNG'?' class=tot':''}>
     <td class="l">${esc(fmtKey(kind,r.key))}</td>
-    <td class="b0">${r.b[0]||''}</td><td class="b1">${r.b[1]||''}</td><td class="b2">${r.b[2]||''}</td>
-    <td>${r.b[3]||''}</td><td>${r.b[4]||''}</td>
+    ${bcell(r,0,'b0')}${bcell(r,1,'b1')}${bcell(r,2,'b2')}${bcell(r,3,'')}${bcell(r,4,'')}
     <td><b>${r.total}</b></td>
     <td><span class="pill" style="background:${r.lowPct>=25?'#B4232A':r.lowPct>=12?'#E08A1E':'#7FB069'}">${r.lowPct.toFixed(1)}%</span></td>
     <td>${vn(r.tan)}</td></tr>`;
   $('panel').innerHTML=`<h3>Thống kê theo ${label.toLowerCase()}</h3>
-    <div class="s">Số chuyến theo mốc lấp đầy. Cột "% thấp" = tỉ lệ chuyến 0-30% (càng cao càng lãng phí).</div>
+    <div class="s">Số chuyến theo mốc lấp đầy. Cột "% thấp" = tỉ lệ chuyến 0-30% (càng cao càng lãng phí).${clickable?' <b>Bấm vào ô số</b> để xem danh sách chuyến của mốc đó'+(kind==='week'?' trong tuần.':kind==='day'?' trong ngày.':' của tỉnh.'):''}</div>
     <div class="table-wrap"><table><thead><tr>
       <th class="l">${label}</th><th class="b0">0-10%</th><th class="b1">10-20%</th><th class="b2">20-30%</th>
       <th>30-50%</th><th>&gt;50%</th><th>Tổng</th><th>% thấp<br>(0-30)</th><th>Tấn</th>
     </tr></thead><tbody>${rows.map(rowHtml).join('')}${rowHtml(tot)}</tbody></table></div>`;
+  $('panel').querySelectorAll('td.clk[data-key]').forEach(td=>td.onclick=()=>pickCell(kind,td.dataset.key,+td.dataset.b));
+}
+/* Bấm ô số trong bảng tuần/ngày/tỉnh → sang tab Chi tiết, lọc đúng mốc + khoảng thời gian */
+function pickCell(kind,key,bandIdx){
+  state.bandFilter=bandIdx; state.q=''; state.from=''; state.to='';
+  if(kind==='week'){state.from=key<DET_MIN?DET_MIN:key;const e=addDays(key,6);state.to=e>DET_MAX?DET_MAX:e;}
+  else if(kind==='day'){state.from=key;state.to=key;}
+  else if(kind==='prov'){state.q=key;}
+  const tabEl=document.querySelector('.tab[data-tab="det"]');
+  document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+  if(tabEl)tabEl.classList.add('active');
+  state.tab='det';render();
+  const p=$('panel');if(p&&p.scrollIntoView)p.scrollIntoView({behavior:'smooth',block:'start'});
 }
 
 /* ---- detail 346 ---- */
@@ -177,7 +193,8 @@ function renderDet(){
     <td style="text-align:right">${x.cuoc==null?'<span style="color:var(--muted)">Nội bộ</span>':'<b>'+vn(x.cuoc)+'</b>'}</td></tr>`;
   const heads=[['code','Mã chuyến'],['day','Ngày'],['band','Mốc'],['prov','Tỉnh XP'],['cap','Tải trọng'],['picked','Đã xếp(kg)'],['fill','% Lấp đầy'],['plate','Biển số'],['mt','Mã tuyến'],['route','Lộ trình di chuyển'],['km','Tổng QĐ (km)'],['cuoc','Cước (đ)']];
   const bf=state.bandFilter;
-  const titleTxt=bf==null?`Chi tiết ${d.length} chuyến lấp đầy thấp (0-30%)`:bf==='all'?`Chi tiết TẤT CẢ ${d.length} chuyến`:`Chi tiết ${d.length} chuyến mốc ${BLABEL[bf]}`;
+  const rangeTxt=(state.from||state.to)?` · từ ${state.from?ddmm(state.from):'…'} đến ${state.to?ddmm(state.to):'…'}`:'';
+  const titleTxt=(bf==null?`Chi tiết ${d.length} chuyến lấp đầy thấp (0-30%)`:bf==='all'?`Chi tiết TẤT CẢ ${d.length} chuyến`:`Chi tiết ${d.length} chuyến mốc ${BLABEL[bf]}`)+rangeTxt;
   const chipDef=[['0-30% (thấp)',null],['Tất cả','all'],['0-10%',0],['10-20%',1],['20-30%',2],['30-50%',3],['>50%',4],['Khác',5]];
   const chips=chipDef.map(([lbl,v])=>{const on=(bf===v);const col=(typeof v==='number')?BCOL[v]:(v==='all'?'#334155':'#B4232A');return `<button class="bandChip" data-bf="${v==null?'null':v}" style="border:1.5px solid ${col};background:${on?col:'transparent'};color:${on?'#fff':col};padding:5px 12px;border-radius:20px;font-size:12.5px;font-weight:700;cursor:pointer;white-space:nowrap">${lbl}</button>`;}).join('');
   $('panel').innerHTML=`<div class="bar" style="margin-top:0">
