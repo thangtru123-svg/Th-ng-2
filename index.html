@@ -4659,7 +4659,7 @@ function buildVolumePage(csvText){
   GTC[t][bc][lo][ng].sv+=v;GTC[t][bc][lo][ng].sg+=v*g;
  }
 
- window._volD={V,GTC,N1,N2,wArr,wPrevArr,TINH_ORDER,TINH_FULL,NHOM,NHOM_L};
+ window._volD={V,GTC,N1,N2,wArr,wPrevArr,dates:last30,TINH_ORDER,TINH_FULL,NHOM,NHOM_L};
 
  const fmtD=d=>d?d.replace(/(\d{4})-(\d{2})-(\d{2}) - .*/,'$3/$2'):'';
  const n1lbl=N1?N1.replace(/(\d{4})-(\d{2})-(\d{2}) - .*/,'$3/$2/$1'):'N/A';
@@ -4673,6 +4673,12 @@ function buildVolumePage(csvText){
  </div>
 
  <div style="display:flex;align-items:center;gap:12px;padding:10px 0 16px;flex-wrap:wrap">
+  <div style="display:flex;align-items:center;gap:6px">
+   <label style="font-size:12px;font-weight:600;color:var(--text-sub)">📅 Ngày báo cáo:</label>
+   <select id="vol-main-date" onchange="_volRender()" style="padding:6px 10px;border-radius:6px;border:1px solid var(--border);font-size:12px;font-family:inherit;background:#fff;cursor:pointer">
+    ${last30.slice().reverse().map(dd=>`<option value="${dd}"${dd===N1?' selected':''}>${dd.replace(/(\d{4})-(\d{2})-(\d{2}).*/,'$3/$2/$1')}</option>`).join('')}
+   </select>
+  </div>
   <div style="display:flex;align-items:center;gap:6px">
    <label style="font-size:12px;font-weight:600;color:var(--text-sub)">So sánh với:</label>
    <select id="vol-comp-mode" onchange="_volRender()" style="padding:6px 10px;border-radius:6px;border:1px solid var(--border);font-size:12px;font-family:inherit;background:#fff;cursor:pointer">
@@ -4710,7 +4716,23 @@ function buildVolumePage(csvText){
 
 window._volRender=function(){
  const d=window._volD;if(!d)return;
- const {V,GTC,N1,N2,wArr,wPrevArr,TINH_ORDER,TINH_FULL,NHOM,NHOM_L}=d;
+ let {V,GTC,N1,N2,wArr,wPrevArr,TINH_ORDER,TINH_FULL,NHOM,NHOM_L}=d;
+ // Cho phép chọn NGÀY BÁO CÁO bất kỳ (mặc định N-1 = ngày mới nhất)
+ const _dates=d.dates||[];
+ const _sel=(document.getElementById('vol-main-date')||{}).value;
+ if(_sel&&_dates.includes(_sel)){
+  const _i=_dates.indexOf(_sel);
+  N1=_sel; N2=_dates[_i-1]||'';
+  wArr=_dates.slice(Math.max(0,_i-7),_i);
+  const _dt=new Date(_sel.substring(0,10)),_dw=_dt.getDay();
+  const _mon=new Date(_dt);_mon.setDate(_dt.getDate()-(_dw===0?6:_dw-1));
+  const _pm=new Date(_mon);_pm.setDate(_mon.getDate()-7);
+  wPrevArr=_dates.filter(x=>{const xx=new Date(x.substring(0,10));return xx>=_pm&&xx<_mon;});
+  const _o1=document.querySelector('#vol-comp-mode option[value=tb7]');if(_o1)_o1.textContent=`TB 7 ngày (${fmtDD(wArr[0]||'')}–${fmtDD(wArr[wArr.length-1]||'')})`;
+  const _o2=document.querySelector('#vol-comp-mode option[value=n2]');if(_o2)_o2.textContent=`N-2 (${fmtDD(N2)})`;
+  const _o3=document.querySelector('#vol-comp-mode option[value=tbweek]');if(_o3)_o3.textContent=`TB tuần trước (${fmtDD(wPrevArr[0]||'')}–${fmtDD(wPrevArr[wPrevArr.length-1]||'')})`;
+  const _tag=document.querySelector('#vol-meta .tag');if(_tag)_tag.innerHTML='📅 Ngày: '+N1.replace(/(\d{4})-(\d{2})-(\d{2}).*/,'$3/$2/$1');
+ }
  const mode=(document.getElementById('vol-comp-mode')||{}).value||'tb7';
  const tinhFil=(document.getElementById('vol-tinh-filter')||{}).value||'';
  
@@ -4721,7 +4743,7 @@ window._volRender=function(){
  else{compDates=wArr;compLabel='TB 7 ngày';}
 
  // Update meta
- const mi=document.getElementById('vol-a-info');if(mi)mi.textContent=`N-1 vs ${compLabel}`;
+ const mi=document.getElementById('vol-a-info');if(mi)mi.textContent=`${fmtDD(N1)} vs ${compLabel}`;
 
  const gv=(t,bc,lo,nh,ds)=>{
   if(isSingle){return V[t]?.[bc]?.[lo]?.[nh]?.[ds[0]]||0;}
