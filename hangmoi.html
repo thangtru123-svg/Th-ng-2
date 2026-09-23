@@ -1,0 +1,87 @@
+<!doctype html><html lang="vi"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Hàng Mới Về — XBG</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap">
+<style>
+:root{--ground:#FBF7F1;--panel:#fff;--ink:#20262E;--sub:#5C6673;--line:#E7E0D6;--navy:#1F3864;--orange:#E8622A;--green:#1E7A4D;--green-s:#E3F2E9;--red:#C33124;--red-s:#FBE7E4;--shadow:0 1px 2px rgba(30,38,46,.04),0 8px 24px rgba(30,38,46,.06);color-scheme:light}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--ground:#14171C;--panel:#1C2128;--ink:#E9ECF0;--sub:#9BA6B2;--line:#2C333C;--navy:#9DB6E6;--orange:#FF8A5C;--green:#5FC38C;--green-s:#183026;--red:#F0736A;--red-s:#3A1F1D;color-scheme:dark}}
+:root[data-theme="dark"]{--ground:#14171C;--panel:#1C2128;--ink:#E9ECF0;--sub:#9BA6B2;--line:#2C333C;--navy:#9DB6E6;--orange:#FF8A5C;--green:#5FC38C;--green-s:#183026;--red:#F0736A;--red-s:#3A1F1D;color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:"Be Vietnam Pro",system-ui,sans-serif;line-height:1.45}
+.wrap{max-width:1180px;margin:0 auto;padding-inline:16px;padding-block:0 48px}
+header{background:linear-gradient(135deg,var(--navy),#16294A);color:#fff;border-radius:0 0 20px 20px;padding:24px 20px 26px}
+header .in{max-width:1180px;margin:0 auto}
+.eyebrow{font-size:11.5px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#FFB59A}
+header h1{margin:6px 0 0;font-size:clamp(21px,3.6vw,30px);font-weight:800}
+header p{margin:9px 0 0;color:#D6DEEC;font-size:13.5px;max-width:80ch}
+.kpis{display:flex;gap:12px;flex-wrap:wrap;margin-top:16px}
+.kpi{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.18);border-radius:12px;padding:10px 16px}
+.kpi .t{font-size:11.5px;color:#C6D2E6}.kpi .v{font-size:22px;font-weight:800;margin-top:2px}
+section{margin-top:26px}
+.h{display:flex;align-items:baseline;gap:10px;margin-bottom:10px}
+.h h2{margin:0;font-size:17px;font-weight:800;color:var(--orange)}
+.h .s{color:var(--sub);font-size:12.5px}
+.tw{overflow-x:auto;border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);background:var(--panel)}
+table{border-collapse:collapse;width:100%;font-size:13px;min-width:520px}
+th{background:var(--navy);color:#fff;font-weight:700;padding:9px 12px;text-align:center;white-space:nowrap;position:sticky;top:0}
+th:first-child,td:first-child{text-align:left}
+td{padding:7px 12px;text-align:center;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums}
+tbody tr:last-child td{border-bottom:none}
+td.nm{font-weight:600;white-space:nowrap}
+td.am{color:var(--sub);font-size:12px;white-space:nowrap}
+.pos{color:var(--green);font-weight:700}.neg{color:var(--red);font-weight:700}
+.chip{display:inline-block;padding:2px 8px;border-radius:999px;font-weight:700;font-size:12px}
+.chip.pos{background:var(--green-s)}.chip.neg{background:var(--red-s)}
+.note{margin-top:18px;color:var(--sub);font-size:12px;background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--orange);border-radius:10px;padding:12px 14px}
+.foot{margin-top:20px;text-align:center;color:var(--sub);font-size:12px}
+</style></head><body>
+<header><div class="in">
+  <div class="eyebrow">Vùng XBG · Vận hành</div>
+  <h1>📦 Hàng Mới Về — <span id="hDay"></span></h1>
+  <p>So sánh <b>hàng mới về hôm nay</b> (realtime mốc 0–6h, gồm cả đơn đã/đang/chưa có chuyến) với <b>trung bình Hàng Mới Ca 1 của 5 ngày gần nhất</b>. Sắp xếp theo chênh lệch tăng nhiều → thấp.</p>
+  <div class="kpis" id="kpis"></div>
+</div></header>
+<div class="wrap">
+  <section><div class="h"><h2>1. Tổng quan theo Tỉnh</h2><span class="s" id="s1"></span></div><div class="tw"><table id="tTinh"></table></div></section>
+  <section><div class="h"><h2>2. Tổng quan theo AM</h2><span class="s" id="s2"></span></div><div class="tw"><table id="tAM"></table></div></section>
+  <section><div class="h"><h2>3. Tổng quan theo Bưu Cục</h2><span class="s" id="s3"></span></div><div class="tw"><table id="tBC"></table></div></section>
+  <div class="note" id="note"></div>
+  <div class="foot" id="foot"></div>
+</div>
+<script src="hangmoi_data.js"></script>
+<script>
+(function(){
+  var D=window.HM_DATA;if(!D){document.body.innerHTML='<p style="padding:24px">Chưa có dữ liệu.</p>';return;}
+  var fn=function(x){return Math.round(x).toLocaleString('vi-VN');};
+  var fp=function(x){return (x>=0?'▲ +':'▼ ')+Math.abs(x).toFixed(1)+'%';};
+  var fc=function(x){return (x>=0?'▲ +':'▼ ')+fn(Math.abs(x));};
+  document.getElementById('hDay').textContent=D.day;
+  var t=D.tong;
+  document.getElementById('kpis').innerHTML=
+    '<div class="kpi"><div class="t">Hàng mới hôm nay (0–6h)</div><div class="v">'+fn(t.rt)+'</div></div>'+
+    '<div class="kpi"><div class="t">TB Ca1 5 ngày</div><div class="v">'+fn(t.tb5)+'</div></div>'+
+    '<div class="kpi"><div class="t">Chênh lệch</div><div class="v" style="color:'+(t.chenh>=0?'#7FE0A8':'#FF9E93')+'">'+fc(t.chenh)+'</div></div>';
+  function build(el,rows,firstCol,withAM){
+    var head='<thead><tr><th>'+firstCol+'</th>'+(withAM?'<th>AM</th>':'')+'<th>Hàng mới hôm nay</th><th>TB Ca1 5 ngày</th><th>Chênh (đơn)</th><th>Chênh (%)</th></tr></thead>';
+    var body='<tbody>';
+    for(var i=0;i<rows.length;i++){var r=rows[i];var cl=r.chenh>=0?'pos':'neg';
+      body+='<tr><td class="nm">'+((withAM?'':(i+1)+'. '))+(r.bc||r.name)+'</td>'+
+        (withAM?'<td class="am">'+(r.am||'—')+'</td>':'')+
+        '<td>'+fn(r.rt)+'</td><td>'+fn(r.tb5)+'</td>'+
+        '<td class="'+cl+'">'+fc(r.chenh)+'</td>'+
+        '<td><span class="chip '+cl+'">'+fp(r.pct)+'</span></td></tr>';
+    }
+    document.getElementById(el).innerHTML=head+body+'</tbody>';
+  }
+  build('tTinh',D.byTinh,'Tỉnh/TP',false);
+  build('tAM',D.byAM,'AM',false);
+  build('tBC',D.byBC.map(function(b){return {name:(b.bc),bc:b.bc,am:b.am,rt:b.rt,tb5:b.tb5,chenh:b.chenh,pct:b.pct};}),'Bưu Cục',true);
+  document.getElementById('s1').textContent='6 tỉnh';
+  document.getElementById('s2').textContent=D.byAM.length+' AM';
+  document.getElementById('s3').textContent=D.byBC.length+' Bưu Cục';
+  document.getElementById('note').innerHTML='⚠️ <b>Cách đọc:</b> "Hàng mới hôm nay" là số realtime lấy từ nhanh.ghn.vn tại thời điểm chạy (mốc 0–6h). Báo cáo dùng đúng lúc <b>8h30–9h sáng</b> khi hàng Ca 1 vừa về; nếu chạy ngoài khung giờ này, số 0–6h sẽ thấp (chỉ là hàng vừa nhập gần đây). Baseline = trung bình Hàng Mới Ca 1 của '+(D.days5&&D.days5.length?D.days5.length:5)+' ngày ('+(D.days5?D.days5.map(function(d){return d.slice(8)+'/'+d.slice(5,7);}).join(', '):'')+').';
+  document.getElementById('foot').textContent='Cập nhật: '+D.generatedAt+' · Vùng XBG';
+})();
+</script></body></html>
