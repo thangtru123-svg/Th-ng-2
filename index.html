@@ -5310,7 +5310,8 @@ async function buildRotLCPage(){
      <td style="padding:7px 10px;color:#7A4A2B;white-space:nowrap">TỔNG mỗi ngày</td>
      ${withAM?'<td></td>':''}
      ${dayTot.map(v=>`<td style="text-align:center;padding:7px 10px;color:#7A4A2B">${fmt(v)}</td>`).join('')}
-     <td style="text-align:center;padding:7px 10px;color:var(--orange-dark)">${fmt(grand)}</td></tr>`;
+     <td style="text-align:center;padding:7px 10px;color:var(--orange-dark)">${fmt(grand)}</td>
+     <td style="text-align:center;padding:7px 10px;color:#7A4A2B">100%</td></tr>`;
    const body=arr.map((o,i)=>{
     const tds=last7.map(dd=>{const v=o.d[dd]||0;return `<td style="text-align:center;padding:6px 10px;background:${bg(v)};color:${cl(v)};font-weight:${v/mx>=.34?'700':'500'}">${fmt(v)}</td>`;}).join('');
     return `<tr style="border-bottom:1px solid var(--border)">
@@ -5318,7 +5319,8 @@ async function buildRotLCPage(){
       <td style="padding:6px 10px;font-weight:600;white-space:nowrap">${o.name}</td>
       ${withAM?`<td style="padding:6px 10px;color:var(--text-sub);white-space:nowrap">${o.am||'—'}</td>`:''}
       ${tds}
-      <td style="text-align:center;padding:6px 10px;font-weight:800;background:#FFF3EA;color:var(--orange-dark)">${fmt(o.tot)}</td></tr>`;
+      <td style="text-align:center;padding:6px 10px;font-weight:800;background:#FFF3EA;color:var(--orange-dark)">${fmt(o.tot)}</td>
+      <td style="text-align:center;padding:6px 10px;font-weight:700;background:#F4F6FA;color:#1F3864">${grand>0?(o.tot/grand*100).toFixed(1):'0.0'}%</td></tr>`;
    }).join('');
    const t3=arr.slice(0,3).map(o=>`${o.name} (${fmt(o.d[d0]||0)} đơn)`).join(' · ');
    const ana=`<div class="analysis-box"><b>📌 Nhận định:</b><br>
@@ -5335,6 +5337,7 @@ async function buildRotLCPage(){
         ${withAM?'<th style="position:sticky;top:0;z-index:2;background:#1F3864;color:#fff;padding:8px 10px;text-align:left">AM</th>':''}
         ${th}
         <th style="position:sticky;top:0;z-index:2;background:#1F3864;color:#fff;padding:8px 10px;text-align:center">Tổng 7N</th>
+        <th style="position:sticky;top:0;z-index:2;background:#1F3864;color:#fff;padding:8px 10px;text-align:center;white-space:nowrap">% tỉ trọng</th>
        </tr></thead><tbody>${totRow}${body}</tbody></table>
      </div>${ana}</div>`;
   }
