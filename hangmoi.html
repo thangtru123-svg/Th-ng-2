@@ -5,9 +5,9 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap">
 <style>
-:root{--ground:#FBF7F1;--panel:#fff;--ink:#20262E;--sub:#5C6673;--line:#E7E0D6;--navy:#1F3864;--orange:#E8622A;--green:#1E7A4D;--green-s:#E3F2E9;--red:#C33124;--red-s:#FBE7E4;--hl:#FFF3E6;--shadow:0 1px 2px rgba(30,38,46,.04),0 8px 24px rgba(30,38,46,.06);color-scheme:light}
-@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--ground:#14171C;--panel:#1C2128;--ink:#E9ECF0;--sub:#9BA6B2;--line:#2C333C;--navy:#9DB6E6;--orange:#FF8A5C;--green:#5FC38C;--green-s:#183026;--red:#F0736A;--red-s:#3A1F1D;--hl:#33270F;color-scheme:dark}}
-:root[data-theme="dark"]{--ground:#14171C;--panel:#1C2128;--ink:#E9ECF0;--sub:#9BA6B2;--line:#2C333C;--navy:#9DB6E6;--orange:#FF8A5C;--green:#5FC38C;--green-s:#183026;--red:#F0736A;--red-s:#3A1F1D;--hl:#33270F;color-scheme:dark}
+:root{--ground:#FBF7F1;--panel:#fff;--ink:#20262E;--sub:#5C6673;--line:#E7E0D6;--navy:#1F3864;--orange:#E8622A;--green:#1E7A4D;--green-s:#E3F2E9;--red:#C33124;--red-s:#FBE7E4;--hl:#E7EFFB;--shadow:0 1px 2px rgba(30,38,46,.04),0 8px 24px rgba(30,38,46,.06);color-scheme:light}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){--ground:#14171C;--panel:#1C2128;--ink:#E9ECF0;--sub:#9BA6B2;--line:#2C333C;--navy:#9DB6E6;--orange:#FF8A5C;--green:#5FC38C;--green-s:#183026;--red:#F0736A;--red-s:#3A1F1D;--hl:#22334D;color-scheme:dark}}
+:root[data-theme="dark"]{--ground:#14171C;--panel:#1C2128;--ink:#E9ECF0;--sub:#9BA6B2;--line:#2C333C;--navy:#9DB6E6;--orange:#FF8A5C;--green:#5FC38C;--green-s:#183026;--red:#F0736A;--red-s:#3A1F1D;--hl:#22334D;color-scheme:dark}
 *{box-sizing:border-box}
 body{margin:0;background:var(--ground);color:var(--ink);font-family:"Be Vietnam Pro",system-ui,sans-serif;line-height:1.45}
 .wrap{max-width:1240px;margin:0 auto;padding-inline:16px;padding-block:0 48px}
@@ -32,6 +32,7 @@ tbody tr:last-child td{border-bottom:none}
 td.nm{font-weight:600}
 td.am{color:var(--sub);font-size:11.5px}
 th.n1,td.n1c{background:var(--hl)}
+td.n1c{font-weight:700}
 th.now,td.nowc{color:var(--orange);font-weight:800}
 .pos{color:var(--green);font-weight:700}.neg{color:var(--red);font-weight:700}
 .chip{display:inline-block;padding:2px 8px;border-radius:999px;font-weight:700;font-size:12px}
