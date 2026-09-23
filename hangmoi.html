@@ -82,7 +82,7 @@ th.now,td.nowc{color:var(--orange);font-weight:800}
   }
   build('tTinh',D.byTinh,'Tỉnh/TP',false);
   build('tAM',D.byAM,'AM',false);
-  build('tBC',D.byBC.map(function(b){b.name=b.bc;return b;}),'Bưu Cục',true);
+  build('tBC',D.byBC,'Bưu Cục',true);
   document.getElementById('s1').textContent='6 tỉnh';
   document.getElementById('s2').textContent=D.byAM.length+' AM';
   document.getElementById('s3').textContent=D.byBC.length+' Bưu Cục';
