@@ -5305,6 +5305,7 @@ async function buildRotLCPage(){
    const th=last7.map(dd=>`<th style="position:sticky;top:0;z-index:2;background:#1F3864;color:#fff;padding:8px 10px;font-size:11px;text-align:center;white-space:nowrap">${dhdr(dd)}</th>`).join('');
    const dayTot=last7.map(dd=>arr.reduce((s,o)=>s+(o.d[dd]||0),0));
    const grand=arr.reduce((s,o)=>s+o.tot,0);
+   const grandD0=arr.reduce((s,o)=>s+(o.d[d0]||0),0);
    const totRow=`<tr style="background:#FDEBDA;border-bottom:2px solid #E6B98F;font-weight:800">
      <td style="padding:7px 8px;text-align:center;color:#7A4A2B">Σ</td>
      <td style="padding:7px 10px;color:#7A4A2B;white-space:nowrap">TỔNG mỗi ngày</td>
@@ -5320,7 +5321,7 @@ async function buildRotLCPage(){
       ${withAM?`<td style="padding:6px 10px;color:var(--text-sub);white-space:nowrap">${o.am||'—'}</td>`:''}
       ${tds}
       <td style="text-align:center;padding:6px 10px;font-weight:800;background:#FFF3EA;color:var(--orange-dark)">${fmt(o.tot)}</td>
-      <td style="text-align:center;padding:6px 10px;font-weight:700;background:#F4F6FA;color:#1F3864">${grand>0?(o.tot/grand*100).toFixed(1):'0.0'}%</td></tr>`;
+      <td style="text-align:center;padding:6px 10px;font-weight:700;background:#F4F6FA;color:#1F3864">${grandD0>0?((o.d[d0]||0)/grandD0*100).toFixed(1):'0.0'}%</td></tr>`;
    }).join('');
    const t3=arr.slice(0,3).map(o=>`${o.name} (${fmt(o.d[d0]||0)} đơn)`).join(' · ');
    const ana=`<div class="analysis-box"><b>📌 Nhận định:</b><br>
@@ -5337,7 +5338,7 @@ async function buildRotLCPage(){
         ${withAM?'<th style="position:sticky;top:0;z-index:2;background:#1F3864;color:#fff;padding:8px 10px;text-align:left">AM</th>':''}
         ${th}
         <th style="position:sticky;top:0;z-index:2;background:#1F3864;color:#fff;padding:8px 10px;text-align:center">Tổng 7N</th>
-        <th style="position:sticky;top:0;z-index:2;background:#1F3864;color:#fff;padding:8px 10px;text-align:center;white-space:nowrap">% tỉ trọng</th>
+        <th style="position:sticky;top:0;z-index:2;background:#1F3864;color:#fff;padding:8px 10px;text-align:center;white-space:nowrap">% tỉ trọng<br>ngày ${dhdr(d0)}</th>
        </tr></thead><tbody>${totRow}${body}</tbody></table>
      </div>${ana}</div>`;
   }
