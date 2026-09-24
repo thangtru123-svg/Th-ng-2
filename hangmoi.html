@@ -25,7 +25,7 @@ section{margin-top:26px}
 .h .s{color:var(--sub);font-size:12.5px}
 .tw{overflow-x:auto;border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);background:var(--panel)}
 table{border-collapse:collapse;width:100%;font-size:12.5px;min-width:660px}
-th{background:var(--navy);color:#fff;font-weight:700;padding:8px 10px;text-align:center;white-space:nowrap;position:sticky;top:0}
+th{background:var(--navy);color:#fff;font-weight:700;padding:8px 10px;text-align:center;white-space:nowrap;position:sticky;top:0;z-index:3}
 th:first-child,td:first-child{text-align:left}
 td{padding:6px 10px;text-align:center;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums;white-space:nowrap}
 tbody tr:last-child td{border-bottom:none}
@@ -45,6 +45,11 @@ th.now,td.nowc{color:var(--orange);font-weight:800}
 :root[data-theme="dark"] .ana{background:#2A2118}
 .ana b{color:var(--navy)}
 .foot{margin-top:20px;text-align:center;color:var(--sub);font-size:12px}
+.tw.scroll{max-height:74vh;overflow:auto}
+.bcbar{display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap}
+.bcbar input{flex:1;min-width:200px;max-width:340px;padding:8px 12px;border:1px solid var(--line);border-radius:10px;background:var(--panel);color:var(--ink);font:inherit;font-size:13px;outline:none}
+.bcbar input:focus{border-color:var(--orange)}
+.bcbar .cnt{color:var(--sub);font-size:12.5px}
 </style></head><body>
 <header><div class="in">
   <div class="eyebrow">Vùng XBG · Vận hành</div>
@@ -55,7 +60,7 @@ th.now,td.nowc{color:var(--orange);font-weight:800}
 <div class="wrap">
   <section id="secTinh"><div class="h"><h2>1. Tổng quan theo Tỉnh</h2><span class="s" id="s1"></span></div><div class="tw"><table id="tTinh"></table></div><div class="ana" id="anaTinh"></div></section>
   <section id="secAM"><div class="h"><h2>2. Tổng quan theo AM</h2><span class="s" id="s2"></span></div><div class="tw"><table id="tAM"></table></div><div class="ana" id="anaAM"></div></section>
-  <section id="secBC"><div class="h"><h2 id="hBC">3. Tổng quan theo Bưu Cục</h2><span class="s" id="s3"></span></div><div class="tw"><table id="tBC"></table></div></section>
+  <section id="secBC"><div class="h"><h2 id="hBC">3. Tổng quan theo Bưu Cục</h2><span class="s" id="s3"></span></div><div class="bcbar"><input id="qBC" type="text" placeholder="🔎 Tìm Bưu Cục / AM…" autocomplete="off"><span class="cnt" id="cBC"></span></div><div class="tw scroll"><table id="tBC"></table></div></section>
   <div class="note" id="note"></div>
   <div class="foot" id="foot"></div>
 </div>
@@ -111,6 +116,16 @@ th.now,td.nowc{color:var(--orange);font-weight:800}
   document.getElementById('s1').textContent='6 tỉnh';
   document.getElementById('s2').textContent=D.byAM.length+' AM';
   document.getElementById('s3').textContent=D.byBC.length+' Bưu Cục';
+  // ---- Bộ lọc Bưu Cục (không dấu, tìm cả tên BC & AM) ----
+  var norm=function(x){return (x||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/đ/g,'d');};
+  var qBC=document.getElementById('qBC'),cBC=document.getElementById('cBC');
+  function filterBC(){
+    var s=norm(qBC.value.trim());
+    var trs=document.querySelectorAll('#tBC tbody tr'),vis=0;
+    for(var i=0;i<trs.length;i++){var show=!s||norm(trs[i].textContent).indexOf(s)>=0;trs[i].style.display=show?'':'none';if(show)vis++;}
+    cBC.textContent=s?('Hiện '+vis+'/'+D.byBC.length):'';
+  }
+  qBC.addEventListener('input',filterBC);
   document.getElementById('note').innerHTML='⚠️ <b>Cách đọc:</b> "Hôm nay (0–6h)" là số realtime nhanh.ghn.vn tại thời điểm chạy — dùng đúng lúc <b>8h30–9h sáng</b> khi hàng Ca 1 vừa về; chạy ngoài khung giờ này số sẽ thấp. <b>% so N-1</b> = Hôm nay ÷ '+n1lbl+' × 100 (VD 100/200 = 50%). Cột '+n1lbl+' (bôi vàng) = ngày N-1 dùng để so sánh.';
   document.getElementById('foot').textContent='Cập nhật: '+D.generatedAt+' · Vùng XBG';
 })();
