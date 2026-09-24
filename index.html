@@ -5306,18 +5306,19 @@ async function buildRotLCPage(){
    const isoD0=dmy2iso(d0);
    const last7Iso=new Set(last7.map(dmy2iso).filter(Boolean));
    const P=v=>parseFloat(v)||0;
-   const grandByIso={};
+   const grandByIso={}, amByIso={};// đơn LTC theo NGÀY (đại nhân: chỉ lấy ngày gần nhất, không cộng 7N)
    ld.forEach(r=>{
     const iso=isoD(r[1]); if(!last7Iso.has(iso))return;
     const am=(r[0]||'').trim();
     const vol=Math.round(P(r[2])), pLTC=P(r[4]), pLC=P(r[6]);
     if(!am){ grandByIso[iso]={vol,pLTC,pLC}; return; }
-    const names=am.split(',').map(x=>x.trim()).filter(Boolean);
+    if(!amByIso[iso])amByIso[iso]={};
     const ltcOrders=Math.round(vol*pLC), pickOrders=Math.round(vol*pLTC);
-    names.forEach(nm=>{const k=nrm(nm); if(!ltcByAM[k])ltcByAM[k]={ltc:0,pick:0,vol:0}; ltcByAM[k].ltc+=ltcOrders; ltcByAM[k].pick+=pickOrders; ltcByAM[k].vol+=vol;});
+    am.split(',').map(x=>x.trim()).filter(Boolean).forEach(nm=>{const k=nrm(nm), m=amByIso[iso]; if(!m[k])m[k]={ltc:0,pick:0,vol:0}; m[k].ltc+=ltcOrders; m[k].pick+=pickOrders; m[k].vol+=vol;});
    });
    if(grandByIso[isoD0]){ ltcOv=grandByIso[isoD0]; ltcOvDay=d0; }
    else{ const av=[...last7Iso].filter(x=>grandByIso[x]).sort().reverse(); if(av[0]){ ltcOv=grandByIso[av[0]]; ltcOvDay=last7.find(s=>dmy2iso(s)===av[0])||null; } }
+   ltcByAM=amByIso[ltcOvDay?dmy2iso(ltcOvDay):isoD0]||{};
   }catch(e){ console.warn('[RotLC] LTC-AM lỗi:',e&&e.message); }
   window._rotlc={last7,d0,d1,dhdr,T,TTS,ltcOv,ltcOvDay,ltcByAM};
   // ==== 1 bảng ====
@@ -5332,8 +5333,8 @@ async function buildRotLCPage(){
    const dayTot=last7.map(dd=>arr.reduce((s,o)=>s+(o.d[dd]||0),0));
    const grand=arr.reduce((s,o)=>s+o.tot,0);
    const grandD0=arr.reduce((s,o)=>s+(o.d[d0]||0),0);
-   const ltcSum=hasLTC?arr.reduce((s,o)=>{const L=ltcMap[nrm(o.name)];return s+(L?L.ltc:0);},0):0;
-   const regRatio=ltcSum>0?grand/ltcSum*100:null;
+   const regLTC=(hasLTC&&ltcOv)?Math.round(ltcOv.vol*ltcOv.pLC):0;
+   const regRatio=regLTC>0?grandD0/regLTC*100:null;
    const totRow=`<tr style="background:#FDEBDA;border-bottom:2px solid #E6B98F;font-weight:800">
      <td style="padding:7px 8px;text-align:center;color:#7A4A2B">Σ</td>
      <td style="padding:7px 10px;color:#7A4A2B;white-space:nowrap">TỔNG mỗi ngày</td>
@@ -5344,8 +5345,8 @@ async function buildRotLCPage(){
      ${hasLTC?`<td style="text-align:center;padding:7px 10px;color:#7A3D22">${regRatio!=null?regRatio.toFixed(1)+'%':'—'}</td>`:''}</tr>`;
    const body=arr.map((o,i)=>{
     const tds=last7.map(dd=>{const v=o.d[dd]||0;return `<td style="text-align:center;padding:6px 10px;background:${bg(v)};color:${cl(v)};font-weight:${v/mx>=.34?'700':'500'}">${fmt(v)}</td>`;}).join('');
-    const _L=hasLTC?ltcMap[nrm(o.name)]:null; const _l7=_L?_L.ltc:0; const _rt=_l7>0?o.tot/_l7*100:null;
-    const _rc=hasLTC?`<td style="text-align:center;padding:6px 10px;background:${rr(_rt)};color:${rrc(_rt)};font-weight:800;white-space:nowrap">${_rt!=null?_rt.toFixed(1)+'%':'—'}<div style="font-size:9px;font-weight:600;color:#8A6A50">${_l7>0?fmt(o.tot)+'/'+fmt(_l7):'thiếu LTC'}</div></td>`:'';
+    const _L=hasLTC?ltcMap[nrm(o.name)]:null; const _ld=_L?_L.ltc:0; const _r0=o.d[d0]||0; const _rt=_ld>0?_r0/_ld*100:null;
+    const _rc=hasLTC?`<td style="text-align:center;padding:6px 10px;background:${rr(_rt)};color:${rrc(_rt)};font-weight:800;white-space:nowrap">${_rt!=null?_rt.toFixed(1)+'%':'—'}<div style="font-size:9px;font-weight:600;color:#8A6A50">${_ld>0?fmt(_r0)+'/'+fmt(_ld):'thiếu LTC'}</div></td>`:'';
     return `<tr style="border-bottom:1px solid var(--border)">
       <td style="padding:6px 8px;text-align:center;color:var(--text-sub)">${i+1}</td>
       <td style="padding:6px 10px;font-weight:600;white-space:nowrap">${o.name}</td>
@@ -5357,11 +5358,11 @@ async function buildRotLCPage(){
    const t3=arr.slice(0,3).map(o=>`${o.name} (${fmt(o.d[d0]||0)} đơn)`).join(' · ');
    let ratioLine='';
    if(hasLTC){
-    const rk=arr.map(o=>{const L=ltcMap[nrm(o.name)];const l=L?L.ltc:0;return l>0?{name:o.name,ratio:o.tot/l*100,rot:o.tot,ltc:l}:null;}).filter(Boolean).sort((a,b)=>b.ratio-a.ratio);
+    const rk=arr.map(o=>{const L=ltcMap[nrm(o.name)];const l=L?L.ltc:0;const r0=o.d[d0]||0;return l>0?{name:o.name,ratio:r0/l*100,rot:r0,ltc:l}:null;}).filter(Boolean).sort((a,b)=>b.ratio-a.ratio);
     const top=rk.slice(0,3).map(x=>`<b>${x.name}</b> (${x.ratio.toFixed(1)}% · rớt ${fmt(x.rot)}/LTC ${fmt(x.ltc)})`).join(' · ');
-    ratioLine=`<br>• 🔺 <b>AM có tỉ lệ Rớt/Đơn LTC (7 ngày) cao nhất</b> — rớt lớn so lượng đã luân chuyển, cần soát tải & chốt LC: ${top||'—'}.`
-      +(regRatio!=null?`<br>• Tỉ lệ Rớt/LTC toàn Vùng 7 ngày: <b>${regRatio.toFixed(1)}%</b> (${fmt(grand)} rớt / ${fmt(ltcSum)} đơn LTC).`:'')
-      +`<br><span style="font-size:11px;color:var(--text-sub)">* Đơn LTC = Volume × %LC (đã luân chuyển). AM gộp trong sheet LTC (VD "Lê Đắc Vinh, Bùi Xuân Quang") dùng chung số LTC nên tỉ lệ mang tính tương đối.</span>`;
+    ratioLine=`<br>• 🔺 <b>AM có tỉ lệ Rớt/Đơn LTC ngày ${dhdr(d0)} cao nhất</b> — rớt lớn so lượng đã luân chuyển, cần soát tải & chốt LC: ${top||'—'}.`
+      +(regRatio!=null?`<br>• Tỉ lệ Rớt/LTC toàn Vùng ngày ${dhdr(d0)}: <b>${regRatio.toFixed(1)}%</b> (${fmt(grandD0)} rớt / ${fmt(regLTC)} đơn LTC).`:'')
+      +`<br><span style="font-size:11px;color:var(--text-sub)">* Đơn LTC = Volume × %LC ngày gần nhất (đã luân chuyển). AM gộp trong sheet LTC (VD "Lê Đắc Vinh, Bùi Xuân Quang") dùng chung số LTC nên tỉ lệ mang tính tương đối.</span>`;
    }
    const ana=`<div class="analysis-box"><b>📌 Nhận định:</b><br>
      • Tổng rớt LC ${kind} ngày <b>${dhdr(d0)}</b>: <b>${fmt(st.c0)} đơn</b>${d1?` — ${st.up?'tăng':'giảm'} ${fmt(Math.abs(st.delta))} đơn (${st.up?'+':''}${st.pctD.toFixed(1)}%) so ${dhdr(d1)}`:''}.<br>
@@ -5378,7 +5379,7 @@ async function buildRotLCPage(){
         ${th}
         <th style="position:sticky;top:0;z-index:2;background:#1F3864;color:#fff;padding:8px 10px;text-align:center">Tổng 7N</th>
         <th style="position:sticky;top:0;z-index:2;background:#1F3864;color:#fff;padding:8px 10px;text-align:center;white-space:nowrap">% tỉ trọng<br>ngày ${dhdr(d0)}</th>
-        ${hasLTC?`<th style="position:sticky;top:0;z-index:2;background:#7A3D22;color:#fff;padding:8px 10px;text-align:center;white-space:nowrap">Rớt 7N /<br>Đơn LTC 7N</th>`:''}
+        ${hasLTC?`<th style="position:sticky;top:0;z-index:2;background:#7A3D22;color:#fff;padding:8px 10px;text-align:center;white-space:nowrap">Rớt / Đơn LTC<br>ngày ${dhdr(d0)}</th>`:''}
        </tr></thead><tbody>${totRow}${body}</tbody></table>
      </div>${ana}</div>`;
   }
