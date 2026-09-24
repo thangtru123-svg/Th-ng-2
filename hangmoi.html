@@ -40,6 +40,10 @@ th.now,td.nowc{color:var(--orange);font-weight:800}
 .chip{display:inline-block;padding:2px 8px;border-radius:999px;font-weight:700;font-size:12px}
 .chip.pos{background:var(--green-s)}.chip.neg{background:var(--red-s)}
 .note{margin-top:18px;color:var(--sub);font-size:12px;background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--orange);border-radius:10px;padding:12px 14px}
+.ana{margin-top:12px;color:var(--ink);font-size:13px;background:#FFF7ED;border:1px solid var(--line);border-left:3px solid var(--orange);border-radius:10px;padding:12px 15px;line-height:1.7}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]) .ana{background:#2A2118}}
+:root[data-theme="dark"] .ana{background:#2A2118}
+.ana b{color:var(--navy)}
 .foot{margin-top:20px;text-align:center;color:var(--sub);font-size:12px}
 </style></head><body>
 <header><div class="in">
@@ -49,9 +53,9 @@ th.now,td.nowc{color:var(--orange);font-weight:800}
   <div class="kpis" id="kpis"></div>
 </div></header>
 <div class="wrap">
-  <section><div class="h"><h2>1. Tổng quan theo Tỉnh</h2><span class="s" id="s1"></span></div><div class="tw"><table id="tTinh"></table></div></section>
-  <section><div class="h"><h2>2. Tổng quan theo AM</h2><span class="s" id="s2"></span></div><div class="tw"><table id="tAM"></table></div></section>
-  <section><div class="h"><h2>3. Tổng quan theo Bưu Cục</h2><span class="s" id="s3"></span></div><div class="tw"><table id="tBC"></table></div></section>
+  <section id="secTinh"><div class="h"><h2>1. Tổng quan theo Tỉnh</h2><span class="s" id="s1"></span></div><div class="tw"><table id="tTinh"></table></div><div class="ana" id="anaTinh"></div></section>
+  <section id="secAM"><div class="h"><h2>2. Tổng quan theo AM</h2><span class="s" id="s2"></span></div><div class="tw"><table id="tAM"></table></div><div class="ana" id="anaAM"></div></section>
+  <section id="secBC"><div class="h"><h2 id="hBC">3. Tổng quan theo Bưu Cục</h2><span class="s" id="s3"></span></div><div class="tw"><table id="tBC"></table></div></section>
   <div class="note" id="note"></div>
   <div class="foot" id="foot"></div>
 </div>
@@ -90,6 +94,20 @@ th.now,td.nowc{color:var(--orange);font-weight:800}
   build('tTinh',D.byTinh,'Tỉnh/TP',false,D.tong);
   build('tAM',D.byAM,'AM',false);
   build('tBC',D.byBC,'Bưu Cục',true);
+  // ---- Phân tích ----
+  var trend=function(o){return o.pct>=100?'🟢':o.pct>=80?'🟡':'🔴';};
+  function ana(el,arr,label){
+    var byPct=arr.slice().sort(function(a,b){return b.pct-a.pct;});
+    var hi=byPct[0],lo=byPct[byPct.length-1];
+    var up=arr.filter(function(x){return x.pct>=100;}).length, low=arr.filter(function(x){return x.pct<80;}).length;
+    var h='<b>Toàn Vùng:</b> hàng mới hôm nay <b>'+fn(t.rt)+' đơn</b>, đạt <b>'+t.pct.toFixed(1)+'%</b> so ngày N-1 ('+n1lbl+': '+fn(t.n1)+' đơn) → chênh '+fc(t.chenh)+' đơn.<br>';
+    h+='🟢 '+label+' nhiều nhất (%đạt cao nhất): <b>'+hi.name+'</b> ('+hi.pct.toFixed(1)+'%, hôm nay '+fn(hi.rt)+' vs '+fn(hi.n1)+').<br>';
+    h+='🔴 '+label+' thấp nhất: <b>'+lo.name+'</b> ('+lo.pct.toFixed(1)+'%, hôm nay '+fn(lo.rt)+' vs '+fn(lo.n1)+').<br>';
+    h+='📊 '+up+'/'+arr.length+' '+label+' đạt ≥100% (bằng/hơn hôm qua) · '+low+' '+label+' dưới 80%.';
+    document.getElementById(el).innerHTML=h;
+  }
+  ana('anaTinh',D.byTinh,'Tỉnh');
+  ana('anaAM',D.byAM,'AM');
   document.getElementById('s1').textContent='6 tỉnh';
   document.getElementById('s2').textContent=D.byAM.length+' AM';
   document.getElementById('s3').textContent=D.byBC.length+' Bưu Cục';
