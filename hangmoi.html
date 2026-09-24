@@ -31,8 +31,10 @@ td{padding:6px 10px;text-align:center;border-bottom:1px solid var(--line);font-v
 tbody tr:last-child td{border-bottom:none}
 td.nm{font-weight:600}
 td.am{color:var(--sub);font-size:11.5px}
-th.n1,td.n1c{background:var(--hl)}
-td.n1c{font-weight:700}
+td.n1c{background:var(--hl);font-weight:700}
+th.n1{background:#33507F;border-left:2px solid #5C7BA8;border-right:2px solid #5C7BA8}
+tr.total td{background:var(--navy);color:#fff;font-weight:800;border-top:2px solid var(--orange)}
+tr.total td.nowc{color:#FFD9C7}
 th.now,td.nowc{color:var(--orange);font-weight:800}
 .pos{color:var(--green);font-weight:700}.neg{color:var(--red);font-weight:700}
 .chip{display:inline-block;padding:2px 8px;border-radius:999px;font-weight:700;font-size:12px}
@@ -68,9 +70,10 @@ th.now,td.nowc{color:var(--orange);font-weight:800}
     '<div class="kpi"><div class="t">Ngày N-1 ('+n1lbl+')</div><div class="v">'+fn(t.n1)+'</div></div>'+
     '<div class="kpi"><div class="t">Chênh vs N-1</div><div class="v" style="color:'+(t.chenh>=0?'#7FE0A8':'#FF9E93')+'">'+fc(t.chenh)+'</div></div>'+
     '<div class="kpi"><div class="t">% so N-1</div><div class="v" style="color:'+(t.pct>=100?'#7FE0A8':'#FF9E93')+'">'+t.pct.toFixed(1)+'%</div></div>';
-  function build(el,rows,firstCol,withAM){
+  function build(el,rows,firstCol,withAM,total){
+    var ncols=1+(withAM?1:0);
     var head='<thead><tr><th>'+firstCol+'</th>'+(withAM?'<th>AM</th>':'');
-    for(var k=0;k<dh.length;k++){var last=k===dh.length-1;head+='<th class="'+(last?'n1':'')+'">'+dh[k]+(last?'<br><span style="font-weight:600;font-size:10px;opacity:.8">N-1</span>':'')+'</th>';}
+    for(var k=0;k<dh.length;k++){var last=k===dh.length-1;head+='<th class="'+(last?'n1':'')+'">'+dh[k]+(last?'<br><span style="font-weight:600;font-size:10px;opacity:.85">N-1</span>':'')+'</th>';}
     head+='<th class="now">Hôm nay<br><span style="font-weight:600;font-size:10px;opacity:.85">0–6h</span></th><th>Chênh vs N-1</th><th>% so N-1</th></tr></thead>';
     var body='<tbody>';
     for(var i=0;i<rows.length;i++){var r=rows[i];var cc=r.chenh>=0?'pos':'neg';var pc=r.pct>=100?'pos':'neg';
@@ -78,9 +81,13 @@ th.now,td.nowc{color:var(--orange);font-weight:800}
       for(var j=0;j<r.dv.length;j++){var lastd=j===r.dv.length-1;body+='<td class="'+(lastd?'n1c':'')+'">'+fn(r.dv[j])+'</td>';}
       body+='<td class="nowc">'+fn(r.rt)+'</td><td class="'+cc+'">'+fc(r.chenh)+'</td><td><span class="chip '+pc+'">'+r.pct.toFixed(1)+'%</span></td></tr>';
     }
+    if(total){var t=total;var tr='<tr class="total"><td>TỔNG</td>';for(var m=1;m<ncols;m++)tr+='<td></td>';
+      for(var n=0;n<t.dv.length;n++)tr+='<td>'+fn(t.dv[n])+'</td>';
+      tr+='<td class="nowc">'+fn(t.rt)+'</td><td>'+fc(t.chenh)+'</td><td>'+t.pct.toFixed(1)+'%</td></tr>';
+      body+=tr;}
     document.getElementById(el).innerHTML=head+body+'</tbody>';
   }
-  build('tTinh',D.byTinh,'Tỉnh/TP',false);
+  build('tTinh',D.byTinh,'Tỉnh/TP',false,D.tong);
   build('tAM',D.byAM,'AM',false);
   build('tBC',D.byBC,'Bưu Cục',true);
   document.getElementById('s1').textContent='6 tỉnh';
