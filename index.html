@@ -6495,6 +6495,7 @@ async function buildQuaHanPage(){
   for(const bc in shTally){bc2am[bc]=Object.entries(shTally[bc]).sort((a,b)=>b[1]-a[1])[0][0];}
   // ===== TTS pivots (bucket = Tuổi Backlog col7) =====
   const ttsData=tts.slice(1).filter(x=>x[0]);
+  window._QHRAW={ttsHeader:tts[0]||[],ttsData,shHeader:shopee[sh0]||shopee[0]||[],shData};
   const ttsCnt=_qhPivot(ttsData,x=>bc2am[(x[3]||'').trim()]||'',x=>_qhTinhBC(x[3]),x=>(x[7]||'').trim(),null);
   const ttsVal=_qhPivot(ttsData,x=>bc2am[(x[3]||'').trim()]||'',x=>_qhTinhBC(x[3]),x=>(x[7]||'').trim(),x=>_qhNum(x[13]));
   // ===== Shopee pivot (bucket = col11 số 0-4; bỏ ô trống) =====
@@ -6507,7 +6508,8 @@ async function buildQuaHanPage(){
   el.innerHTML=`
    <div class="page-header"><div><div class="page-title">🚨 Quá Hạn / Truy Thu — Backlog XBG</div>
     <div class="page-meta"><span style="color:var(--text-sub);font-size:13px">Cập nhật: ${dstr} · TTS ${ttsData.length} đơn · Shopee ${shData.length-shBlank} đơn</span>
-    <button onclick="buildQuaHanPage()" style="padding:6px 13px;background:rgba(241,93,41,0.12);border:1px solid rgba(241,93,41,0.35);color:var(--orange-dark);border-radius:20px;font-size:12px;font-weight:700;cursor:pointer">🔄 Cập nhật</button></div></div></div>
+    <button onclick="buildQuaHanPage()" style="padding:6px 13px;background:rgba(241,93,41,0.12);border:1px solid rgba(241,93,41,0.35);color:var(--orange-dark);border-radius:20px;font-size:12px;font-weight:700;cursor:pointer">🔄 Cập nhật</button>
+    <button id="qhXlsBtn" onclick="downloadQuaHanExcel()" style="padding:6px 13px;background:rgba(16,122,64,0.12);border:1px solid rgba(16,122,64,0.4);color:#0b7a40;border-radius:20px;font-size:12px;font-weight:700;cursor:pointer;margin-left:6px">⬇️ Tải Excel (quá hạn·1·2 ngày)</button></div></div></div>
    <div style="max-width:1120px">
     <div id="qhCap1" style="background:#fff;padding:8px 8px 12px;border-radius:6px">
      ${_qhBanner('TTS')}
@@ -6532,6 +6534,32 @@ async function buildQuaHanPage(){
    </div>`;
   el.querySelectorAll('#qhDate').forEach(e=>e.textContent=dstr);
  }catch(e){el.innerHTML=`<div class="page-header"><div class="page-title">🚨 Quá Hạn / Truy Thu</div></div><div style="padding:20px;color:var(--red)">Lỗi tải dữ liệu: ${e.message}. Kiểm tra quyền truy cập 2 sheet nguồn (cần chia sẻ "bất kỳ ai có link" hoặc đăng nhập Google có quyền).</div>`;}
+}
+async function downloadQuaHanExcel(){
+ const btn=document.getElementById('qhXlsBtn');
+ if(!window._QHRAW){alert('Trang chưa tải xong dữ liệu Quá Hạn.');return;}
+ const OLD='⬇️ Tải Excel (quá hạn·1·2 ngày)';
+ if(btn){btn.disabled=true;btn.textContent='⏳ Đang tạo...';}
+ try{
+  if(!window.XLSX){await new Promise((res,rej)=>{const s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';s.onload=res;s.onerror=()=>rej(new Error('Không tải được thư viện XLSX'));document.head.appendChild(s);});}
+  const R=window._QHRAW;const keep=new Set([0,1,2]); // 0 Đã quá hạn · 1 Còn 1 ngày · 2 Còn 2 ngày
+  // ---- TTS: bucket = Tuổi Backlog (col7) dạng "0. Đã quá hạn"... ----
+  const ttsHdr=R.ttsHeader.map(h=>(''+(h||'')).trim());
+  const ttsRows=R.ttsData.filter(x=>keep.has(QH_BUCKETS.indexOf((''+(x[7]||'')).trim())));
+  const ttsAoA=[['Mức SLA',...ttsHdr]];
+  ttsRows.forEach(x=>ttsAoA.push([(''+(x[7]||'')).trim(),...ttsHdr.map((_,i)=>x[i]!==undefined?x[i]:'')]));
+  // ---- Shopee: bucket = "Quá hạn sau" (col11) số 0-4 ----
+  const shHdr=R.shHeader.map(h=>(''+(h||'')).trim());
+  const shRows=R.shData.filter(x=>{const n=(''+(x[11]||'')).trim();return n!==''&&keep.has(+n);});
+  const shAoA=[['Mức SLA',...shHdr]];
+  shRows.forEach(x=>{const n=+(''+(x[11]||'')).trim();shAoA.push([QH_BUCKETS[n]||('Mức '+n),...shHdr.map((_,i)=>x[i]!==undefined?x[i]:'')]);});
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(ttsAoA),'TTS');
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(shAoA),'Shopee');
+  const d=new Date();const p=n=>(''+n).padStart(2,'0');
+  XLSX.writeFile(wb,`QuaHan_TruyThu_XBG_${p(d.getDate())}${p(d.getMonth()+1)}${d.getFullYear()}.xlsx`);
+  if(btn){btn.textContent=`✅ Đã tải (${ttsRows.length} TTS · ${shRows.length} Shopee)`;setTimeout(()=>{btn.disabled=false;btn.textContent=OLD;},3200);}
+ }catch(e){alert('Lỗi tạo Excel: '+e.message);if(btn){btn.disabled=false;btn.textContent=OLD;}}
 }
 async function sendQuaHanToTelegram(){
  const btn=document.getElementById('tgInpage_p35');
