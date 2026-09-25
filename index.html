@@ -5439,6 +5439,19 @@ async function sendRotLCToTelegram(silent){
  try{
   const R=window._rotlc; if(!R)throw new Error('Chưa có dữ liệu');
   const CHAT=TG_AGING_CHAT, TH=TG_PICKUP_THREAD, f=v=>(+v||0).toLocaleString('vi-VN');
+  // ==== Tổng quan Lấy & Luân chuyển (đại nhân yêu cầu bắn kèm + note ý) ====
+  if(R.ltcOv){
+   const O=R.ltcOv, vol=O.vol, daPick=Math.round(vol*O.pLTC), daLC=Math.round(vol*O.pLC);
+   const ovDay=R.dhdr(R.ltcOvDay||R.d0);
+   let ot=`🚚 <b>TỔNG QUAN LẤY &amp; LUÂN CHUYỂN — VÙNG XBG</b> (${ovDay})\n`;
+   ot+=`• Tổng đơn cần LC (Volume): <b>${f(vol)} đơn</b>\n`;
+   ot+=`• Đã lấy thành công (LTC): <b>${f(daPick)} đơn</b> — %LTC ${(O.pLTC*100).toFixed(1)}%\n`;
+   ot+=`• Đã LC (luân chuyển): <b>${f(daLC)} đơn</b> — % Ontime LC <b>${(O.pLC*100).toFixed(1)}%</b>\n`;
+   ot+=`• Rớt LC: <b>${f(R.T.c0)} đơn</b> (TTS ${f(R.TTS.c0)})${R.d1?` — ${R.T.up?'▲ +':'▼ '}${f(Math.abs(R.T.delta))} (${R.T.up?'+':''}${R.T.pctD.toFixed(1)}%) so ${R.dhdr(R.d1)}`:''}`;
+   await _tgSend(CHAT,TH,ot);
+   const elOv=document.getElementById('rotlcOvLC');
+   if(elOv){ try{ const img=await _captureEl('rotlcOvLC'); await _tgSendPhoto(CHAT,TH,img,'🚚 Tổng quan Lấy & Luân chuyển — Vùng XBG ('+ovDay+')'); }catch(e){ console.warn('[RotLC] chụp tổng quan lỗi',e&&e.message); } }
+  }
   const seg=(st,unit,kind)=>{
    let s=`\n🔴 <b>${unit} rớt ${kind} nhiều nhất ngày ${R.d0.slice(0,5)}:</b>\n`;
    (unit==='AM'?st.arrAM:st.arrBC).slice(0,3).forEach((o,i)=>{s+=`${i+1}. ${o.name}: ${f(o.d[R.d0]||0)} đơn\n`;});
