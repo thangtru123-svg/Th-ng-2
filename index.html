@@ -235,6 +235,7 @@ tr.tot td{background:#FFF0EB!important;font-weight:800!important;border-top:2px 
  <div class="nav-section">Tỉ Lệ Trả</div>
  <button class="nav-item" onclick="show('p3',this)"><span class="icon">📅</span>TLT theo Ngày</button>
  <button class="nav-item" onclick="show('p4',this)"><span class="icon">📆</span>TLT theo Tuần</button>
+ <button class="nav-item" onclick="show('p39',this)"><span class="icon">🎯</span>Tỉ lệ trả - AM - Bưu Cục</button>
  <div class="nav-section">Ontime SLA TTS</div>
  <button class="nav-item" onclick="show('p5',this)"><span class="icon">⏱️</span>Tổng quan ODR TTS</button>
  <button class="nav-item" onclick="show('p6',this)"><span class="icon">🚀</span>Tổng quan OPR TTS</button>
@@ -267,6 +268,7 @@ tr.tot td{background:#FFF0EB!important;font-weight:800!important;border-top:2px 
  <div class="page" id="p2"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
  <div class="page" id="p3"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
  <div class="page" id="p4"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
+ <div class="page" id="p39"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
  <div class="page" id="p5"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
  <div class="page" id="p6"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
  <div class="page" id="p7"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
@@ -994,6 +996,83 @@ function buildFDDayTable(sheetArr,labels,dates,nameLabel,gtcMap,amMap,nameFilter
  return h;
 }
 
+/* ===== p39 — TỈ LỆ TRẢ - AM - BƯU CỤC (target theo BC ổn định / bất ổn) ===== */
+// Target FD (%): BC không bất ổn (ổn định) vs BC bất ổn. Vượt target = tô đỏ, đạt = tô xanh.
+const FD_TARGET={
+ stable:{Total:8, SME:8, TTS:6.5, Shopee:7},
+ unstable:{Total:12, SME:13, TTS:9, Shopee:9}
+};
+function buildFDByAMPage(fd){
+ if(!fd||!fd.totalAM||fd.totalAM.length<2)return errPage('Không có dữ liệu FD');
+ const allD=[...new Set(fd.totalAM.slice(1).map(r=>isoD(r[1])).filter(d=>d))].sort((a,b)=>b.localeCompare(a));
+ if(!allD.length)return errPage('Không có dữ liệu FD');
+ const mkOpts=sv=>allD.map(d=>`<option value="${d}"${d===sv?' selected':''}>${shortDDow(d)}</option>`).join('');
+ return`<div class="page-header">
+  <div class="page-title">Tỉ lệ trả - AM - Bưu Cục</div>
+  <div class="page-meta"><span class="tag tag-orange">👤 Mỗi AM một bảng · chi tiết Bưu Cục · sắp theo tỉ lệ trả cao → thấp</span></div>
+ </div>
+ <div class="date-filter-bar"><label>Ngày:</label><select id="fdAmbc_d" onchange="renderFDByAM()">${mkOpts(allD[0])}</select>
+  <span style="font-size:12px;color:var(--text-sub);margin-left:10px">Target ổn định: Total 8% · SME 8% · TTS 6,5% · Shopee 7% &nbsp;|&nbsp; Target bất ổn: Total 12% · SME 13% · TTS 9% · Shopee 9%</span></div>
+ <div id="fdAmbcBody"><div class="loading"><div class="spinner"></div></div></div>`;
+}
+function renderFDByAM(){
+ const fd=window._FD;if(!fd||!fd.totalAM)return;
+ const allD=[...new Set(fd.totalAM.slice(1).map(r=>isoD(r[1])).filter(d=>d))].sort((a,b)=>b.localeCompare(a));
+ const dSel=document.getElementById('fdAmbc_d')?.value||allD[0];
+ const getD=sheet=>{const m={};(sheet||[]).slice(1).forEach(r=>{if(isoD(r[1])!==dSel)return;const n=(r[0]||'').trim();if(!n||n.toLowerCase().includes('grand total'))return;m[n]={vol:parsePct(r[2]),fd:parsePct(r[3])};});return m;};
+ const bc={Total:getD(fd.totalBC),SME:getD(fd.smeBC),TTS:getD(fd.ttsBC),Shopee:getD(fd.shopeeBC)};
+ const am={Total:getD(fd.totalAM),SME:getD(fd.smeAM),TTS:getD(fd.ttsAM),Shopee:getD(fd.shopeeAM)};
+ const cc=window._CC_BCAM||{};const baton=window._BC_BATON||new Set();const isBaton=n=>baton.has((n||'').trim());
+ const amBCs={};Object.keys(cc).forEach(b=>{(cc[b]||[]).forEach(a=>{(amBCs[a]=amBCs[a]||[]).push(b);});});
+ const types=['Total','SME','TTS','Shopee'];
+ // Danh sách AM có dữ liệu, sort FD Total AM giảm dần
+ const amList=Object.keys(amBCs).filter(a=>am.Total[a]||amBCs[a].some(b=>bc.Total[b]));
+ const amFD=a=>{ if(am.Total[a]&&am.Total[a].fd!=null)return am.Total[a].fd; // ưu tiên số AM chính thức
+  const bs=amBCs[a].map(b=>bc.Total[b]).filter(x=>x&&x.vol!=null); const sv=bs.reduce((s,v)=>s+v.vol,0),sf=bs.reduce((s,v)=>s+(v.fd||0)*v.vol,0);return sv>0?sf/sv:null;};
+ amList.sort((a,b)=>((amFD(b)??-1)-(amFD(a)??-1)));
+ const cs='padding:5px 9px;font-size:12px;';
+ const cell=(v,type,bo)=>{ if(v==null||v.fd==null)return `<td style="${cs}text-align:center;color:var(--text-sub)">—</td>`;
+  const t=(bo?FD_TARGET.unstable:FD_TARGET.stable)[type];const pass=v.fd<=t;
+  const bg=pass?'#DCFCE7':'#FEE2E2',col=pass?'#15803D':'#DC2626';
+  return `<td style="${cs}text-align:center;background:${bg};color:${col};font-weight:700">${v.fd.toFixed(2)}%</td>`;};
+ let H='';
+ amList.forEach((a,ai)=>{
+  const bcs=[...new Set(amBCs[a])].filter(b=>types.some(t=>bc[t][b]));
+  bcs.sort((x,y)=>((bc.Total[y]?.fd??-1)-(bc.Total[x]?.fd??-1)));
+  if(!bcs.length)return;
+  const fdT=amFD(a);
+  // AM total row (weighted theo %Vol từ BC của AM này, cho từng loại)
+  const amAgg=type=>{const bs=bcs.map(b=>bc[type][b]).filter(x=>x&&x.vol!=null);const sv=bs.reduce((s,v)=>s+v.vol,0),sf=bs.reduce((s,v)=>s+(v.fd||0)*v.vol,0);return sv>0?{fd:sf/sv,vol:sv}:null;};
+  H+=`<div class="card" style="padding:12px 14px;margin-bottom:14px">
+   <div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:8px">
+    <span style="font-size:12px;color:var(--text-sub);font-weight:700">#${ai+1}</span>
+    <span style="font-size:15px;font-weight:800;color:var(--text-main)">${a}</span>
+    <span style="font-size:13px;font-weight:800;color:${fdT!=null&&fdT>=8?'#DC2626':'#15803D'}">Tỉ lệ trả Total: ${fdT!=null?fdT.toFixed(2)+'%':'—'}</span>
+    <span style="font-size:11px;color:var(--text-sub)">${bcs.length} Bưu Cục</span></div>
+   <div class="table-wrap" style="overflow-x:auto"><table><thead><tr>
+    <th style="${cs}width:30px;text-align:center;background:#FEEDE4">STT</th>
+    <th style="${cs}background:#FEEDE4;min-width:150px">Bưu Cục</th>
+    <th style="${cs}text-align:center;background:#FEEDE4">Trạng thái</th>
+    <th style="${cs}text-align:center;background:#FEEDE4">FD Total</th>
+    <th style="${cs}text-align:center;background:#FEEDE4">FD SME</th>
+    <th style="${cs}text-align:center;background:#FEEDE4">FD TTS</th>
+    <th style="${cs}text-align:center;background:#FEEDE4">FD Shopee</th></tr></thead><tbody>`;
+  bcs.forEach((b,bi)=>{const bo=isBaton(b);
+   H+=`<tr><td style="${cs}text-align:center;color:var(--text-sub)">${bi+1}</td>
+    <td style="${cs}font-weight:600;white-space:nowrap">${b}</td>
+    <td style="${cs}text-align:center">${bo?'<span style="background:#FEE2E2;color:#DC2626;border:1px solid #FECACA;border-radius:4px;font-size:10px;font-weight:700;padding:1px 6px">⚠ bất ổn</span>':'<span style="background:#DCFCE7;color:#15803D;border:1px solid #BBF7D0;border-radius:4px;font-size:10px;font-weight:700;padding:1px 6px">ổn định</span>'}</td>
+    ${cell(bc.Total[b],'Total',bo)}${cell(bc.SME[b],'SME',bo)}${cell(bc.TTS[b],'TTS',bo)}${cell(bc.Shopee[b],'Shopee',bo)}</tr>`;
+  });
+  // dòng Total AM (dùng target ổn định làm mốc tham chiếu — không tô, chỉ in đậm)
+  const tot={};types.forEach(t=>tot[t]=amAgg(t));
+  const totCell=v=>v&&v.fd!=null?`<td style="${cs}text-align:center;font-weight:800">${v.fd.toFixed(2)}%</td>`:`<td style="${cs}text-align:center">—</td>`;
+  H+=`<tr class="tot"><td style="${cs}"></td><td style="${cs}font-weight:800">TỔNG ${a}</td><td style="${cs}"></td>${totCell(tot.Total)}${totCell(tot.SME)}${totCell(tot.TTS)}${totCell(tot.Shopee)}</tr>`;
+  H+=`</tbody></table></div></div>`;
+ });
+ if(!H)H='<p style="padding:16px;color:var(--text-sub)">Không có dữ liệu cho ngày này.</p>';
+ document.getElementById('fdAmbcBody').innerHTML=H;
+}
+
 /* ===== DASHBOARD 4: FD TUẦN ===== */
 // Weekly data is in cols 7+ of each FD sheet
 // Row where col[7]==="AM"/"Bưu Cục" is the header; subsequent rows are data
@@ -1033,6 +1112,12 @@ function buildFDWeekTable(sheetArr,labels,isBC,selWeeks){
  const p0Map=wMap[0]||{};
  // latestWk = tuần số lớn nhất trong selWeeks (tránh lỗi AM giảm dần / BC tăng dần)
  const latestWk=selWeeks.reduce((a,b)=>+b>+a?b:a);
+ // Δ vs target (chỉ bảng Bưu Cục — target theo BC ổn định/bất ổn)
+ const _baton=window._BC_BATON||new Set();const _isBt=n=>_baton.has((n||'').trim());
+ const addTgt=isBC&&typeof FD_TARGET!=='undefined';
+ const dCell=(fd,type,bo)=>{ if(fd==null)return `<td style="${cs}text-align:center;color:var(--text-sub);border-left:1px solid #E5E7EB;background:#FFFDF5">—</td>`;
+  const t=(bo?FD_TARGET.unstable:FD_TARGET.stable)[type];const d=fd-t;const over=d>0.0001;
+  return `<td style="${cs}text-align:center;border-left:1px solid #E5E7EB;background:${over?'#FEE2E2':'#DCFCE7'};color:${over?'#DC2626':'#15803D'};font-weight:700">${over?'+':''}${d.toFixed(1)}</td>`;};
  // Chỉ giữ BC/AM có số liệu ở tuần gần nhất
  const active=regular.filter(name=>(p0Map[name]?.[latestWk]??0)>0);
  const sorted=active.sort((a,b)=>(p0Map[b]?.[latestWk]??-1)-(p0Map[a]?.[latestWk]??-1));
@@ -1041,8 +1126,10 @@ function buildFDWeekTable(sheetArr,labels,isBC,selWeeks){
  let h=`<div class="table-wrap" style="overflow-x:auto"><table><thead style="position:sticky;top:0;z-index:4">`;
  h+=`<tr><th rowspan="2" style="${cs}width:32px;text-align:center;background:#FEEDE4">STT</th><th rowspan="2" style="${cs}width:200px;background:#FEEDE4">${hLabel}</th>`;
  selWeeks.forEach((w,wi)=>{const bg=WC[wi%WC.length];h+=`<th colspan="${labels.length}" style="${cs}text-align:center;border-left:3px solid #D1D5DB;background:${bg}"><strong>Tuần ${w}</strong></th>`;});
+ if(addTgt)h+=`<th colspan="4" style="${cs}text-align:center;border-left:3px solid #C00000;background:#FDE7E7"><strong>Δ so Target (Tuần ${latestWk})</strong></th>`;
  h+='</tr><tr>';
  selWeeks.forEach((w,wi)=>{const bg=WC[wi%WC.length];labels.forEach(l=>{h+=`<th style="${cs}text-align:center;border-left:1px solid #E5E7EB;background:${bg}">%FD<br><small style="font-weight:400;font-size:10px">${l}</small></th>`;});});
+ if(addTgt)labels.forEach((l,li)=>{h+=`<th style="${cs}text-align:center;border-left:${li===0?'3px solid #C00000':'1px solid #E5E7EB'};background:#FDE7E7">Δ<br><small style="font-weight:400;font-size:10px">${l}</small></th>`;});
  h+='</tr></thead><tbody>';
  names.forEach((name,i)=>{
   const isG=isGrand(name);
@@ -1054,6 +1141,7 @@ function buildFDWeekTable(sheetArr,labels,isBC,selWeeks){
     h+=`<td style="${cs}text-align:center;border-left:${si===0?'3px solid #D1D5DB':'1px solid #E5E7EB'};background:${red?'#FEE2E2':bg};color:${red?'#DC2626':'inherit'};font-weight:${red?700:'inherit'}">${fd!==null?fd.toFixed(1)+'%':'—'}</td>`;
    });
   });
+  if(addTgt){ if(isG){h+=`<td colspan="4" style="${cs}background:#FDE7E7"></td>`;} else {const bo=_isBt(name);labels.forEach((l)=>{const fd=wMap[labels.indexOf(l)]?.[name]?.[latestWk]??null;h+=dCell(fd,l,bo);});} }
   h+='</tr>';
  });
  h+='</tbody></table></div>';
@@ -2063,6 +2151,34 @@ async function _fdSendAll(){
  await sendCard('p3-card-am',capAM,980);
  await sendCard('p3-card-bc-baton',capBaton,1200);
  await sendCard('p3-card-bc-ondinh',capOndinh,1200,15);
+ // Bắn kèm TỔNG QUAN TUẦN (đại nhân yêu cầu 27/09)
+ try{ await _fdSendWeekOverview(); }catch(e){ console.warn('TG FD tuần:',e&&e.message); }
+}
+// Ảnh tổng quan Tỉ lệ trả TUẦN (gần nhất) + đối chiếu target → thread FD
+async function _fdSendWeekOverview(){
+ const fd=window._FD;if(!fd||!fd.totalBC||typeof parseWeeklySection!=='function')return;
+ const baton=window._BC_BATON||new Set();const isB=n=>baton.has((n||'').trim());
+ const parsed={Total:parseWeeklySection(fd.totalBC,'Bưu Cục'),SME:parseWeeklySection(fd.smeBC,'Bưu Cục'),TTS:parseWeeklySection(fd.ttsBC,'Bưu Cục'),Shopee:parseWeeklySection(fd.shopeeBC,'Bưu Cục')};
+ const pt=parsed.Total;if(!pt||!pt.weeks.length)return;
+ const latestWk=pt.weeks.reduce((a,b)=>+b>+a?b:a);
+ const isGrand=n=>n.toLowerCase().includes('grand total');
+ const grandOf=l=>{const p=parsed[l];if(!p)return null;const g=p.data.find(r=>isGrand(r.name));return g?(g.wData[latestWk]??null):null;};
+ const P=x=>x==null?'—':x.toFixed(2)+'%';
+ let over=0,tot=0,overBO=0,overOD=0;
+ pt.data.filter(r=>!isGrand(r.name)).forEach(r=>{const v=r.wData[latestWk];if(v==null)return;tot++;const bo=isB(r.name);const t=(bo?FD_TARGET.unstable:FD_TARGET.stable).Total;if(v>t){over++;bo?overBO++:overOD++;}});
+ const gT=grandOf('Total');
+ const box=(l)=>{const v=grandOf(l);return `<div style="flex:1;min-width:150px;border:1px solid #e5e7eb;border-top:3px solid #DC2626;border-radius:10px;padding:12px 14px"><div style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase">Toàn Vùng ${l}</div><div style="font-size:26px;font-weight:800;color:#1f2937">${P(v)}</div></div>`;};
+ const html=`<div style="width:900px;background:#fff;padding:18px 20px;font-family:'Be Vietnam Pro',system-ui,sans-serif">
+  <div style="background:#FFF200;text-align:center;font-weight:800;font-size:17px;padding:8px;border:1px solid #333">TỔNG QUAN TỈ LỆ TRẢ — TUẦN ${latestWk}</div>
+  <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:14px">${box('Total')}${box('SME')}${box('TTS')}${box('Shopee')}</div>
+  <div style="margin-top:14px;font-size:13px;line-height:1.9;color:#1e293b">
+   • Số Bưu Cục VƯỢT target Total tuần ${latestWk}: <b style="color:#DC2626">${over}/${tot}</b> (bất ổn ${overBO} · ổn định ${overOD}).<br>
+   • Target ổn định: Total ≤8% · SME ≤8% · TTS &lt;6,5% · Shopee &lt;7%. &nbsp; Target bất ổn: Total &lt;12% · SME ≤13% · TTS &lt;9% · Shopee &lt;9%.<br>
+   • Toàn Vùng Total tuần ${latestWk}: <b>${P(gT)}</b>${gT!=null?(gT>8?` — cao hơn mốc 8% <b style="color:#DC2626">${(gT-8).toFixed(2)}</b> điểm.`:` — đạt mốc 8%.`):''}
+  </div></div>`;
+ const tmp=document.createElement('div');tmp.id='tg-fdwk-tmp';tmp.style.cssText='position:fixed;top:-9999px;left:0;z-index:-1;background:#fff';tmp.innerHTML=html;document.body.appendChild(tmp);
+ await new Promise(r=>setTimeout(r,320));
+ try{const img=await _captureEl('tg-fdwk-tmp');await _tgSendPhoto(TG_AGING_CHAT,TG_FD_THREAD,img,`📆 <b>TỔNG QUAN TỈ LỆ TRẢ — TUẦN ${latestWk}</b> (đối chiếu target)`);}finally{tmp.remove();}
 }
 async function sendTLTToTelegram(){
  const fd=window._FD;
@@ -2140,6 +2256,7 @@ async function sendTLTToTelegram(){
   await sendCard('p3-card-am',capFD('am'),980);
   await sendCard('p3-card-bc-baton',capBaton,1200);
   await sendCard('p3-card-bc-ondinh',capOndinh,1200,15);
+  try{ await _fdSendWeekOverview(); }catch(e){ console.warn('TG FD tuần:',e&&e.message); }
   if(btn){btn.disabled=false;btn.textContent='✅ Đã gửi!';btn.style.background='rgba(34,197,94,0.15)';btn.style.borderColor='rgba(34,197,94,0.4)';btn.style.color='#4ade80';setTimeout(()=>{btn.textContent='📤 Bắn TLT Ngày TG';btn.style.background='';btn.style.borderColor='';btn.style.color='';},3000);}
  }catch(e){
   console.error('TG TLT Error:',e);
@@ -4066,6 +4183,10 @@ async function init(){
  const p4el=document.getElementById('p4');
  if(R['FD Total theo AM']){p4el.innerHTML=buildFDWeekPage(window._FD);setTimeout(()=>renderFDWeek(),0);}
  else p4el.innerHTML=errPage('Không thể tải dữ liệu FD Tuần.');
+ // p39 — Tỉ lệ trả - AM - Bưu Cục
+ const p39el=document.getElementById('p39');
+ if(R['FD Total theo AM']){p39el.innerHTML=buildFDByAMPage(window._FD);setTimeout(()=>renderFDByAM(),0);}
+ else p39el.innerHTML=errPage('Không thể tải dữ liệu FD.');
  // p5 — ODR
  const p5el=document.getElementById('p5');
  if(R['ODR TTS - AM']&&R['ODR TTS - Bưu Cục']){
