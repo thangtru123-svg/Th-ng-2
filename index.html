@@ -235,7 +235,7 @@ tr.tot td{background:#FFF0EB!important;font-weight:800!important;border-top:2px 
  <div class="nav-section">Tỉ Lệ Trả</div>
  <button class="nav-item" onclick="show('p3',this)"><span class="icon">📅</span>TLT theo Ngày</button>
  <button class="nav-item" onclick="show('p4',this)"><span class="icon">📆</span>TLT theo Tuần</button>
- <button class="nav-item" onclick="show('p39',this)"><span class="icon">🎯</span>Tỉ lệ trả - AM - Bưu Cục</button>
+ <button class="nav-item" onclick="show('p40',this)"><span class="icon">🎯</span>Tỉ lệ trả - AM - Bưu Cục</button>
  <div class="nav-section">Ontime SLA TTS</div>
  <button class="nav-item" onclick="show('p5',this)"><span class="icon">⏱️</span>Tổng quan ODR TTS</button>
  <button class="nav-item" onclick="show('p6',this)"><span class="icon">🚀</span>Tổng quan OPR TTS</button>
@@ -268,7 +268,7 @@ tr.tot td{background:#FFF0EB!important;font-weight:800!important;border-top:2px 
  <div class="page" id="p2"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
  <div class="page" id="p3"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
  <div class="page" id="p4"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
- <div class="page" id="p39"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
+ <div class="page" id="p40"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
  <div class="page" id="p5"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
  <div class="page" id="p6"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
  <div class="page" id="p7"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
@@ -1099,7 +1099,7 @@ function parseWeeklySection(rows,headerLabel){
  return{weeks,data};
 }
 const WC=['#FFF8F5','#F0FDF4','#EFF6FF','#FAF5FF','#FEFCE8','#F0FDFA'];
-function buildFDWeekTable(sheetArr,labels,isBC,selWeeks){
+function buildFDWeekTable(sheetArr,labels,isBC,selWeeks,nameFilter){
  const hLabel=isBC?'Bưu Cục':'AM';
  const parsed=sheetArr.map(s=>parseWeeklySection(s,hLabel));
  // Chỉ lấy dòng đầu tiên của mỗi tên (tránh Grand Total #2 overwrite Grand Total #1)
@@ -1107,8 +1107,8 @@ function buildFDWeekTable(sheetArr,labels,isBC,selWeeks){
  const allNames=new Set();
  parsed.forEach(p=>{if(p)p.data.forEach(r=>allNames.add(r.name));});
  const isGrand=n=>n.toLowerCase().includes('grand total');
- const regular=[...allNames].filter(n=>!isGrand(n));
- const grands=[...allNames].filter(n=>isGrand(n));
+ const regular=[...allNames].filter(n=>!isGrand(n)&&(!nameFilter||nameFilter(n)));
+ const grands=nameFilter?[]:[...allNames].filter(n=>isGrand(n));
  const p0Map=wMap[0]||{};
  // latestWk = tuần số lớn nhất trong selWeeks (tránh lỗi AM giảm dần / BC tăng dần)
  const latestWk=selWeeks.reduce((a,b)=>+b>+a?b:a);
@@ -1117,7 +1117,7 @@ function buildFDWeekTable(sheetArr,labels,isBC,selWeeks){
  const addTgt=isBC&&typeof FD_TARGET!=='undefined';
  const dCell=(fd,type,bo)=>{ if(fd==null)return `<td style="${cs}text-align:center;color:var(--text-sub);border-left:1px solid #E5E7EB;background:#FFFDF5">—</td>`;
   const t=(bo?FD_TARGET.unstable:FD_TARGET.stable)[type];const d=fd-t;const over=d>0.0001;
-  return `<td style="${cs}text-align:center;border-left:1px solid #E5E7EB;background:${over?'#FEE2E2':'#DCFCE7'};color:${over?'#DC2626':'#15803D'};font-weight:700">${over?'+':''}${d.toFixed(1)}</td>`;};
+  return `<td style="${cs}text-align:center;border-left:1px solid #E5E7EB;background:${over?'#FEE2E2':'#DCFCE7'};color:${over?'#DC2626':'#15803D'};font-weight:700">${over?'+':''}${d.toFixed(1)}%</td>`;};
  // Chỉ giữ BC/AM có số liệu ở tuần gần nhất
  const active=regular.filter(name=>(p0Map[name]?.[latestWk]??0)>0);
  const sorted=active.sort((a,b)=>(p0Map[b]?.[latestWk]??-1)-(p0Map[a]?.[latestWk]??-1));
@@ -1172,8 +1172,12 @@ function renderFDWeek(){
  const fi=weeks.indexOf(wFrom),ti=weeks.indexOf(wTo);
  const lo=Math.min(fi,ti),hi=Math.max(fi,ti);
  const selWeeks=weeks.slice(lo,hi+1);
- document.getElementById('fdWkAMTable').innerHTML=buildFDWeekTable([fd.totalAM,fd.smeAM,fd.ttsAM,fd.shopeeAM],['Total','SME','TTS','Shopee'],false,selWeeks);
- document.getElementById('fdWkBCTable').innerHTML=buildFDWeekTable([fd.totalBC,fd.smeBC,fd.ttsBC,fd.shopeeBC],['Total','SME','TTS','Shopee'],true,selWeeks);
+ const bcSheets=[fd.totalBC,fd.smeBC,fd.ttsBC,fd.shopeeBC];const L=['Total','SME','TTS','Shopee'];
+ const baton=window._BC_BATON||new Set();const _isB=n=>baton.has((n||'').trim());
+ document.getElementById('fdWkAMTable').innerHTML=buildFDWeekTable([fd.totalAM,fd.smeAM,fd.ttsAM,fd.shopeeAM],L,false,selWeeks);
+ const _bo=document.getElementById('fdWkBatOnTable');if(_bo){_bo.innerHTML=buildFDWeekTable(bcSheets,L,true,selWeeks,n=>_isB(n));addBCSearch(_bo);}
+ const _od=document.getElementById('fdWkOnDinhTable');if(_od){_od.innerHTML=buildFDWeekTable(bcSheets,L,true,selWeeks,n=>!_isB(n));addBCSearch(_od);}
+ document.getElementById('fdWkBCTable').innerHTML=buildFDWeekTable(bcSheets,L,true,selWeeks);
  addBCSearch(document.getElementById('fdWkAMTable'));
  addBCSearch(document.getElementById('fdWkBCTable'));
 }
@@ -1194,7 +1198,9 @@ function buildFDWeekPage(fd){
   <select id="fdWk_to" onchange="renderFDWeek()">${mkWk(wTo)}</select>
  </div>
  <div class="card"><div class="card-header"><div class="card-title"><div class="card-icon">👤</div>A. Theo AM</div></div><div id="fdWkAMTable"></div></div>
- <div class="card"><div class="card-header"><div class="card-title"><div class="card-icon">🏪</div>B. Theo Bưu Cục</div></div><div id="fdWkBCTable"></div></div>`;
+ <div class="card"><div class="card-header"><div class="card-title"><div class="card-icon">⚠️</div>B. Bưu Cục Bất Ổn</div></div><div id="fdWkBatOnTable"></div></div>
+ <div class="card"><div class="card-header"><div class="card-title"><div class="card-icon">✅</div>C. Bưu Cục Ổn Định</div></div><div id="fdWkOnDinhTable"></div></div>
+ <div class="card"><div class="card-header"><div class="card-title"><div class="card-icon">🏪</div>D. Theo Bưu Cục (tất cả)</div></div><div id="fdWkBCTable"></div></div>`;
 }
 
 /* ===== DASHBOARD 5 & 6: ODR / OPR ===== */
@@ -4183,10 +4189,10 @@ async function init(){
  const p4el=document.getElementById('p4');
  if(R['FD Total theo AM']){p4el.innerHTML=buildFDWeekPage(window._FD);setTimeout(()=>renderFDWeek(),0);}
  else p4el.innerHTML=errPage('Không thể tải dữ liệu FD Tuần.');
- // p39 — Tỉ lệ trả - AM - Bưu Cục
- const p39el=document.getElementById('p39');
- if(R['FD Total theo AM']){p39el.innerHTML=buildFDByAMPage(window._FD);setTimeout(()=>renderFDByAM(),0);}
- else p39el.innerHTML=errPage('Không thể tải dữ liệu FD.');
+ // p40 — Tỉ lệ trả - AM - Bưu Cục
+ const p40el=document.getElementById('p40');
+ if(R['FD Total theo AM']){p40el.innerHTML=buildFDByAMPage(window._FD);setTimeout(()=>renderFDByAM(),0);}
+ else p40el.innerHTML=errPage('Không thể tải dữ liệu FD.');
  // p5 — ODR
  const p5el=document.getElementById('p5');
  if(R['ODR TTS - AM']&&R['ODR TTS - Bưu Cục']){
