@@ -1840,12 +1840,19 @@ async function buildAgingPage(){
 /* ===== TELEGRAM — GỬI AGING ===== */
 async function _tgSend(chatId,threadId,text){
  if(!window._canSend||!window._canSend()){_roleToast('⛔ Bạn không có quyền bắn báo cáo Telegram');throw new Error('NO_PERMISSION_SEND');}
- const r=await fetch(`https://api.telegram.org/bot${TG_TOKEN}/sendMessage`,{
-  method:'POST',headers:{'Content-Type':'application/json'},
-  body:JSON.stringify({chat_id:chatId,message_thread_id:threadId,text,parse_mode:'HTML',disable_web_page_preview:true}),
-  signal:AbortSignal.timeout(30000)
- });
- return r.json();
+ // Retry khi Telegram trả 429 (Too Many Requests / flood limit) theo retry_after
+ for(let attempt=0;attempt<4;attempt++){
+  const r=await fetch(`https://api.telegram.org/bot${TG_TOKEN}/sendMessage`,{
+   method:'POST',headers:{'Content-Type':'application/json'},
+   body:JSON.stringify({chat_id:chatId,message_thread_id:threadId,text,parse_mode:'HTML',disable_web_page_preview:true}),
+   signal:AbortSignal.timeout(30000)
+  });
+  const j=await r.json().catch(()=>({ok:false,description:'parse lỗi'}));
+  if(j.ok||r.status!==429||attempt===3)return j;
+  const wait=(((j.parameters&&j.parameters.retry_after)||2)*1000)+500;
+  await new Promise(res=>setTimeout(res,wait));
+ }
+ return {ok:false,description:'429 retry exhausted'};
 }
 async function _tgSendPhoto(chatId,threadId,blob,caption){
  if(!window._canSend||!window._canSend()){_roleToast('⛔ Bạn không có quyền bắn báo cáo Telegram');throw new Error('NO_PERMISSION_SEND');}
@@ -1854,8 +1861,14 @@ async function _tgSendPhoto(chatId,threadId,blob,caption){
  if(threadId!=null&&threadId!=='')form.append('message_thread_id',threadId);
  form.append('photo',blob,'aging.png');
  if(caption){form.append('caption',caption);form.append('parse_mode','HTML');}
- const r=await fetch(`https://api.telegram.org/bot${TG_TOKEN}/sendPhoto`,{method:'POST',body:form,signal:AbortSignal.timeout(45000)});
- return r.json();
+ for(let attempt=0;attempt<4;attempt++){
+  const r=await fetch(`https://api.telegram.org/bot${TG_TOKEN}/sendPhoto`,{method:'POST',body:form,signal:AbortSignal.timeout(45000)});
+  const j=await r.json().catch(()=>({ok:false,description:'parse lỗi'}));
+  if(j.ok||r.status!==429||attempt===3)return j;
+  const wait=(((j.parameters&&j.parameters.retry_after)||2)*1000)+500;
+  await new Promise(res=>setTimeout(res,wait));
+ }
+ return {ok:false,description:'429 retry exhausted'};
 }
 async function _tgSendDoc(chatId,threadId,blob,caption){
  if(!window._canSend||!window._canSend()){_roleToast('⛔ Bạn không có quyền bắn báo cáo Telegram');throw new Error('NO_PERMISSION_SEND');}
@@ -2591,7 +2604,7 @@ async function sendAllToTelegram(){
   /* --- P3: Tỉ Lệ Trả Ngày → FD thread (format MỚI: Tổng quan + AM + Bất Ổn + Ổn Định + phân tích) --- */
   await navTo('p3');
   if(btn)btn.innerHTML='⏳ Đang gửi: Tỉ Lệ Trả (Tổng quan + nhóm)...';
-  await _fdSendAll();
+  try{ await _fdSendAll(); }catch(e){ console.warn('[TG FD] lỗi (bỏ qua, chạy tiếp):',e&&e.message); }
 
   /* --- P6: OPR TTS → Pickup/Luân chuyển thread --- */
   await navTo('p6');
