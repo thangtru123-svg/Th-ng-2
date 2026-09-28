@@ -463,10 +463,12 @@ function _onToken(resp){
   _silentTry=false; _startSession();
 }
 // Làm mới token Google im lặng TRƯỚC khi bắn (tránh 401 → dữ liệu re-fetch rỗng → báo cáo miss).
-async function _ensureFreshToken(){
+async function _ensureFreshToken(force){
   if(!_tokenClient||!window._gToken)return false;
+  const now=Date.now();
+  if(!force && window.__lastTokRefresh && (now-window.__lastTokRefresh)<90000)return true; // đã làm mới trong 90s → bỏ qua
   return await new Promise(resolve=>{
-   let done=false;const fin=v=>{if(!done){done=true;resolve(v);}};
+   let done=false;const fin=v=>{if(!done){done=true;if(v)window.__lastTokRefresh=Date.now();resolve(v);}};
    window.__tokRes=fin; window.__tokenRefreshOnly=true; _silentTry=true;
    try{_tokenClient.requestAccessToken({prompt:'none'});}catch(e){window.__tokenRefreshOnly=false;fin(false);}
    setTimeout(()=>fin(false),6000);
@@ -503,7 +505,7 @@ function injectTgBtn(pageId,fn,label){
  const b=document.createElement('button');
  b.className='tg-inpage-btn';b.id='tgInpage_'+pageId;
  b.innerHTML='📤 '+(label||'Bắn Telegram');
- b.onclick=fn;
+ b.onclick=async()=>{ try{ if(typeof _ensureFreshToken==='function')await _ensureFreshToken(); }catch(_){} return fn(); }; // luôn làm mới token trước khi bắn (mọi trang)
  meta.appendChild(b);
 }
 function injectAllTgBtns(){
