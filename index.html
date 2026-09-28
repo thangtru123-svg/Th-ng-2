@@ -2187,6 +2187,20 @@ async function _fdSendWeekOverview(){
  const tmp=document.createElement('div');tmp.id='tg-fdwk-tmp';tmp.style.cssText='position:fixed;top:-9999px;left:0;z-index:-1;background:#fff';tmp.innerHTML=html;document.body.appendChild(tmp);
  await new Promise(r=>setTimeout(r,320));
  try{const img=await _captureEl('tg-fdwk-tmp');await _tgSendPhoto(TG_AGING_CHAT,TG_FD_THREAD,img,`📆 <b>TỔNG QUAN TỈ LỆ TRẢ — TUẦN ${latestWk}</b> (đối chiếu target)`);}finally{tmp.remove();}
+ await new Promise(r=>setTimeout(r,700));
+ // ===== Bảng FD Tuần theo Bưu Cục (kèm Δ so target) — Bất ổn + Ổn định =====
+ const L=['Total','SME','TTS','Shopee'];const bcSheets=[fd.totalBC,fd.smeBC,fd.ttsBC,fd.shopeeBC];
+ const sel2=[...pt.weeks].sort((a,b)=>+b-+a).slice(0,2);
+ const sendWkBC=async(title,icon,filterFn,trimN)=>{
+  const inner=buildFDWeekTable(bcSheets,L,true,sel2,filterFn);
+  const t2=document.createElement('div');t2.id='tg-fdwkbc-tmp';t2.style.cssText='position:fixed;top:-9999px;left:0;z-index:-1;background:#fff;padding:12px 14px';
+  t2.innerHTML=`<div style="background:#FFF200;text-align:center;font-weight:800;font-size:16px;padding:7px;border:1px solid #333">${icon} ${title} — TỈ LỆ TRẢ TUẦN ${sel2[0]} (kèm Δ so target)</div>`+inner;
+  if(trimN){const tb=t2.querySelector('.table-wrap>table tbody');if(tb){let k=0;[...tb.querySelectorAll('tr')].forEach(tr=>{if(!tr.classList.contains('tot')){if(k>=trimN)tr.remove();else k++;}});}}
+  document.body.appendChild(t2);await new Promise(r=>setTimeout(r,320));
+  try{const img=await _captureEl('tg-fdwkbc-tmp',1,true);let res=await _tgSendPhoto(TG_AGING_CHAT,TG_FD_THREAD,img,`${icon} <b>${title} — Tỉ lệ trả TUẦN ${sel2.join(' vs ')}</b> (kèm Δ so target)`);if(!res||!res.ok)await _tgSendDoc(TG_AGING_CHAT,TG_FD_THREAD,img,`${icon} ${title} — Tuần ${sel2[0]}`);}catch(e){console.warn('TG FD tuần BC:',e&&e.message);}finally{t2.remove();}
+  await new Promise(r=>setTimeout(r,800));
+ };
+ try{ await sendWkBC('BƯU CỤC BẤT ỔN','⚠️',n=>isB(n)); await sendWkBC('BƯU CỤC ỔN ĐỊNH','✅',n=>!isB(n),30); }catch(e){ console.warn('TG FD tuần BC:',e&&e.message); }
 }
 async function sendTLTToTelegram(){
  const fd=window._FD;
