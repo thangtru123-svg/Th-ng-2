@@ -454,8 +454,23 @@ async function _startSession(){
   }catch(e){ if(ck)ck.style.display='none'; _showAuthError('Không thể xác thực: '+(e&&e.message||e)); }
 }
 function _onToken(resp){
-  if(!resp||resp.error||!resp.access_token){ if(_silentTry){_silentTry=false;return;} _showAuthError('Đăng nhập thất bại, vui lòng thử lại.'); return; }
-  _silentTry=false; window._gToken=resp.access_token; _startSession();
+  const ok=!(!resp||resp.error||!resp.access_token);
+  if(ok) window._gToken=resp.access_token;
+  const refreshOnly=window.__tokenRefreshOnly; window.__tokenRefreshOnly=false;
+  if(window.__tokRes){const f=window.__tokRes;window.__tokRes=null;try{f(ok);}catch(_){}}
+  if(refreshOnly){ _silentTry=false; return; } // chỉ làm mới token trước khi bắn — KHÔNG re-init trang
+  if(!ok){ if(_silentTry){_silentTry=false;return;} _showAuthError('Đăng nhập thất bại, vui lòng thử lại.'); return; }
+  _silentTry=false; _startSession();
+}
+// Làm mới token Google im lặng TRƯỚC khi bắn (tránh 401 → dữ liệu re-fetch rỗng → báo cáo miss).
+async function _ensureFreshToken(){
+  if(!_tokenClient||!window._gToken)return false;
+  return await new Promise(resolve=>{
+   let done=false;const fin=v=>{if(!done){done=true;resolve(v);}};
+   window.__tokRes=fin; window.__tokenRefreshOnly=true; _silentTry=true;
+   try{_tokenClient.requestAccessToken({prompt:'none'});}catch(e){window.__tokenRefreshOnly=false;fin(false);}
+   setTimeout(()=>fin(false),6000);
+  });
 }
 
 window.onGoogleLibraryLoad=function(){
@@ -2305,7 +2320,9 @@ async function sendTLTToTelegram(){
 /* ===== TELEGRAM: BẮN TẤT CẢ ===== */
 async function sendAllToTelegram(){
  const btn=document.getElementById('tgSidebarBtn');
- if(btn){btn.disabled=true;btn.innerHTML='⏳ Đang gửi...';}
+ if(btn){btn.disabled=true;btn.innerHTML='🔑 Làm mới token...';}
+ try{ await _ensureFreshToken(); }catch(_){}
+ if(btn)btn.innerHTML='⏳ Đang gửi...';
  const num=n=>n.toLocaleString('vi-VN');
  const fD=d=>{if(!d)return'';const p=d.split('-');return p.length===3?`${p[2]}/${p[1]}/${p[0]}`:d;};
  const trimCap=s=>s.length>1020?s.slice(0,1017)+'...':s;
@@ -6576,8 +6593,9 @@ function _vyBuildText(bc,A,m){
 async function sendVietYenToTelegram(){
  const btn=document.getElementById('tgInpage_p34'); if(btn){btn.disabled=true;btn.innerHTML='⏳ Đang gửi...';}
  try{
+  try{ await _ensureFreshToken(); }catch(_){}
   _vyOnChange(); // lưu input BC đang mở trước khi bắn
-  const S=(window._vyS)?window._vyS:await _vyFetchAll();
+  const S=await _vyFetchAll(); // luôn fetch mới với token vừa làm mới (tránh dùng _vyS cũ/rỗng)
   const st=_vyStore();let okAll=true;
   for(let i=0;i<VY_BCS.length;i++){
    const bc=VY_BCS[i];
