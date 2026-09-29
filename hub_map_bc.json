@@ -1,0 +1,602 @@
+[
+{
+"name": "(QNI) Cao Xanh",
+"id": "21639000",
+"am": "Vũ Hồng Thái",
+"tinh": "Quảng Ninh"
+},
+{
+"name": "(BGI) Xuân Cẩm",
+"id": "21436000",
+"am": "Giáp Hải Sự",
+"tinh": "Bắc Giang"
+},
+{
+"name": "(LSO) Đình Lập",
+"id": "21302000",
+"am": "Vi Văn Trịnh",
+"tinh": "Lạng Sơn"
+},
+{
+"name": "(QNI) Ba Chẽ",
+"id": "22936000",
+"am": "Nguyễn Phú Hưởng",
+"tinh": "Quảng Ninh"
+},
+{
+"name": "(HPH) Hải An 1",
+"id": "22984000",
+"am": "Hoàng Thị Hồng Nhung",
+"tinh": "Hải Phòng"
+},
+{
+"name": "(BGI) Tân Yên",
+"id": "21977000",
+"am": "Đỗ Phú Duyên",
+"tinh": "Bắc Giang"
+},
+{
+"name": "(BGI) Đa Mai",
+"id": "23009000",
+"am": "Đỗ Phú Duyên",
+"tinh": "Bắc Giang"
+},
+{
+"name": "(LSO) Thất Khê",
+"id": "20842000",
+"am": "Vi Văn Trịnh",
+"tinh": "Lạng Sơn"
+},
+{
+"name": "(BGI) Trường Sơn",
+"id": "22603000",
+"am": "Nguyễn Văn Long",
+"tinh": "Bắc Giang"
+},
+{
+"name": "(QNI) Bình Liêu",
+"id": "22943000",
+"am": "Nguyễn Phú Hưởng",
+"tinh": "Quảng Ninh"
+},
+{
+"name": "(QNI) Cửa Ông 1",
+"id": "21049000",
+"am": "Chu Mạnh Dũng",
+"tinh": "Quảng Ninh"
+},
+{
+"name": "(HPH) Hải An 2",
+"id": "2500",
+"am": "Hoàng Thị Hồng Nhung",
+"tinh": "Hải Phòng"
+},
+{
+"name": "(BGI) Lạng Giang",
+"id": "20860000",
+"am": "Giáp Hải Sự",
+"tinh": "Bắc Giang"
+},
+{
+"name": "(QNI) Tiên Yên",
+"id": "22965000",
+"am": "Nguyễn Phú Hưởng",
+"tinh": "Quảng Ninh"
+},
+{
+"name": "(HPH) Bạch Đằng",
+"id": "20373000",
+"am": "Nguyễn Bá Tuấn",
+"tinh": "Hải Phòng"
+},
+{
+"name": "(QNI) Đầm Hà",
+"id": "22681000",
+"am": "Nguyễn Phú Hưởng",
+"tinh": "Quảng Ninh"
+},
+{
+"name": "(LSO) Bắc Sơn",
+"id": "20315000",
+"am": "Vi Văn Trịnh",
+"tinh": "Lạng Sơn"
+},
+{
+"name": "(HDU) Nam Sách",
+"id": "20459000",
+"am": "Nguyễn Văn Quang",
+"tinh": "Hải Dương"
+},
+{
+"name": "(HDU) Phú Thái",
+"id": "20779000",
+"am": "Hoàng Tấn Dũng",
+"tinh": "Hải Dương"
+},
+{
+"name": "(BGI) Việt Yên",
+"id": "20179000",
+"am": "Đỗ Phú Duyên",
+"tinh": "Bắc Giang"
+},
+{
+"name": "(LSO) Tam Thanh",
+"id": "21993000",
+"am": "Lê Văn Lâm",
+"tinh": "Lạng Sơn"
+},
+{
+"name": "(QNI) Vân Đồn 1",
+"id": "23157000",
+"am": "Chu Mạnh Dũng",
+"tinh": "Quảng Ninh"
+},
+{
+"name": "(LSO) Chi Lăng",
+"id": "20735000",
+"am": "Lê Văn Lâm",
+"tinh": "Lạng Sơn"
+},
+{
+"name": "(LSO) Na Sầm",
+"id": "22304000",
+"am": "Vi Văn Trịnh",
+"tinh": "Lạng Sơn"
+},
+{
+"name": "(QNI) Mạo Khê",
+"id": "22204000",
+"am": "Cao Xuân Minh",
+"tinh": "Quảng Ninh"
+},
+{
+"name": "(BGI) Nhã Nam",
+"id": "20396000",
+"am": "Đỗ Phú Duyên",
+"tinh": "Bắc Giang"
+},
+{
+"name": "(HPH) Kiến An",
+"id": "20870000",
+"am": "Nguyễn Bá Tuấn",
+"tinh": "Hải Phòng"
+},
+{
+"name": "(HDU) Tân Hưng",
+"id": "20090000",
+"am": "Trương Ngọc Nên",
+"tinh": "Hải Dương"
+},
+{
+"name": "(BGI) Yên Thế",
+"id": "20471000",
+"am": "Phạm Đức Thắng",
+"tinh": "Bắc Giang"
+},
+{
+"name": "(HDU) Tứ Minh",
+"id": "22935000",
+"am": "Nguyễn Văn Quang",
+"tinh": "Hải Dương"
+},
+{
+"name": "(LSO) Đông Kinh",
+"id": "21995000",
+"am": "Lê Văn Lâm",
+"tinh": "Lạng Sơn"
+},
+{
+"name": "(QNI) Hoành Bồ",
+"id": "20355000",
+"am": "Hạ Thị Lan Anh",
+"tinh": "Quảng Ninh"
+},
+{
+"name": "(BGI) Bố Hạ",
+"id": "20771000",
+"am": "Phạm Đức Thắng",
+"tinh": "Bắc Giang"
+},
+{
+"name": "(QNI) Cửa Ông 2",
+"id": "2409",
+"am": "Chu Mạnh Dũng",
+"tinh": "Quảng Ninh"
+},
+{
+"name": "(QNI) Quảng Hà",
+"id": "20841000",
+"am": "Nguyễn Phú Hưởng",
+"tinh": "Quảng Ninh"
+},
+{
+"name": "(HPH) Hồng An",
+"id": "20929000",
+"am": "Lê Đắc Vinh",
+"tinh": "Hải Phòng"
+},
+{
+"name": "(BNI) Phật Tích",
+"id": "22455000",
+"am": "Nguyễn Hữu Phi Dũng",
+"tinh": "Bắc Ninh"
+},
+{
+"name": "(QNI) Đông Triều",
+"id": "20930000",
+"am": "Cao Xuân Minh",
+"tinh": "Quảng Ninh"
+},
+{
+"name": "(HPH) Đông Hải",
+"id": "21642000",
+"am": "Bùi Xuân Quang",
+"tinh": "Hải Phòng"
+},
+{
+"name": "(HPH) Cát Hải",
+"id": "22740000",
+"am": "Bùi Xuân Quang",
+"tinh": "Hải Phòng"
+},
+{
+"name": "(LSO) Bình Gia",
+"id": "21301000",
+"am": "Vi Văn Trịnh",
+"tinh": "Lạng Sơn"
+},
+{
+"name": "(HPH) Thủy Nguyên",
+"id": "20377000",
+"am": "Nguyễn Bá Tuấn",
+"tinh": "Hải Phòng"
+},
+{
+"name": "(BNI) Yên Phong",
+"id": "21081000",
+"am": "Kiều Văn Nam",
+"tinh": "Bắc Ninh"
+},
+{
+"name": "(LSO) Lộc Bình",
+"id": "20060000",
+"am": "Vi Văn Trịnh",
+"tinh": "Lạng Sơn"
+},
+{
+"name": "(HPH) Ngô Quyền",
+"id": "21464000",
+"am": "Bùi Xuân Quang",
+"tinh": "Hải Phòng"
+},
+{
+"name": "(BGI) Sơn Động",
+"id": "22693000",
+"am": "Nguyễn Văn Long",
+"tinh": "Bắc Giang"
+},
+{
+"name": "(HPH) An Phong",
+"id": "2535",
+"am": "Lê Đắc Vinh",
+"tinh": "Hải Phòng"
+},
+{
+"name": "(BNI) Trung Chính",
+"id": "20969000",
+"am": "Nguyễn Văn Đạt",
+"tinh": "Bắc Ninh"
+},
+{
+"name": "(HDU) Chu Văn An",
+"id": "22773000",
+"am": "Hoàng Tấn Dũng",
+"tinh": "Hải Dương"
+},
+{
+"name": "(HPH) Tân Minh",
+"id": "1443",
+"am": "Vũ Văn Vinh",
+"tinh": "Hải Phòng"
+},
+{
+"name": "(HDU) Cẩm Giang",
+"id": "22277000",
+"am": "Nguyễn Văn Quang",
+"tinh": "Hải Dương"
+},
+{
+"name": "(BGI) Lục Nam",
+"id": "21332000",
+"am": "Nguyễn Văn Long",
+"tinh": "Bắc Giang"
+},
+{
+"name": "(HDU) Kẻ Sặt",
+"id": "20236000",
+"am": "Nguyễn Văn Đạt",
+"tinh": "Hải Dương"
+},
+{
+"name": "(HPH) An Hải",
+"id": "1403",
+"am": "Lê Đắc Vinh",
+"tinh": "Hải Phòng"
+},
+{
+"name": "(HDU) Gia Lộc",
+"id": "21040000",
+"am": "Trương Ngọc Nên",
+"tinh": "Hải Dương"
+},
+{
+"name": "(BGI) Chũ",
+"id": "22837000",
+"am": "Nguyễn Văn Long",
+"tinh": "Bắc Giang"
+},
+{
+"name": "(BNI) Thuận Thành 2",
+"id": "23128000",
+"am": "Nguyễn Văn Đạt",
+"tinh": "Bắc Ninh"
+},
+{
+"name": "(BNI) Thuận Thành",
+"id": "20514000",
+"am": "Nguyễn Văn Đạt",
+"tinh": "Bắc Ninh"
+},
+{
+"name": "(BNI) Đào Viên",
+"id": "20487000",
+"am": "Nguyễn Hữu Phi Dũng",
+"tinh": "Bắc Ninh"
+},
+{
+"name": "(HDU) Phạm Sư Mạnh",
+"id": "20989000",
+"am": "Hoàng Tấn Dũng",
+"tinh": "Hải Dương"
+},
+{
+"name": "(HDU) Tứ Kỳ",
+"id": "21317000",
+"am": "Trương Ngọc Nên",
+"tinh": "Hải Dương"
+},
+{
+"name": "(LSO) Hữu Lũng",
+"id": "20857000",
+"am": "Lê Văn Lâm",
+"tinh": "Lạng Sơn"
+},
+{
+"name": "(QNI) Hạ Long",
+"id": "20952000",
+"am": "Cao Văn Đức",
+"tinh": "Quảng Ninh"
+},
+{
+"name": "(HDU) Nam An Phụ",
+"id": "23141000",
+"am": "Hoàng Tấn Dũng",
+"tinh": "Hải Dương"
+},
+{
+"name": "(BNI) Đồng Nguyên",
+"id": "20765000",
+"am": "Kiều Văn Nam",
+"tinh": "Bắc Ninh"
+},
+{
+"name": "(HPH) Phù Liễn",
+"id": "21649000",
+"am": "Bùi Xuân Quang",
+"tinh": "Hải Phòng"
+},
+{
+"name": "(BGI) Kép",
+"id": "21430000",
+"am": "Giáp Hải Sự",
+"tinh": "Bắc Giang"
+},
+{
+"name": "(BNI) Gia Bình",
+"id": "22002000",
+"am": "Nguyễn Văn Đạt",
+"tinh": "Bắc Ninh"
+},
+{
+"name": "(HDU) Thanh Hà",
+"id": "21713000",
+"am": "Trương Ngọc Nên",
+"tinh": "Hải Dương"
+},
+{
+"name": "(HPH) Dương Kinh",
+"id": "21561000",
+"am": "Vũ Văn Vinh",
+"tinh": "Hải Phòng"
+},
+{
+"name": "(BNI) Võ Cường",
+"id": "21041000",
+"am": "Kiều Văn Nam",
+"tinh": "Bắc Ninh"
+},
+{
+"name": "(QNI) Cô Tô 1",
+"id": "23157001",
+"am": "Chu Mạnh Dũng",
+"tinh": "Quảng Ninh"
+},
+{
+"name": "(LSO) Đồng Đăng",
+"id": "20059000",
+"am": "Vi Văn Trịnh",
+"tinh": "Lạng Sơn"
+},
+{
+"name": "(HDU) Ninh Giang",
+"id": "22136000",
+"am": "Nguyễn Văn Quang",
+"tinh": "Hải Dương"
+},
+{
+"name": "(QNI) Quang Hanh",
+"id": "20093000",
+"am": "Chu Mạnh Dũng",
+"tinh": "Quảng Ninh"
+},
+{
+"name": "(QNI) Việt Hưng",
+"id": "22993000",
+"am": "Hạ Thị Lan Anh",
+"tinh": "Quảng Ninh"
+},
+{
+"name": "(HDU) Thanh Miện",
+"id": "20975000",
+"am": "Nguyễn Văn Quang",
+"tinh": "Hải Dương"
+},
+{
+"name": "(HPH) Gia Viên",
+"id": "23080000",
+"am": "Vũ Văn Vinh",
+"tinh": "Hải Phòng"
+},
+{
+"name": "(BNI) Yên Trung",
+"id": "22047000",
+"am": "Kiều Văn Nam",
+"tinh": "Bắc Ninh"
+},
+{
+"name": "(HPH) An Lão",
+"id": "21981000",
+"am": "Vũ Văn Vinh",
+"tinh": "Hải Phòng"
+},
+{
+"name": "(HDU) Thành Đông",
+"id": "20501000",
+"am": "Trương Ngọc Nên",
+"tinh": "Hải Dương"
+},
+{
+"name": "(BGI) Yên Dũng",
+"id": "21999000",
+"am": "Triệu Ngọc Duy",
+"tinh": "Bắc Giang"
+},
+{
+"name": "(QNI) Uông Bí",
+"id": "20381000",
+"am": "Cao Xuân Minh",
+"tinh": "Quảng Ninh"
+},
+{
+"name": "(HPH) Kiến Hưng",
+"id": "2467",
+"am": "Vũ Văn Vinh",
+"tinh": "Hải Phòng"
+},
+{
+"name": "(HPH) Vĩnh Bảo",
+"id": "22181000",
+"am": "Vũ Văn Vinh",
+"tinh": "Hải Phòng"
+},
+{
+"name": "(HPH) An Biên 3",
+"id": "1122",
+"am": "Vũ Văn Vinh",
+"tinh": "Hải Phòng"
+},
+{
+"name": "(BNI) Từ Sơn",
+"id": "20567000",
+"am": "Kiều Văn Nam",
+"tinh": "Bắc Ninh"
+},
+{
+"name": "(QNI) Quảng Yên",
+"id": "20253000",
+"am": "Cao Xuân Minh",
+"tinh": "Quảng Ninh"
+},
+{
+"name": "(HPH) Nam Đồ Sơn",
+"id": "22475000",
+"am": "Vũ Văn Vinh",
+"tinh": "Hải Phòng"
+},
+{
+"name": "(BNI) Nam Sơn",
+"id": "22453000",
+"am": "Nguyễn Hữu Phi Dũng",
+"tinh": "Bắc Ninh"
+},
+{
+"name": "(BNI) Phương Liễu",
+"id": "22183000",
+"am": "Nguyễn Hữu Phi Dũng",
+"tinh": "Bắc Ninh"
+},
+{
+"name": "(HPH) Lưu Kiếm",
+"id": "20946000",
+"am": "Nguyễn Bá Tuấn",
+"tinh": "Hải Phòng"
+},
+{
+"name": "(BNI) Vũ Ninh",
+"id": "21585000",
+"am": "Kiều Văn Nam",
+"tinh": "Bắc Ninh"
+},
+{
+"name": "(BNI) Đại Đồng",
+"id": "22256000",
+"am": "Kiều Văn Nam",
+"tinh": "Bắc Ninh"
+},
+{
+"name": "(BGI) Nếnh",
+"id": "20879000",
+"am": "Phạm Đức Thắng",
+"tinh": "Bắc Giang"
+},
+{
+"name": "(QNI) Móng Cái 1",
+"id": "1119",
+"am": "Cao Văn Đức",
+"tinh": "Quảng Ninh"
+},
+{
+"name": "(HPH) Hồng Bàng",
+"id": "21335000",
+"am": "Bùi Xuân Quang",
+"tinh": "Hải Phòng"
+},
+{
+"name": "(BGI) Hiệp Hòa",
+"id": "22734000",
+"am": "Giáp Hải Sự",
+"tinh": "Bắc Giang"
+},
+{
+"name": "(HPH) An Biên 2",
+"id": "20061000",
+"am": "Vũ Văn Vinh",
+"tinh": "Hải Phòng"
+},
+{
+"name": "(BGI) Bắc Giang",
+"id": "21318000",
+"am": "Triệu Ngọc Duy",
+"tinh": "Bắc Giang"
+}
+]
