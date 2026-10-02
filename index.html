@@ -4497,6 +4497,21 @@ function _nsBCTable(bc,nvMap,last7,noCap){
    <td style="${csN};font-weight:800;color:${_nsGtcColor(o.rate)}">${(o.rate*100).toFixed(1)}%</td>
   </tr>`;
  });
+ // ── Hàng TỔNG Bưu Cục (cộng dọc toàn bộ NV trong bảng) ──
+ if(list.length){
+  const tot={};disp.forEach(d=>tot[d]={gan:0,gtc:0});let TG=0,TGT=0;
+  list.forEach(o=>{disp.forEach(d=>{const r=o.days[d];if(r){tot[d].gan+=r.gan;tot[d].gtc+=r.gtc;}});TG+=o.sg;TGT+=o.sgtc;});
+  const totDays=disp.map(d=>`<td style="${csN};border-left:2px solid #E5E7EB;font-weight:800">${fmt(tot[d].gan)}</td><td style="${csN};font-weight:800;color:${_nsGtcColor(tot[d].gan>0?tot[d].gtc/tot[d].gan:0)}">${fmt(tot[d].gtc)}</td>`).join('');
+  const rTot=TG>0?TGT/TG:0;
+  body+=`<tr style="background:#FEF3E8;border-top:2px solid var(--orange)">
+   <td style="${csN}"></td>
+   <td style="${cs};position:sticky;left:0;background:#FEF3E8;font-weight:800;color:var(--orange-dark)">Σ TỔNG Bưu Cục (${list.length} NV)</td>
+   ${totDays}
+   <td style="${csN};font-weight:800;border-left:3px solid #D1D5DB">${fmt(TG)}</td>
+   <td style="${csN};font-weight:800">${fmt(TGT)}</td>
+   <td style="${csN};font-weight:800;color:${_nsGtcColor(rTot)}">${(rTot*100).toFixed(1)}%</td>
+  </tr>`;
+ }
  if(!list.length)body=`<tr><td colspan="${2+disp.length*2+3}" style="padding:16px;text-align:center;color:var(--text-sub)">Không có nhân viên nào có đơn gán > 1 trong 7 ngày</td></tr>`;
  return`<div class="table-wrap" style="${noCap?'':'max-height:520px'}"><table style="width:auto;border-collapse:collapse">
   <thead>
@@ -6198,15 +6213,11 @@ async function sendKhoaIDToTelegram(){
 async function buildBatOnPage(){
  const el=document.getElementById('p31');if(!el)return;
  try{
-  const [agTxt,nsTxt,volTxt,tgTxt]=await Promise.all([
+  const [agTxt,nsTxt,volTxt]=await Promise.all([
    fetch(`https://docs.google.com/spreadsheets/d/${AGING_SHEET_ID}/gviz/tq?tqx=out:csv&sheet=`+encodeURIComponent('Lịch sử Aging')+`&_=${Date.now()}`).then(r=>r.text()),
    fetch(`https://docs.google.com/spreadsheets/d/${SID}/gviz/tq?tqx=out:csv&gid=1723871284&_=${Date.now()}`).then(r=>r.text()),
-   _getVolCSV(),
-   fetch(`https://docs.google.com/spreadsheets/d/${SHEET_TONGAN_ID}/export?format=csv&gid=${SHEET_TONGAN_GID}&_=${Date.now()}`).then(r=>r.text()).catch(()=>'')
+   _getVolCSV()
   ]);
-  // ── Đơn tồn CHƯA GÁN theo BC (sheet riêng: BC0 · OTHER1 · Shopee2 · TTS3 · Total4) ──
-  const tonGanMap={};
-  try{_vwParseCSV(tgTxt).slice(1).forEach(r=>{const bc=(r[0]||'').trim();if(!bc||/grand|tổng|total/i.test(bc))return;tonGanMap[bc]=_vwNum(r[4])||((_vwNum(r[1])||0)+(_vwNum(r[2])||0)+(_vwNum(r[3])||0));});}catch(e){console.warn('Tồn chưa gán p31:',e&&e.message);}
   // ── Aging từ "Lịch sử Aging" (tổng hợp): ngay0·bc1·am2·tinh3·total4·g1_5_7(5)·g2(6)·g3(7)·g4(8)·Trạng thái(9) ──
   const ag=_vwParseCSV(agTxt).slice(1).filter(r=>r.length>4);
   const _agd=s=>((s||'').match(/\d{4}-\d{2}-\d{2}/)||[''])[0];
@@ -6230,11 +6241,19 @@ async function buildBatOnPage(){
    NS[bc]=NS[bc]||{};if(!NS[bc][nv])NS[bc][nv]={am:(x[7]||'').trim(),days:{}};
    NS[bc][nv].days[d]={gan:_vwNum(x[3]),gtc:_vwNum(x[4])};});
   // ── Volume hàng mới+tồn (toàn Vùng, chỉ BC bất ổn) ──
-  const vr=_vwParseCSV(volTxt);const vAgg={},vDates=new Set();
+  const vr=_vwParseCSV(volTxt);const vAgg={},vGanAgg={},vDates=new Set();
+  const _pgan=x=>{const n=parseFloat(String(x||'').replace(',','.'));return isFinite(n)?n:0;}; // Tỉ lệ gán (fraction 0-1)
   for(let i=1;i<vr.length;i++){const r=vr[i];const bc=(r[1]||'').trim();if(!bcAg[bc])continue;
    const loai=(r[2]||'').trim(),d=isoD(r[4]);if(!d||!loai)continue;vDates.add(d);
-   vAgg[bc+'|'+loai+'|'+d]=(vAgg[bc+'|'+loai+'|'+d]||0)+_vwNum(r[5]);}
+   const vol=_vwNum(r[5]);const key=bc+'|'+loai+'|'+d;
+   vAgg[key]=(vAgg[key]||0)+vol;
+   vGanAgg[key]=(vGanAgg[key]||0)+vol*_pgan(r[6]);}   // Volume đã gán = Vol × %gán
   const vLatest=[...vDates].sort().pop()||'';
+  // ── Tồn CHƯA GÁN theo BC (ngày mới nhất) = Σ_loại [ Volume − Volume×%gán ] ──
+  const tonGanMap={};
+  Object.keys(bcAg).forEach(bc=>{let ton=0;['Hàng Mới Ca 1','Hàng Mới Ca 2','Hàng Tồn'].forEach(loai=>{
+    const k=bc+'|'+loai+'|'+vLatest;ton+=(vAgg[k]||0)-(vGanAgg[k]||0);});
+   tonGanMap[bc]=Math.max(0,Math.round(ton));});
   const _hm=(bc,d)=>(vAgg[bc+'|Hàng Mới Ca 1|'+d]||0)+(vAgg[bc+'|Hàng Mới Ca 2|'+d]||0);
   const _ton=(bc,d)=>vAgg[bc+'|Hàng Tồn|'+d]||0;
   const volOf=bc=>{let hm7=0,ton7=0;last7.forEach(d=>{hm7+=_hm(bc,d);ton7+=_ton(bc,d);});
@@ -6267,7 +6286,7 @@ function _batOnRender(arr,NS,last7,volOf,agLatest,agPrev,tonGanMap){
   let ana=`🚨 <strong>${o.bc}</strong> (${o.tinh}) — AM ${o.am||'—'} · <strong style="color:var(--red)">BƯU CỤC BẤT ỔN</strong> theo aging ngày ${agingFmtDate(agLatest)}.<br>`;
   ana+=`Đơn tồn aging: <strong style="color:var(--red)">${fmt(o.cnt)} đơn</strong>`+(agPrev?` · N-1 (${agingFmtDate(agPrev)}): ${fmt(o.prev)} đơn · ${trendTxt}.`:'.')+`<br>`;
   ana+=`Phân nhóm ngày tồn: 5-7 ngày ${fmt(o.g.g1)} đơn · 8-10 ngày ${fmt(o.g.g2)} đơn · 11-15 ngày ${fmt(o.g.g3)} đơn · &gt;15 ngày <strong style="color:#991B1B">${fmt(o.g.g4)} đơn</strong>.<br>`;
-  ana+=`📦 Đơn tồn CHƯA GÁN hiện tại: <strong style="color:${tonGan>=300?'var(--red)':tonGan>=100?'var(--orange-dark)':'var(--text-sub)'}">${fmt(tonGan)} đơn</strong>.<br>`;
+  ana+=`📦 Đơn tồn CHƯA GÁN (ngày ${_vwFmtDMY(v.d)}): <strong style="color:${tonGan>=300?'var(--red)':tonGan>=100?'var(--orange-dark)':'var(--text-sub)'}">${fmt(tonGan)} đơn</strong> = Volume − (Volume × %gán).<br>`;
   if(hasNS){
    ana+=`Năng suất 7 ngày (${wRange}): <strong>${active.length} NV</strong> (đơn gán > 1) · Tổng GTC <strong>${fmt(sgtc)} đơn</strong> · Volume hàng mới+tồn <strong>${fmt(v.vol7)} đơn</strong> (mới ${fmt(v.hm7)} + tồn ${fmt(v.ton7)}).<br>`;
    ana+=`%GTC Bưu Cục (GTC ÷ hàng mới+tồn): <strong style="color:${_nsGtcColor(rateBC)}">${(rateBC*100).toFixed(1)}%</strong>.<br>`;
