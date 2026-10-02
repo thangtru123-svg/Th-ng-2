@@ -7,7 +7,7 @@ const SECRET = "xbg-tagall-7k9m2p";                 // khớp secret_token khi s
 const TRIGGER_USERS = ["anhthuvu123", "thangquada"];
 const TAGS = ["@VuVinh_200619","@NenTN_1877611","@DungHT_3006148","@CaoXuanMinh","@trinhvv","@DUNG_AM","@thai4568","@DUNGNHP_AM","@levinhtb","@Dat_BN","@NguyenphuHuongz3sz3","@DUYBG","@Quangnv_3002416","@longlucngan","@MinhGiang90","@DuyenDP","@ThuBaTheMoon","@nhunghoang1990","@NamKv_97","@QuangBX_3098460","@Duc_QN","@TuanNB0","@lailalamday","@mslananh8x","@SUBG92","@thangquada"];
 
-module.exports = async (req, res) => {
+export default async function handler(req, res) {
   if (req.method !== "POST") { res.status(200).send("ok"); return; }
   // chặn request lạ — chỉ nhận đúng secret của Telegram
   if ((req.headers["x-telegram-bot-api-secret-token"] || "") !== SECRET) { res.status(200).send("ok"); return; }
@@ -29,4 +29,4 @@ module.exports = async (req, res) => {
     }
   } catch (e) { /* luôn trả 200 để Telegram không retry dồn */ }
   res.status(200).send("ok");
-};
+}
