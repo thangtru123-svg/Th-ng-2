@@ -4467,7 +4467,7 @@ async function buildNSBGPage(){
  }catch(e){el.innerHTML=errPage('Không thể tải Năng suất Bắc Giang: '+e.message);}
 }
 
-function _nsBCTable(bc,nvMap,last7,noCap){
+function _nsBCTable(bc,nvMap,last7,noCap,tonGanDay){
  const disp=last7.slice().reverse();             // hiển thị giảm dần (mới→cũ)
  // gom NV + streak + tổng; LOẠI NV không phát sinh GTC trong 7 ngày (ΣGTC=0)
  const list=Object.keys(nvMap).map(nv=>{
@@ -4511,6 +4511,18 @@ function _nsBCTable(bc,nvMap,last7,noCap){
    <td style="${csN};font-weight:800">${fmt(TGT)}</td>
    <td style="${csN};font-weight:800;color:${_nsGtcColor(rTot)}">${(rTot*100).toFixed(1)}%</td>
   </tr>`;
+  // ── Hàng Đơn tồn CHƯA GÁN theo từng ngày (= Volume − Volume×%gán) ──
+  if(tonGanDay){
+   const tgDays=disp.map(d=>{const t=tonGanDay[d];const col=t>=200?'#B91C1C':t>=80?'#9A3412':'#2563EB';
+     return `<td colspan="2" style="${csN};text-align:center;border-left:2px solid #E5E7EB;font-weight:700;color:${col}">${t!=null?fmt(t):'—'}</td>`;}).join('');
+   const tLatest=tonGanDay[disp[0]];
+   body+=`<tr style="background:#EFF6FF;border-top:1px solid #BFDBFE">
+    <td style="${csN}"></td>
+    <td style="${cs};position:sticky;left:0;background:#EFF6FF;font-weight:800;color:#1E40AF">📦 Đơn tồn chưa gán</td>
+    ${tgDays}
+    <td colspan="3" style="${csN};text-align:center;font-weight:800;color:#1E40AF;border-left:3px solid #D1D5DB">${tLatest!=null?fmt(tLatest)+' (mới nhất)':'—'}</td>
+   </tr>`;
+  }
  }
  if(!list.length)body=`<tr><td colspan="${2+disp.length*2+3}" style="padding:16px;text-align:center;color:var(--text-sub)">Không có nhân viên nào có đơn gán > 1 trong 7 ngày</td></tr>`;
  return`<div class="table-wrap" style="${noCap?'':'max-height:520px'}"><table style="width:auto;border-collapse:collapse">
@@ -6249,21 +6261,20 @@ async function buildBatOnPage(){
    vAgg[key]=(vAgg[key]||0)+vol;
    vGanAgg[key]=(vGanAgg[key]||0)+vol*_pgan(r[6]);}   // Volume đã gán = Vol × %gán
   const vLatest=[...vDates].sort().pop()||'';
-  // ── Tồn CHƯA GÁN theo BC (ngày mới nhất) = Σ_loại [ Volume − Volume×%gán ] ──
-  const tonGanMap={};
-  Object.keys(bcAg).forEach(bc=>{let ton=0;['Hàng Mới Ca 1','Hàng Mới Ca 2','Hàng Tồn'].forEach(loai=>{
-    const k=bc+'|'+loai+'|'+vLatest;ton+=(vAgg[k]||0)-(vGanAgg[k]||0);});
-   tonGanMap[bc]=Math.max(0,Math.round(ton));});
+  // ── Tồn CHƯA GÁN theo BC theo TỪNG NGÀY (last7) = Σ_loại [ Volume − Volume×%gán ] ──
+  const _tonDay=(bc,d)=>{let t=0;['Hàng Mới Ca 1','Hàng Mới Ca 2','Hàng Tồn'].forEach(loai=>{const k=bc+'|'+loai+'|'+d;t+=(vAgg[k]||0)-(vGanAgg[k]||0);});return Math.max(0,Math.round(t));};
+  const tonGanByDay={},tonGanMap={};
+  Object.keys(bcAg).forEach(bc=>{tonGanByDay[bc]={};last7.forEach(d=>{tonGanByDay[bc][d]=_tonDay(bc,d);});tonGanMap[bc]=tonGanByDay[bc][vLatest]!=null?tonGanByDay[bc][vLatest]:_tonDay(bc,vLatest);});
   const _hm=(bc,d)=>(vAgg[bc+'|Hàng Mới Ca 1|'+d]||0)+(vAgg[bc+'|Hàng Mới Ca 2|'+d]||0);
   const _ton=(bc,d)=>vAgg[bc+'|Hàng Tồn|'+d]||0;
   const volOf=bc=>{let hm7=0,ton7=0;last7.forEach(d=>{hm7+=_hm(bc,d);ton7+=_ton(bc,d);});
    return{hm7,ton7,vol7:hm7+ton7,hmL:_hm(bc,vLatest),tonL:_ton(bc,vLatest),d:vLatest};};
-  el.innerHTML=_batOnRender(arr,NS,last7,volOf,agLatest,agPrev,tonGanMap);
+  el.innerHTML=_batOnRender(arr,NS,last7,volOf,agLatest,agPrev,tonGanMap,tonGanByDay);
  }catch(e){el.innerHTML=errPage('Không thể tải Bưu Cục Bất Ổn: '+e.message);}
 }
 
-function _batOnRender(arr,NS,last7,volOf,agLatest,agPrev,tonGanMap){
- tonGanMap=tonGanMap||{};
+function _batOnRender(arr,NS,last7,volOf,agLatest,agPrev,tonGanMap,tonGanByDay){
+ tonGanMap=tonGanMap||{};tonGanByDay=tonGanByDay||{};
  const wRange=last7.length?`${_vwFmtDMY(last7[0])}–${_vwFmtDMY(last7[last7.length-1])}`:'—';
  const totCnt=arr.reduce((s,o)=>s+o.cnt,0),totPrev=arr.reduce((s,o)=>s+o.prev,0);
  const totTonGan=arr.reduce((s,o)=>s+(tonGanMap[o.bc]||0),0);
@@ -6306,7 +6317,7 @@ function _batOnRender(arr,NS,last7,volOf,agLatest,agPrev,tonGanMap){
   cards+=`<div class="card baton-card" id="batonCard_${ci}" data-bc="${o.bc.replace(/"/g,'')}">
     <div class="card-header"><div class="card-title"><div class="card-icon">🚨</div>${o.bc}</div>
      <div class="card-info">${o.tinh} · AM ${o.am||'—'} · ${fmt(o.cnt)} đơn tồn · 📦 ${fmt(tonGan)} chưa gán${hasNS?` · ${active.length} NV · ${flagged.length} NV kém`:''}</div></div>
-    ${hasNS?_nsBCTable(o.bc,nvMap,last7,true):'<div style="padding:6px 16px 12px;color:var(--text-sub);font-size:13px">Không có dữ liệu năng suất nhân viên cho bưu cục này.</div>'}
+    ${hasNS?_nsBCTable(o.bc,nvMap,last7,true,tonGanByDay[o.bc]):'<div style="padding:6px 16px 12px;color:var(--text-sub);font-size:13px">Không có dữ liệu năng suất nhân viên cho bưu cục này.</div>'}
     <div class="analysis-box" style="margin:14px 16px 16px">${ana}</div>
    </div>`;
  });
