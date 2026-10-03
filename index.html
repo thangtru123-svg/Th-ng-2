@@ -3541,7 +3541,7 @@ function rebuildWeakBC(dateISO){
 }
 
 /* ===== P23: BÁO CÁO VẬN HÀNH KHU VỰC THẮNG ===== */
-const THANG_BCS=['(BGI) Bắc Giang','(BGI) Bố Hạ','(BGI) Chũ','(BGI) Hiệp Hòa','(BGI) Kép','(BGI) Lạng Giang','(BGI) Lục Nam','(BGI) Nhã Nam','(BGI) Nếnh','(BGI) Sơn Động','(BGI) Trường Sơn','(BGI) Tân Yên','(BGI) Việt Yên','(BGI) Xuân Cẩm','(BGI) Yên Dũng','(BGI) Yên Thế'];
+const THANG_BCS=['(BGI) Bắc Giang','(BGI) Bố Hạ','(BGI) Chũ','(BGI) Đa Mai','(BGI) Hiệp Hòa','(BGI) Kép','(BGI) Lạng Giang','(BGI) Lục Nam','(BGI) Nhã Nam','(BGI) Nếnh','(BGI) Sơn Động','(BGI) Trường Sơn','(BGI) Tân Yên','(BGI) Việt Yên','(BGI) Xuân Cẩm','(BGI) Yên Dũng','(BGI) Yên Thế'];
 function _coreBC(s){return (s||'').toString().toLowerCase().replace(/\([^)]*\)/g,'').replace(/\s+/g,' ').trim();}
 const _THANG_CORE=new Set(THANG_BCS.map(_coreBC));
 function _isThangBC(name){return _THANG_CORE.has(_coreBC(name));}
@@ -3691,7 +3691,7 @@ function _thangAging(id){
  cap+=`🔴 Tồn nhiều nhất: ${perBC[0].bc} (${fmt(perBC[0].v)} đơn)\n`;
  cap+=`⏳ Nhóm: 5-7=${fmt(sg('g1'))} · 8-10=${fmt(sg('g2'))} · 11-15=${fmt(sg('g3'))} · >15=${fmt(sg('g4'))}`;
  const inner=`<thead style="position:sticky;top:0;z-index:2">${h}</thead><tbody>${body}${totalHtml}</tbody>`;
- return {html:_thangCard(id,'Bảng 6 — Aging &gt; 5 ngày','⏳','16 Bưu Cục · 7 ngày · trend N-1 + nhóm ngày',ana,inner),cap};
+ return {html:_thangCard(id,'Bảng 6 — Aging &gt; 5 ngày','⏳','17 Bưu Cục · 7 ngày · trend N-1 + nhóm ngày',ana,inner),cap};
 }
 function buildThangPage(){
  const el=document.getElementById('p23');if(!el)return;
@@ -3704,17 +3704,17 @@ function buildThangPage(){
   {label:'GTC',val:o=>o?o.cnt:null},
   {label:'%GTC',pct:true,val:o=>o&&o.vol>0?o.cnt/o.vol*100:null}
  ];
- const t1=_thangMulti({id:'thang-t1',title:'Bảng 1 — GTC Total',icon:'📦',badge:'16 Bưu Cục · 7 ngày · Vol / Số đơn GTC / %GTC',sheet:D.gtcTotalBC,cfg:{bcCol:1,dateCol:2,volCol:3,rateCol:5,cntCol:6,volParse:'num'},subCols:gtcSub,pctColor:_cGTC,betterHigh:true,avgLabel:'TB %GTC',capUnit:'% GTC'});
- const t2=_thangMulti({id:'thang-t2',title:'Bảng 2 — GTC TTS',icon:'🎯',badge:'16 Bưu Cục · 7 ngày · Vol / Số đơn GTC / %GTC',sheet:D.gtcTTSBC,cfg:{bcCol:1,dateCol:2,volCol:3,rateCol:5,cntCol:6,volParse:'num'},subCols:gtcSub,pctColor:_cGTC,betterHigh:true,avgLabel:'TB %GTC',capUnit:'% GTC TTS'});
- const t3=_thangMulti({id:'thang-t3',title:'Bảng 3 — Tỉ lệ trả (TLT)',icon:'🔄',badge:'16 Bưu Cục · 7 ngày · %Trả / Số đơn trả (thấp = tốt, MT ≤8%)',sheet:FD.totalBC,cfg:{bcCol:0,dateCol:1,volCol:2,rateCol:3,cntCol:null,volParse:'pct'},subCols:[
+ const t1=_thangMulti({id:'thang-t1',title:'Bảng 1 — GTC Total',icon:'📦',badge:'17 Bưu Cục · 7 ngày · Vol / Số đơn GTC / %GTC',sheet:D.gtcTotalBC,cfg:{bcCol:1,dateCol:2,volCol:3,rateCol:5,cntCol:6,volParse:'num'},subCols:gtcSub,pctColor:_cGTC,betterHigh:true,avgLabel:'TB %GTC',capUnit:'% GTC'});
+ const t2=_thangMulti({id:'thang-t2',title:'Bảng 2 — GTC TTS',icon:'🎯',badge:'17 Bưu Cục · 7 ngày · Vol / Số đơn GTC / %GTC',sheet:D.gtcTTSBC,cfg:{bcCol:1,dateCol:2,volCol:3,rateCol:5,cntCol:6,volParse:'num'},subCols:gtcSub,pctColor:_cGTC,betterHigh:true,avgLabel:'TB %GTC',capUnit:'% GTC TTS'});
+ const t3=_thangMulti({id:'thang-t3',title:'Bảng 3 — Tỉ lệ trả (TLT)',icon:'🔄',badge:'17 Bưu Cục · 7 ngày · %Trả / Số đơn trả (thấp = tốt, MT ≤8%)',sheet:FD.totalBC,cfg:{bcCol:0,dateCol:1,volCol:2,rateCol:3,cntCol:null,volParse:'pct'},subCols:[
   {label:'%Trả',pct:true,val:o=>o&&o.vol>0?o.rv/o.vol:null},
   {label:'Đơn trả',val:(o,core,d)=>{const fd=o&&o.vol>0?o.rv/o.vol:null;const n=(nGTCmap[core]||{})[d];if(fd==null||n==null||n<=0||fd<=0||fd>=50)return null;return Math.round(fd/100*n/(1-fd/100));}}
  ],pctColor:_cFD,betterHigh:false,avgLabel:'TB %Trả',capUnit:'% trả'});
- const t4=_thangMulti({id:'thang-t4',title:'Bảng 4 — ODR (Ontime Giao TTS)',icon:'⏱️',badge:'16 Bưu Cục · 7 ngày · Volume GTC / %Ontime',sheet:D.odrBC,cfg:{bcCol:1,dateCol:2,volCol:3,rateCol:4,cntCol:5,volParse:'num'},subCols:[
+ const t4=_thangMulti({id:'thang-t4',title:'Bảng 4 — ODR (Ontime Giao TTS)',icon:'⏱️',badge:'17 Bưu Cục · 7 ngày · Volume GTC / %Ontime',sheet:D.odrBC,cfg:{bcCol:1,dateCol:2,volCol:3,rateCol:4,cntCol:5,volParse:'num'},subCols:[
   {label:'Vol GTC',val:o=>o?o.vol:null},
   {label:'%Ont',pct:true,val:o=>o&&o.vol>0?o.cnt/o.vol*100:null}
  ],pctColor:_cODR,betterHigh:true,avgLabel:'TB %',capUnit:'% Ontime giao'});
- const t5=_thangMulti({id:'thang-t5',title:'Bảng 5 — OPR (Ontime Lấy TTS)',icon:'🚀',badge:'16 Bưu Cục · 7 ngày · Volume LTC / %Ontime',sheet:D.oprBC,cfg:{bcCol:1,dateCol:2,volCol:3,rateCol:4,cntCol:5,volParse:'num'},subCols:[
+ const t5=_thangMulti({id:'thang-t5',title:'Bảng 5 — OPR (Ontime Lấy TTS)',icon:'🚀',badge:'17 Bưu Cục · 7 ngày · Volume LTC / %Ontime',sheet:D.oprBC,cfg:{bcCol:1,dateCol:2,volCol:3,rateCol:4,cntCol:5,volParse:'num'},subCols:[
   {label:'Vol LTC',val:o=>o?o.vol:null},
   {label:'%Ont',pct:true,val:o=>o&&o.vol>0?o.cnt/o.vol*100:null}
  ],pctColor:_cOPR,betterHigh:true,avgLabel:'TB %',capUnit:'% Ontime lấy'});
