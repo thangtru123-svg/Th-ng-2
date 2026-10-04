@@ -229,6 +229,7 @@ tr.tot td{background:#FFF0EB!important;font-weight:800!important;border-top:2px 
  <button class="nav-item" onclick="show('p35',this)" style="background:linear-gradient(135deg,rgba(220,38,38,0.16),rgba(241,93,41,0.08));border:1px solid rgba(220,38,38,0.32);font-weight:700"><span class="icon">🚨</span>Quá Hạn / Truy Thu</button>
  <button class="nav-item" onclick="show('p38',this)" style="background:linear-gradient(135deg,rgba(220,38,38,0.16),rgba(241,93,41,0.08));border:1px solid rgba(220,38,38,0.32);font-weight:700"><span class="icon">🔁</span>Tổng quan truy thu XBG</button>
  <button class="nav-item" onclick="show('p39',this)" style="background:linear-gradient(135deg,rgba(37,99,235,0.14),rgba(59,130,246,0.08));border:1px solid rgba(37,99,235,0.3);font-weight:700"><span class="icon">🏙️</span>Báo cáo GTC khu vực</button>
+ <button class="nav-item" onclick="show('p41',this)" style="background:linear-gradient(135deg,rgba(22,101,52,0.16),rgba(34,197,94,0.1));border:1px solid rgba(22,101,52,0.35);font-weight:700"><span class="icon">🚚</span>Báo cáo GTC realtime trong ngày</button>
  <button class="nav-item" onclick="show('p37',this)" style="background:linear-gradient(135deg,rgba(220,38,38,0.16),rgba(241,93,41,0.08));border:1px solid rgba(220,38,38,0.32);font-weight:700"><span class="icon">📮</span>Đơn TTS · Shopee (BG)</button>
  <div class="nav-section">GTC</div>
  <button class="nav-item" onclick="show('p1',this)"><span class="icon">📦</span>Tổng quan GTC Total</button>
@@ -292,6 +293,7 @@ tr.tot td{background:#FFF0EB!important;font-weight:800!important;border-top:2px 
 <div class="page" id="p32"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
 <div class="page" id="p38"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
 <div class="page" id="p39"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
+<div class="page" id="p41"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
 </main>
 
 <script>
@@ -4117,6 +4119,67 @@ function _gkCauses(data){
    <ul style="margin:6px 0 0;padding-left:18px;font-size:12.5px;line-height:1.55;color:#374151">${li}</ul></div>`;}).join('');
  return `<h3 style="margin:20px 0 10px;font-size:16px">🧩 Tổng quan nguyên nhân từng Bưu Cục</h3><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:12px">${cards}</div>`;
 }
+/* ===== p41 — BÁO CÁO GTC REALTIME TRONG NGÀY ===== */
+/* Nguồn: file gtc_realtime.json trong repo (cập nhật mỗi lần chạy "Năng suất giao Vùng" qua Chrome → nhanh.ghn.vn).
+   Dashboard tĩnh KHÔNG tự gọi được API nhanh.ghn.vn (CORS + token khác origin) nên đọc snapshot JSON. */
+function _grtVN(n){return (+n||0).toLocaleString('vi-VN');}
+function _grtPct(a,b){return (+b>0)?((+a/+b*100).toFixed(1).replace('.',',')+'%'):'—';}
+function _grtStrip(s){return (s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/đ/g,'d').replace(/Đ/g,'D').toLowerCase();}
+function grtFilter(q){const t=_grtStrip(q);document.querySelectorAll('#p41 tr[data-grt]').forEach(tr=>{tr.style.display=(!t||tr.getAttribute('data-grt').indexOf(t)>=0)?'':'none';});}
+async function buildGTCRealtimePage(){
+ const el=document.getElementById('p41');
+ el.innerHTML='<div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải GTC realtime…</div></div>';
+ try{
+  const r=await fetch('gtc_realtime.json?t='+Date.now());
+  if(!r.ok) throw new Error('HTTP '+r.status);
+  const d=await r.json(); window._GTCRT=d;
+  const V=d.vung||{canGiao:0,daGan:0,gtc:0};
+  const upd=new Date(d.updatedAt);
+  const updStr=isNaN(upd)?'—':upd.toLocaleString('vi-VN',{hour:'2-digit',minute:'2-digit',day:'2-digit',month:'2-digit',year:'numeric'});
+  const am=[...(d.am||[])].sort((a,b)=>b.gtc-a.gtc);
+  const bc=[...(d.bc||[])].sort((a,b)=>b.gtc-a.gtc);
+  const kpi=(t,v,s,c)=>`<div style="background:#fff;border:1px solid var(--border);border-radius:14px;padding:14px 16px;min-width:160px;box-shadow:var(--shadow-sm)"><div style="font-size:12px;color:var(--text-sub);font-weight:600">${t}</div><div style="font-size:24px;font-weight:800;color:${c||'var(--text-main)'};margin-top:2px">${v}</div><div style="font-size:11.5px;color:var(--text-sub)">${s}</div></div>`;
+  const TH='style="background:#1F3864;color:#fff;padding:7px 11px;font-size:12px;font-weight:700;white-space:nowrap;text-align:center"';
+  const tdC='style="text-align:center;padding:6px 11px;font-size:12.5px;border-bottom:1px solid var(--border);white-space:nowrap"';
+  const tdL='style="text-align:left;padding:6px 11px;font-size:12.5px;border-bottom:1px solid var(--border);white-space:nowrap"';
+  const amRows=am.map((r,i)=>`<tr data-grt="${_grtStrip(r.am)}"><td ${tdC}>${i+1}</td><td ${tdL}>${r.am}</td><td ${tdC}>${_grtVN(r.canGiao)}</td><td ${tdC}>${_grtVN(r.daGan)}</td><td ${tdC} style="font-weight:800;color:#C8461A">${_grtVN(r.gtc)}</td><td ${tdC}>${_grtPct(r.gtc,r.daGan)}</td><td ${tdC}>${_grtPct(r.gtc,r.canGiao)}</td></tr>`).join('');
+  const bcRows=bc.map((r,i)=>`<tr data-grt="${_grtStrip(r.bc+' '+r.am)}"><td ${tdC}>${i+1}</td><td ${tdL}>${r.bc}</td><td ${tdL}>${r.am}</td><td ${tdC}>${_grtVN(r.canGiao)}</td><td ${tdC}>${_grtVN(r.daGan)}</td><td ${tdC} style="font-weight:800;color:#C8461A">${_grtVN(r.gtc)}</td><td ${tdC}>${_grtPct(r.gtc,r.daGan)}</td></tr>`).join('');
+  const excl=d.excl06?'ĐÃ loại đơn nhập BC 0–6h (sau 18h)':'KHÔNG loại 0–6h (khung 6h–18h)';
+  el.innerHTML=`
+   <div class="page-header">
+    <div class="page-title">🚚 Báo cáo GTC realtime trong ngày</div>
+    <div class="page-meta">
+     <span style="background:var(--orange-light);color:var(--orange-dark);padding:3px 10px;border-radius:20px;font-size:12px;font-weight:700">🕒 Cập nhật: ${updStr}</span>
+     <span style="background:#ECFDF5;color:#166534;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:700">${excl}</span>
+     <button class="tg-inpage-btn" style="background:#16A34A;border-color:#16A34A" onclick="buildGTCRealtimePage()">🔄 Tải lại</button>
+    </div>
+   </div>
+   <div class="kpis" style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px">
+    ${kpi('Tổng đơn cần giao',_grtVN(V.canGiao)+' đơn','Toàn Vùng XBG · 100 BC','#1F3864')}
+    ${kpi('Tổng đơn đã gán',_grtVN(V.daGan)+' đơn','Chuyến tạo trong ngày','#C8461A')}
+    ${kpi('Tổng đơn GTC',_grtVN(V.gtc)+' đơn',_grtPct(V.gtc,V.daGan)+' / đã gán · '+_grtPct(V.gtc,V.canGiao)+' / cần giao','#DC2626')}
+   </div>
+   <div style="font-size:14px;font-weight:800;color:var(--text-main);margin:6px 2px 8px">📋 Theo AM (${am.length})</div>
+   <div class="table-wrap" style="margin-bottom:22px"><table style="border-collapse:collapse;display:inline-block;min-width:520px">
+    <thead><tr><th ${TH}>STT</th><th ${TH} style="text-align:left">AM</th><th ${TH}>Cần giao</th><th ${TH}>Đã gán</th><th ${TH}>GTC</th><th ${TH}>%GTC/gán</th><th ${TH}>%GTC/cần</th></tr></thead>
+    <tbody>${amRows}</tbody></table></div>
+   <div style="display:flex;align-items:center;gap:10px;margin:6px 2px 8px;flex-wrap:wrap">
+    <span style="font-size:14px;font-weight:800;color:var(--text-main)">🏢 Theo Bưu Cục (${bc.length})</span>
+    <input type="text" placeholder="🔎 Tìm Bưu Cục / AM…" oninput="grtFilter(this.value)" style="padding:5px 10px;border:1px solid var(--border);border-radius:8px;font-size:12.5px;min-width:200px">
+   </div>
+   <div class="table-wrap"><table style="border-collapse:collapse;display:inline-block;min-width:600px">
+    <thead><tr><th ${TH}>STT</th><th ${TH} style="text-align:left">Bưu Cục</th><th ${TH} style="text-align:left">AM</th><th ${TH}>Cần giao</th><th ${TH}>Đã gán</th><th ${TH}>GTC</th><th ${TH}>%GTC/gán</th></tr></thead>
+    <tbody>${bcRows}</tbody></table></div>
+   <div class="analysis-box" style="margin-top:16px;padding:12px 14px;font-size:12.5px;line-height:1.7">
+    <b>Cách tính (bản nhanh):</b><br>
+    • <b>Cần giao</b> = chưa gán + đã gán (của chuyến tạo trong ngày).<br>
+    • <b>Đã gán</b> = tổng đơn đã gán vào chuyến tạo hôm nay.<br>
+    • <b>GTC</b> = đơn giao thành công (DELIVER, isSucceeded) của chuyến tạo hôm nay.<br>
+    • 6h–18h: KHÔNG loại 0–6h · Sau 18h: loại đơn nhập BC 0–6h khỏi "cần giao".<br>
+    • Số liệu realtime lấy qua nhanh.ghn.vn mỗi lần chạy lệnh <b>"Năng suất giao Vùng"</b> (snapshot).
+   </div>`;
+ }catch(e){el.innerHTML=(typeof errPage==='function'?errPage('Không tải được GTC realtime: '+(e&&e.message||e)):'<div style="padding:20px;color:#b91c1c">Lỗi: '+(e&&e.message||e)+'</div>');}
+}
 async function buildGKPage(){
  const el=document.getElementById('p39');
  el.innerHTML='<div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải Báo cáo GTC khu vực…</div></div>';
@@ -4262,6 +4325,8 @@ async function init(){
  buildTruyThuPage().catch(e=>console.warn('Truy thu LC:',e&&e.message||e));
  // p39 — Báo cáo GTC khu vực 13 BC (không chặn init)
  buildGKPage().catch(e=>console.warn('GTC khu vực:',e&&e.message||e));
+ // p41 — Báo cáo GTC realtime trong ngày (đọc snapshot gtc_realtime.json)
+ buildGTCRealtimePage().catch(e=>console.warn('GTC realtime:',e&&e.message||e));
  // p23 — Báo cáo vận hành khu vực Thắng (cần _D, _FD, _agingRows)
  buildThangPage();
  // p16 — Báo Cáo Vận Hành Ngày
