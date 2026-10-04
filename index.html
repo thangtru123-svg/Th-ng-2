@@ -4143,7 +4143,7 @@ async function buildGTCRealtimePage(){
   const tdC='style="text-align:center;padding:6px 11px;font-size:12.5px;border-bottom:1px solid var(--border);white-space:nowrap"';
   const tdL='style="text-align:left;padding:6px 11px;font-size:12.5px;border-bottom:1px solid var(--border);white-space:nowrap"';
   const amRows=am.map((r,i)=>`<tr data-grt="${_grtStrip(r.am)}"><td ${tdC}>${i+1}</td><td ${tdL}>${r.am}</td><td ${tdC}>${_grtVN(r.canGiao)}</td><td ${tdC}>${_grtVN(r.daGan)}</td><td ${tdC} style="font-weight:800;color:#C8461A">${_grtVN(r.gtc)}</td><td ${tdC}>${_grtPct(r.gtc,r.daGan)}</td><td ${tdC}>${_grtPct(r.gtc,r.canGiao)}</td></tr>`).join('');
-  const bcRows=bc.map((r,i)=>`<tr data-grt="${_grtStrip(r.bc+' '+r.am)}"><td ${tdC}>${i+1}</td><td ${tdL}>${r.bc}</td><td ${tdL}>${r.am}</td><td ${tdC}>${_grtVN(r.canGiao)}</td><td ${tdC}>${_grtVN(r.daGan)}</td><td ${tdC} style="font-weight:800;color:#C8461A">${_grtVN(r.gtc)}</td><td ${tdC}>${_grtPct(r.gtc,r.daGan)}</td></tr>`).join('');
+  const bcRows=bc.map((r,i)=>`<tr data-grt="${_grtStrip(r.bc+' '+r.am)}"><td ${tdC}>${i+1}</td><td ${tdL}>${r.bc}</td><td ${tdL}>${r.am}</td><td ${tdC}>${_grtVN(r.canGiao)}</td><td ${tdC}>${_grtVN(r.daGan)}</td><td ${tdC} style="font-weight:800;color:#C8461A">${_grtVN(r.gtc)}</td><td ${tdC}>${_grtPct(r.gtc,r.daGan)}</td><td ${tdC}>${_grtPct(r.gtc,r.canGiao)}</td></tr>`).join('');
   const excl=d.excl06?'ĐÃ loại đơn nhập BC 0–6h (sau 18h)':'KHÔNG loại 0–6h (khung 6h–18h)';
   el.innerHTML=`
    <div class="page-header">
@@ -4161,14 +4161,14 @@ async function buildGTCRealtimePage(){
    </div>
    <div style="font-size:14px;font-weight:800;color:var(--text-main);margin:6px 2px 8px">📋 Theo AM (${am.length})</div>
    <div class="table-wrap" style="margin-bottom:22px"><table style="border-collapse:collapse;display:inline-block;min-width:520px">
-    <thead><tr><th ${TH}>STT</th><th ${TH} style="text-align:left">AM</th><th ${TH}>Cần giao</th><th ${TH}>Đã gán</th><th ${TH}>GTC</th><th ${TH}>%GTC/gán</th><th ${TH}>%GTC/cần</th></tr></thead>
+    <thead><tr><th ${TH}>STT</th><th ${TH} style="text-align:left">AM</th><th ${TH}>Cần giao</th><th ${TH}>Đã gán</th><th ${TH}>GTC</th><th ${TH}>%GTC/gán</th><th ${TH}>GTC total</th></tr></thead>
     <tbody>${amRows}</tbody></table></div>
    <div style="display:flex;align-items:center;gap:10px;margin:6px 2px 8px;flex-wrap:wrap">
     <span style="font-size:14px;font-weight:800;color:var(--text-main)">🏢 Theo Bưu Cục (${bc.length})</span>
     <input type="text" placeholder="🔎 Tìm Bưu Cục / AM…" oninput="grtFilter(this.value)" style="padding:5px 10px;border:1px solid var(--border);border-radius:8px;font-size:12.5px;min-width:200px">
    </div>
-   <div class="table-wrap"><table style="border-collapse:collapse;display:inline-block;min-width:600px">
-    <thead><tr><th ${TH}>STT</th><th ${TH} style="text-align:left">Bưu Cục</th><th ${TH} style="text-align:left">AM</th><th ${TH}>Cần giao</th><th ${TH}>Đã gán</th><th ${TH}>GTC</th><th ${TH}>%GTC/gán</th></tr></thead>
+   <div class="table-wrap"><table style="border-collapse:collapse;display:inline-block;min-width:680px">
+    <thead><tr><th ${TH}>STT</th><th ${TH} style="text-align:left">Bưu Cục</th><th ${TH} style="text-align:left">AM</th><th ${TH}>Cần giao</th><th ${TH}>Đã gán</th><th ${TH}>GTC</th><th ${TH}>%GTC/gán</th><th ${TH}>GTC total</th></tr></thead>
     <tbody>${bcRows}</tbody></table></div>
    <div class="analysis-box" style="margin-top:16px;padding:12px 14px;font-size:12.5px;line-height:1.7">
     <b>Cách tính (bản nhanh):</b><br>
