@@ -410,24 +410,45 @@ async function _gidToTitle(id,gid){
   if(gid==null||gid==='')return _titleCache[id]._first;
   return _titleCache[id][String(gid)]||_titleCache[id]._first;
 }
+// Đọc sheet qua proxy server (/api/sheet) — server đọc bằng tài khoản @ghn của chủ sheet,
+// nên MỌI người đăng nhập @ghn đều xem được, không cần cấp quyền sheet từng người.
+// _proxyOk: null=chưa biết, true=server đã cấu hình xong, false=chưa cấu hình → fallback cách cũ.
+let _proxyOk=null;
+async function _sheetViaProxy(id,name,gid){
+  const q=new URLSearchParams({id}); if(name)q.set('sheet',name); if(gid!=null&&gid!=='')q.set('gid',gid);
+  const r=await _origFetch('/api/sheet?'+q.toString(),{headers:{Authorization:'Bearer '+(window._gToken||'')}});
+  if(!r.ok){let e='proxy '+r.status;try{const j=await r.json();if(j&&j.error)e=j.error;}catch(_){ } const er=new Error(e);er._status=r.status;throw er;}
+  return await r.text(); // CSV
+}
+// Cách cũ: đọc trực tiếp Sheets API bằng token của người đang xem (dùng khi proxy chưa cấu hình).
+async function _sheetDirectCsv(id,name,gid){
+  if(!name)name=await _gidToTitle(id,gid);
+  const range=encodeURIComponent("'"+String(name).replace(/'/g,"''")+"'");
+  const api=`https://sheets.googleapis.com/v4/spreadsheets/${id}/values/${range}?valueRenderOption=FORMATTED_VALUE&dateTimeRenderOption=FORMATTED_STRING`;
+  const r=await _apiFetch(api);
+  if(r.status===401){window._gToken=null; if(_tokenClient)_tokenClient.requestAccessToken({prompt:''}); throw new Error('token hết hạn — đăng nhập lại');}
+  if(!r.ok)throw new Error('Sheets API '+r.status);
+  const j=await r.json();
+  const vals=j.values||[]; const w=vals.reduce((m,rw)=>Math.max(m,(rw||[]).length),0);
+  const padded=vals.map(rw=>{const c=(rw||[]).slice(); while(c.length<w)c.push(''); return c;});
+  return _rowsToCsv(padded);
+}
 async function _sheetViaApi(url){
   const id=(url.match(/\/d\/([A-Za-z0-9_\-]+)/)||[])[1]; if(!id)throw new Error('no id');
-  const u=new URL(url); let name=u.searchParams.get('sheet'); const gid=u.searchParams.get('gid');
-  if(!name)name=await _gidToTitle(id,gid);
-  const ck=id+'|'+name;
+  const u=new URL(url); const name=u.searchParams.get('sheet'); const gid=u.searchParams.get('gid');
+  const ck=id+'|'+(name||('gid='+(gid||'')));
   if(window._apiCache[ck]!=null)return new Response(window._apiCache[ck],{status:200,headers:{'Content-Type':'text/csv'}});
   if(_apiInflight[ck]){const csv=await _apiInflight[ck];return new Response(csv,{status:200,headers:{'Content-Type':'text/csv'}});}
   const job=(async()=>{
-    const range=encodeURIComponent("'"+String(name).replace(/'/g,"''")+"'");
-    const api=`https://sheets.googleapis.com/v4/spreadsheets/${id}/values/${range}?valueRenderOption=FORMATTED_VALUE&dateTimeRenderOption=FORMATTED_STRING`;
-    const r=await _apiFetch(api);
-    if(r.status===401){window._gToken=null; if(_tokenClient)_tokenClient.requestAccessToken({prompt:''}); throw new Error('token hết hạn — đăng nhập lại');}
-    if(!r.ok)throw new Error('Sheets API '+r.status);
-    const j=await r.json();
-    // Sheets API cắt ô trống cuối dòng → đệm mọi dòng về đủ chiều rộng (như gviz) để parser theo cột không lệch
-    const vals=j.values||[]; const w=vals.reduce((m,rw)=>Math.max(m,(rw||[]).length),0);
-    const padded=vals.map(rw=>{const c=(rw||[]).slice(); while(c.length<w)c.push(''); return c;});
-    const csv=_rowsToCsv(padded); window._apiCache[ck]=csv; return csv;
+    if(_proxyOk!==false){
+      try{ const csv=await _sheetViaProxy(id,name,gid); _proxyOk=true; window._apiCache[ck]=csv; return csv; }
+      catch(e){ // 500 not_configured ⇒ chưa set env ⇒ fallback; lỗi khác sau khi proxy đã OK ⇒ ném ra
+        if(_proxyOk===true) throw e;
+        if(e&&e._status&&e._status!==500) throw e; // vd 403 (không phải @ghn) thì không fallback vô ích
+        _proxyOk=false;
+      }
+    }
+    const csv=await _sheetDirectCsv(id,name,gid); window._apiCache[ck]=csv; return csv;
   })();
   _apiInflight[ck]=job;
   try{const csv=await job; return new Response(csv,{status:200,headers:{'Content-Type':'text/csv'}});}
