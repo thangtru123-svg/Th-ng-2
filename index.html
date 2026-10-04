@@ -4136,8 +4136,9 @@ async function buildGTCRealtimePage(){
   const V=d.vung||{canGiao:0,daGan:0,gtc:0};
   const upd=new Date(d.updatedAt);
   const updStr=isNaN(upd)?'—':upd.toLocaleString('vi-VN',{hour:'2-digit',minute:'2-digit',day:'2-digit',month:'2-digit',year:'numeric'});
-  const am=[...(d.am||[])].sort((a,b)=>b.gtc-a.gtc);
-  const bc=[...(d.bc||[])].sort((a,b)=>b.gtc-a.gtc);
+  const _gttot=r=>(r.canGiao>0?r.gtc/r.canGiao:-1);
+  const am=[...(d.am||[])].sort((a,b)=>_gttot(b)-_gttot(a));
+  const bc=[...(d.bc||[])].sort((a,b)=>_gttot(b)-_gttot(a));
   const kpi=(t,v,s,c)=>`<div style="background:#fff;border:1px solid var(--border);border-radius:14px;padding:14px 16px;min-width:160px;box-shadow:var(--shadow-sm)"><div style="font-size:12px;color:var(--text-sub);font-weight:600">${t}</div><div style="font-size:24px;font-weight:800;color:${c||'var(--text-main)'};margin-top:2px">${v}</div><div style="font-size:11.5px;color:var(--text-sub)">${s}</div></div>`;
   const TH='style="background:#1F3864;color:#fff;padding:7px 11px;font-size:12px;font-weight:700;white-space:nowrap;text-align:center"';
   const tdC='style="text-align:center;padding:6px 11px;font-size:12.5px;border-bottom:1px solid var(--border);white-space:nowrap"';
