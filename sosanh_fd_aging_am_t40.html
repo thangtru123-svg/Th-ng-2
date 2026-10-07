@@ -1,0 +1,60 @@
+<!DOCTYPE html><html lang="vi"><head><meta charset="utf-8"><title>So sánh FD & Aging theo AM — T40</title>
+<style>
+body{margin:0;font-family:'Be Vietnam Pro',system-ui,Arial,sans-serif;background:#EEE;color:#1a1a1a}
+.card{width:860px;background:#FBF7F1;padding:22px 26px;margin:16px auto;box-sizing:border-box;border-radius:6px}
+.ttl{font-size:21px;font-weight:800;color:#C55A11;margin:0 0 2px}
+.sub{font-size:12.5px;color:#5C6673;margin:0 0 14px}
+table{border-collapse:collapse;width:100%;background:#fff;font-size:13px}
+th,td{border:1px solid #d0d0d0;padding:6px 8px;text-align:center;white-space:nowrap}
+th{background:#1F3864;color:#fff;font-weight:700;font-size:11.5px}
+thead tr:nth-child(1) th{background:#1F3864;color:#fff}
+th[rowspan]{background:#1F3864;color:#fff}
+th.hact{background:#C55A11 !important;color:#fff !important}
+th.htgt{background:#5B6B7F !important;color:#fff !important}
+td.bc{text-align:left;font-weight:600}
+thead .grp{background:#274a8a;color:#fff}
+.dat{font-weight:800;font-size:13.5px}
+.pass{background:#D6F5DE;color:#157347}
+.fail{background:#FBD5D5;color:#C02626}
+.tgt{color:#334155;background:#F3F4F6;font-size:12px}
+tr.sum td{background:#F1E9DC;font-weight:800}
+.foot{font-size:11px;color:#7A4A2B;margin-top:8px}
+.legend{width:860px;margin:6px auto 0;font-size:12px;color:#444}
+.badge{display:inline-block;padding:1px 7px;border-radius:10px;font-size:11px;font-weight:700}
+</style></head><body>
+<div class="legend">🟢 <b>Đạt</b> (thực tế ≤ target) · 🔴 <b>Vượt</b> (thực tế &gt; target). FD = Tỉ lệ trả Tổng (Tuần 40). Aging = số đơn tồn (snapshot 04/10). Target: FD theo file "Target Aging, FD XBG"; Aging theo target BC đã cấp.</div>
+<div id="root"></div>
+<script>
+const DATA={"Giáp Hải Sự": [["(BGI) Lạng Giang", 13.448582029970463, 9, 34, 30, 3, 0], ["(BGI) Hiệp Hòa", 11.55073328974401, 9, 132, 100, 63, 0], ["(BGI) Xuân Cẩm", 23.7325012391051, 9, 16, 150, 12, 0], ["(BGI) Kép", 6.817782259956918, 6.5, 7, 5, 3, 0]], "Trương Ngọc Nên": [["(HDU) Tân Hưng", 11.94303877839488, 9, 56, 100, 6, 0], ["(HDU) Tứ Kỳ", 10.180597141593054, 9, 74, 100, 48, 0], ["(HDU) Thanh Hà", 15.005128665479575, 9, 14, 3, 0, 0], ["(HDU) Thành Đông", 11.029814119036642, 9, 26, 20, 1, 0], ["(HDU) Gia Lộc", 6.648591074690649, 7.09, 2, 15, 0, 0]], "Vũ Văn Vinh": [["(HPH) Nam Đồ Sơn", 12.734810885615536, 9, 1, 15, 0, 0], ["(HPH) Gia Viên", 9.421466029763224, 9, 13, 50, 0, 0], ["(HPH) Kiến Hưng", 9.495175970141636, 9, 2, 5, 0, 0], ["(HPH) An Lão", 10.845250976881342, 9, 1, 5, 0, 0], ["(HPH) Dương Kinh", 13.367769067951066, 9, 88, 30, 4, 0], ["(HPH) Vĩnh Bảo", 6.907517286302851, 7.85, 1, 3, 1, 0], ["(HPH) Tân Minh", 6.628944569839609, 7.14, 2, 3, 0, 0], ["(HPH) An Biên 3", 3.7488261996232493, 4.17, 1, 3, 0, 0], ["(HPH) An Biên 2", 3.068302183177846, 3.51, 2, 3, 0, 0]], "Đỗ Phú Duyên": [["(BGI) Tân Yên", 14.866042931510002, 9, 74, 50, 50, 0], ["(BGI) Nhã Nam", 14.346158296138015, 9, 1, 3, 1, 0], ["(BGI) Việt Yên", 10.942455915771202, 9, 5, 3, 4, 0], ["(BGI) Đa Mai", 7.1804519872046395, 9, 18, 5, 4, 0]], "Cao Xuân Minh": [["(QNI) Quảng Yên", 14.308805913907102, 9, 88, 3, 1, 0], ["(QNI) Uông Bí", 8.75679541190196, 9, 3, 3, 0, 0], ["(QNI) Đông Triều", 4.998160235467724, 5.23, 0, 3, 0, 0], ["(QNI) Mạo Khê", 4.486260763076579, 5.07, 0, 3, 0, 0]], "Hoàng Thị Hồng Nhung": [["(HPH) Hải An 1", 9.989378616508242, 10, 25, 15, 11, 0], ["(HPH) Hải An 2", 31.603321877181074, 9, 60, 150, 30, 0]], "Kiều Văn Nam": [["(BNI) Yên Trung", 12.182670382513788, 9, 4, 5, 2, 0], ["(BNI) Đồng Nguyên", 15.007956209725132, 9, 10, 20, 7, 0], ["(BNI) Vũ Ninh", 10.44887659040056, 9, 18, 5, 2, 0], ["(BNI) Yên Phong", 10.942244161706224, 9, 1, 3, 0, 0], ["(BNI) Đại Đồng", 9.065970529023037, 9, 17, 5, 0, 0], ["(BNI) Từ Sơn", 7.607513250544301, 7.5, 6, 3, 0, 0], ["(BNI) Võ Cường", 9.099459013799986, 7.5, 13, 5, 0, 0]], "Lê Văn Lâm": [["(LSO) Hữu Lũng", 10.880874256977325, 9, 36, 5, 2, 0], ["(LSO) Chi Lăng", 7.100081252997548, 7.63, 1, 3, 1, 0], ["(LSO) Tam Thanh", 6.459899446383092, 7.41, 17, 5, 4, 0], ["(LSO) Đông Kinh", 6.135554812974051, 6.13, 0, 3, 0, 0]], "Lê Đắc Vinh": [["(HPH) Hồng An", 29.207420017229254, 9, 50, 100, 22, 0], ["(HPH) An Phong", 9.366432302193479, 9, 1, 3, 1, 0]], "Hoàng Tấn Dũng": [["(HDU) Phú Thái", 14.198216928884385, 9, 2, 20, 1, 0], ["(HDU) Chu Văn An", 15.344782400250697, 9, 27, 50, 11, 0], ["(HDU) Nam An Phụ", 10.358931327309365, 9, 9, 15, 1, 0], ["(HDU) Phạm Sư Mạnh", 5.418878219617541, 5.64, 3, 5, 1, 0]], "Nguyễn Bá Tuấn": [["(HPH) Lưu Kiếm", 27.485247626537458, 9, 23, 100, 2, 0], ["(HPH) Thủy Nguyên", 14.131100697576986, 9, 8, 5, 1, 0], ["(HPH) Bạch Đằng", 9.046889381237605, 9.08, 4, 3, 1, 0], ["(HPH) Kiến An", 7.478710549990182, 7.29, 2, 3, 2, 0]], "Bùi Xuân Quang": [["(HPH) Phù Liễn", 17.457623735698203, 9, 20, 40, 1, 0], ["(HPH) An Hải", 17.08307177813641, 10, 5, 20, 0, 0], ["(HPH) Đông Hải", 8.303798415386147, 9, 2, 3, 1, 0], ["(HPH) Cát Hải", 7.81937723965746, 8, 1, 3, 1, 0], ["(HPH) Ngô Quyền", 7.043912849244145, 7.31, 2, 3, 0, 0], ["(HPH) Hồng Bàng", 5.896874543814639, 6.4, 4, 20, 2, 0]], "Vi Văn Trịnh": [["(LSO) Thất Khê", 8.669879320290311, 9, 1, 3, 0, 0], ["(LSO) Lộc Bình", 8.008784253609203, 9, 26, 3, 0, 0], ["(LSO) Bắc Sơn", 8.519710650130007, 7.5, 0, 3, 0, 0], ["(LSO) Na Sầm", 7.900450436912347, 7.8, 0, 3, 0, 0], ["(LSO) Bình Gia", 6.787834319518783, 7.38, 0, 3, 0, 0], ["(LSO) Đình Lập", 5.954490145749441, 7.31, 0, 3, 0, 0], ["(LSO) Đồng Đăng", 5.042926374122654, 5.84, 0, 3, 0, 0]], "Nguyễn Văn Đạt": [["(BNI) Trung Chính", 9.312160106615174, 8, 5, 30, 3, 0], ["(HDU) Kẻ Sặt", 22.467101697373142, 9, 4, 3, 0, 0], ["(BNI) Thuận Thành 2", 8.956937801544541, 9, 4, 5, 4, 0], ["(BNI) Thuận Thành", 9.194188539599773, 9, 3, 3, 1, 0], ["(BNI) Gia Bình", 8.433824365071207, 7.5, 8, 15, 7, 0]], "Phạm Đức Thắng": [["(BGI) Nếnh", 18.091041625339326, 9.5, 21, 20, 4, 0], ["(BGI) Yên Thế", 8.424080044045143, 9, 3, 3, 0, 0], ["(BGI) Bố Hạ", 7.341951198558124, 6.89, 0, 3, 0, 0]], "Nguyễn Văn Long": [["(BGI) Trường Sơn", 12.231911203780943, 9, 0, 5, 0, 0], ["(BGI) Lục Nam", 10.175195241454745, 9, 11, 15, 2, 0], ["(BGI) Chũ", 10.113565138418453, 9, 12, 20, 0, 0], ["(BGI) Sơn Động", 5.32779381380246, 6.49, 0, 3, 0, 0]], "Triệu Ngọc Duy": [["(BGI) Yên Dũng", 14.66488953676215, 10, 3, 15, 3, 0], ["(BGI) Bắc Giang", 11.265200082051509, 10, 13, 50, 1, 0]], "Vũ Hồng Thái": [["(QNI) Cao Xanh", 27.267031144294286, 9, 6, 100, 4, 0], ["(QNI) Hồng Gai", 27.774315108732544, 9, 10, null, 0, null]], "Nguyễn Văn Quang": [["(HDU) Tứ Minh", 12.882363988258474, 10, 2, 3, 1, 0], ["(HDU) Cẩm Giang", 9.13156097744912, 9, 4, 5, 1, 0], ["(HDU) Nam Sách", 9.820464693947844, 9, 4, 15, 1, 0], ["(HDU) Ninh Giang", 6.4551084861074735, 6.27, 0, 3, 0, 0], ["(HDU) Thanh Miện", 5.082549608009982, 5.55, 2, 3, 0, 0]], "Nguyễn Hữu Phi Dũng": [["(BNI) Nam Sơn", 9.71874787027604, 9, 0, 3, 0, 0], ["(BNI) Đào Viên", 8.174228828431607, 9, 5, 3, 0, 0], ["(BNI) Phương Liễu", 8.155329908898034, 9, 4, 3, 0, 0], ["(BNI) Phật Tích", 6.533421932141663, 8, 1, 3, 1, 0]], "Chu Mạnh Dũng": [["(QNI) Cô Tô 1", 13.36548526188257, 9, 0, 5, 0, 0], ["(QNI) Vân Đồn 1", 9.876258726927954, 7.5, 1, 5, 1, 0], ["(QNI) Quang Hanh", 6.342268491934753, 7.58, 1, 3, 0, 0], ["(QNI) Cửa Ông 1", 6.990604724905373, 5.91, 1, 3, 0, 0], ["(QNI) Cửa Ông 2", 5.739238712129647, 5.9, 0, 3, 0, 0], ["(QNI) Cô Tô", null, null, 2, 3, 2, 0]], "Cao Văn Đức": [["(QNI) Hạ Long", 11.909919566517004, 9, 1, 3, 1, 0], ["(QNI) Móng Cái 1", 6.79700640972231, 6.4, 2, 3, 1, 0]], "Hạ Thị Lan Anh": [["(QNI) Việt Hưng", 7.4473297626943715, 7.5, 2, 3, 1, 0], ["(QNI) Hoành Bồ", 7.356386739669493, 7.54, 0, 3, 0, 0]], "Nguyễn Phú Hưởng": [["(QNI) Quảng Hà", 10.787277656442924, 9, 1, 3, 0, 0], ["(QNI) Bình Liêu", 6.0069182631748905, 7.32, 0, 3, 0, 0], ["(QNI) Tiên Yên", 4.8879082140951855, 6.48, 0, 3, 0, 0], ["(QNI) Ba Chẽ", 8.100146925262749, 5.89, 0, 3, 0, 0], ["(QNI) Đầm Hà", 6.078049771035981, 5.86, 0, 3, 0, 0]]};
+const AMFD={"Giáp Hải Sự": {"fd": 12.47088984123598, "tgt": 8.447238671345747}, "Trương Ngọc Nên": {"fd": 10.995211965671519, "tgt": 8.630170628128278}, "Vũ Văn Vinh": {"fd": 7.657957641720402, "tgt": 7.071672496429207}, "Đỗ Phú Duyên": {"fd": 12.007019898489009, "tgt": 9.000000000000002}, "Cao Xuân Minh": {"fd": 9.2966275642312, "tgt": 7.695628199344846}, "Hoàng Thị Hồng Nhung": {"fd": 21.619304197115653, "tgt": 9.461924858395998}, "Kiều Văn Nam": {"fd": 10.341139583163232, "tgt": 8.593279839492249}, "Lê Văn Lâm": {"fd": 7.692432050317855, "tgt": 7.536235008631251}, "Lê Đắc Vinh": {"fd": 21.756207462903426, "tgt": 9.000000000000002}, "Hoàng Tấn Dũng": {"fd": 10.555131870730802, "tgt": 7.873575289559889}, "Nguyễn Bá Tuấn": {"fd": 14.660261203039118, "tgt": 8.560970095454278}, "Bùi Xuân Quang": {"fd": 9.521225139559771, "tgt": 7.847808720746045}, "Vi Văn Trịnh": {"fd": 7.27185510938852, "tgt": 7.692978189833126}, "Nguyễn Văn Đạt": {"fd": 10.925908611900827, "tgt": 8.475403749333596}, "Phạm Đức Thắng": {"fd": 13.278477707072126, "tgt": 8.808701165888538}, "Nguyễn Văn Long": {"fd": 9.494374109590394, "tgt": 8.556630975317566}, "Triệu Ngọc Duy": {"fd": 12.572261811937233, "tgt": 10.0}, "Vũ Hồng Thái": {"fd": 27.480110242370593, "tgt": 9.0}, "Nguyễn Văn Quang": {"fd": 8.301534876767034, "tgt": 7.712167169345669}, "Nguyễn Hữu Phi Dũng": {"fd": 8.416252434628024, "tgt": 8.842111764893978}, "Chu Mạnh Dũng": {"fd": 7.746403231115812, "tgt": 7.043619682673838}, "Cao Văn Đức": {"fd": 8.460242864386677, "tgt": 7.245782951814959}, "Hạ Thị Lan Anh": {"fd": 7.41620689905295, "tgt": 7.513688950556616}, "Nguyễn Phú Hưởng": {"fd": 7.568383630456271, "tgt": 7.296504521353444}};
+const pf=v=>v==null?'—':(''+(Math.round(v*10)/10)).replace('.',',')+'%';
+const pT=v=>v==null?'—':(''+v).replace('.',',')+'%';
+const cls=(a,t)=>(a==null||t==null)?'':(a<=t+1e-9?'pass':'fail');
+const clsN=(a,t)=>(a==null||t==null)?'':(a<=t?'pass':'fail');
+const root=document.getElementById('root');
+Object.keys(DATA).forEach((am,idx)=>{
+  const bcs=DATA[am];
+  let rows='',sA5=0,sA8=0,sT5=0,sT8=0;
+  bcs.forEach((b,i)=>{
+    const [bc,fa,tf,a5,t5,a8,t8]=b; sA5+=a5||0; sA8+=a8||0; sT5+=(typeof t5==='number'?t5:0); sT8+=(typeof t8==='number'?t8:0);
+    rows+=`<tr><td>${i+1}</td><td class="bc">${bc}</td>`
+      +`<td class="dat ${cls(fa,tf)}">${pf(fa)}</td><td class="tgt">${pT(tf)}</td>`
+      +`<td class="dat ${clsN(a5,t5)}">${a5}</td><td class="tgt">${t5==null?'—':t5}</td>`
+      +`<td class="dat ${clsN(a8,t8)}">${a8}</td><td class="tgt">${t8==null?'—':t8}</td></tr>`;
+  });
+  const af=AMFD[am]||{};const faT=af.fd,tfT=af.tgt;
+  rows+=`<tr class="sum"><td></td><td class="bc">TỔNG ${am}</td>`
+    +`<td class="dat ${cls(faT,tfT)}">${pf(faT)}</td><td class="tgt">${tfT==null?'—':(Math.round(tfT*10)/10+'').replace('.',',')+'%'}</td>`
+    +`<td class="dat ${clsN(sA5,sT5)}">${sA5}</td><td class="tgt">${sT5}</td>`
+    +`<td class="dat ${clsN(sA8,sT8)}">${sA8}</td><td class="tgt">${sT8}</td></tr>`;
+  root.insertAdjacentHTML('beforeend',`<div class="card" id="am${idx}">
+   <div class="ttl">📊 SO SÁNH FD & AGING — AM ${am}</div>
+   <div class="sub">Thực tế Tuần 40 vs Target · ${bcs.length} Bưu Cục</div>
+   <table><thead>
+    <tr><th rowspan="2">STT</th><th rowspan="2">Bưu Cục</th><th colspan="2" class="grp">FD Tổng (tỉ lệ trả)</th><th colspan="2" class="grp">Aging &gt;5 ngày</th><th colspan="2" class="grp">Aging &gt;8 ngày</th></tr>
+    <tr><th class="hact">Thực tế</th><th class="htgt">Target</th><th class="hact">Thực tế</th><th class="htgt">Target</th><th class="hact">Thực tế</th><th class="htgt">Target</th></tr>
+   </thead><tbody>${rows}</tbody></table>
+   <div class="foot">🟢 Đạt · 🔴 Vượt. Nguồn: FD Total & Aging thực tế Tuần 40 (28/09–04/10, snapshot Aging 04/10) · Target tuần 40.</div>
+  </div>`);
+});
+</script></body></html>
