@@ -6259,15 +6259,24 @@ async function sendKhoaIDToTelegram(){
    uniq.forEach((o,i)=>{ const ld=esc(o.lydoTxt||'—')+(o.ndon>1?` · ${o.ndon} đơn`:''); L.push(`${i+1}. <b>${esc(o.nv)}</b> — ${esc(o.bc)}`,`   • Lý do: ${ld}`,`   • Số lần vi phạm: ${o.lan}`); });
    L.push('',`⏰ <b>Hạn cuối giải trình: ${HAN}</b> (ngày thông báo + 3 ngày)`,'⚠️ Đề nghị AM vào check &amp; xử lý giải trình trước hạn để tránh ảnh hưởng vận hành.',`🔗 Chi tiết: ${LINK}`);
    return L.join('\n'); };
-  if(!confirm(`Bắn báo cáo Khoá ID tới ${chatIds.length} group AM có NV bị khoá?`+(missing.length?`\n⚠️ ${missing.length} AM chưa map group: ${missing.join(', ')}`:''))){ if(btn){btn.disabled=false;btn.innerHTML='📤 Bắn Khoá ID TG';} return; }
+  if(!confirm(`Bắn báo cáo Khoá ID tới ${chatIds.length} group AM có NV bị khoá + room "Vấn đề chung"?`+(missing.length?`\n⚠️ ${missing.length} AM chưa map group: ${missing.join(', ')}`:''))){ if(btn){btn.disabled=false;btn.innerHTML='📤 Bắn Khoá ID TG';} return; }
   let ok=0,fail=0;
   for(const cid of chatIds){ const o=byChat[cid];
    let res=await _tgSend(Number(cid),undefined,render(o.ams,o.items));
    if(res&&res.ok)ok++; else { fail++; console.warn('Khoá ID gửi lỗi',cid,o.ams,res&&res.description); }
    await new Promise(r=>setTimeout(r,1200));
   }
+  // Ngoài 24 group AM: bắn ảnh tổng quan + tổng hợp theo AM vào room "Vấn đề chung" (nhóm Aging)
+  let roomOk=false;
+  try{
+   const img=await _captureEl('khoaidTbl');
+   let res=await _tgSendPhoto(TG_AGING_CHAT,undefined,img,R.noteTG);
+   if(!res||!res.ok)res=await _tgSendDoc(TG_AGING_CHAT,undefined,img,R.noteTG);
+   roomOk=!!(res&&res.ok);
+   if(R.amSummaryTG){await new Promise(r=>setTimeout(r,600));await _tgSend(TG_AGING_CHAT,undefined,'<b>📊 Số NV bị khoá theo AM — '+R.dmy(R.latest)+'</b>\n'+R.amList.map(([am,n])=>`• ${am}: ${n} NV`).join('\n'));}
+  }catch(e){ console.warn('Room Vấn đề chung lỗi',e); }
   if(btn){btn.innerHTML=`✅ Đã gửi ${ok}/${chatIds.length}`;setTimeout(()=>{btn.disabled=false;btn.innerHTML='📤 Bắn Khoá ID TG';},3000);}
-  alert(`Đã bắn Khoá ID: ${ok} group OK${fail?`, ${fail} lỗi`:''}.`+(missing.length?`\n⚠️ Chưa map group cho AM: ${missing.join(', ')}`:''));
+  alert(`Đã bắn Khoá ID: ${ok} group AM OK${fail?`, ${fail} lỗi`:''} · room Vấn đề chung: ${roomOk?'OK':'lỗi'}.`+(missing.length?`\n⚠️ Chưa map group cho AM: ${missing.join(', ')}`:''));
  }catch(e){ alert('Lỗi gửi Telegram: '+e.message); if(btn){btn.disabled=false;btn.innerHTML='📤 Bắn Khoá ID TG';} }
 }
 
