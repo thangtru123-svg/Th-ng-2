@@ -69,6 +69,7 @@ input.search{border:1px solid var(--line);background:var(--panel);color:var(--in
     <div class="tab active" data-tab="prov">Theo tỉnh xuất phát</div>
     <div class="tab" data-tab="day">Theo ngày</div>
     <div class="tab" data-tab="week">Theo tuần</div>
+    <div class="tab" data-tab="kct">🏬 Theo KCT</div>
     <div class="tab" data-tab="det">🔎 Chi tiết chuyến theo mốc</div>
     <div class="tab" data-tab="cost">💰 Chi phí cước</div>
     <div class="tab" data-tab="legs">🧭 Chi tiết chặng theo tuyến</div>
@@ -90,7 +91,7 @@ const BCOL=['#B4232A','#D65A4A','#E08A1E','#7FB069','#1f7a4d','#9aa8a0'];
 const vn=n=>Math.round(n).toLocaleString('vi-VN');
 const esc=s=>String(s==null?'':s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
 const ddmm=s=>{const m=/(\d{4})-(\d{2})-(\d{2})/.exec(s);return m?m[3]+'/'+m[2]:s;};
-let state={tab:'prov',q:'',sortK:6,sortDir:1,from:'',to:'',bandFilter:null,legQ:'',legProv:'',legSel:null,legDay:''};
+let state={tab:'prov',q:'',sortK:6,sortDir:1,from:'',to:'',bandFilter:null,legQ:'',legProv:'',legSel:null,legDay:'',kctSel:'all',kctSK:3,kctSD:1};
 const n1=x=>Number(x||0).toLocaleString('vi-VN',{maximumFractionDigits:1});
 
 /* ---- KPI + bands ---- */
@@ -389,7 +390,63 @@ function renderLegDetail(r){
   $('legBack').onclick=()=>{state.legDay='';state.legSel=null;renderLegs();};
   const ds=$('legDaySel');if(ds)ds.onchange=e=>{state.legDay=e.target.value;renderLegDetail(r);};
 }
-function render(){ if(state.tab==='det')renderDet(); else if(state.tab==='cost')renderCost(); else if(state.tab==='legs')renderLegs(); else renderAgg(state.tab); }
+function render(){ if(state.tab==='det')renderDet(); else if(state.tab==='cost')renderCost(); else if(state.tab==='legs')renderLegs(); else if(state.tab==='kct')renderKCT(); else renderAgg(state.tab); }
+
+/* ---- Lấp đầy theo KCT (tuyến đi qua từng KCT) ---- */
+const KCT_LIST=['KCT Bắc Giang','KCT Lạng Sơn','KCT Quảng Ninh','KCT Hải Phòng'];
+function kctAgg(){
+  const routes={};
+  DET.forEach(r=>{
+    const mt=r[8], lo=r[9]||'', fill=+r[6]||0, cap=+r[4]||0, band=r[2], pick=+r[5]||0;
+    const ks=KCT_LIST.filter(k=>lo.indexOf(k)>=0);
+    if(!ks.length) return;
+    let R=routes[mt]; if(!R){R=routes[mt]={mt,lo,ks:{},trips:0,b:[0,0,0,0,0,0],sUc:0,sC:0,sF:0,tan:0,low:0};}
+    ks.forEach(k=>R.ks[k]=1); R.trips++; R.b[band]++; if(cap>0){R.sUc+=fill*cap;R.sC+=cap;} R.sF+=fill; R.tan+=pick/1000; if(band<=2)R.low++;
+    if(lo.length>(R.lo||'').length)R.lo=lo;
+  });
+  const rl=Object.values(routes).map(R=>({mt:R.mt,lo:R.lo,ks:Object.keys(R.ks),trips:R.trips,b:R.b,fill:R.sC>0?R.sUc/R.sC:R.sF/R.trips,tan:R.tan,low:R.low,lowPct:R.trips?R.low/R.trips*100:0}));
+  const sum={}; KCT_LIST.forEach(k=>sum[k]={k,trips:0,b:[0,0,0,0,0,0],sUc:0,sC:0,tan:0,low:0,routes:0});
+  rl.forEach(R=>R.ks.forEach(k=>{const S=sum[k];S.trips+=R.trips;for(let i=0;i<6;i++)S.b[i]+=R.b[i];S.tan+=R.tan;S.low+=R.low;S.routes++;}));
+  // recompute sum weighted fill từ DET trực tiếp cho chính xác
+  const rawSum={}; KCT_LIST.forEach(k=>rawSum[k]={sUc:0,sC:0,sF:0,n:0});
+  DET.forEach(r=>{const lo=r[9]||'',fill=+r[6]||0,cap=+r[4]||0;KCT_LIST.forEach(k=>{if(lo.indexOf(k)>=0){const S=rawSum[k];if(cap>0){S.sUc+=fill*cap;S.sC+=cap;}S.sF+=fill;S.n++;}});});
+  KCT_LIST.forEach(k=>{sum[k].fill=rawSum[k].sC>0?rawSum[k].sUc/rawSum[k].sC:(rawSum[k].n?rawSum[k].sF/rawSum[k].n:0);sum[k].lowPct=sum[k].trips?sum[k].low/sum[k].trips*100:0;});
+  return {rl,sum};
+}
+function renderKCT(){
+  const {rl,sum}=kctAgg();
+  const fillPill=f=>`<span class="pill" style="background:${f>=50?'#1f7a4d':f>=30?'#E08A1E':'#B4232A'}">${n1(f)}%</span>`;
+  const lowPill=p=>`<span class="pill" style="background:${p>=25?'#B4232A':p>=12?'#E08A1E':'#7FB069'}">${p.toFixed(1)}%</span>`;
+  // Bảng tổng theo KCT
+  const srow=k=>{const S=sum[k];return `<tr><td class="l">🏬 ${esc(k)}</td><td>${fillPill(S.fill)}</td>`
+    +`<td class="b0">${S.b[0]||''}</td><td class="b1">${S.b[1]||''}</td><td class="b2">${S.b[2]||''}</td><td>${S.b[3]||''}</td><td>${S.b[4]||''}</td>`
+    +`<td><b>${vn(S.trips)}</b></td><td>${lowPill(S.lowPct)}</td><td>${vn(S.tan)}</td></tr>`;};
+  // Bảng tuyến (lọc theo KCT + sort)
+  let routes=rl.slice();
+  if(state.kctSel!=='all')routes=routes.filter(R=>R.ks.indexOf(state.kctSel)>=0);
+  const keys=['mt','ks','trips','fill','low','tan'];const kk=keys[state.kctSK]||'fill';
+  routes.sort((a,b)=>{let x=a[kk],y=b[kk];if(kk==='ks'){x=a.ks.join();y=b.ks.join();}if(typeof x==='number')return state.kctSD*(x-y);return state.kctSD*String(x).localeCompare(String(y),'vi');});
+  const kctShort=k=>k.replace('KCT ','');
+  const rrow=R=>`<tr><td class="l" style="font-weight:600">${esc(R.mt)}</td>`
+    +`<td style="font-size:12px">${R.ks.map(kctShort).join(', ')}</td>`
+    +`<td>${vn(R.trips)}</td><td>${fillPill(R.fill)}</td><td>${R.low||''}</td><td>${vn(R.tan)}</td>`
+    +`<td class="l" style="font-size:11.5px;color:#5a6b62;max-width:420px;white-space:normal">${esc(R.lo)}</td></tr>`;
+  const chips=['all',...KCT_LIST].map(k=>`<span class="bandChip" data-kct="${esc(k)}" style="cursor:pointer;padding:4px 11px;border-radius:14px;font-size:12.5px;font-weight:600;margin-right:6px;border:1px solid #cdd8d0;${state.kctSel===k?'background:#1f7a4d;color:#fff;border-color:#1f7a4d':'background:#fff;color:#2a3a32'}">${k==='all'?'Tất cả 4 KCT':'🏬 '+kctShort(k)}</span>`).join('');
+  const hd=(i,t,cls)=>`<th data-ki="${i}" class="${cls||''}" style="cursor:pointer">${t}${state.kctSK===i?(state.kctSD>0?' ▲':' ▼'):''}</th>`;
+  $('panel').innerHTML=`<h3>Tỷ lệ lấp đầy theo KCT (tuyến đi qua từng Kho Chuyển Tiếp)</h3>
+    <div class="s">Mỗi chuyến được tính cho MỌI KCT mà lộ trình đi qua (1 tuyến nối 2 KCT sẽ tính ở cả 2). "Lấp đầy TB" = bình quân theo tải trọng. "% thấp" = tỉ lệ chuyến 0-30%.</div>
+    <div class="table-wrap"><table><thead><tr>
+      <th class="l">KCT</th><th>Lấp đầy TB</th><th class="b0">0-10%</th><th class="b1">10-20%</th><th class="b2">20-30%</th><th>30-50%</th><th>&gt;50%</th><th>Số chuyến</th><th>% thấp<br>(0-30)</th><th>Tấn</th>
+    </tr></thead><tbody>${KCT_LIST.map(srow).join('')}</tbody></table></div>
+    <h3 style="margin-top:22px">Chi tiết tuyến theo KCT</h3>
+    <div class="s" style="margin-bottom:10px">Lọc theo KCT · bấm tiêu đề cột để sắp xếp. Mặc định: lấp đầy thấp → cao (tuyến lãng phí nhất lên đầu).</div>
+    <div style="margin-bottom:12px">${chips}</div>
+    <div class="table-wrap"><table><thead><tr>
+      ${hd(0,'Mã tuyến','l')}${hd(1,'KCT đi qua')}${hd(2,'Số chuyến')}${hd(3,'Lấp đầy TB')}${hd(4,'Thấp 0-30')}${hd(5,'Tấn')}<th class="l">Lộ trình</th>
+    </tr></thead><tbody>${routes.map(rrow).join('')}</tbody></table></div>`;
+  $('panel').querySelectorAll('.bandChip[data-kct]').forEach(c=>c.onclick=()=>{state.kctSel=c.dataset.kct;renderKCT();});
+  $('panel').querySelectorAll('thead th[data-ki]').forEach(th=>th.onclick=()=>{const i=+th.dataset.ki;if(state.kctSK===i)state.kctSD*=-1;else{state.kctSK=i;state.kctSD=(i===3)?1:-1;}renderKCT();});
+}
 
 /* ---- wiring ---- */
 document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));t.classList.add('active');state.tab=t.dataset.tab;render();});
