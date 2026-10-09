@@ -6201,17 +6201,73 @@ async function buildKhoaIDPage(){
  }catch(e){ el.innerHTML=`<div class="card"><p style="padding:16px;color:#DC2626">Lỗi tải dữ liệu khoá ID: ${e.message}</p></div>`; }
 }
 
+/* ===== Nhóm Telegram từng AM (chat_id) — để bắn báo cáo Khoá ID riêng từng AM =====
+   Tên group dạng "AM <Tên> - Vận Hành". Alias cho group viết tắt tên.
+   1 group có thể 2 AM → cả 2 AM trỏ về cùng chat_id (tự gộp khi bắn). */
+const KHOAID_AM_GROUPS=[
+ {id:-1003705972185,t:'AM Phạm Đức Thắng - Vận Hành'},
+ {id:-1004382895980,t:'AM MinhCX - Báo Cáo Vận hành Daily'},
+ {id:-1003987067575,t:'AM Hoàng Tấn Dũng + Trần Thu Ba Vận Hành'},
+ {id:-1004484964362,t:'AM Nguyễn Phú Hưởng - Vận hành'},
+ {id:-1004390152995,t:'AM Hạ Thị Lan Anh - Vận hành'},
+ {id:-1003761080026,t:'AM DũngNHP - GDV - HRBP'},
+ {id:-1004426693233,t:'AM Triệu Ngọc Duy - Vận Hành'},
+ {id:-1004497080080,t:'AM Nguyễn Văn Quang - Vận Hành'},
+ {id:-1003740280533,t:'AM Lê Đắc Vinh - Vận Hành'},
+ {id:-1003587329653,t:'AM Trương Ngọc Nên - Vận hành'},
+ {id:-1004386988721,t:'AM Vũ Hồng Thái - Vận hành'},
+ {id:-1004402857618,t:'AM Lê Văn Lâm - Vận hành'},
+ {id:-1004397491952,t:'AM Cao Văn Đức - Vận hành'},
+ {id:-1004367886963,t:'AM Hoàng Thị Hồng Nhung - Vận hành'},
+ {id:-1004328726760,t:'AM Nguyễn Văn Đạt - Vận hành'},
+ {id:-1004308796904,t:'AM Chu Mạnh Dũng - Vận hành'},
+ {id:-1004467670087,t:'AM Nguyễn Văn Long + Phạm Minh Giang - Vận Hành'},
+ {id:-1004417470720,t:'AM Vũ Văn Vinh - Vận Hành'},
+ {id:-1003760228435,t:'AM Bùi Xuân Quang - Vận Hành'},
+ {id:-1003629149563,t:'AM Giáp Hải Sự - Vận hành'},
+ {id:-1004472381776,t:'AM Vi Văn Trịnh - Vận hành'},
+ {id:-1004373458737,t:'AM Kiều Văn Nam - GDV - HRBP'},
+ {id:-1003909129277,t:'AM Đỗ Phú Duyên -Vận Hành'},
+ {id:-1004443182482,t:'AM Nguyễn Bá Tuấn - Vận hành'}
+];
+const KHOAID_AM_ALIAS={'Nguyễn Hữu Phi Dũng':-1003761080026,'Cao Xuân Minh':-1004382895980};
+const _kidStrip=s=>(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/đ/g,'d').replace(/Đ/g,'D').toLowerCase().trim();
+function _kidResolveChat(am){
+ if(KHOAID_AM_ALIAS[am])return KHOAID_AM_ALIAS[am];
+ const na=_kidStrip(am); if(!na)return null;
+ const g=KHOAID_AM_GROUPS.find(x=>_kidStrip(x.t).includes(na));
+ return g?g.id:null;
+}
+// bắn báo cáo Khoá ID riêng từng AM vào group của AM đó (group 2 AM gộp chung)
 async function sendKhoaIDToTelegram(){
  const btn=document.getElementById('tgInpage_p30'); if(btn){btn.disabled=true;btn.innerHTML='⏳ Đang gửi...';}
  try{
-  const R=window._khoaid; if(!R)throw new Error('Chưa có dữ liệu');
-  const img=await _captureEl('khoaidTbl'); // chỉ chụp BẢNG (không tổng quan/analysis)
-  let res=await _tgSendPhoto(TG_AGING_CHAT,undefined,img,R.noteTG); // topic General → không kèm message_thread_id
-  if(!res||!res.ok)res=await _tgSendDoc(TG_AGING_CHAT,undefined,img,R.noteTG);
-  if(res&&res.ok===false)throw new Error(res.description||'gửi thất bại');
-  // Tổng hợp số NV bị khoá theo AM (tin text riêng, đậm tiêu đề)
-  if(R.amSummaryTG){await new Promise(r=>setTimeout(r,600));await _tgSend(TG_AGING_CHAT,undefined,'<b>📊 Số NV bị khoá theo AM — '+R.dmy(R.latest)+'</b>\n'+R.amList.map(([am,n])=>`• ${am}: ${n} NV`).join('\n'));}
-  if(btn){btn.innerHTML='✅ Đã gửi';setTimeout(()=>{btn.disabled=false;btn.innerHTML='📤 Bắn Khoá ID TG';},2500);}
+  const R=window._khoaid; if(!R||!R.arr||!R.arr.length)throw new Error('Chưa có dữ liệu');
+  const esc=s=>(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const NGAY=R.dmy(R.latest),KHOA=R.dmy(R.khoa),HAN=R.hanGT;
+  const LINK='https://docs.google.com/spreadsheets/d/1kDVp2soHOAgp_AhhTddSlocXCUjB07kbLi1EHcCqay8/edit?gid=802313671#gid=802313671';
+  // gom row theo từng AM
+  const byAM={};
+  R.arr.forEach(o=>{ (o.am||'').split(',').map(x=>x.trim()).filter(x=>x&&x!=='(chưa map AM)').forEach(am=>{ (byAM[am]=byAM[am]||[]).push(o); }); });
+  // gom theo chat (group 2 AM gộp)
+  const byChat={},missing=[];
+  Object.keys(byAM).forEach(am=>{ const cid=_kidResolveChat(am); if(!cid){missing.push(am);return;} (byChat[cid]=byChat[cid]||{ams:[],items:[]}); byChat[cid].ams.push(am); byChat[cid].items.push(...byAM[am]); });
+  const chatIds=Object.keys(byChat);
+  if(!chatIds.length)throw new Error('Không map được AM nào ra group'+(missing.length?' · thiếu: '+missing.join(', '):''));
+  const render=(ams,items)=>{ const seen=new Set(),uniq=items.filter(o=>!seen.has(o.nv)&&seen.add(o.nv));
+   let L=['🔒 <b>KHOÁ ID VI PHẠM — XBG</b>',`📅 Ngày thông báo: <b>${NGAY}</b> · Ngày khoá: <b>${KHOA}</b>`,'',`👤 AM <b>${esc(ams.join(' & '))}</b> — có <b>${uniq.length}</b> nhân viên bị khoá ID:`,''];
+   uniq.forEach((o,i)=>{ const ld=esc(o.lydoTxt||'—')+(o.ndon>1?` · ${o.ndon} đơn`:''); L.push(`${i+1}. <b>${esc(o.nv)}</b> — ${esc(o.bc)}`,`   • Lý do: ${ld}`,`   • Số lần vi phạm: ${o.lan}`); });
+   L.push('',`⏰ <b>Hạn cuối giải trình: ${HAN}</b> (ngày thông báo + 3 ngày)`,'⚠️ Đề nghị AM vào check &amp; xử lý giải trình trước hạn để tránh ảnh hưởng vận hành.',`🔗 Chi tiết: ${LINK}`);
+   return L.join('\n'); };
+  if(!confirm(`Bắn báo cáo Khoá ID tới ${chatIds.length} group AM có NV bị khoá?`+(missing.length?`\n⚠️ ${missing.length} AM chưa map group: ${missing.join(', ')}`:''))){ if(btn){btn.disabled=false;btn.innerHTML='📤 Bắn Khoá ID TG';} return; }
+  let ok=0,fail=0;
+  for(const cid of chatIds){ const o=byChat[cid];
+   let res=await _tgSend(Number(cid),undefined,render(o.ams,o.items));
+   if(res&&res.ok)ok++; else { fail++; console.warn('Khoá ID gửi lỗi',cid,o.ams,res&&res.description); }
+   await new Promise(r=>setTimeout(r,1200));
+  }
+  if(btn){btn.innerHTML=`✅ Đã gửi ${ok}/${chatIds.length}`;setTimeout(()=>{btn.disabled=false;btn.innerHTML='📤 Bắn Khoá ID TG';},3000);}
+  alert(`Đã bắn Khoá ID: ${ok} group OK${fail?`, ${fail} lỗi`:''}.`+(missing.length?`\n⚠️ Chưa map group cho AM: ${missing.join(', ')}`:''));
  }catch(e){ alert('Lỗi gửi Telegram: '+e.message); if(btn){btn.disabled=false;btn.innerHTML='📤 Bắn Khoá ID TG';} }
 }
 
