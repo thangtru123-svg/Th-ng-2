@@ -98,10 +98,11 @@ function head(){
   const m=OUT.meta, b=OUT.bands;
   const low=b[0].trips+b[1].trips+b[2].trips, tot=m.total;
   $('meta').textContent=`Dữ liệu 30 ngày · ${ddmm(m.from)}–${ddmm(m.to)}/2026 · chốt lúc ${new Date(m.generatedAt).toLocaleString('vi-VN')}`;
-  $('snapNote').innerHTML='⚠️ <b>Bản snapshot</b> — nguồn Metabase (token cấp động) không đọc live được. Muốn số mới nhất: báo để con trích lại & cập nhật.';
+  $('snapNote').innerHTML='⚠️ <b>Bản snapshot</b> — nguồn Sheet Data chuyến (cần đăng nhập @ghn), Vercel không đọc live được. Muốn số mới nhất: báo để con trích lại & cập nhật.';
   $('kpis').innerHTML=[
     ['Tổng số chuyến',vn(tot),'chuyến LXBG'],
     ['Tổng khối lượng',vn(m.tanTot)+' tấn','đã luân chuyển'],
+    ['Tỷ lệ lấp đầy TB toàn Vùng','<span style=color:'+(m.avgFill>=50?'var(--green)':'var(--red)')+'>'+(''+(m.avgFill!=null?m.avgFill:'-')).replace('.',',')+'%</span>','bình quân theo tải trọng · giản đơn '+(''+(m.avgFillSimple!=null?m.avgFillSimple:'-')).replace('.',',')+'%'],
     ['Chuyến lấp đầy thấp (0-30%)','<span style=color:var(--red)>'+vn(low)+'</span>',(low/tot*100).toFixed(1)+'% tổng chuyến · thiệt hại chi phí'],
     ['Chuyến đầy tốt (>50%)','<span style=color:var(--green)>'+vn(b[4].trips)+'</span>',(b[4].trips/tot*100).toFixed(1)+'% tổng chuyến']
   ].map(k=>`<div class="kpi"><div class="t">${k[0]}</div><div class="v">${k[1]}</div><div class="f">${k[2]}</div></div>`).join('');
