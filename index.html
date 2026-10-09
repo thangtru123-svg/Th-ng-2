@@ -6132,6 +6132,7 @@ async function buildKhoaIDPage(){
   const url=`https://docs.google.com/spreadsheets/d/${SHEET_KHOAID_ID}/export?format=csv&gid=${SHEET_KHOAID_GID}&_=${Date.now()}`;
   const rows=_vwParseCSV(await(await fetch(url)).text()).slice(1).filter(r=>r.length>8&&(r[0]||'').trim());
   const dmy=s=>{const m=/(\d{4})-(\d{2})-(\d{2})/.exec(s||'');return m?`${m[3]}/${m[2]}/${m[1]}`:(s||'—');};
+  const addDays=(s,n)=>{const m=/(\d{4})-(\d{2})-(\d{2})/.exec(s||'');if(!m)return '—';const d=new Date(Date.UTC(+m[1],+m[2]-1,+m[3]));d.setUTCDate(d.getUTCDate()+n);const p=x=>String(x).padStart(2,'0');return `${p(d.getUTCDate())}/${p(d.getUTCMonth()+1)}/${d.getUTCFullYear()}`;};
   const datesByNV={};
   rows.forEach(r=>{const nv=r[0].trim(),d=(r[7]||'').trim(); if(!d)return; (datesByNV[nv]=datesByNV[nv]||new Set()).add(d);});
   const soLan=nv=>(datesByNV[nv]||new Set()).size;
@@ -6149,10 +6150,11 @@ async function buildKhoaIDPage(){
   // ngày khoá phổ biến nhất
   const kc={}; arr.forEach(o=>{if(o.khoa)kc[o.khoa]=(kc[o.khoa]||0)+1;});
   const khoa=Object.keys(kc).sort((a,b)=>kc[b]-kc[a])[0]||'';
+  const hanGT=addDays(latest,3); // Hạn cuối giải trình = ngày thông báo + 3 ngày
   // đoạn văn thông báo (dùng cho box dưới bảng + caption Telegram)
   const noteHTML=`Ngày <b>${dmy(latest)}</b> thông báo có <b>${arr.length}</b> nhân viên vi phạm bị khoá ID vào ngày <b>${dmy(khoa)}</b>.<br>Chi tiết check tại link: <a href="${LINK}" target="_blank" style="color:#1D4ED8">${LINK}</a><br><b>Yêu cầu các AM vào check và xử lý giải trình để tránh ảnh hưởng đến vận hành.</b>`;
   const noteTG=`Ngày ${dmy(latest)} thông báo có ${arr.length} nhân viên vi phạm bị khoá ID vào ngày ${dmy(khoa)}.\n\nChi tiết check tại link: ${LINK}\n\nYêu cầu các AM vào check và xử lý giải trình để tránh ảnh hưởng đến vận hành.`;
-  window._khoaid={arr,latest,dmy,noteTG,amSummaryTG,amList};
+  window._khoaid={arr,latest,khoa,dmy,hanGT,noteTG,amSummaryTG,amList};
   if(!arr.length){el.innerHTML='<div class="card"><p style="padding:16px;color:var(--text-sub)">Không có dữ liệu khoá ID.</p></div>';return;}
   const nRepeat=arr.filter(o=>o.lan>=2).length;
   const lanBg=n=>n>=3?'#DC2626':n>=2?'#F59E0B':'#E5E7EB';
@@ -6165,6 +6167,7 @@ async function buildKhoaIDPage(){
     <td style="padding:7px 12px;color:#374151;white-space:nowrap">${o.lydoTxt||'—'}${o.ndon>1?`<span style="color:var(--text-sub);font-size:11px"> · ${o.ndon} đơn</span>`:''}</td>
     <td style="text-align:center;padding:7px 12px;white-space:nowrap">${dmy(latest)}</td>
     <td style="text-align:center;padding:7px 12px;white-space:nowrap;color:#B91C1C;font-weight:600">${dmy(o.khoa)}</td>
+    <td style="text-align:center;padding:7px 12px;white-space:nowrap;color:#C2410C;font-weight:700;background:#FFF7ED">${hanGT}</td>
     <td style="text-align:center;padding:7px 12px"><span style="background:${lanBg(o.lan)};color:${lanCol(o.lan)};padding:2px 10px;border-radius:8px;font-weight:800">${o.lan}</span></td></tr>`).join('');
   const ov=`<div class="card">
     <div style="font-weight:800;font-size:16px;margin-bottom:12px">🔒 Tổng quan Khoá ID vi phạm</div>
@@ -6185,7 +6188,7 @@ async function buildKhoaIDPage(){
     <div class="table-wrap" style="max-height:660px;overflow:auto;border:1px solid var(--border);border-radius:10px">
      <table style="border-collapse:collapse;font-size:12.5px">
       <thead><tr>
-       ${['#','Bưu Cục / Tỉnh','AM','NV vi phạm','Lý do','Ngày thông báo','Ngày khoá','Số lần vi phạm'].map((h,i)=>`<th style="position:sticky;top:0;z-index:2;background:#1F3864;color:#fff;padding:8px 12px;text-align:${i>=5?'center':'left'};white-space:nowrap">${h}</th>`).join('')}
+       ${['#','Bưu Cục / Tỉnh','AM','NV vi phạm','Lý do','Ngày thông báo','Ngày khoá','Hạn cuối giải trình','Số lần vi phạm'].map((h,i)=>`<th style="position:sticky;top:0;z-index:2;background:#1F3864;color:#fff;padding:8px 12px;text-align:${i>=5?'center':'left'};white-space:nowrap">${h}</th>`).join('')}
       </tr></thead><tbody>${body}</tbody></table>
     </div></div>`;
   const amCard=`<div class="card" id="khoaidAM" style="margin-top:14px;padding:14px 16px">
