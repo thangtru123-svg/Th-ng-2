@@ -1,868 +1,868 @@
 {
- "updatedAt": "2026-10-09T21:18:16.235965+07:00",
- "excl06": true,
- "note": "ban nhanh - GTC chuyen tao hom nay; sau 18h LOAI nhom 0-6h",
+ "updatedAt": "2026-10-11T10:43:23.354786+07:00",
+ "excl06": false,
+ "note": "ban nhanh - GTC chuyen tao hom nay; 6h-18h GIU nhom 0-6h (snapshot sang)",
  "vung": {
-  "canGiao": 133030,
-  "daGan": 116350,
-  "gtc": 80462
+  "canGiao": 116784,
+  "daGan": 89610,
+  "gtc": 10336
  },
  "am": [
   {
    "am": "Vũ Văn Vinh",
-   "canGiao": 15490,
-   "daGan": 13654,
-   "gtc": 10457
-  },
-  {
-   "am": "Kiều Văn Nam",
-   "canGiao": 11524,
-   "daGan": 10492,
-   "gtc": 7103
-  },
-  {
-   "am": "Trương Ngọc Nên",
-   "canGiao": 8343,
-   "daGan": 6708,
-   "gtc": 5034
-  },
-  {
-   "am": "Cao Xuân Minh",
-   "canGiao": 7747,
-   "daGan": 6687,
-   "gtc": 4976
-  },
-  {
-   "am": "Bùi Xuân Quang",
-   "canGiao": 8194,
-   "daGan": 7060,
-   "gtc": 4804
+   "canGiao": 13285,
+   "daGan": 9481,
+   "gtc": 980
   },
   {
    "am": "Nguyễn Văn Quang",
-   "canGiao": 6187,
-   "daGan": 5767,
-   "gtc": 4216
+   "canGiao": 5694,
+   "daGan": 4821,
+   "gtc": 779
+  },
+  {
+   "am": "Cao Xuân Minh",
+   "canGiao": 5675,
+   "daGan": 5277,
+   "gtc": 740
+  },
+  {
+   "am": "Kiều Văn Nam",
+   "canGiao": 11363,
+   "daGan": 8304,
+   "gtc": 698
+  },
+  {
+   "am": "Trương Ngọc Nên",
+   "canGiao": 7887,
+   "daGan": 5347,
+   "gtc": 658
   },
   {
    "am": "Nguyễn Hữu Phi Dũng",
-   "canGiao": 6788,
-   "daGan": 6406,
-   "gtc": 4107
+   "canGiao": 6326,
+   "daGan": 5139,
+   "gtc": 655
   },
   {
    "am": "Chu Mạnh Dũng",
-   "canGiao": 6326,
-   "daGan": 5559,
-   "gtc": 3588
+   "canGiao": 4262,
+   "daGan": 3781,
+   "gtc": 486
   },
   {
-   "am": "Lê Văn Lâm",
-   "canGiao": 5298,
-   "daGan": 5069,
-   "gtc": 3406
+   "am": "Bùi Xuân Quang",
+   "canGiao": 7374,
+   "daGan": 3179,
+   "gtc": 466
   },
   {
    "am": "Vi Văn Trịnh",
-   "canGiao": 5171,
-   "daGan": 5052,
-   "gtc": 3387
-  },
-  {
-   "am": "Cao Văn Đức",
-   "canGiao": 4734,
-   "daGan": 4664,
-   "gtc": 3224
-  },
-  {
-   "am": "Nguyễn Văn Đạt",
-   "canGiao": 4426,
-   "daGan": 3982,
-   "gtc": 2763
-  },
-  {
-   "am": "Giáp Hải Sự",
-   "canGiao": 5173,
-   "daGan": 4303,
-   "gtc": 2761
-  },
-  {
-   "am": "Hạ Thị Lan Anh",
-   "canGiao": 4674,
-   "daGan": 3731,
-   "gtc": 2540
-  },
-  {
-   "am": "Nguyễn Phú Hưởng",
-   "canGiao": 3840,
-   "daGan": 3361,
-   "gtc": 2393
-  },
-  {
-   "am": "Nguyễn Bá Tuấn",
-   "canGiao": 4287,
-   "daGan": 3681,
-   "gtc": 2215
-  },
-  {
-   "am": "Nguyễn Văn Long",
-   "canGiao": 4227,
-   "daGan": 2897,
-   "gtc": 1991
-  },
-  {
-   "am": "Phạm Đức Thắng",
-   "canGiao": 3103,
-   "daGan": 2452,
-   "gtc": 1808
+   "canGiao": 4831,
+   "daGan": 4508,
+   "gtc": 414
   },
   {
    "am": "Triệu Ngọc Duy",
-   "canGiao": 2908,
-   "daGan": 2757,
-   "gtc": 1777
+   "canGiao": 3274,
+   "daGan": 2288,
+   "gtc": 349
   },
   {
    "am": "Đỗ Phú Duyên",
-   "canGiao": 3037,
-   "daGan": 2720,
-   "gtc": 1737
+   "canGiao": 2928,
+   "daGan": 2218,
+   "gtc": 343
+  },
+  {
+   "am": "Cao Văn Đức",
+   "canGiao": 3845,
+   "daGan": 3525,
+   "gtc": 338
+  },
+  {
+   "am": "Giáp Hải Sự",
+   "canGiao": 4777,
+   "daGan": 3365,
+   "gtc": 337
+  },
+  {
+   "am": "Lê Văn Lâm",
+   "canGiao": 4169,
+   "daGan": 3927,
+   "gtc": 328
+  },
+  {
+   "am": "Nguyễn Văn Đạt",
+   "canGiao": 4730,
+   "daGan": 3458,
+   "gtc": 299
   },
   {
    "am": "Hoàng Tấn Dũng",
-   "canGiao": 2599,
-   "daGan": 2130,
-   "gtc": 1545
+   "canGiao": 2336,
+   "daGan": 1912,
+   "gtc": 294
   },
   {
-   "am": "Lê Đắc Vinh",
-   "canGiao": 2461,
-   "daGan": 1979,
-   "gtc": 1440
-  },
-  {
-   "am": "Phạm Minh Giang",
-   "canGiao": 1930,
-   "daGan": 1627,
-   "gtc": 1109
+   "am": "Nguyễn Phú Hưởng",
+   "canGiao": 2896,
+   "daGan": 2804,
+   "gtc": 281
   },
   {
    "am": "Trần Thu Ba",
-   "canGiao": 2270,
-   "daGan": 1745,
-   "gtc": 1018
+   "canGiao": 1923,
+   "daGan": 1568,
+   "gtc": 276
+  },
+  {
+   "am": "Hạ Thị Lan Anh",
+   "canGiao": 3320,
+   "daGan": 3243,
+   "gtc": 269
+  },
+  {
+   "am": "Phạm Đức Thắng",
+   "canGiao": 2767,
+   "daGan": 1721,
+   "gtc": 267
+  },
+  {
+   "am": "Nguyễn Văn Long",
+   "canGiao": 3421,
+   "daGan": 2653,
+   "gtc": 266
+  },
+  {
+   "am": "Nguyễn Bá Tuấn",
+   "canGiao": 4245,
+   "daGan": 3388,
+   "gtc": 250
+  },
+  {
+   "am": "Phạm Minh Giang",
+   "canGiao": 1267,
+   "daGan": 1094,
+   "gtc": 207
+  },
+  {
+   "am": "Lê Đắc Vinh",
+   "canGiao": 2261,
+   "daGan": 1203,
+   "gtc": 180
   },
   {
    "am": "Hoàng Thị Hồng Nhung",
-   "canGiao": 1260,
-   "daGan": 914,
-   "gtc": 549
+   "canGiao": 1220,
+   "daGan": 814,
+   "gtc": 124
   },
   {
    "am": "Vũ Hồng Thái",
-   "canGiao": 1033,
-   "daGan": 953,
-   "gtc": 514
+   "canGiao": 708,
+   "daGan": 592,
+   "gtc": 52
   }
  ],
  "bc": [
   {
-   "bc": "(QNI) Móng Cái 1",
-   "am": "Cao Văn Đức",
-   "canGiao": 2804,
-   "daGan": 2778,
-   "gtc": 2002
-  },
-  {
-   "bc": "(QNI) Việt Hưng",
-   "am": "Hạ Thị Lan Anh",
-   "canGiao": 3327,
-   "daGan": 2545,
-   "gtc": 1699
-  },
-  {
-   "bc": "(HPH) An Biên 2",
-   "am": "Vũ Văn Vinh",
-   "canGiao": 2049,
-   "daGan": 1969,
-   "gtc": 1699
-  },
-  {
    "bc": "(QNI) Quảng Yên",
    "am": "Cao Xuân Minh",
-   "canGiao": 2650,
-   "daGan": 2081,
-   "gtc": 1651
-  },
-  {
-   "bc": "(QNI) Uông Bí",
-   "am": "Cao Xuân Minh",
-   "canGiao": 2618,
-   "daGan": 2377,
-   "gtc": 1599
-  },
-  {
-   "bc": "(HPH) An Biên 3",
-   "am": "Vũ Văn Vinh",
-   "canGiao": 2002,
-   "daGan": 1834,
-   "gtc": 1527
-  },
-  {
-   "bc": "(HPH) Vĩnh Bảo",
-   "am": "Vũ Văn Vinh",
-   "canGiao": 1987,
-   "daGan": 1842,
-   "gtc": 1452
-  },
-  {
-   "bc": "(BNI) Đại Đồng",
-   "am": "Kiều Văn Nam",
-   "canGiao": 2228,
-   "daGan": 2134,
-   "gtc": 1448
-  },
-  {
-   "bc": "(HPH) Hồng Bàng",
-   "am": "Bùi Xuân Quang",
-   "canGiao": 2351,
-   "daGan": 1941,
-   "gtc": 1421
-  },
-  {
-   "bc": "(HPH) Gia Viên",
-   "am": "Vũ Văn Vinh",
-   "canGiao": 1932,
-   "daGan": 1678,
-   "gtc": 1267
-  },
-  {
-   "bc": "(BNI) Nam Sơn",
-   "am": "Nguyễn Hữu Phi Dũng",
-   "canGiao": 1709,
-   "daGan": 1702,
-   "gtc": 1240
-  },
-  {
-   "bc": "(BNI) Vũ Ninh",
-   "am": "Kiều Văn Nam",
-   "canGiao": 1843,
-   "daGan": 1732,
-   "gtc": 1226
-  },
-  {
-   "bc": "(QNI) Hạ Long",
-   "am": "Cao Văn Đức",
-   "canGiao": 1930,
-   "daGan": 1886,
-   "gtc": 1222
-  },
-  {
-   "bc": "(BNI) Yên Trung",
-   "am": "Kiều Văn Nam",
-   "canGiao": 1935,
-   "daGan": 1831,
-   "gtc": 1193
-  },
-  {
-   "bc": "(BGI) Hiệp Hòa",
-   "am": "Giáp Hải Sự",
-   "canGiao": 2259,
-   "daGan": 1752,
-   "gtc": 1183
-  },
-  {
-   "bc": "(HPH) Tân Minh",
-   "am": "Vũ Văn Vinh",
-   "canGiao": 2147,
-   "daGan": 1549,
-   "gtc": 1169
-  },
-  {
-   "bc": "(BGI) Chũ",
-   "am": "Nguyễn Văn Long",
-   "canGiao": 2859,
-   "daGan": 1676,
-   "gtc": 1134
+   "canGiao": 1966,
+   "daGan": 1770,
+   "gtc": 258
   },
   {
    "bc": "(HDU) Ninh Giang",
    "am": "Nguyễn Văn Quang",
-   "canGiao": 1505,
-   "daGan": 1390,
-   "gtc": 1134
-  },
-  {
-   "bc": "(BGI) Bắc Giang",
-   "am": "Triệu Ngọc Duy",
-   "canGiao": 1735,
-   "daGan": 1666,
-   "gtc": 1110
-  },
-  {
-   "bc": "(BGI) Lục Nam",
-   "am": "Phạm Minh Giang",
-   "canGiao": 1930,
-   "daGan": 1627,
-   "gtc": 1109
-  },
-  {
-   "bc": "(BNI) Phương Liễu",
-   "am": "Nguyễn Hữu Phi Dũng",
-   "canGiao": 1670,
-   "daGan": 1618,
-   "gtc": 1104
-  },
-  {
-   "bc": "(HDU) Gia Lộc",
-   "am": "Trương Ngọc Nên",
-   "canGiao": 1731,
-   "daGan": 1458,
-   "gtc": 1100
-  },
-  {
-   "bc": "(BGI) Nếnh",
-   "am": "Phạm Đức Thắng",
-   "canGiao": 2082,
-   "daGan": 1473,
-   "gtc": 1083
-  },
-  {
-   "bc": "(HDU) Thanh Hà",
-   "am": "Trương Ngọc Nên",
-   "canGiao": 1997,
-   "daGan": 1340,
-   "gtc": 1080
+   "canGiao": 1282,
+   "daGan": 1087,
+   "gtc": 208
   },
   {
    "bc": "(HDU) Thành Đông",
    "am": "Trương Ngọc Nên",
-   "canGiao": 1619,
-   "daGan": 1489,
-   "gtc": 1080
+   "canGiao": 1644,
+   "daGan": 1036,
+   "gtc": 208
   },
   {
-   "bc": "(HPH) An Lão",
-   "am": "Vũ Văn Vinh",
-   "canGiao": 1425,
-   "daGan": 1394,
-   "gtc": 1071
+   "bc": "(BGI) Lục Nam",
+   "am": "Phạm Minh Giang",
+   "canGiao": 1267,
+   "daGan": 1094,
+   "gtc": 207
   },
   {
-   "bc": "(BNI) Từ Sơn",
-   "am": "Kiều Văn Nam",
-   "canGiao": 1677,
-   "daGan": 1575,
-   "gtc": 1071
+   "bc": "(BGI) Bắc Giang",
+   "am": "Triệu Ngọc Duy",
+   "canGiao": 2299,
+   "daGan": 1407,
+   "gtc": 203
   },
   {
-   "bc": "(QNI) Quang Hanh",
-   "am": "Chu Mạnh Dũng",
-   "canGiao": 1572,
-   "daGan": 1522,
-   "gtc": 1065
+   "bc": "(QNI) Hạ Long",
+   "am": "Cao Văn Đức",
+   "canGiao": 1578,
+   "daGan": 1415,
+   "gtc": 192
   },
   {
-   "bc": "(HDU) Phạm Sư Mạnh",
-   "am": "Hoàng Tấn Dũng",
-   "canGiao": 1437,
-   "daGan": 1243,
-   "gtc": 981
-  },
-  {
-   "bc": "(LSO) Tam Thanh",
-   "am": "Lê Văn Lâm",
-   "canGiao": 1509,
-   "daGan": 1410,
-   "gtc": 960
-  },
-  {
-   "bc": "(LSO) Hữu Lũng",
-   "am": "Lê Văn Lâm",
-   "canGiao": 1662,
-   "daGan": 1649,
-   "gtc": 953
-  },
-  {
-   "bc": "(HDU) Thanh Miện",
-   "am": "Nguyễn Văn Quang",
-   "canGiao": 1237,
-   "daGan": 1156,
-   "gtc": 936
-  },
-  {
-   "bc": "(LSO) Đông Kinh",
-   "am": "Lê Văn Lâm",
-   "canGiao": 1326,
-   "daGan": 1213,
-   "gtc": 930
-  },
-  {
-   "bc": "(HPH) An Hải",
-   "am": "Bùi Xuân Quang",
-   "canGiao": 1940,
-   "daGan": 1467,
-   "gtc": 914
-  },
-  {
-   "bc": "(HDU) Tân Hưng",
-   "am": "Trương Ngọc Nên",
-   "canGiao": 1471,
-   "daGan": 1273,
-   "gtc": 907
-  },
-  {
-   "bc": "(QNI) Mạo Khê",
-   "am": "Cao Xuân Minh",
-   "canGiao": 1202,
-   "daGan": 1143,
-   "gtc": 878
-  },
-  {
-   "bc": "(HDU) Tứ Kỳ",
-   "am": "Trương Ngọc Nên",
-   "canGiao": 1525,
-   "daGan": 1148,
-   "gtc": 867
-  },
-  {
-   "bc": "(QNI) Cửa Ông 2",
-   "am": "Chu Mạnh Dũng",
-   "canGiao": 1313,
-   "daGan": 1275,
-   "gtc": 866
-  },
-  {
-   "bc": "(HPH) Kiến An",
-   "am": "Nguyễn Bá Tuấn",
-   "canGiao": 1564,
-   "daGan": 1240,
-   "gtc": 865
-  },
-  {
-   "bc": "(HPH) Kiến Hưng",
-   "am": "Vũ Văn Vinh",
-   "canGiao": 1291,
-   "daGan": 1144,
-   "gtc": 862
+   "bc": "(BGI) Hiệp Hòa",
+   "am": "Giáp Hải Sự",
+   "canGiao": 1971,
+   "daGan": 1406,
+   "gtc": 183
   },
   {
    "bc": "(QNI) Đông Triều",
    "am": "Cao Xuân Minh",
-   "canGiao": 1277,
-   "daGan": 1086,
-   "gtc": 848
+   "canGiao": 804,
+   "daGan": 796,
+   "gtc": 182
   },
   {
-   "bc": "(HPH) Ngô Quyền",
-   "am": "Bùi Xuân Quang",
-   "canGiao": 1358,
-   "daGan": 1347,
-   "gtc": 848
-  },
-  {
-   "bc": "(QNI) Hoành Bồ",
-   "am": "Hạ Thị Lan Anh",
-   "canGiao": 1347,
-   "daGan": 1186,
-   "gtc": 841
-  },
-  {
-   "bc": "(BNI) Yên Phong",
-   "am": "Kiều Văn Nam",
-   "canGiao": 1288,
-   "daGan": 1224,
-   "gtc": 840
-  },
-  {
-   "bc": "(HPH) Dương Kinh",
-   "am": "Vũ Văn Vinh",
-   "canGiao": 1782,
-   "daGan": 1394,
-   "gtc": 834
-  },
-  {
-   "bc": "(BNI) Thuận Thành",
-   "am": "Nguyễn Văn Đạt",
-   "canGiao": 1255,
-   "daGan": 1214,
-   "gtc": 820
-  },
-  {
-   "bc": "(HPH) Hồng An",
-   "am": "Lê Đắc Vinh",
-   "canGiao": 1604,
-   "daGan": 1168,
-   "gtc": 800
-  },
-  {
-   "bc": "(BGI) Kép",
-   "am": "Giáp Hải Sự",
-   "canGiao": 1184,
-   "daGan": 1048,
-   "gtc": 796
-  },
-  {
-   "bc": "(BNI) Đào Viên",
+   "bc": "(BNI) Nam Sơn",
    "am": "Nguyễn Hữu Phi Dũng",
-   "canGiao": 1431,
-   "daGan": 1259,
-   "gtc": 795
+   "canGiao": 1647,
+   "daGan": 1323,
+   "gtc": 182
   },
   {
-   "bc": "(QNI) Quảng Hà",
-   "am": "Nguyễn Phú Hưởng",
-   "canGiao": 1312,
-   "daGan": 1107,
-   "gtc": 774
+   "bc": "(HDU) Phạm Sư Mạnh",
+   "am": "Hoàng Tấn Dũng",
+   "canGiao": 1167,
+   "daGan": 1070,
+   "gtc": 179
   },
   {
-   "bc": "(LSO) Đồng Đăng",
-   "am": "Vi Văn Trịnh",
-   "canGiao": 1024,
-   "daGan": 1023,
-   "gtc": 774
+   "bc": "(QNI) Quang Hanh",
+   "am": "Chu Mạnh Dũng",
+   "canGiao": 1005,
+   "daGan": 994,
+   "gtc": 179
   },
   {
-   "bc": "(HPH) Bạch Đằng",
-   "am": "Nguyễn Bá Tuấn",
-   "canGiao": 1262,
-   "daGan": 1198,
-   "gtc": 754
-  },
-  {
-   "bc": "(HDU) Cẩm Giang",
+   "bc": "(HDU) Thanh Miện",
    "am": "Nguyễn Văn Quang",
-   "canGiao": 1037,
-   "daGan": 979,
-   "gtc": 732
+   "canGiao": 1238,
+   "daGan": 1221,
+   "gtc": 172
   },
   {
-   "bc": "(HPH) Phù Liễn",
-   "am": "Bùi Xuân Quang",
-   "canGiao": 1186,
-   "daGan": 975,
-   "gtc": 729
+   "bc": "(BNI) Phương Liễu",
+   "am": "Nguyễn Hữu Phi Dũng",
+   "canGiao": 1512,
+   "daGan": 1290,
+   "gtc": 168
+  },
+  {
+   "bc": "(QNI) Việt Hưng",
+   "am": "Hạ Thị Lan Anh",
+   "canGiao": 2393,
+   "daGan": 2326,
+   "gtc": 162
+  },
+  {
+   "bc": "(HPH) An Biên 2",
+   "am": "Vũ Văn Vinh",
+   "canGiao": 1875,
+   "daGan": 1474,
+   "gtc": 160
   },
   {
    "bc": "(HDU) Nam Sách",
    "am": "Nguyễn Văn Quang",
-   "canGiao": 1284,
-   "daGan": 1120,
-   "gtc": 718
+   "canGiao": 1142,
+   "daGan": 926,
+   "gtc": 156
   },
   {
-   "bc": "(BNI) Thuận Thành 2",
-   "am": "Nguyễn Văn Đạt",
-   "canGiao": 1080,
-   "daGan": 1017,
-   "gtc": 716
+   "bc": "(QNI) Mạo Khê",
+   "am": "Cao Xuân Minh",
+   "canGiao": 827,
+   "daGan": 817,
+   "gtc": 155
   },
   {
-   "bc": "(HDU) Tứ Minh",
-   "am": "Nguyễn Văn Quang",
-   "canGiao": 1124,
-   "daGan": 1122,
-   "gtc": 696
+   "bc": "(HDU) Tứ Kỳ",
+   "am": "Trương Ngọc Nên",
+   "canGiao": 1510,
+   "daGan": 897,
+   "gtc": 154
   },
   {
-   "bc": "(BNI) Đồng Nguyên",
+   "bc": "(HDU) Thanh Hà",
+   "am": "Trương Ngọc Nên",
+   "canGiao": 1738,
+   "daGan": 1248,
+   "gtc": 152
+  },
+  {
+   "bc": "(BNI) Yên Phong",
    "am": "Kiều Văn Nam",
-   "canGiao": 1015,
-   "daGan": 994,
-   "gtc": 671
+   "canGiao": 1368,
+   "daGan": 1298,
+   "gtc": 151
   },
   {
    "bc": "(BGI) Yên Dũng",
    "am": "Triệu Ngọc Duy",
-   "canGiao": 1173,
-   "daGan": 1091,
-   "gtc": 667
+   "canGiao": 975,
+   "daGan": 881,
+   "gtc": 146
   },
   {
-   "bc": "(BNI) Gia Bình",
-   "am": "Nguyễn Văn Đạt",
-   "canGiao": 1090,
-   "daGan": 1020,
-   "gtc": 664
+   "bc": "(QNI) Móng Cái 1",
+   "am": "Cao Văn Đức",
+   "canGiao": 2267,
+   "daGan": 2110,
+   "gtc": 146
   },
   {
-   "bc": "(BGI) Sơn Động",
+   "bc": "(QNI) Uông Bí",
+   "am": "Cao Xuân Minh",
+   "canGiao": 2078,
+   "daGan": 1894,
+   "gtc": 145
+  },
+  {
+   "bc": "(BGI) Chũ",
    "am": "Nguyễn Văn Long",
-   "canGiao": 893,
-   "daGan": 842,
-   "gtc": 655
+   "canGiao": 2327,
+   "daGan": 1682,
+   "gtc": 143
   },
   {
-   "bc": "(BNI) Võ Cường",
-   "am": "Kiều Văn Nam",
-   "canGiao": 1538,
-   "daGan": 1002,
-   "gtc": 654
-  },
-  {
-   "bc": "(LSO) Lộc Bình",
-   "am": "Vi Văn Trịnh",
-   "canGiao": 1088,
-   "daGan": 1044,
-   "gtc": 651
-  },
-  {
-   "bc": "(QNI) Cửa Ông 1",
-   "am": "Chu Mạnh Dũng",
-   "canGiao": 908,
-   "daGan": 895,
-   "gtc": 649
-  },
-  {
-   "bc": "(HPH) An Phong",
-   "am": "Lê Đắc Vinh",
-   "canGiao": 857,
-   "daGan": 811,
-   "gtc": 640
-  },
-  {
-   "bc": "(BGI) Lạng Giang",
-   "am": "Giáp Hải Sự",
-   "canGiao": 1285,
-   "daGan": 1082,
-   "gtc": 632
-  },
-  {
-   "bc": "(QNI) Tiên Yên",
-   "am": "Nguyễn Phú Hưởng",
-   "canGiao": 1084,
-   "daGan": 812,
-   "gtc": 612
-  },
-  {
-   "bc": "(BNI) Phật Tích",
-   "am": "Nguyễn Hữu Phi Dũng",
-   "canGiao": 783,
-   "daGan": 781,
-   "gtc": 594
-  },
-  {
-   "bc": "(QNI) Vân Đồn 1",
-   "am": "Chu Mạnh Dũng",
-   "canGiao": 1646,
-   "daGan": 1147,
-   "gtc": 586
-  },
-  {
-   "bc": "(HPH) Nam Đồ Sơn",
+   "bc": "(HPH) An Biên 3",
    "am": "Vũ Văn Vinh",
-   "canGiao": 875,
-   "daGan": 850,
-   "gtc": 576
+   "canGiao": 1802,
+   "daGan": 1574,
+   "gtc": 142
   },
   {
-   "bc": "(HDU) Chu Văn An",
-   "am": "Hoàng Tấn Dũng",
-   "canGiao": 1162,
-   "daGan": 887,
-   "gtc": 564
-  },
-  {
-   "bc": "(LSO) Chi Lăng",
-   "am": "Lê Văn Lâm",
-   "canGiao": 801,
-   "daGan": 797,
-   "gtc": 563
-  },
-  {
-   "bc": "(BNI) Trung Chính",
-   "am": "Nguyễn Văn Đạt",
-   "canGiao": 1001,
-   "daGan": 731,
-   "gtc": 563
-  },
-  {
-   "bc": "(BGI) Việt Yên",
-   "am": "Đỗ Phú Duyên",
-   "canGiao": 1044,
-   "daGan": 890,
-   "gtc": 554
-  },
-  {
-   "bc": "(HDU) Nam An Phụ",
-   "am": "Trần Thu Ba",
-   "canGiao": 1294,
-   "daGan": 898,
-   "gtc": 553
-  },
-  {
-   "bc": "(HPH) Hải An 1",
-   "am": "Hoàng Thị Hồng Nhung",
-   "canGiao": 1238,
-   "daGan": 914,
-   "gtc": 549
-  },
-  {
-   "bc": "(QNI) Cao Xanh",
-   "am": "Vũ Hồng Thái",
-   "canGiao": 1033,
-   "daGan": 953,
-   "gtc": 514
-  },
-  {
-   "bc": "(BGI) Nhã Nam",
-   "am": "Đỗ Phú Duyên",
-   "canGiao": 862,
-   "daGan": 789,
-   "gtc": 497
-  },
-  {
-   "bc": "(LSO) Thất Khê",
-   "am": "Vi Văn Trịnh",
-   "canGiao": 779,
-   "daGan": 778,
-   "gtc": 485
-  },
-  {
-   "bc": "(HPH) Đông Hải",
+   "bc": "(HPH) Hồng Bàng",
    "am": "Bùi Xuân Quang",
-   "canGiao": 791,
-   "daGan": 772,
-   "gtc": 482
+   "canGiao": 1892,
+   "daGan": 666,
+   "gtc": 142
   },
   {
    "bc": "(HDU) Phú Thái",
    "am": "Trần Thu Ba",
-   "canGiao": 976,
-   "daGan": 847,
-   "gtc": 465
+   "canGiao": 736,
+   "daGan": 734,
+   "gtc": 139
   },
   {
-   "bc": "(HPH) Thủy Nguyên",
-   "am": "Nguyễn Bá Tuấn",
-   "canGiao": 1068,
-   "daGan": 902,
-   "gtc": 465
-  },
-  {
-   "bc": "(QNI) Cô Tô 1",
-   "am": "Chu Mạnh Dũng",
-   "canGiao": 887,
-   "daGan": 720,
-   "gtc": 422
-  },
-  {
-   "bc": "(BGI) Tân Yên",
-   "am": "Đỗ Phú Duyên",
-   "canGiao": 738,
-   "daGan": 658,
-   "gtc": 420
-  },
-  {
-   "bc": "(LSO) Na Sầm",
-   "am": "Vi Văn Trịnh",
-   "canGiao": 619,
-   "daGan": 603,
-   "gtc": 415
-  },
-  {
-   "bc": "(HPH) Cát Hải",
+   "bc": "(HPH) Phù Liễn",
    "am": "Bùi Xuân Quang",
-   "canGiao": 568,
-   "daGan": 558,
-   "gtc": 410
+   "canGiao": 1165,
+   "daGan": 633,
+   "gtc": 139
   },
   {
-   "bc": "(LSO) Bắc Sơn",
-   "am": "Vi Văn Trịnh",
-   "canGiao": 647,
-   "daGan": 645,
-   "gtc": 409
+   "bc": "(HDU) Nam An Phụ",
+   "am": "Trần Thu Ba",
+   "canGiao": 1187,
+   "daGan": 834,
+   "gtc": 137
   },
   {
-   "bc": "(QNI) Đầm Hà",
-   "am": "Nguyễn Phú Hưởng",
-   "canGiao": 536,
-   "daGan": 534,
-   "gtc": 391
+   "bc": "(HDU) Cẩm Giang",
+   "am": "Nguyễn Văn Quang",
+   "canGiao": 1030,
+   "daGan": 827,
+   "gtc": 134
   },
   {
-   "bc": "(HDU) Kẻ Sặt",
-   "am": "Nguyễn Hữu Phi Dũng",
-   "canGiao": 1195,
-   "daGan": 1046,
-   "gtc": 374
+   "bc": "(LSO) Đông Kinh",
+   "am": "Lê Văn Lâm",
+   "canGiao": 975,
+   "daGan": 805,
+   "gtc": 133
   },
   {
-   "bc": "(BGI) Bố Hạ",
-   "am": "Phạm Đức Thắng",
-   "canGiao": 481,
-   "daGan": 477,
-   "gtc": 365
+   "bc": "(BNI) Từ Sơn",
+   "am": "Kiều Văn Nam",
+   "canGiao": 1614,
+   "daGan": 1236,
+   "gtc": 130
   },
   {
-   "bc": "(LSO) Bình Gia",
-   "am": "Vi Văn Trịnh",
-   "canGiao": 524,
-   "daGan": 489,
-   "gtc": 362
+   "bc": "(BNI) Đại Đồng",
+   "am": "Kiều Văn Nam",
+   "canGiao": 1767,
+   "daGan": 1503,
+   "gtc": 130
   },
   {
    "bc": "(BGI) Yên Thế",
    "am": "Phạm Đức Thắng",
-   "canGiao": 540,
-   "daGan": 502,
-   "gtc": 360
+   "canGiao": 483,
+   "daGan": 435,
+   "gtc": 127
   },
   {
-   "bc": "(QNI) Bình Liêu",
-   "am": "Nguyễn Phú Hưởng",
-   "canGiao": 521,
-   "daGan": 521,
-   "gtc": 324
-  },
-  {
-   "bc": "(QNI) Ba Chẽ",
-   "am": "Nguyễn Phú Hưởng",
-   "canGiao": 387,
-   "daGan": 387,
-   "gtc": 292
-  },
-  {
-   "bc": "(LSO) Đình Lập",
-   "am": "Vi Văn Trịnh",
-   "canGiao": 490,
-   "daGan": 470,
-   "gtc": 291
-  },
-  {
-   "bc": "(BGI) Đa Mai",
+   "bc": "(BGI) Việt Yên",
    "am": "Đỗ Phú Duyên",
-   "canGiao": 393,
-   "daGan": 383,
-   "gtc": 266
+   "canGiao": 1207,
+   "daGan": 829,
+   "gtc": 125
   },
   {
-   "bc": "(BGI) Trường Sơn",
-   "am": "Nguyễn Văn Long",
-   "canGiao": 475,
-   "daGan": 379,
-   "gtc": 202
+   "bc": "(HPH) Hải An 1",
+   "am": "Hoàng Thị Hồng Nhung",
+   "canGiao": 1220,
+   "daGan": 814,
+   "gtc": 124
   },
   {
-   "bc": "(BGI) Xuân Cẩm",
+   "bc": "(HPH) An Lão",
+   "am": "Vũ Văn Vinh",
+   "canGiao": 1144,
+   "daGan": 800,
+   "gtc": 123
+  },
+  {
+   "bc": "(HDU) Kẻ Sặt",
+   "am": "Nguyễn Hữu Phi Dũng",
+   "canGiao": 882,
+   "daGan": 688,
+   "gtc": 120
+  },
+  {
+   "bc": "(HDU) Chu Văn An",
+   "am": "Hoàng Tấn Dũng",
+   "canGiao": 1169,
+   "daGan": 842,
+   "gtc": 115
+  },
+  {
+   "bc": "(HPH) Vĩnh Bảo",
+   "am": "Vũ Văn Vinh",
+   "canGiao": 1421,
+   "daGan": 1345,
+   "gtc": 115
+  },
+  {
+   "bc": "(BNI) Vũ Ninh",
+   "am": "Kiều Văn Nam",
+   "canGiao": 1643,
+   "daGan": 1226,
+   "gtc": 115
+  },
+  {
+   "bc": "(HDU) Tân Hưng",
+   "am": "Trương Ngọc Nên",
+   "canGiao": 1614,
+   "daGan": 1008,
+   "gtc": 111
+  },
+  {
+   "bc": "(HDU) Tứ Minh",
+   "am": "Nguyễn Văn Quang",
+   "canGiao": 1002,
+   "daGan": 760,
+   "gtc": 109
+  },
+  {
+   "bc": "(QNI) Hoành Bồ",
+   "am": "Hạ Thị Lan Anh",
+   "canGiao": 927,
+   "daGan": 917,
+   "gtc": 107
+  },
+  {
+   "bc": "(BGI) Tân Yên",
+   "am": "Đỗ Phú Duyên",
+   "canGiao": 690,
+   "daGan": 550,
+   "gtc": 106
+  },
+  {
+   "bc": "(HPH) Nam Đồ Sơn",
+   "am": "Vũ Văn Vinh",
+   "canGiao": 788,
+   "daGan": 587,
+   "gtc": 102
+  },
+  {
+   "bc": "(QNI) Vân Đồn 1",
+   "am": "Chu Mạnh Dũng",
+   "canGiao": 1159,
+   "daGan": 951,
+   "gtc": 98
+  },
+  {
+   "bc": "(HPH) Kiến Hưng",
+   "am": "Vũ Văn Vinh",
+   "canGiao": 911,
+   "daGan": 847,
+   "gtc": 98
+  },
+  {
+   "bc": "(QNI) Cửa Ông 1",
+   "am": "Chu Mạnh Dũng",
+   "canGiao": 570,
+   "daGan": 485,
+   "gtc": 96
+  },
+  {
+   "bc": "(HPH) Hồng An",
+   "am": "Lê Đắc Vinh",
+   "canGiao": 1411,
+   "daGan": 785,
+   "gtc": 96
+  },
+  {
+   "bc": "(BNI) Phật Tích",
+   "am": "Nguyễn Hữu Phi Dũng",
+   "canGiao": 790,
+   "daGan": 630,
+   "gtc": 95
+  },
+  {
+   "bc": "(LSO) Đồng Đăng",
+   "am": "Vi Văn Trịnh",
+   "canGiao": 1065,
+   "daGan": 998,
+   "gtc": 94
+  },
+  {
+   "bc": "(LSO) Tam Thanh",
+   "am": "Lê Văn Lâm",
+   "canGiao": 1103,
+   "daGan": 1044,
+   "gtc": 92
+  },
+  {
+   "bc": "(HPH) Cát Hải",
+   "am": "Bùi Xuân Quang",
+   "canGiao": 585,
+   "daGan": 578,
+   "gtc": 92
+  },
+  {
+   "bc": "(BNI) Đồng Nguyên",
+   "am": "Kiều Văn Nam",
+   "canGiao": 1255,
+   "daGan": 1129,
+   "gtc": 92
+  },
+  {
+   "bc": "(BNI) Thuận Thành 2",
+   "am": "Nguyễn Văn Đạt",
+   "canGiao": 1026,
+   "daGan": 833,
+   "gtc": 90
+  },
+  {
+   "bc": "(BNI) Đào Viên",
+   "am": "Nguyễn Hữu Phi Dũng",
+   "canGiao": 1495,
+   "daGan": 1208,
+   "gtc": 90
+  },
+  {
+   "bc": "(BNI) Gia Bình",
+   "am": "Nguyễn Văn Đạt",
+   "canGiao": 1338,
+   "daGan": 1300,
+   "gtc": 89
+  },
+  {
+   "bc": "(QNI) Quảng Hà",
+   "am": "Nguyễn Phú Hưởng",
+   "canGiao": 1025,
+   "daGan": 972,
+   "gtc": 88
+  },
+  {
+   "bc": "(QNI) Đầm Hà",
+   "am": "Nguyễn Phú Hưởng",
+   "canGiao": 481,
+   "daGan": 480,
+   "gtc": 87
+  },
+  {
+   "bc": "(HPH) Gia Viên",
+   "am": "Vũ Văn Vinh",
+   "canGiao": 1697,
+   "daGan": 953,
+   "gtc": 85
+  },
+  {
+   "bc": "(HPH) Kiến An",
+   "am": "Nguyễn Bá Tuấn",
+   "canGiao": 1290,
+   "daGan": 1055,
+   "gtc": 84
+  },
+  {
+   "bc": "(HPH) An Phong",
+   "am": "Lê Đắc Vinh",
+   "canGiao": 850,
+   "daGan": 418,
+   "gtc": 84
+  },
+  {
+   "bc": "(LSO) Na Sầm",
+   "am": "Vi Văn Trịnh",
+   "canGiao": 551,
+   "daGan": 503,
+   "gtc": 83
+  },
+  {
+   "bc": "(BGI) Lạng Giang",
    "am": "Giáp Hải Sự",
-   "canGiao": 445,
-   "daGan": 421,
-   "gtc": 150
+   "canGiao": 1219,
+   "daGan": 834,
+   "gtc": 79
+  },
+  {
+   "bc": "(HPH) Tân Minh",
+   "am": "Vũ Văn Vinh",
+   "canGiao": 1896,
+   "daGan": 1156,
+   "gtc": 79
+  },
+  {
+   "bc": "(BGI) Nhã Nam",
+   "am": "Đỗ Phú Duyên",
+   "canGiao": 656,
+   "daGan": 506,
+   "gtc": 78
+  },
+  {
+   "bc": "(BGI) Sơn Động",
+   "am": "Nguyễn Văn Long",
+   "canGiao": 633,
+   "daGan": 616,
+   "gtc": 78
+  },
+  {
+   "bc": "(BNI) Thuận Thành",
+   "am": "Nguyễn Văn Đạt",
+   "canGiao": 1273,
+   "daGan": 918,
+   "gtc": 76
+  },
+  {
+   "bc": "(HPH) Dương Kinh",
+   "am": "Vũ Văn Vinh",
+   "canGiao": 1751,
+   "daGan": 745,
+   "gtc": 76
+  },
+  {
+   "bc": "(LSO) Bình Gia",
+   "am": "Vi Văn Trịnh",
+   "canGiao": 444,
+   "daGan": 292,
+   "gtc": 75
+  },
+  {
+   "bc": "(QNI) Cửa Ông 2",
+   "am": "Chu Mạnh Dũng",
+   "canGiao": 879,
+   "daGan": 875,
+   "gtc": 73
+  },
+  {
+   "bc": "(HPH) Ngô Quyền",
+   "am": "Bùi Xuân Quang",
+   "canGiao": 1212,
+   "daGan": 706,
+   "gtc": 73
+  },
+  {
+   "bc": "(BGI) Nếnh",
+   "am": "Phạm Đức Thắng",
+   "canGiao": 1933,
+   "daGan": 944,
+   "gtc": 73
+  },
+  {
+   "bc": "(BGI) Bố Hạ",
+   "am": "Phạm Đức Thắng",
+   "canGiao": 351,
+   "daGan": 342,
+   "gtc": 67
+  },
+  {
+   "bc": "(LSO) Lộc Bình",
+   "am": "Vi Văn Trịnh",
+   "canGiao": 832,
+   "daGan": 803,
+   "gtc": 67
   },
   {
    "bc": "(HPH) Lưu Kiếm",
    "am": "Nguyễn Bá Tuấn",
-   "canGiao": 393,
-   "daGan": 341,
-   "gtc": 131
+   "canGiao": 434,
+   "daGan": 303,
+   "gtc": 63
+  },
+  {
+   "bc": "(BNI) Yên Trung",
+   "am": "Kiều Văn Nam",
+   "canGiao": 1500,
+   "daGan": 925,
+   "gtc": 59
+  },
+  {
+   "bc": "(QNI) Tiên Yên",
+   "am": "Nguyễn Phú Hưởng",
+   "canGiao": 667,
+   "daGan": 629,
+   "gtc": 57
+  },
+  {
+   "bc": "(HPH) Bạch Đằng",
+   "am": "Nguyễn Bá Tuấn",
+   "canGiao": 1472,
+   "daGan": 1179,
+   "gtc": 53
+  },
+  {
+   "bc": "(QNI) Cao Xanh",
+   "am": "Vũ Hồng Thái",
+   "canGiao": 708,
+   "daGan": 592,
+   "gtc": 52
+  },
+  {
+   "bc": "(LSO) Chi Lăng",
+   "am": "Lê Văn Lâm",
+   "canGiao": 658,
+   "daGan": 656,
+   "gtc": 52
+  },
+  {
+   "bc": "(LSO) Hữu Lũng",
+   "am": "Lê Văn Lâm",
+   "canGiao": 1433,
+   "daGan": 1422,
+   "gtc": 51
+  },
+  {
+   "bc": "(HPH) Thủy Nguyên",
+   "am": "Nguyễn Bá Tuấn",
+   "canGiao": 1049,
+   "daGan": 851,
+   "gtc": 50
+  },
+  {
+   "bc": "(BGI) Trường Sơn",
+   "am": "Nguyễn Văn Long",
+   "canGiao": 461,
+   "daGan": 355,
+   "gtc": 45
+  },
+  {
+   "bc": "(BNI) Trung Chính",
+   "am": "Nguyễn Văn Đạt",
+   "canGiao": 1093,
+   "daGan": 407,
+   "gtc": 44
+  },
+  {
+   "bc": "(QNI) Cô Tô 1",
+   "am": "Chu Mạnh Dũng",
+   "canGiao": 649,
+   "daGan": 476,
+   "gtc": 40
+  },
+  {
+   "bc": "(LSO) Bắc Sơn",
+   "am": "Vi Văn Trịnh",
+   "canGiao": 583,
+   "daGan": 579,
+   "gtc": 39
+  },
+  {
+   "bc": "(BGI) Kép",
+   "am": "Giáp Hải Sự",
+   "canGiao": 981,
+   "daGan": 557,
+   "gtc": 38
+  },
+  {
+   "bc": "(BGI) Xuân Cẩm",
+   "am": "Giáp Hải Sự",
+   "canGiao": 606,
+   "daGan": 568,
+   "gtc": 37
+  },
+  {
+   "bc": "(LSO) Thất Khê",
+   "am": "Vi Văn Trịnh",
+   "canGiao": 906,
+   "daGan": 906,
+   "gtc": 35
+  },
+  {
+   "bc": "(BGI) Đa Mai",
+   "am": "Đỗ Phú Duyên",
+   "canGiao": 375,
+   "daGan": 333,
+   "gtc": 34
+  },
+  {
+   "bc": "(HDU) Gia Lộc",
+   "am": "Trương Ngọc Nên",
+   "canGiao": 1381,
+   "daGan": 1158,
+   "gtc": 33
+  },
+  {
+   "bc": "(QNI) Ba Chẽ",
+   "am": "Nguyễn Phú Hưởng",
+   "canGiao": 315,
+   "daGan": 315,
+   "gtc": 29
+  },
+  {
+   "bc": "(LSO) Đình Lập",
+   "am": "Vi Văn Trịnh",
+   "canGiao": 450,
+   "daGan": 427,
+   "gtc": 21
+  },
+  {
+   "bc": "(BNI) Võ Cường",
+   "am": "Kiều Văn Nam",
+   "canGiao": 2216,
+   "daGan": 987,
+   "gtc": 21
+  },
+  {
+   "bc": "(QNI) Bình Liêu",
+   "am": "Nguyễn Phú Hưởng",
+   "canGiao": 408,
+   "daGan": 408,
+   "gtc": 20
+  },
+  {
+   "bc": "(HPH) Đông Hải",
+   "am": "Bùi Xuân Quang",
+   "canGiao": 935,
+   "daGan": 319,
+   "gtc": 11
+  },
+  {
+   "bc": "(HPH) An Hải",
+   "am": "Bùi Xuân Quang",
+   "canGiao": 1585,
+   "daGan": 277,
+   "gtc": 9
   },
   {
    "bc": "(HPH) Hải An 2",
    "am": "Hoàng Thị Hồng Nhung",
-   "canGiao": 22,
+   "canGiao": 0,
    "daGan": 0,
    "gtc": 0
   }
