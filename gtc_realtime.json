@@ -1,11 +1,11 @@
 {
- "updatedAt": "2026-10-11T15:18:33.491293+07:00",
+ "updatedAt": "2026-10-11T15:51:04.242582+07:00",
  "excl06": false,
- "note": "ban nhanh - GTC chuyen tao hom nay; 6h-18h GIU nhom 0-6h",
+ "note": "ban nhanh - GTC chuyen tao hom nay; 6h-18h GIU nhom 0-6h (Nenh cap nhat lai)",
  "vung": {
-  "canGiao": 137208,
-  "daGan": 97763,
-  "gtc": 36012
+  "canGiao": 137211,
+  "daGan": 98067,
+  "gtc": 36024
  },
  "am": [
   {
@@ -136,9 +136,9 @@
   },
   {
    "am": "Phạm Đức Thắng",
-   "canGiao": 2925,
-   "daGan": 1788,
-   "gtc": 589
+   "canGiao": 2928,
+   "daGan": 2092,
+   "gtc": 601
   },
   {
    "am": "Phạm Minh Giang",
@@ -713,6 +713,13 @@
    "gtc": 217
   },
   {
+   "bc": "(BGI) Nếnh",
+   "am": "Phạm Đức Thắng",
+   "canGiao": 1946,
+   "daGan": 1314,
+   "gtc": 211
+  },
+  {
    "bc": "(HPH) Bạch Đằng",
    "am": "Nguyễn Bá Tuấn",
    "canGiao": 1753,
@@ -753,13 +760,6 @@
    "canGiao": 585,
    "daGan": 578,
    "gtc": 200
-  },
-  {
-   "bc": "(BGI) Nếnh",
-   "am": "Phạm Đức Thắng",
-   "canGiao": 1943,
-   "daGan": 1010,
-   "gtc": 199
   },
   {
    "bc": "(HPH) An Phong",
