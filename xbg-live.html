@@ -74,6 +74,10 @@ tr.bcrow td:first-child{cursor:pointer}
 .nvwrap table{font-size:12px}
 .nvwrap th{font-size:10px}
 .nvwrap td{padding:5px 4px;border-bottom:1px solid #222640}
+tr.amgrp td{background:#1a1e33;border-bottom:1px solid var(--line)}
+tr.amgrp td:first-child{cursor:pointer}
+tr.amgrp b{font-size:14px}
+tr.amchild td:first-child{padding-left:16px;font-size:12.5px}
 .search{width:100%;background:var(--card2);border:1px solid var(--line);color:var(--txt);border-radius:10px;padding:9px 12px;font-size:14px;margin-bottom:8px}
 .toggle{color:var(--blue);font-size:13px;text-align:center;padding:8px;font-weight:700}
 .delta{font-size:11px;padding:1px 6px;border-radius:6px;margin-left:6px}
@@ -154,9 +158,9 @@ tr.bcrow td:first-child{cursor:pointer}
   </div>
 
   <div class="card">
-    <div class="sect">🏬 Theo Bưu Cục</div>
+    <div class="sect">🏬 Bưu Cục theo AM</div>
     <input class="search" id="bcSearch" placeholder="Tìm bưu cục / AM…">
-    <div class="mut" style="margin-bottom:6px">Bấm (+) để xem năng suất từng NV</div>
+    <div class="mut" style="margin-bottom:6px">Bấm AM để xổ Bưu Cục · bấm (+) ở BC để xem NV</div>
     <table><thead><tr><th>Bưu Cục</th><th>Cần giao</th><th>GTC</th><th>%GTC</th><th>%Tot</th></tr></thead><tbody id="bcBody"></tbody></table>
     <div class="toggle" id="bcToggle">Xem tất cả ▾</div>
   </div>
@@ -270,16 +274,38 @@ function nvTable(nvs){
 }
 function renderBC(){
   var q=(document.getElementById('bcSearch').value||'').toLowerCase().trim();
-  var rows=window._bc.filter(function(b){ return !q || (b.bc+' '+b.am).toLowerCase().indexOf(q)>=0; });
-  var show = (_bcAll||q) ? rows : rows.slice(0,15);
   var tb=document.getElementById('bcBody'); tb.innerHTML='';
-  show.forEach(function(b){ var pp=pct(b.gtc,b.daGan), pt=pct(b.gtc,b.canGiao); var hasNv=b.nv&&b.nv.length;
+  // gom BC theo AM
+  var G={};
+  window._bc.forEach(function(b){ var k=b.am||'(không rõ)'; var g=G[k]||(G[k]={am:k,canGiao:0,daGan:0,gtc:0,bcs:[]}); g.canGiao+=b.canGiao; g.daGan+=b.daGan; g.gtc+=b.gtc; g.bcs.push(b); });
+  var gl=Object.keys(G).map(function(k){return G[k];}).sort(function(a,b){return b.canGiao-a.canGiao;});
+  gl.forEach(function(g){
+    var bcs=g.bcs, amMatch=g.am.toLowerCase().indexOf(q)>=0;
+    if(q && !amMatch){ bcs=g.bcs.filter(function(b){return b.bc.toLowerCase().indexOf(q)>=0;}); if(!bcs.length) return; }
+    var open=!!q;
+    var pp=pct(g.gtc,g.daGan), pt=pct(g.gtc,g.canGiao);
     tb.insertAdjacentHTML('beforeend',
-      '<tr class="bcrow"><td><span class="exp">'+(hasNv?'+':'·')+'</span>'+b.bc+'<div class="mut">'+b.am+'</div></td><td>'+vn(b.canGiao)+'</td><td>'+vn(b.gtc)+'</td><td class="pct '+cls(pp)+'">'+pstr(pp)+'</td><td class="pct '+cls(pt)+'">'+pstr(pt)+'</td></tr>'+
-      '<tr class="bcdetail hidden"><td colspan="5">'+(hasNv?nvTable(b.nv):'')+'</td></tr>');
+      '<tr class="amgrp"><td><span class="exp">'+(open?'−':'+')+'</span><b>'+g.am+'</b><div class="mut">'+g.bcs.length+' bưu cục</div></td><td>'+vn(g.canGiao)+'</td><td>'+vn(g.gtc)+'</td><td class="pct '+cls(pp)+'">'+pstr(pp)+'</td><td class="pct '+cls(pt)+'">'+pstr(pt)+'</td></tr>');
+    bcs.forEach(function(b){ var bp=pct(b.gtc,b.daGan), bt=pct(b.gtc,b.canGiao); var hasNv=b.nv&&b.nv.length;
+      tb.insertAdjacentHTML('beforeend',
+        '<tr class="bcrow amchild'+(open?'':' hidden')+'"><td><span class="exp">'+(hasNv?'+':'·')+'</span>'+b.bc+'</td><td>'+vn(b.canGiao)+'</td><td>'+vn(b.gtc)+'</td><td class="pct '+cls(bp)+'">'+pstr(bp)+'</td><td class="pct '+cls(bt)+'">'+pstr(bt)+'</td></tr>'+
+        '<tr class="bcdetail hidden"><td colspan="5">'+(hasNv?nvTable(b.nv):'')+'</td></tr>');
+    });
   });
+  // AM header toggle: xổ/thu các BC con
+  [].forEach.call(tb.querySelectorAll('tr.amgrp'),function(h){ h.querySelector('td').onclick=function(){
+    var ex=h.querySelector('.exp'); var open=ex.textContent==='−'; ex.textContent=open?'+':'−';
+    var n=h.nextElementSibling;
+    while(n && !n.classList.contains('amgrp')){
+      if(n.classList.contains('amchild')){ n.classList.toggle('hidden', open); }
+      if(n.classList.contains('bcdetail')){ n.classList.add('hidden'); }
+      if(n.classList.contains('bcrow')){ var e2=n.querySelector('.exp'); if(e2&&e2.textContent==='−')e2.textContent='+'; }
+      n=n.nextElementSibling;
+    }
+  };});
+  // BC toggle: xổ NV
   [].forEach.call(tb.querySelectorAll('tr.bcrow'),function(r){ r.querySelector('td').onclick=function(){ var ex=r.querySelector('.exp'); if(ex.textContent==='·')return; var d=r.nextElementSibling; d.classList.toggle('hidden'); ex.textContent=d.classList.contains('hidden')?'+':'−'; }; });
-  var tg=document.getElementById('bcToggle'); tg.style.display=(q)?'none':'block'; tg.textContent=_bcAll?'Thu gọn ▴':('Xem tất cả ('+rows.length+') ▾');
+  document.getElementById('bcToggle').style.display='none';
 }
 document.getElementById('bcSearch').oninput=renderBC;
 document.getElementById('bcToggle').onclick=function(){ _bcAll=!_bcAll; renderBC(); };
