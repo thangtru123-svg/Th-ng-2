@@ -66,6 +66,14 @@ td{padding:7px 6px;border-bottom:1px solid #22263c;text-align:right}
 .rsub{position:absolute;bottom:-18px;font-size:10px;color:var(--sub);white-space:nowrap}
 #toast{position:fixed;left:16px;right:16px;bottom:24px;z-index:40;background:#262a44;color:var(--txt);border:1px solid var(--line);border-radius:12px;padding:12px 14px;font-size:13px;text-align:center;box-shadow:0 8px 24px rgba(0,0,0,.4);opacity:0;transform:translateY(12px);transition:.3s;pointer-events:none}
 #toast.show{opacity:1;transform:translateY(0)}
+.scrollbox{max-height:372px;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.scrollbox::-webkit-scrollbar{width:5px}.scrollbox::-webkit-scrollbar-thumb{background:#3a3f63;border-radius:3px}
+.exp{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:5px;background:var(--card2);color:var(--orange);font-weight:800;margin-right:7px;font-size:13px}
+tr.bcrow td:first-child{cursor:pointer}
+.nvwrap{background:#14172a;border-radius:10px;padding:8px 10px;margin:2px 0 6px}
+.nvwrap table{font-size:12px}
+.nvwrap th{font-size:10px}
+.nvwrap td{padding:5px 4px;border-bottom:1px solid #222640}
 .search{width:100%;background:var(--card2);border:1px solid var(--line);color:var(--txt);border-radius:10px;padding:9px 12px;font-size:14px;margin-bottom:8px}
 .toggle{color:var(--blue);font-size:13px;text-align:center;padding:8px;font-weight:700}
 .delta{font-size:11px;padding:1px 6px;border-radius:6px;margin-left:6px}
@@ -104,6 +112,25 @@ td{padding:7px 6px;border-bottom:1px solid #22263c;text-align:right}
     </div>
   </div>
 
+  <div class="card">
+    <div class="lbl">📦 Tồn đọng chờ xử lý</div>
+    <div class="row" style="margin-top:8px">
+      <div class="chip"><span class="c">🔴 Giao >5 ngày</span><b id="dGiao5">—</b></div>
+      <div class="chip"><span class="c">🔴 Giao >8 ngày</span><b id="dGiao8">—</b></div>
+      <div class="chip"><span class="c">↩️ Trả >48h</span><b id="dTra48">—</b></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="sect">🏬 Top BC tồn giao > 8 ngày</div>
+    <div class="scrollbox"><table><thead><tr><th>Bưu Cục</th><th>AM</th><th>Số đơn</th></tr></thead><tbody id="topGiao8"></tbody></table></div>
+  </div>
+
+  <div class="card">
+    <div class="sect">↩️ Top BC tồn trả > 48h</div>
+    <div class="scrollbox"><table><thead><tr><th>Bưu Cục</th><th>AM</th><th>Số đơn</th></tr></thead><tbody id="topTra48"></tbody></table></div>
+  </div>
+
   <div class="card" id="kpis">
     <div class="kv"><span>Đơn giao thành công (GTC)</span><span class="v" id="kGtc">—</span></div>
     <div class="kv"><span>Đã gán</span><span class="v" id="kGan">—</span></div>
@@ -122,20 +149,22 @@ td{padding:7px 6px;border-bottom:1px solid #22263c;text-align:right}
 
   <div class="card">
     <div class="sect">👤 Theo AM (cần giao cao → thấp)</div>
-    <table><thead><tr><th>AM</th><th>Cần giao</th><th>Đã gán</th><th>GTC</th><th>%GTC</th></tr></thead><tbody id="amBody"></tbody></table>
+    <div class="mut" style="margin-bottom:6px">%GTC = GTC÷gán · %Tot = GTC÷cần giao</div>
+    <table><thead><tr><th>AM</th><th>Cần giao</th><th>Đã gán</th><th>GTC</th><th>%GTC</th><th>%Tot</th></tr></thead><tbody id="amBody"></tbody></table>
   </div>
 
   <div class="card">
     <div class="sect">🏬 Theo Bưu Cục</div>
     <input class="search" id="bcSearch" placeholder="Tìm bưu cục / AM…">
-    <table><thead><tr><th>Bưu Cục</th><th>Cần giao</th><th>GTC</th><th>%GTC</th></tr></thead><tbody id="bcBody"></tbody></table>
+    <div class="mut" style="margin-bottom:6px">Bấm (+) để xem năng suất từng NV</div>
+    <table><thead><tr><th>Bưu Cục</th><th>Cần giao</th><th>GTC</th><th>%GTC</th><th>%Tot</th></tr></thead><tbody id="bcBody"></tbody></table>
     <div class="toggle" id="bcToggle">Xem tất cả ▾</div>
   </div>
 
   <div style="height:60px"></div>
 </div>
 
-<button id="refresh" class="hidden"><span id="rfIco">⟳</span> <span id="rfTxt">Cập nhật nhanh</span></button>
+<button id="refresh" class="hidden"><span id="rfIco">⟳</span> <span id="rfTxt">Cập nhật dữ liệu</span></button>
 <div id="rfRing" class="hidden">
   <svg viewBox="0 0 86 86"><defs><linearGradient id="rgrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff9f1c"/><stop offset="1" stop-color="#ffd166"/></linearGradient></defs>
     <circle class="rbg" cx="43" cy="43" r="36"/>
@@ -192,6 +221,9 @@ function render(d){
   document.getElementById('kgPick').textContent=ton(v.kgPick||0);
   document.getElementById('kgDeliver').textContent=ton(v.kgDeliver||0);
   document.getElementById('kgReturn').textContent=ton(v.kgReturn||0);
+  document.getElementById('dGiao5').textContent=vn(v.dGiao5||0)+' đơn';
+  document.getElementById('dGiao8').textContent=vn(v.dGiao8||0)+' đơn';
+  document.getElementById('dTra48').textContent=vn(v.dTra48||0)+' đơn';
   document.getElementById('kGtc').textContent=vn(v.gtc)+' đơn';
   document.getElementById('kGan').textContent=vn(v.daGan)+' đơn';
   document.getElementById('kChua').textContent=vn(v.chuaGan!=null?v.chuaGan:(v.canGiao-v.daGan))+' đơn';
@@ -213,22 +245,40 @@ function render(d){
   document.getElementById('hotBc50').innerHTML='<span class="lo">'+lo50+' BC</span>';
   document.getElementById('hotBcOk').innerHTML='<span class="ok">'+ok50+' BC</span>';
 
-  // AM table
+  // Top BC tồn đọng
+  var tg8=document.getElementById('topGiao8'); tg8.innerHTML='';
+  bc.filter(function(b){return (b.dGiao8||0)>0;}).sort(function(a,b){return (b.dGiao8||0)-(a.dGiao8||0);}).forEach(function(b){ tg8.insertAdjacentHTML('beforeend','<tr><td>'+b.bc+'</td><td class="mut">'+b.am+'</td><td class="lo" style="font-weight:800">'+vn(b.dGiao8)+'</td></tr>'); });
+  if(!tg8.innerHTML) tg8.innerHTML='<tr><td colspan="3" class="mut">Không có đơn tồn >8 ngày 👍</td></tr>';
+  var tt48=document.getElementById('topTra48'); tt48.innerHTML='';
+  bc.filter(function(b){return (b.dTra48||0)>0;}).sort(function(a,b){return (b.dTra48||0)-(a.dTra48||0);}).forEach(function(b){ tt48.insertAdjacentHTML('beforeend','<tr><td>'+b.bc+'</td><td class="mut">'+b.am+'</td><td class="lo" style="font-weight:800">'+vn(b.dTra48)+'</td></tr>'); });
+  if(!tt48.innerHTML) tt48.innerHTML='<tr><td colspan="3" class="mut">Không có đơn trả >48h 👍</td></tr>';
+
+  // AM table (+ %GTC Total)
   var ab=document.getElementById('amBody'); ab.innerHTML='';
-  am.forEach(function(a,i){ var pp=pct(a.gtc,a.daGan); ab.insertAdjacentHTML('beforeend',
-    '<tr><td>'+(i+1)+'. '+a.am+'</td><td>'+vn(a.canGiao)+'</td><td>'+vn(a.daGan)+'</td><td>'+vn(a.gtc)+'</td><td class="pct '+cls(pp)+'">'+pstr(pp)+'</td></tr>'); });
+  am.forEach(function(a,i){ var pp=pct(a.gtc,a.daGan), pt=pct(a.gtc,a.canGiao); ab.insertAdjacentHTML('beforeend',
+    '<tr><td>'+(i+1)+'. '+a.am+'</td><td>'+vn(a.canGiao)+'</td><td>'+vn(a.daGan)+'</td><td>'+vn(a.gtc)+'</td><td class="pct '+cls(pp)+'">'+pstr(pp)+'</td><td class="pct '+cls(pt)+'">'+pstr(pt)+'</td></tr>'); });
 
   // BC table
   window._bc=bc; renderBC();
 }
 var _bcAll=false;
+function nvTable(nvs){
+  if(!nvs||!nvs.length) return '<div class="mut" style="padding:6px">Chưa có nhân viên hoạt động</div>';
+  var h='<div class="nvwrap"><table><thead><tr><th>Nhân viên</th><th>Gán giao/lấy</th><th>GTC</th><th>%GTC</th></tr></thead><tbody>';
+  nvs.forEach(function(n){ h+='<tr><td>'+n.nv+'</td><td>'+vn(n.ganGiao)+' / '+vn(n.ganLay)+'</td><td>'+vn(n.gtc)+'</td><td class="pct '+cls(n.pct)+'">'+pstr(n.pct)+'</td></tr>'; });
+  return h+'</tbody></table></div>';
+}
 function renderBC(){
   var q=(document.getElementById('bcSearch').value||'').toLowerCase().trim();
   var rows=window._bc.filter(function(b){ return !q || (b.bc+' '+b.am).toLowerCase().indexOf(q)>=0; });
   var show = (_bcAll||q) ? rows : rows.slice(0,15);
   var tb=document.getElementById('bcBody'); tb.innerHTML='';
-  show.forEach(function(b){ var pp=pct(b.gtc,b.daGan); tb.insertAdjacentHTML('beforeend',
-    '<tr><td>'+b.bc+'<div class="mut">'+b.am+'</div></td><td>'+vn(b.canGiao)+'</td><td>'+vn(b.gtc)+'</td><td class="pct '+cls(pp)+'">'+pstr(pp)+'</td></tr>'); });
+  show.forEach(function(b){ var pp=pct(b.gtc,b.daGan), pt=pct(b.gtc,b.canGiao); var hasNv=b.nv&&b.nv.length;
+    tb.insertAdjacentHTML('beforeend',
+      '<tr class="bcrow"><td><span class="exp">'+(hasNv?'+':'·')+'</span>'+b.bc+'<div class="mut">'+b.am+'</div></td><td>'+vn(b.canGiao)+'</td><td>'+vn(b.gtc)+'</td><td class="pct '+cls(pp)+'">'+pstr(pp)+'</td><td class="pct '+cls(pt)+'">'+pstr(pt)+'</td></tr>'+
+      '<tr class="bcdetail hidden"><td colspan="5">'+(hasNv?nvTable(b.nv):'')+'</td></tr>');
+  });
+  [].forEach.call(tb.querySelectorAll('tr.bcrow'),function(r){ r.querySelector('td').onclick=function(){ var ex=r.querySelector('.exp'); if(ex.textContent==='·')return; var d=r.nextElementSibling; d.classList.toggle('hidden'); ex.textContent=d.classList.contains('hidden')?'+':'−'; }; });
   var tg=document.getElementById('bcToggle'); tg.style.display=(q)?'none':'block'; tg.textContent=_bcAll?'Thu gọn ▴':('Xem tất cả ('+rows.length+') ▾');
 }
 document.getElementById('bcSearch').oninput=renderBC;
