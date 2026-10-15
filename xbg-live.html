@@ -219,12 +219,15 @@ function render(d){
   var p = pct(v.gtc, v.daGan);
   document.getElementById('pctBig').innerHTML = pstr(p).replace('%','')+'<span>%</span>';
   document.getElementById('bar').style.width = Math.min(100,p)+'%';
-  document.getElementById('progLine').innerHTML = '<b style="color:var(--green)">'+vn(v.gtc)+'</b> / '+vn(v.daGan)+' đơn giao thành công · cần giao '+vn(v.canGiao);
+  document.getElementById('progLine').innerHTML =
+    '<div><b style="color:var(--green)">'+vn(v.gtc)+'</b> / '+vn(v.daGan)+' đã gán · <b style="color:var(--orange)">%GTC '+pstr(pct(v.gtc,v.daGan))+'</b></div>'+
+    '<div style="margin-top:3px"><b style="color:var(--green)">'+vn(v.gtc)+'</b> / '+vn(v.canGiao)+' cần giao · <b style="color:var(--orange)">Total '+pstr(pct(v.gtc,v.canGiao))+'</b></div>';
   var dt=new Date(d.updatedAt); var hh=(dt.getUTCHours()+7)%24;
   document.getElementById('updAt').textContent = ('0'+hh).slice(-2)+':'+('0'+dt.getUTCMinutes()).slice(-2)+' · '+('0'+dt.getUTCDate()).slice(-2)+'/'+('0'+(dt.getUTCMonth()+1)).slice(-2);
-  document.getElementById('kgPick').textContent=ton(v.kgPick||0);
-  document.getElementById('kgDeliver').textContent=ton(v.kgDeliver||0);
-  document.getElementById('kgReturn').textContent=ton(v.kgReturn||0);
+  var kgTxt=function(kg,don){ return ton(kg)+(don!=null?'<span style="display:block;font-size:11px;color:var(--sub);font-weight:600;margin-top:2px">'+vn(don)+' đơn</span>':''); };
+  document.getElementById('kgPick').innerHTML=kgTxt(v.kgPick||0, v.oLay);
+  document.getElementById('kgDeliver').innerHTML=kgTxt(v.kgDeliver||0, v.oGiao);
+  document.getElementById('kgReturn').innerHTML=kgTxt(v.kgReturn||0, v.oTra);
   document.getElementById('dGiao5').textContent=vn(v.dGiao5||0)+' đơn';
   document.getElementById('dGiao8').textContent=vn(v.dGiao8||0)+' đơn';
   document.getElementById('dTra48').textContent=vn(v.dTra48||0)+' đơn';
