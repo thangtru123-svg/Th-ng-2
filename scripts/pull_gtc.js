@@ -44,9 +44,12 @@ async function proc(h) {
   const hub = String(h.id);
   // --- chưa gán + tồn + trọng lượng (general-info) ---
   let chuaGan = 0, canGiaoSnap = 0, wPick = 0, wDeliver = 0, wReturn = 0;
+  let dGiao5 = 0, dGiao8 = 0, dTra48 = 0; // tồn đọng giao>5ngày(120h), >8ngày(192h), trả>48h
   try {
     const gi = await api('/api/core/oss/v1/report/get-general-info', { hub_ids: [hub], view_mode: 'CLIENT', order_type: 'DAILY_TRIP_NONE' });
     const infos = (((gi.data || [])[0] || {}).general_infos) || [];
+    const sumB = (g, set) => { let s = 0; (g.order_inventories || []).forEach(x => { if (set.has(x.duration)) s += x.total_order || 0; }); return s; };
+    const RET48 = new Set(['48_72', '72_96', '96_120', '120_192', '192']);
     infos.forEach(g => {
       if (g.order_type === 'DELIVER' || g.order_type === 'DELIVER_PRIORITY') {
         const tot = g.total_order || 0; let u6 = 0;
@@ -54,19 +57,26 @@ async function proc(h) {
         chuaGan += EXCL06 ? (tot - u6) : tot;
         canGiaoSnap += tot;
         wDeliver += g.total_weight || 0;
+        dGiao8 += sumB(g, new Set(['192']));
+        dGiao5 += sumB(g, new Set(['120_192', '192']));
       } else if (g.order_type === 'PICK') { wPick += g.total_weight || 0; }
-      else if (g.order_type === 'RETURN') { wReturn += g.total_weight || 0; }
+      else if (g.order_type === 'RETURN') { wReturn += g.total_weight || 0; dTra48 += sumB(g, RET48); }
     });
   } catch (e) { if (e.auth) throw e; }
-  // --- chuyến tạo hôm nay: đã gán + GTC ---
-  const seen = {}; let carry = 0;
+  // --- chuyến tạo hôm nay: đã gán + GTC + theo nhân viên (tài xế) ---
+  const seen = {}; let carry = 0; const nvM = {};
+  const nvOf = (name) => nvM[name] || (nvM[name] = { nv: name || '(không rõ)', ganGiao: 0, ganLay: 0, gtc: 0 });
   for (const st of ['FINISHED', 'ON_TRIP']) {
     for (let pg = 1; pg <= 50; pg++) {
       const j = await api('/api/lastmile/trip/get-trip-list-by-hub', { hub_id: hub, status: st, is_ready: 0, offset: (pg - 1) * 100, limit: 100, reverse: 1, page: pg, size: 100 });
       const a = j.data || []; if (!a.length) break; let allOld = true;
       a.forEach(x => {
         const c = x.tripCode, cd = x.createDateIndex, ed = x.endDateIndex;
-        if (cd === TODAY) seen[c] = { dc: x.deliverCount || 0, ended: ed === TODAY };
+        if (cd === TODAY) {
+          seen[c] = { dc: x.deliverCount || 0, ended: ed === TODAY, driver: x.driverName || '' };
+          const nv = nvOf(x.driverName || '');
+          nv.ganGiao += x.deliverCount || 0; nv.ganLay += x.pickCount || 0;
+        }
         if (cd === YD && ed === TODAY) carry++;
         if (cd >= YD || ed >= TODAY) allOld = false;
       });
@@ -80,14 +90,19 @@ async function proc(h) {
   let gtc = 0;
   for (const [c, v] of trips) {
     if (v.dc <= 0) continue;
+    let g = 0;
     for (let pg = 1; pg <= 15; pg++) {
       const j = await api('/api/lastmile/trip/get-trip-items', { trip_code: c, tripCode: c, typeList: ['DELIVER'], offset: (pg - 1) * 100, limit: 100, page: pg, size: 100 });
       const a = j.data || []; if (!a.length) break;
-      a.forEach(it => { if (it.isSucceeded === true) gtc++; });
+      a.forEach(it => { if (it.isSucceeded === true) g++; });
       if (a.length < 100) break;
     }
+    gtc += g; nvOf(v.driver).gtc += g;
   }
-  return { name: h.name, am: h.am, tinh: h.tinh, chuaGan, daGan, gtc, nTripToday, nChuaXong, carry, canGiaoSnap, wPick, wDeliver, wReturn };
+  const nv = Object.values(nvM).filter(n => n.ganGiao > 0 || n.ganLay > 0 || n.gtc > 0)
+    .map(n => ({ nv: n.nv, ganGiao: n.ganGiao, ganLay: n.ganLay, gtc: n.gtc, pct: n.ganGiao > 0 ? Math.round(n.gtc / n.ganGiao * 1000) / 10 : 0 }))
+    .sort((a, b) => b.ganGiao - a.ganGiao);
+  return { name: h.name, am: h.am, tinh: h.tinh, chuaGan, daGan, gtc, nTripToday, nChuaXong, carry, canGiaoSnap, wPick, wDeliver, wReturn, dGiao5, dGiao8, dTra48, nv };
 }
 
 // ----- pool song song -----
@@ -109,10 +124,10 @@ async function pool(items, n, fn) {
   const errN = res.length - hubs.length;
   // tổng hợp
   const amM = {}, bcL = [];
-  let sum = { chuaGan: 0, daGan: 0, gtc: 0, nTripToday: 0, nChuaXong: 0, carry: 0, wPick: 0, wDeliver: 0, wReturn: 0 };
+  let sum = { chuaGan: 0, daGan: 0, gtc: 0, nTripToday: 0, nChuaXong: 0, carry: 0, wPick: 0, wDeliver: 0, wReturn: 0, dGiao5: 0, dGiao8: 0, dTra48: 0 };
   for (const h of hubs) {
     const cg = h.chuaGan + h.daGan;
-    bcL.push({ bc: h.name, am: h.am, tinh: h.tinh, canGiao: cg, daGan: h.daGan, gtc: h.gtc });
+    bcL.push({ bc: h.name, am: h.am, tinh: h.tinh, canGiao: cg, daGan: h.daGan, gtc: h.gtc, dGiao5: h.dGiao5, dGiao8: h.dGiao8, dTra48: h.dTra48, nv: h.nv || [] });
     const a = amM[h.am] || (amM[h.am] = { am: h.am, canGiao: 0, daGan: 0, gtc: 0 });
     a.canGiao += cg; a.daGan += h.daGan; a.gtc += h.gtc;
     for (const k in sum) sum[k] += h[k] || 0;
@@ -120,7 +135,8 @@ async function pool(items, n, fn) {
   const vung = {
     canGiao: sum.chuaGan + sum.daGan, daGan: sum.daGan, gtc: sum.gtc, chuaGan: sum.chuaGan,
     nTrip: sum.nTripToday, nChuaXong: sum.nChuaXong,
-    kgPick: Math.round(sum.wPick), kgDeliver: Math.round(sum.wDeliver), kgReturn: Math.round(sum.wReturn)
+    kgPick: Math.round(sum.wPick), kgDeliver: Math.round(sum.wDeliver), kgReturn: Math.round(sum.wReturn),
+    dGiao5: sum.dGiao5, dGiao8: sum.dGiao8, dTra48: sum.dTra48
   };
   const out = {
     updatedAt: new Date().toISOString(), excl06: EXCL06, hourVN: HOUR, hubsOk: hubs.length, hubsErr: errN,
