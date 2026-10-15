@@ -3,7 +3,15 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-<title>TBB Trực Tiếp — XBG</title>
+<title>XBG - Vận hành</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0e0f1a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="XBG - Vận hành">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" href="icon-192.png">
 <style>
 :root{--bg:#0e0f1a;--bg2:#171a2b;--card:#1b1e30;--card2:#222641;--line:#2b2f4a;--txt:#eef0fb;--sub:#9aa0c0;--orange:#ff9f1c;--green:#38d39f;--red:#ff5d6c;--blue:#5b8cff}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -60,7 +68,7 @@ td{padding:7px 6px;border-bottom:1px solid #22263c;text-align:right}
 <body>
 
 <div id="pin">
-  <h1>🔒 TBB Trực Tiếp</h1>
+  <h1>🔒 XBG - Vận hành</h1>
   <div id="pinDots"><div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
   <div id="pinErr"></div>
   <div id="pad"></div>
@@ -68,7 +76,7 @@ td{padding:7px 6px;border-bottom:1px solid #22263c;text-align:right}
 
 <div id="app" class="hidden">
   <div class="hd">
-    <div class="live"><span class="ldot"></span> TBB TRỰC TIẾP</div>
+    <div class="live"><span class="ldot"></span> XBG · VẬN HÀNH</div>
     <div class="t" id="updAt">—</div>
   </div>
 
@@ -123,7 +131,7 @@ td{padding:7px 6px;border-bottom:1px solid #22263c;text-align:right}
 
 <script>
 // ====== CONFIG ======
-var PIN = "1368";                      // << PIN mở app (đổi được)
+var PIN = "1986";                      // << PIN mở app (đổi được)
 var REFRESH_API = "/api/tbb-refresh";  // endpoint kích hoạt kéo số ngay
 var DATA = "gtc_live.json";
 var HIST = "gtc_history.json";
