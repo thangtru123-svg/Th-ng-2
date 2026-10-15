@@ -58,6 +58,12 @@ td{padding:7px 6px;border-bottom:1px solid #22263c;text-align:right}
 #refresh:disabled{opacity:.6}
 .spin{width:16px;height:16px;border:2px solid rgba(0,0,0,.3);border-top-color:#1a1200;border-radius:50%;animation:sp .8s linear infinite}
 @keyframes sp{to{transform:rotate(360deg)}}
+#rfRing{position:fixed;right:16px;bottom:16px;width:86px;height:86px;z-index:20;display:flex;align-items:center;justify-content:center;filter:drop-shadow(0 8px 24px rgba(255,159,28,.35))}
+#rfRing svg{position:absolute;inset:0;transform:rotate(-90deg)}
+#rfRing .rbg{fill:#171a2b;stroke:#2b2f4a;stroke-width:7}
+#rfRing .rfg{fill:none;stroke:url(#rgrad);stroke-width:7;stroke-linecap:round;transition:stroke-dashoffset .4s ease}
+.rpct{font-size:21px;font-weight:800;color:var(--orange);line-height:1}
+.rsub{position:absolute;bottom:-18px;font-size:10px;color:var(--sub);white-space:nowrap}
 .search{width:100%;background:var(--card2);border:1px solid var(--line);color:var(--txt);border-radius:10px;padding:9px 12px;font-size:14px;margin-bottom:8px}
 .toggle{color:var(--blue);font-size:13px;text-align:center;padding:8px;font-weight:700}
 .delta{font-size:11px;padding:1px 6px;border-radius:6px;margin-left:6px}
@@ -128,6 +134,14 @@ td{padding:7px 6px;border-bottom:1px solid #22263c;text-align:right}
 </div>
 
 <button id="refresh" class="hidden"><span id="rfIco">⟳</span> <span id="rfTxt">Cập nhật nhanh</span></button>
+<div id="rfRing" class="hidden">
+  <svg viewBox="0 0 86 86"><defs><linearGradient id="rgrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff9f1c"/><stop offset="1" stop-color="#ffd166"/></linearGradient></defs>
+    <circle class="rbg" cx="43" cy="43" r="36"/>
+    <circle class="rfg" id="rfArc" cx="43" cy="43" r="36" stroke-dasharray="226.2" stroke-dashoffset="226.2"/>
+  </svg>
+  <div class="rpct" id="rfPct">0%</div>
+  <div class="rsub" id="rfSub">Đang quét…</div>
+</div>
 
 <script>
 // ====== CONFIG ======
@@ -228,23 +242,29 @@ function yesterdaySameHour(d){
 }
 
 // ===== Cập nhật nhanh =====
+var RING_C=226.2; // chu vi vòng (2π·36)
+function setRing(p){ p=Math.max(0,Math.min(100,p)); var a=document.getElementById('rfArc'); if(a)a.setAttribute('stroke-dashoffset',(RING_C*(1-p/100)).toFixed(1)); var t=document.getElementById('rfPct'); if(t)t.textContent=Math.round(p)+'%'; }
 document.getElementById('refresh').onclick=async function(){
-  var btn=this, ico=document.getElementById('rfIco'), txt=document.getElementById('rfTxt');
-  btn.disabled=true; ico.outerHTML='<span class="spin" id="rfIco"></span>'; txt.textContent='Đang kéo số…';
+  var pill=document.getElementById('refresh'), ring=document.getElementById('rfRing'), sub=document.getElementById('rfSub');
+  pill.classList.add('hidden'); ring.classList.remove('hidden'); setRing(0); sub.textContent='Đang gửi lệnh…';
+  var t0=Date.now(), anim=null, iv=null, fin=false;
+  function finish(msg, full){ if(fin)return; fin=true; if(anim)clearInterval(anim); if(iv)clearInterval(iv);
+    if(full){ setRing(100); sub.textContent='✓ Xong'; }
+    setTimeout(function(){ ring.classList.add('hidden'); pill.classList.remove('hidden'); if(msg)document.getElementById('updAt').textContent=msg; }, full?1000:250); }
   try{
     var r=await fetch(REFRESH_API,{method:'POST'});
-    if(!r.ok) throw 0;
-    // kéo mất ~3-4 phút; poll gtc_live.json đổi updatedAt
+    if(!r.ok){ var j={}; try{ j=await r.json(); }catch(e){} finish(j.error||'Chưa bật nút (thiếu token Vercel)'); return; }
     var before=null; try{ before=(await fetch(DATA+'?t='+Date.now()).then(function(x){return x.json();})).updatedAt; }catch(e){}
-    txt.textContent='Đang xử lý (~3-4p)…';
-    var tries=0; var iv=setInterval(async function(){
-      tries++;
+    sub.textContent='Đang quét 100 BC…';
+    // vòng tiến độ ước tính theo thời gian, tiệm cận ~95%
+    anim=setInterval(function(){ var el=Date.now()-t0; setRing(95*(1-Math.exp(-el/70000))); }, 400);
+    // nhảy 100% khi dữ liệu mới về
+    var tries=0; iv=setInterval(async function(){ tries++;
       try{ var d=await fetch(DATA+'?t='+Date.now()).then(function(x){return x.json();});
-        if(d.updatedAt!==before){ clearInterval(iv); render(d); done('✓ Đã cập nhật'); } }catch(e){}
-      if(tries>60){ clearInterval(iv); done('Vẫn đang chạy — tải lại sau'); }
+        if(d.updatedAt!==before){ render(d); finish('✓ Đã cập nhật', true); } }catch(e){}
+      if(tries>80){ finish('Vẫn đang chạy — mở lại sau'); }
     },5000);
-  }catch(e){ done('Không kích hoạt được'); }
-  function done(m){ var i=document.getElementById('rfIco'); if(i)i.outerHTML='<span id="rfIco">⟳</span>'; document.getElementById('rfTxt').textContent='Cập nhật nhanh'; btn.disabled=false; document.getElementById('updAt').textContent=m; setTimeout(load,1500); }
+  }catch(e){ finish('Không kích hoạt được'); }
 };
 </script>
 </body>
