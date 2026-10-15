@@ -1,7 +1,7 @@
 {
   "name": "XBG - Vận hành",
   "short_name": "XBG",
-  "start_url": "/tbb-live.html",
+  "start_url": "/xbg-live.html",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait",
