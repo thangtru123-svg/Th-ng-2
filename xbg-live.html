@@ -64,6 +64,8 @@ td{padding:7px 6px;border-bottom:1px solid #22263c;text-align:right}
 #rfRing .rfg{fill:none;stroke:url(#rgrad);stroke-width:7;stroke-linecap:round;transition:stroke-dashoffset .4s ease}
 .rpct{font-size:21px;font-weight:800;color:var(--orange);line-height:1}
 .rsub{position:absolute;bottom:-18px;font-size:10px;color:var(--sub);white-space:nowrap}
+#toast{position:fixed;left:16px;right:16px;bottom:24px;z-index:40;background:#262a44;color:var(--txt);border:1px solid var(--line);border-radius:12px;padding:12px 14px;font-size:13px;text-align:center;box-shadow:0 8px 24px rgba(0,0,0,.4);opacity:0;transform:translateY(12px);transition:.3s;pointer-events:none}
+#toast.show{opacity:1;transform:translateY(0)}
 .search{width:100%;background:var(--card2);border:1px solid var(--line);color:var(--txt);border-radius:10px;padding:9px 12px;font-size:14px;margin-bottom:8px}
 .toggle{color:var(--blue);font-size:13px;text-align:center;padding:8px;font-weight:700}
 .delta{font-size:11px;padding:1px 6px;border-radius:6px;margin-left:6px}
@@ -142,6 +144,7 @@ td{padding:7px 6px;border-bottom:1px solid #22263c;text-align:right}
   <div class="rpct" id="rfPct">0%</div>
   <div class="rsub" id="rfSub">Đang quét…</div>
 </div>
+<div id="toast"></div>
 
 <script>
 // ====== CONFIG ======
@@ -242,6 +245,7 @@ function yesterdaySameHour(d){
 }
 
 // ===== Cập nhật nhanh =====
+function toast(m){ var t=document.getElementById('toast'); t.textContent=m; t.classList.add('show'); clearTimeout(window._tt); window._tt=setTimeout(function(){t.classList.remove('show');},4000); }
 var RING_C=226.2; // chu vi vòng (2π·36)
 function setRing(p){ p=Math.max(0,Math.min(100,p)); var a=document.getElementById('rfArc'); if(a)a.setAttribute('stroke-dashoffset',(RING_C*(1-p/100)).toFixed(1)); var t=document.getElementById('rfPct'); if(t)t.textContent=Math.round(p)+'%'; }
 document.getElementById('refresh').onclick=async function(){
@@ -250,7 +254,7 @@ document.getElementById('refresh').onclick=async function(){
   var t0=Date.now(), anim=null, iv=null, fin=false;
   function finish(msg, full){ if(fin)return; fin=true; if(anim)clearInterval(anim); if(iv)clearInterval(iv);
     if(full){ setRing(100); sub.textContent='✓ Xong'; }
-    setTimeout(function(){ ring.classList.add('hidden'); pill.classList.remove('hidden'); if(msg)document.getElementById('updAt').textContent=msg; }, full?1000:250); }
+    setTimeout(function(){ ring.classList.add('hidden'); pill.classList.remove('hidden'); if(msg)toast(msg); }, full?1000:250); }
   try{
     var r=await fetch(REFRESH_API,{method:'POST'});
     if(!r.ok){ var j={}; try{ j=await r.json(); }catch(e){} finish(j.error||'Chưa bật nút (thiếu token Vercel)'); return; }
