@@ -308,8 +308,9 @@ function render(d){
   bc.filter(function(b){return (b.dTra48||0)>0;}).sort(function(a,b){return (b.dTra48||0)-(a.dTra48||0);}).forEach(function(b){ tt48.insertAdjacentHTML('beforeend','<tr><td>'+b.bc+'</td><td class="mut">'+b.am+'</td><td class="lo" style="font-weight:800">'+vn(b.dTra48)+'</td></tr>'); });
   if(!tt48.innerHTML) tt48.innerHTML='<tr><td colspan="3" class="mut">Không có đơn trả >48h 👍</td></tr>';
 
-  // AM table (+ %GTC Total)
+  // AM table (+ %GTC Total) — xếp tệ→tốt theo %GTC
   var ab=document.getElementById('amBody'); ab.innerHTML='';
+  am.sort(function(a,b){return pct(a.gtc,a.daGan)-pct(b.gtc,b.daGan);});
   am.forEach(function(a,i){ var pp=pct(a.gtc,a.daGan), pt=pct(a.gtc,a.canGiao); ab.insertAdjacentHTML('beforeend',
     '<tr><td>'+(i+1)+'. '+a.am+'</td><td>'+vn(a.canGiao)+'</td><td>'+vn(a.daGan)+'</td><td>'+vn(a.gtc)+'</td><td class="pct '+cls(pp)+'">'+pstr(pp)+'</td><td class="pct '+cls(pt)+'">'+pstr(pt)+'</td></tr>'); });
 
@@ -329,10 +330,11 @@ function renderBC(){
   // gom BC theo AM
   var G={};
   window._bc.forEach(function(b){ var k=b.am||'(không rõ)'; var g=G[k]||(G[k]={am:k,canGiao:0,daGan:0,gtc:0,bcs:[]}); g.canGiao+=b.canGiao; g.daGan+=b.daGan; g.gtc+=b.gtc; g.bcs.push(b); });
-  var gl=Object.keys(G).map(function(k){return G[k];}).sort(function(a,b){return b.canGiao-a.canGiao;});
+  var gl=Object.keys(G).map(function(k){return G[k];}).sort(function(a,b){return pct(a.gtc,a.daGan)-pct(b.gtc,b.daGan);});
   gl.forEach(function(g){
     var bcs=g.bcs, amMatch=g.am.toLowerCase().indexOf(q)>=0;
     if(q && !amMatch){ bcs=g.bcs.filter(function(b){return b.bc.toLowerCase().indexOf(q)>=0;}); if(!bcs.length) return; }
+    bcs=bcs.slice().sort(function(a,b){return pct(a.gtc,a.daGan)-pct(b.gtc,b.daGan);});
     var open=!!q;
     var pp=pct(g.gtc,g.daGan), pt=pct(g.gtc,g.canGiao);
     tb.insertAdjacentHTML('beforeend',
@@ -438,22 +440,25 @@ function renderN1(d){
   function setFd(id,x){ var el=document.getElementById(id); el.textContent=nS(x); el.className=''; el.style.color=({ok:'var(--green)',mid:'var(--orange)',lo:'var(--red)',mut:'var(--sub)'})[fdCls(x)]; }
   setFd('n1FdTotal',v.fdTotal); setFd('n1FdSme',v.fdSme); setFd('n1FdTts',v.fdTts); setFd('n1FdShopee',v.fdShopee);
 
-  // GTC Total theo AM
+  var byPctAsc=function(a,b){return (a.pct||0)-(b.pct||0);}; // %GTC thấp (tệ) lên đầu
+  var byFdDesc=function(a,b){return (b.fdTotal==null?-1:b.fdTotal)-(a.fdTotal==null?-1:a.fdTotal);}; // Tỉ lệ trả cao (tệ) lên đầu
+
+  // GTC Total theo AM — tệ→tốt theo %GTC
   var gb=document.getElementById('n1GtcBody'); gb.innerHTML='';
-  d.am.forEach(function(a){
+  d.am.slice().sort(byPctAsc).forEach(function(a){
     gb.insertAdjacentHTML('beforeend',
       '<tr class="amgrp"><td><span class="exp">+</span><b>'+a.am+'</b><div class="mut">'+a.bc.length+' bưu cục</div></td><td>'+vn(a.vol)+'</td><td>'+nS(a.gan)+'</td><td class="pct '+cls(a.pct)+'">'+nS(a.pct)+'</td><td>'+vn(a.ngtc)+'</td></tr>');
-    a.bc.forEach(function(b){ gb.insertAdjacentHTML('beforeend',
+    a.bc.slice().sort(byPctAsc).forEach(function(b){ gb.insertAdjacentHTML('beforeend',
       '<tr class="amchild hidden"><td>'+b.bc+'</td><td>'+vn(b.vol)+'</td><td>'+nS(b.gan)+'</td><td class="pct '+cls(b.pct)+'">'+nS(b.pct)+'</td><td>'+vn(b.ngtc)+'</td></tr>'); });
   });
   wireExp(gb);
 
-  // Tỉ lệ trả theo AM (4 mục)
+  // Tỉ lệ trả theo AM (4 mục) — tệ→tốt theo Tỉ lệ trả Total (cao=tệ lên đầu)
   var fb=document.getElementById('n1FdBody'); fb.innerHTML='';
-  d.am.forEach(function(a){
+  d.am.slice().sort(byFdDesc).forEach(function(a){
     fb.insertAdjacentHTML('beforeend',
       '<tr class="amgrp"><td><span class="exp">+</span><b>'+a.am+'</b><div class="mut">'+a.bc.length+' bưu cục</div></td><td class="pct '+fdCls(a.fdTotal)+'">'+nS(a.fdTotal)+'</td><td class="pct '+fdCls(a.fdSme)+'">'+nS(a.fdSme)+'</td><td class="pct '+fdCls(a.fdTts)+'">'+nS(a.fdTts)+'</td><td class="pct '+fdCls(a.fdShopee)+'">'+nS(a.fdShopee)+'</td></tr>');
-    a.bc.forEach(function(b){ fb.insertAdjacentHTML('beforeend',
+    a.bc.slice().sort(byFdDesc).forEach(function(b){ fb.insertAdjacentHTML('beforeend',
       '<tr class="amchild hidden"><td>'+b.bc+'</td><td class="pct '+fdCls(b.fdTotal)+'">'+nS(b.fdTotal)+'</td><td class="pct '+fdCls(b.fdSme)+'">'+nS(b.fdSme)+'</td><td class="pct '+fdCls(b.fdTts)+'">'+nS(b.fdTts)+'</td><td class="pct '+fdCls(b.fdShopee)+'">'+nS(b.fdShopee)+'</td></tr>'); });
   });
   wireExp(fb);
