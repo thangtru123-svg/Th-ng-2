@@ -54,8 +54,8 @@ export default async function handler(req, res) {
     function fdBC(rows) { const day = latestDay(rows, 1); const m = {}; for (let k = 1; k < rows.length; k++) { const r = rows[k]; const bc = r[0]; if (!bc || bc === 'Grand Total') continue; if (dstr(r[1]) !== day) continue; m[bc] = f(r[3]) * 100; } return m; }
     const FA = { total: fdAM(fTA), sme: fdAM(fSA), tts: fdAM(fTtA), shopee: fdAM(fShA) };
     const FB = { total: fdBC(fTB), sme: fdBC(fSB), tts: fdBC(fTtB), shopee: fdBC(fShB) };
-    const vungFD = {}; // weighted Σtrat/Σvol ×100 over AM
-    for (const cat of ['total', 'sme', 'tts', 'shopee']) { let num = 0, den = 0; for (const am in FA[cat]) { num += FA[cat][am].trat; den += FA[cat][am].vol; } vungFD[cat] = den > 0 ? Math.round(num / den * 1000) / 10 : null; }
+    const vungFD = {}; // weighted Σ(fd×%Vol)/Σ(%Vol) over AM (đúng quy tắc toàn vùng)
+    for (const cat of ['total', 'sme', 'tts', 'shopee']) { let num = 0, den = 0; for (const am in FA[cat]) { num += FA[cat][am].fd * FA[cat][am].vol; den += FA[cat][am].vol; } vungFD[cat] = den > 0 ? Math.round(num / den * 10) / 10 : null; }
     // ===== build AM list (union GTC AM) =====
     const amNames = new Set([...Object.keys(amGTC), ...Object.keys(FA.total)]);
     const am = [];

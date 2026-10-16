@@ -83,6 +83,15 @@ tr.amchild td:first-child{padding-left:16px;font-size:12.5px}
 .delta{font-size:11px;padding:1px 6px;border-radius:6px;margin-left:6px}
 .dup{background:rgba(56,211,159,.15);color:var(--green)}
 .ddn{background:rgba(255,93,108,.15);color:var(--red)}
+/* tabs */
+.tabs{display:flex;gap:8px;margin-bottom:12px}
+.tab{flex:1;text-align:center;padding:11px;border-radius:12px;background:var(--card2);color:var(--sub);font-weight:800;font-size:13px;border:1px solid var(--line)}
+.tab.on{background:linear-gradient(180deg,var(--orange),#ff8c00);color:#1a1200;border-color:transparent}
+.ovgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
+.ovcell{background:var(--card2);border-radius:12px;padding:10px}
+.ovcell b{display:block;font-size:20px;margin-top:3px}
+.ovcell .c{font-size:11px;color:var(--sub)}
+.n1day{font-size:12px;color:var(--sub);background:var(--card2);border-radius:8px;padding:3px 8px}
 </style>
 </head>
 <body>
@@ -100,6 +109,12 @@ tr.amchild td:first-child{padding-left:16px;font-size:12.5px}
     <div class="t" id="updAt">—</div>
   </div>
 
+  <div class="tabs">
+    <div class="tab on" id="tabBtnLive" onclick="setTab('live')">🔴 Trực tiếp</div>
+    <div class="tab" id="tabBtnN1" onclick="setTab('n1')">📅 Ngày N-1</div>
+  </div>
+
+  <div id="tabLive">
   <div class="card">
     <div class="lbl">🎯 %GTC toàn vùng · tới hiện tại</div>
     <div class="big" id="pctBig">—<span>%</span></div>
@@ -163,6 +178,39 @@ tr.amchild td:first-child{padding-left:16px;font-size:12.5px}
     <div class="mut" style="margin-bottom:6px">Bấm AM để xổ Bưu Cục · bấm (+) ở BC để xem NV</div>
     <table><thead><tr><th>Bưu Cục</th><th>Cần giao</th><th>GTC</th><th>%GTC</th><th>%Tot</th></tr></thead><tbody id="bcBody"></tbody></table>
     <div class="toggle" id="bcToggle">Xem tất cả ▾</div>
+  </div>
+  </div><!-- /tabLive -->
+
+  <div id="tabN1" class="hidden">
+    <div class="card">
+      <div class="lbl">📅 Ngày N-1 <span class="n1day" id="n1Day">—</span></div>
+      <div class="sect" style="margin-top:10px">🎯 GTC Total · toàn Vùng</div>
+      <div class="ovgrid">
+        <div class="ovcell"><span class="c">Volume</span><b id="n1Vol">—</b></div>
+        <div class="ovcell"><span class="c">Tỉ lệ gán</span><b id="n1Gan">—</b></div>
+        <div class="ovcell"><span class="c">Tỉ lệ GTC</span><b id="n1Pct" style="color:var(--orange)">—</b></div>
+        <div class="ovcell"><span class="c">Số đơn GTC</span><b id="n1Ngtc">—</b></div>
+      </div>
+      <div class="sect" style="margin-top:14px">↩️ Tỉ lệ trả · toàn Vùng</div>
+      <div class="ovgrid">
+        <div class="ovcell"><span class="c">Total</span><b id="n1FdTotal">—</b></div>
+        <div class="ovcell"><span class="c">SME</span><b id="n1FdSme">—</b></div>
+        <div class="ovcell"><span class="c">TTS</span><b id="n1FdTts">—</b></div>
+        <div class="ovcell"><span class="c">Shopee</span><b id="n1FdShopee">—</b></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="sect">👤 GTC Total theo AM</div>
+      <div class="mut" style="margin-bottom:6px">Bấm (+) để xổ Bưu Cục</div>
+      <table><thead><tr><th>AM</th><th>Vol</th><th>%Gán</th><th>%GTC</th><th>Đơn GTC</th></tr></thead><tbody id="n1GtcBody"></tbody></table>
+    </div>
+
+    <div class="card">
+      <div class="sect">↩️ Tỉ lệ trả theo AM</div>
+      <div class="mut" style="margin-bottom:6px">Bấm (+) để xổ Bưu Cục · thấp = tốt</div>
+      <table><thead><tr><th>AM</th><th>Total</th><th>SME</th><th>TTS</th><th>Shopee</th></tr></thead><tbody id="n1FdBody"></tbody></table>
+    </div>
   </div>
 
   <div style="height:60px"></div>
@@ -329,9 +377,9 @@ var RING_C=226.2; // chu vi vòng (2π·36)
 function setRing(p){ p=Math.max(0,Math.min(100,p)); var a=document.getElementById('rfArc'); if(a)a.setAttribute('stroke-dashoffset',(RING_C*(1-p/100)).toFixed(1)); var t=document.getElementById('rfPct'); if(t)t.textContent=Math.round(p)+'%'; }
 document.getElementById('refresh').onclick=async function(){
   var pill=document.getElementById('refresh'), ring=document.getElementById('rfRing'), sub=document.getElementById('rfSub');
-  pill.classList.add('hidden'); ring.classList.remove('hidden'); setRing(0); sub.textContent='Đang gửi lệnh…';
+  _scanning=true; pill.classList.add('hidden'); ring.classList.remove('hidden'); setRing(0); sub.textContent='Đang gửi lệnh…';
   var t0=Date.now(), anim=null, iv=null, fin=false;
-  function finish(msg, full){ if(fin)return; fin=true; if(anim)clearInterval(anim); if(iv)clearInterval(iv);
+  function finish(msg, full){ if(fin)return; fin=true; _scanning=false; if(anim)clearInterval(anim); if(iv)clearInterval(iv);
     if(full){ setRing(100); sub.textContent='✓ Xong'; }
     setTimeout(function(){ ring.classList.add('hidden'); pill.classList.remove('hidden'); if(msg)toast(msg); }, full?1000:250); }
   try{
@@ -349,6 +397,67 @@ document.getElementById('refresh').onclick=async function(){
     },5000);
   }catch(e){ finish('Không kích hoạt được'); }
 };
+
+// ===== Tab + Ngày N-1 =====
+var _n1loaded=false, _scanning=false;
+function setTab(which){
+  var live=which==='live';
+  document.getElementById('tabBtnLive').classList.toggle('on',live);
+  document.getElementById('tabBtnN1').classList.toggle('on',!live);
+  document.getElementById('tabLive').classList.toggle('hidden',!live);
+  document.getElementById('tabN1').classList.toggle('hidden',live);
+  // nút Cập nhật chỉ hiện ở tab trực tiếp (N-1 là số chốt từ Sheet)
+  document.getElementById('refresh').classList.toggle('hidden', !live || _scanning);
+  if(!live && !_n1loaded){ loadN1(); }
+}
+function fdCls(x){ return x==null?'mut':(x<=8?'ok':(x<=12?'mid':'lo')); }
+function nS(x){ return x==null?'—':(''+x).replace('.',',')+'%'; }
+async function loadN1(){
+  try{
+    var d = await fetch('n1.json?t='+Date.now()).then(function(r){return r.json();});
+    _n1loaded=true; renderN1(d);
+  }catch(e){
+    try{ var d2=await fetch(REFRESH_API.replace('xbg-refresh','n1')+'?t='+Date.now()).then(function(r){return r.json();}); if(d2&&d2.vung){_n1loaded=true;renderN1(d2);return;} }catch(e2){}
+    document.getElementById('n1Day').textContent='Lỗi tải dữ liệu N-1';
+  }
+}
+function wireExp(tb){
+  [].forEach.call(tb.querySelectorAll('tr.amgrp'),function(h){ h.querySelector('td').onclick=function(){
+    var ex=h.querySelector('.exp'); var open=ex.textContent==='−'; ex.textContent=open?'+':'−';
+    var n=h.nextElementSibling;
+    while(n && !n.classList.contains('amgrp')){ if(n.classList.contains('amchild')) n.classList.toggle('hidden', open); n=n.nextElementSibling; }
+  };});
+}
+function renderN1(d){
+  var v=d.vung;
+  document.getElementById('n1Day').textContent='dữ liệu ngày '+(d.day||'').split('-').reverse().join('/');
+  document.getElementById('n1Vol').textContent=vn(v.vol)+' đơn';
+  document.getElementById('n1Gan').textContent=nS(v.gan);
+  document.getElementById('n1Pct').textContent=nS(v.pct);
+  document.getElementById('n1Ngtc').textContent=vn(v.ngtc)+' đơn';
+  function setFd(id,x){ var el=document.getElementById(id); el.textContent=nS(x); el.className=''; el.style.color=({ok:'var(--green)',mid:'var(--orange)',lo:'var(--red)',mut:'var(--sub)'})[fdCls(x)]; }
+  setFd('n1FdTotal',v.fdTotal); setFd('n1FdSme',v.fdSme); setFd('n1FdTts',v.fdTts); setFd('n1FdShopee',v.fdShopee);
+
+  // GTC Total theo AM
+  var gb=document.getElementById('n1GtcBody'); gb.innerHTML='';
+  d.am.forEach(function(a){
+    gb.insertAdjacentHTML('beforeend',
+      '<tr class="amgrp"><td><span class="exp">+</span><b>'+a.am+'</b><div class="mut">'+a.bc.length+' bưu cục</div></td><td>'+vn(a.vol)+'</td><td>'+nS(a.gan)+'</td><td class="pct '+cls(a.pct)+'">'+nS(a.pct)+'</td><td>'+vn(a.ngtc)+'</td></tr>');
+    a.bc.forEach(function(b){ gb.insertAdjacentHTML('beforeend',
+      '<tr class="amchild hidden"><td>'+b.bc+'</td><td>'+vn(b.vol)+'</td><td>'+nS(b.gan)+'</td><td class="pct '+cls(b.pct)+'">'+nS(b.pct)+'</td><td>'+vn(b.ngtc)+'</td></tr>'); });
+  });
+  wireExp(gb);
+
+  // Tỉ lệ trả theo AM (4 mục)
+  var fb=document.getElementById('n1FdBody'); fb.innerHTML='';
+  d.am.forEach(function(a){
+    fb.insertAdjacentHTML('beforeend',
+      '<tr class="amgrp"><td><span class="exp">+</span><b>'+a.am+'</b><div class="mut">'+a.bc.length+' bưu cục</div></td><td class="pct '+fdCls(a.fdTotal)+'">'+nS(a.fdTotal)+'</td><td class="pct '+fdCls(a.fdSme)+'">'+nS(a.fdSme)+'</td><td class="pct '+fdCls(a.fdTts)+'">'+nS(a.fdTts)+'</td><td class="pct '+fdCls(a.fdShopee)+'">'+nS(a.fdShopee)+'</td></tr>');
+    a.bc.forEach(function(b){ fb.insertAdjacentHTML('beforeend',
+      '<tr class="amchild hidden"><td>'+b.bc+'</td><td class="pct '+fdCls(b.fdTotal)+'">'+nS(b.fdTotal)+'</td><td class="pct '+fdCls(b.fdSme)+'">'+nS(b.fdSme)+'</td><td class="pct '+fdCls(b.fdTts)+'">'+nS(b.fdTts)+'</td><td class="pct '+fdCls(b.fdShopee)+'">'+nS(b.fdShopee)+'</td></tr>'); });
+  });
+  wireExp(fb);
+}
 </script>
 </body>
 </html>
