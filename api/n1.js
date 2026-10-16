@@ -29,7 +29,7 @@ const i = x => { const v = parseInt(String(x == null ? '' : x).replace(/[^0-9\-]
 const latestDay = (rows, dcol) => { let mx = ''; for (let k = 1; k < rows.length; k++) { const d = dstr(rows[k][dcol]); if (d && d > mx) mx = d; } return mx; };
 
 let _cache = { t: 0, data: null };
-module.exports = async function handler(req, res) {
+export default async function handler(req, res) {
   try {
     if (!REFRESH_TOKEN) { res.status(500).json({ ok: false, error: 'Chưa cấu hình GOOGLE_REFRESH_TOKEN' }); return; }
     const now = Date.now();
