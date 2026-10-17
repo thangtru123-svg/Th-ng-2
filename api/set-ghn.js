@@ -1,7 +1,7 @@
 // POST /api/set-ghn — cập nhật GitHub secret GHN_SESSION từ token GHN (dùng cho Shortcut iOS "1 chạm").
 // Body JSON: { token, key }. Env Vercel: GH_DISPATCH_TOKEN (classic PAT scope `repo`), SET_GHN_KEY (mã bảo vệ).
 // Luồng: lấy public-key của repo → mã hoá token (libsodium sealed box) → PUT secret GHN_SESSION.
-import _sodium from 'libsodium-wrappers';
+import sodium from 'tweetsodium';
 
 const OWNER = 'thangtru123-svg', REPO = 'Th-ng-2', SECRET = 'GHN_SESSION';
 
@@ -26,11 +26,9 @@ export default async function handler(req, res) {
     const pkR = await fetch(`https://api.github.com/repos/${OWNER}/${REPO}/actions/secrets/public-key`, { headers: H });
     if (!pkR.ok) { const t = await pkR.text(); res.status(502).json({ ok: false, error: 'public-key ' + pkR.status + ' (token thiếu quyền repo?)', body: t.slice(0, 150) }); return; }
     const pk = await pkR.json(); // { key, key_id }
-    // 2) mã hoá sealed box
-    await _sodium.ready; const sodium = _sodium;
-    const binkey = sodium.from_base64(pk.key, sodium.base64_variants.ORIGINAL);
-    const enc = sodium.crypto_box_seal(sodium.from_string(token), binkey);
-    const encrypted_value = sodium.to_base64(enc, sodium.base64_variants.ORIGINAL);
+    // 2) mã hoá sealed box (tweetsodium — thuần JS)
+    const enc = sodium.seal(Buffer.from(token, 'utf8'), Buffer.from(pk.key, 'base64'));
+    const encrypted_value = Buffer.from(enc).toString('base64');
     // 3) PUT secret
     const putR = await fetch(`https://api.github.com/repos/${OWNER}/${REPO}/actions/secrets/${SECRET}`, {
       method: 'PUT', headers: { ...H, 'Content-Type': 'application/json' },
