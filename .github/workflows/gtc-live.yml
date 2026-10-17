@@ -2,7 +2,7 @@ name: GTC Live (TBB)
 on:
   workflow_dispatch:
   schedule:
-    - cron: '*/30 * * * *'   # tu chay 30 phut/lan (gio UTC, 24/7)
+    - cron: '13,43 * * * *'   # tu chay 30 phut/lan, mocgio lech :13 va :43 (ne cao diem GitHub)
 concurrency:
   group: gtc-live
   cancel-in-progress: false
