@@ -415,13 +415,17 @@ function setTab(which){
 function fdCls(x){ return x==null?'mut':(x<=8?'ok':(x<=12?'mid':'lo')); }
 function nS(x){ return x==null?'—':(''+x).replace('.',',')+'%'; }
 async function loadN1(){
+  // Ưu tiên /api/n1 (server đọc Google Sheet trực tiếp → tự cập nhật mỗi ngày)
   try{
-    var d = await fetch('n1.json?t='+Date.now()).then(function(r){return r.json();});
-    _n1loaded=true; renderN1(d);
-  }catch(e){
-    try{ var d2=await fetch(REFRESH_API.replace('xbg-refresh','n1')+'?t='+Date.now()).then(function(r){return r.json();}); if(d2&&d2.vung){_n1loaded=true;renderN1(d2);return;} }catch(e2){}
-    document.getElementById('n1Day').textContent='Lỗi tải dữ liệu N-1';
-  }
+    var d = await fetch('/api/n1?t='+Date.now()).then(function(r){return r.json();});
+    if(d && d.vung && d.day){ _n1loaded=true; renderN1(d); return; }
+  }catch(e){}
+  // Dự phòng: file tĩnh n1.json
+  try{
+    var d2 = await fetch('n1.json?t='+Date.now()).then(function(r){return r.json();});
+    _n1loaded=true; renderN1(d2); return;
+  }catch(e2){}
+  document.getElementById('n1Day').textContent='Lỗi tải dữ liệu N-1';
 }
 function wireExp(tb){
   [].forEach.call(tb.querySelectorAll('tr.amgrp'),function(h){ h.querySelector('td').onclick=function(){
