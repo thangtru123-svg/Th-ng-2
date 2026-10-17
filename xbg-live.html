@@ -124,6 +124,7 @@ tr.amchild td:first-child{padding-left:16px;font-size:12.5px}
     <div class="subtab on" onclick="setSub('L','ov',this)">📊 Tổng quan</div>
     <div class="subtab" onclick="setSub('L','ton',this)">📦 Tồn đọng BC</div>
     <div class="subtab" onclick="setSub('L','ambc',this)">👤 Theo AM / BC</div>
+    <div class="subtab" onclick="setSub('L','hang',this)">🧳 Chuyến treo</div>
   </div>
 
   <div class="subpage" data-sub="L-ov">
@@ -196,6 +197,19 @@ tr.amchild td:first-child{padding-left:16px;font-size:12.5px}
     <div class="toggle" id="bcToggle">Xem tất cả ▾</div>
   </div>
   </div><!-- /L-ambc -->
+
+  <div class="subpage hidden" data-sub="L-hang">
+  <div class="card">
+    <div class="lbl">🧳 Chuyến treo qua ngày · chưa kết thúc</div>
+    <div class="big" id="hangTotal" style="font-size:44px">—<span style="font-size:20px"> chuyến</span></div>
+    <div class="mut">Chuyến tạo từ ngày trước, tới hiện tại vẫn chưa kết thúc (đang trên đường)</div>
+  </div>
+  <div class="card">
+    <div class="sect">👤 Theo AM → Bưu Cục → Nhân viên</div>
+    <div class="mut" style="margin-bottom:6px">Bấm AM để xổ Bưu Cục · bấm (+) ở BC để xem chuyến treo theo NV + ngày tạo</div>
+    <table><thead><tr><th>AM / Bưu Cục</th><th>Số chuyến</th></tr></thead><tbody id="hangBody"></tbody></table>
+  </div>
+  </div><!-- /L-hang -->
   </div><!-- /tabLive -->
 
   <div id="tabN1" class="hidden">
@@ -369,6 +383,44 @@ function render(d){
 
   // BC table
   window._bc=bc; renderBC();
+  // Chuyến treo qua ngày
+  if(v.hang!=null)document.getElementById('hangTotal').innerHTML=vn(v.hang)+'<span style="font-size:20px"> chuyến</span>';
+  renderHang();
+}
+function hangTripTable(trips){
+  if(!trips||!trips.length)return '<div class="mut" style="padding:6px">Không có chuyến treo</div>';
+  var h='<div class="nvwrap"><table><thead><tr><th>Nhân viên</th><th>Ngày tạo chuyến</th></tr></thead><tbody>';
+  trips.forEach(function(t){ h+='<tr><td>'+(t.nv||'(không rõ)')+'</td><td style="text-align:right">'+(t.ngay||'—')+'</td></tr>'; });
+  return h+'</tbody></table></div>';
+}
+function renderHang(){
+  var bc=(window._bc||[]).filter(function(b){return (b.hang||0)>0;});
+  var tb=document.getElementById('hangBody'); if(!tb)return; tb.innerHTML='';
+  if(!bc.length){ tb.innerHTML='<tr><td colspan="2" class="mut" style="padding:12px">Không có chuyến treo qua ngày 👍<br><span style="font-size:11px">(cần bấm "Cập nhật dữ liệu" để lấy số mới)</span></td></tr>'; return; }
+  // gom theo AM
+  var G={};
+  bc.forEach(function(b){ var k=b.am||'(không rõ)'; var g=G[k]||(G[k]={am:k,hang:0,bcs:[]}); g.hang+=b.hang; g.bcs.push(b); });
+  var gl=Object.keys(G).map(function(k){return G[k];}).sort(function(a,b){return b.hang-a.hang;});
+  gl.forEach(function(g){
+    tb.insertAdjacentHTML('beforeend','<tr class="amgrp"><td><span class="exp">+</span><b>'+g.am+'</b><div class="mut">'+g.bcs.length+' bưu cục</div></td><td class="lo" style="font-weight:800">'+vn(g.hang)+'</td></tr>');
+    g.bcs.sort(function(a,b){return b.hang-a.hang;}).forEach(function(b){ var hasT=b.hangTrips&&b.hangTrips.length;
+      tb.insertAdjacentHTML('beforeend',
+        '<tr class="amchild bcrow hidden"><td><span class="exp">'+(hasT?'+':'·')+'</span>'+b.bc+'</td><td class="lo" style="font-weight:700">'+vn(b.hang)+'</td></tr>'+
+        '<tr class="hangdetail hidden"><td colspan="2">'+(hasT?hangTripTable(b.hangTrips):'')+'</td></tr>'); });
+  });
+  // AM header xổ/thu BC
+  [].forEach.call(tb.querySelectorAll('tr.amgrp'),function(h){ h.querySelector('td').onclick=function(){
+    var ex=h.querySelector('.exp'); var open=ex.textContent==='−'; ex.textContent=open?'+':'−';
+    var n=h.nextElementSibling;
+    while(n && !n.classList.contains('amgrp')){
+      if(n.classList.contains('amchild')) n.classList.toggle('hidden', open);
+      if(n.classList.contains('hangdetail')) n.classList.add('hidden');
+      if(n.classList.contains('bcrow')){ var e2=n.querySelector('.exp'); if(e2&&e2.textContent==='−')e2.textContent='+'; }
+      n=n.nextElementSibling;
+    }
+  };});
+  // BC xổ chi tiết chuyến theo NV
+  [].forEach.call(tb.querySelectorAll('tr.bcrow'),function(r){ r.querySelector('td').onclick=function(){ var ex=r.querySelector('.exp'); if(ex.textContent==='·')return; var d=r.nextElementSibling; if(d&&d.classList.contains('hangdetail')){ d.classList.toggle('hidden'); ex.textContent=d.classList.contains('hidden')?'+':'−'; } }; });
 }
 var _bcAll=false;
 function nvTable(nvs){

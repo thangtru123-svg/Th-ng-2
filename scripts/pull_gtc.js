@@ -65,8 +65,9 @@ async function proc(h) {
     });
   } catch (e) { if (e.auth) throw e; }
   // --- chuyến tạo hôm nay: đã gán + GTC + theo nhân viên (tài xế) ---
-  const seen = {}; let carry = 0; const nvM = {};
+  const seen = {}; let carry = 0; const nvM = {}; const hangM = {}; // hangM: chuyến treo qua ngày chưa kết thúc (ON_TRIP, tạo trước hôm nay)
   const nvOf = (name) => nvM[name] || (nvM[name] = { nv: name || '(không rõ)', ganGiao: 0, ganLay: 0, gtc: 0 });
+  const fmtCd = (cd) => { const s = String(cd); return s.length === 8 ? `${s.slice(6, 8)}/${s.slice(4, 6)}` : String(cd); };
   for (const st of ['FINISHED', 'ON_TRIP']) {
     for (let pg = 1; pg <= 50; pg++) {
       const j = await api('/api/lastmile/trip/get-trip-list-by-hub', { hub_id: hub, status: st, is_ready: 0, offset: (pg - 1) * 100, limit: 100, reverse: 1, page: pg, size: 100 });
@@ -79,9 +80,10 @@ async function proc(h) {
           nv.ganGiao += x.deliverCount || 0; nv.ganLay += x.pickCount || 0;
         }
         if (cd === YD && ed === TODAY) carry++;
+        if (st === 'ON_TRIP' && cd < TODAY) hangM[c] = { nv: x.driverName || '(không rõ)', ngay: fmtCd(cd), cd };
         if (cd >= YD || ed >= TODAY) allOld = false;
       });
-      if (a.length < 100 || allOld) break;
+      if (a.length < 100 || (st === 'FINISHED' && allOld)) break;
     }
   }
   const trips = Object.entries(seen);
@@ -103,7 +105,8 @@ async function proc(h) {
   const nv = Object.values(nvM).filter(n => n.ganGiao > 0 || n.ganLay > 0 || n.gtc > 0)
     .map(n => ({ nv: n.nv, ganGiao: n.ganGiao, ganLay: n.ganLay, gtc: n.gtc, pct: n.ganGiao > 0 ? Math.round(n.gtc / n.ganGiao * 1000) / 10 : 0 }))
     .sort((a, b) => b.ganGiao - a.ganGiao);
-  return { name: h.name, am: h.am, tinh: h.tinh, chuaGan, daGan, gtc, nTripToday, nChuaXong, carry, canGiaoSnap, wPick, wDeliver, wReturn, oPick, oReturn, dGiao5, dGiao8, dTra48, nv };
+  const hangTrips = Object.values(hangM).sort((a, b) => a.cd - b.cd).map(t => ({ nv: t.nv, ngay: t.ngay }));
+  return { name: h.name, am: h.am, tinh: h.tinh, chuaGan, daGan, gtc, nTripToday, nChuaXong, carry, canGiaoSnap, wPick, wDeliver, wReturn, oPick, oReturn, dGiao5, dGiao8, dTra48, nv, hangTrips };
 }
 
 // ----- pool song song -----
@@ -126,11 +129,14 @@ async function pool(items, n, fn) {
   // tổng hợp
   const amM = {}, bcL = [];
   let sum = { chuaGan: 0, daGan: 0, gtc: 0, nTripToday: 0, nChuaXong: 0, carry: 0, wPick: 0, wDeliver: 0, wReturn: 0, oPick: 0, oReturn: 0, canGiaoSnap: 0, dGiao5: 0, dGiao8: 0, dTra48: 0 };
+  let hangTotal = 0;
   for (const h of hubs) {
     const cg = h.chuaGan + h.daGan;
-    bcL.push({ bc: h.name, am: h.am, tinh: h.tinh, canGiao: cg, daGan: h.daGan, gtc: h.gtc, dGiao5: h.dGiao5, dGiao8: h.dGiao8, dTra48: h.dTra48, nv: h.nv || [] });
-    const a = amM[h.am] || (amM[h.am] = { am: h.am, canGiao: 0, daGan: 0, gtc: 0 });
-    a.canGiao += cg; a.daGan += h.daGan; a.gtc += h.gtc;
+    const hangTrips = h.hangTrips || [];
+    bcL.push({ bc: h.name, am: h.am, tinh: h.tinh, canGiao: cg, daGan: h.daGan, gtc: h.gtc, dGiao5: h.dGiao5, dGiao8: h.dGiao8, dTra48: h.dTra48, nv: h.nv || [], hang: hangTrips.length, hangTrips });
+    const a = amM[h.am] || (amM[h.am] = { am: h.am, canGiao: 0, daGan: 0, gtc: 0, hang: 0 });
+    a.canGiao += cg; a.daGan += h.daGan; a.gtc += h.gtc; a.hang += hangTrips.length;
+    hangTotal += hangTrips.length;
     for (const k in sum) sum[k] += h[k] || 0;
   }
   const vung = {
@@ -138,7 +144,7 @@ async function pool(items, n, fn) {
     nTrip: sum.nTripToday, nChuaXong: sum.nChuaXong,
     kgPick: Math.round(sum.wPick), kgDeliver: Math.round(sum.wDeliver), kgReturn: Math.round(sum.wReturn),
     oLay: sum.oPick, oGiao: sum.canGiaoSnap, oTra: sum.oReturn,
-    dGiao5: sum.dGiao5, dGiao8: sum.dGiao8, dTra48: sum.dTra48
+    dGiao5: sum.dGiao5, dGiao8: sum.dGiao8, dTra48: sum.dTra48, hang: hangTotal
   };
   const out = {
     updatedAt: new Date().toISOString(), excl06: EXCL06, hourVN: HOUR, hubsOk: hubs.length, hubsErr: errN,
