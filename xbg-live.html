@@ -92,6 +92,11 @@ tr.amchild td:first-child{padding-left:16px;font-size:12.5px}
 .ovcell b{display:block;font-size:20px;margin-top:3px}
 .ovcell .c{font-size:11px;color:var(--sub)}
 .n1day{font-size:12px;color:var(--sub);background:var(--card2);border-radius:8px;padding:3px 8px}
+/* sub-tabs trong mỗi tab chính */
+.subtabs{display:flex;gap:6px;overflow-x:auto;margin-bottom:12px;-webkit-overflow-scrolling:touch;padding-bottom:3px}
+.subtabs::-webkit-scrollbar{display:none}
+.subtab{flex:0 0 auto;padding:8px 13px;border-radius:10px;background:var(--card2);color:var(--sub);font-weight:700;font-size:12.5px;white-space:nowrap;border:1px solid var(--line)}
+.subtab.on{background:linear-gradient(180deg,var(--orange),#ff8c00);color:#1a1200;border-color:transparent}
 </style>
 </head>
 <body>
@@ -115,6 +120,13 @@ tr.amchild td:first-child{padding-left:16px;font-size:12.5px}
   </div>
 
   <div id="tabLive">
+  <div class="subtabs" id="subtabsLive">
+    <div class="subtab on" onclick="setSub('L','ov',this)">📊 Tổng quan</div>
+    <div class="subtab" onclick="setSub('L','ton',this)">📦 Tồn đọng BC</div>
+    <div class="subtab" onclick="setSub('L','ambc',this)">👤 Theo AM / BC</div>
+  </div>
+
+  <div class="subpage" data-sub="L-ov">
   <div class="card">
     <div class="lbl">🎯 %GTC toàn vùng · tới hiện tại</div>
     <div class="big" id="pctBig">—<span>%</span></div>
@@ -140,16 +152,6 @@ tr.amchild td:first-child{padding-left:16px;font-size:12.5px}
     </div>
   </div>
 
-  <div class="card">
-    <div class="sect">🏬 Top BC tồn giao > 8 ngày</div>
-    <div class="scrollbox"><table><thead><tr><th>Bưu Cục</th><th>AM</th><th>Số đơn</th></tr></thead><tbody id="topGiao8"></tbody></table></div>
-  </div>
-
-  <div class="card">
-    <div class="sect">↩️ Top BC tồn trả > 48h</div>
-    <div class="scrollbox"><table><thead><tr><th>Bưu Cục</th><th>AM</th><th>Số đơn</th></tr></thead><tbody id="topTra48"></tbody></table></div>
-  </div>
-
   <div class="card" id="kpis">
     <div class="kv"><span>Đơn giao thành công (GTC)</span><span class="v" id="kGtc">—</span></div>
     <div class="kv"><span>Đã gán</span><span class="v" id="kGan">—</span></div>
@@ -165,7 +167,21 @@ tr.amchild td:first-child{padding-left:16px;font-size:12.5px}
     <div class="kv"><span>🏬 Bưu cục %GTC &lt; 50%</span><span class="v" id="hotBc50">—</span></div>
     <div class="kv"><span>✅ Bưu cục đạt (≥50%)</span><span class="v" id="hotBcOk">—</span></div>
   </div>
+  </div><!-- /L-ov -->
 
+  <div class="subpage hidden" data-sub="L-ton">
+  <div class="card">
+    <div class="sect">🏬 Top BC tồn giao > 8 ngày</div>
+    <div class="scrollbox"><table><thead><tr><th>Bưu Cục</th><th>AM</th><th>Số đơn</th></tr></thead><tbody id="topGiao8"></tbody></table></div>
+  </div>
+
+  <div class="card">
+    <div class="sect">↩️ Top BC tồn trả > 48h</div>
+    <div class="scrollbox"><table><thead><tr><th>Bưu Cục</th><th>AM</th><th>Số đơn</th></tr></thead><tbody id="topTra48"></tbody></table></div>
+  </div>
+  </div><!-- /L-ton -->
+
+  <div class="subpage hidden" data-sub="L-ambc">
   <div class="card">
     <div class="sect">👤 Theo AM (cần giao cao → thấp)</div>
     <div class="mut" style="margin-bottom:6px">%GTC = GTC÷gán · %Tot = GTC÷cần giao</div>
@@ -179,9 +195,19 @@ tr.amchild td:first-child{padding-left:16px;font-size:12.5px}
     <table><thead><tr><th>Bưu Cục</th><th>Cần giao</th><th>GTC</th><th>%GTC</th><th>%Tot</th></tr></thead><tbody id="bcBody"></tbody></table>
     <div class="toggle" id="bcToggle">Xem tất cả ▾</div>
   </div>
+  </div><!-- /L-ambc -->
   </div><!-- /tabLive -->
 
   <div id="tabN1" class="hidden">
+    <div class="subtabs" id="subtabsN1">
+      <div class="subtab on" onclick="setSub('N','ov',this)">📊 Tổng quan</div>
+      <div class="subtab" onclick="setSub('N','gtc',this)">👤 GTC Total</div>
+      <div class="subtab" onclick="setSub('N','fd',this)">↩️ Tỉ lệ trả</div>
+      <div class="subtab" onclick="setSub('N','tts',this)">📦 GTC TTS</div>
+      <div class="subtab" onclick="setSub('N','ont',this)">⏱️ Ontime</div>
+    </div>
+
+    <div class="subpage" data-sub="N-ov">
     <div class="card">
       <div class="lbl">📅 Ngày N-1 <span class="n1day" id="n1Day">—</span></div>
       <div class="sect" style="margin-top:10px">🎯 GTC Total · toàn Vùng</div>
@@ -205,30 +231,39 @@ tr.amchild td:first-child{padding-left:16px;font-size:12.5px}
         <div class="ovcell"><span class="c">OPR TTS (lấy đúng giờ)</span><b id="n1Opr">—</b></div>
       </div>
     </div>
+    </div><!-- /N-ov -->
 
+    <div class="subpage hidden" data-sub="N-gtc">
     <div class="card">
       <div class="sect">👤 GTC Total theo AM</div>
       <div class="mut" style="margin-bottom:6px">Bấm AM để xổ Bưu Cục · bấm (+) ở Bưu Cục để xem năng suất NV</div>
       <table><thead><tr><th>AM</th><th>Vol</th><th>%Gán</th><th>%GTC</th><th>Đơn GTC</th></tr></thead><tbody id="n1GtcBody"></tbody></table>
     </div>
+    </div><!-- /N-gtc -->
 
+    <div class="subpage hidden" data-sub="N-fd">
     <div class="card">
       <div class="sect">↩️ Tỉ lệ trả theo AM</div>
       <div class="mut" style="margin-bottom:6px">Bấm (+) để xổ Bưu Cục · thấp = tốt</div>
       <table><thead><tr><th>AM</th><th>Total</th><th>SME</th><th>TTS</th><th>Shopee</th></tr></thead><tbody id="n1FdBody"></tbody></table>
     </div>
+    </div><!-- /N-fd -->
 
+    <div class="subpage hidden" data-sub="N-tts">
     <div class="card">
       <div class="sect">📦 GTC TTS theo AM</div>
       <div class="mut" style="margin-bottom:6px">Bấm (+) để xổ Bưu Cục</div>
       <table><thead><tr><th>AM</th><th>Vol</th><th>%Gán</th><th>%GTC</th><th>Đơn GTC</th></tr></thead><tbody id="n1TtsBody"></tbody></table>
     </div>
+    </div><!-- /N-tts -->
 
+    <div class="subpage hidden" data-sub="N-ont">
     <div class="card">
       <div class="sect">⏱️ Ontime TTS theo AM</div>
       <div class="mut" style="margin-bottom:6px">ODR = giao đúng giờ · OPR = lấy đúng giờ · bấm (+) xổ Bưu Cục</div>
       <table><thead><tr><th>AM</th><th>ODR</th><th>OPR</th></tr></thead><tbody id="n1OntimeBody"></tbody></table>
     </div>
+    </div><!-- /N-ont -->
   </div>
 
   <div style="height:60px"></div>
@@ -429,6 +464,13 @@ function setTab(which){
   // nút Cập nhật chỉ hiện ở tab trực tiếp (N-1 là số chốt từ Sheet)
   document.getElementById('refresh').classList.toggle('hidden', !live || _scanning);
   if(!live && !_n1loaded){ loadN1(); }
+}
+function setSub(g,key,btn){
+  var bar=document.getElementById(g==='L'?'subtabsLive':'subtabsN1');
+  if(bar){[].forEach.call(bar.querySelectorAll('.subtab'),function(t){t.classList.toggle('on',t===btn);});}
+  var cont=document.getElementById(g==='L'?'tabLive':'tabN1');
+  if(cont){[].forEach.call(cont.querySelectorAll('.subpage'),function(p){ p.classList.toggle('hidden', p.getAttribute('data-sub')!==g+'-'+key); });}
+  try{window.scrollTo(0,0);}catch(e){}
 }
 function fdCls(x){ return x==null?'mut':(x<=8?'ok':(x<=12?'mid':'lo')); }
 function odrCls(x){ return x==null?'mut':(x>=96?'ok':(x>=90?'mid':'lo')); }
