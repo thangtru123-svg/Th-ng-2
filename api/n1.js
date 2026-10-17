@@ -35,13 +35,16 @@ export default async function handler(req, res) {
     const now = Date.now();
     if (_cache.data && now - _cache.t < 20 * 60 * 1000) { res.setHeader('x-cache', 'hit'); res.status(200).json(_cache.data); return; }
     const tok = await ownerToken();
-    const [gAM, gBC, fTA, fTB, fSA, fSB, fTtA, fTtB, fShA, fShB, nsNV] = await Promise.all([
+    const [gAM, gBC, fTA, fTB, fSA, fSB, fTtA, fTtB, fShA, fShB, nsNV, gTtsA, gTtsB, odrA, odrB, oprA, oprB] = await Promise.all([
       getSheet(tok, 'GTC Total theo AM'), getSheet(tok, 'GTC Total theo Bưu Cục'),
       getSheet(tok, 'FD Total theo AM'), getSheet(tok, 'FD Total theo Bưu Cục'),
       getSheet(tok, 'FD SME theo AM'), getSheet(tok, 'FD SME theo Bưu Cục'),
       getSheet(tok, 'FD TTS theo AM'), getSheet(tok, 'FD TTS theo Bưu Cục'),
       getSheet(tok, 'FD Shopee theo AM'), getSheet(tok, 'FD Shopee theo Bưu Cục'),
-      getSheet(tok, 'Năng suất NV')
+      getSheet(tok, 'Năng suất NV'),
+      getSheet(tok, 'GTC TTS theo AM'), getSheet(tok, 'GTC TTS theo Bưu Cục'),
+      getSheet(tok, 'ODR TTS - AM'), getSheet(tok, 'ODR TTS - Bưu Cục'),
+      getSheet(tok, 'OPR TTS - AM'), getSheet(tok, 'OPR TTS - Bưu Cục')
     ]);
     // ===== GTC =====
     const gDay = latestDay(gBC, 2);
@@ -65,8 +68,21 @@ export default async function handler(req, res) {
     const nsBC = {};
     for (let k = 1; k < nsNV.length; k++) { const r = nsNV[k]; const bc = r[0]; if (!bc) continue; if (dstr(r[2]) !== nsDay) continue; const nv = String(r[1] || '').replace(/^\d+_/, '').trim(); const gan = i(r[3]), gtc = i(r[4]); const pct = gan > 0 ? Math.round(gtc / gan * 1000) / 10 : 0; (nsBC[bc] = nsBC[bc] || []).push({ nv, gan, gtc, pct }); }
     for (const bc in nsBC) { nsBC[bc].sort((a, b) => b.gan - a.gan); }
+    // ===== TTS: GTC TTS + ODR + OPR =====
+    function gtcAMidx(rows) { const day = latestDay(rows, 1); const m = {}; for (let k = 1; k < rows.length; k++) { const r = rows[k]; const nm = r[0]; if (!nm || nm === 'Grand Total' || nm.indexOf(',') >= 0) continue; if (dstr(r[1]) !== day) continue; m[nm] = { vol: i(r[2]), gan: f(r[3]) * 100, pct: f(r[4]) * 100, ngtc: i(r[5]) }; } return m; }
+    function gtcBCidx(rows) { const day = latestDay(rows, 2); const m = {}; for (let k = 1; k < rows.length; k++) { const r = rows[k]; const bc = r[1]; if (!bc || bc === 'Grand Total') continue; if (dstr(r[2]) !== day) continue; m[bc] = { vol: i(r[3]), gan: f(r[4]) * 100, pct: f(r[5]) * 100, ngtc: i(r[6]) }; } return m; }
+    function otAMidx(rows) { const day = latestDay(rows, 1); const m = {}; for (let k = 1; k < rows.length; k++) { const r = rows[k]; const nm = r[0]; if (!nm || nm === 'Grand Total' || nm.indexOf(',') >= 0) continue; if (dstr(r[1]) !== day) continue; m[nm] = { vol: i(r[2]), ot: f(r[3]) * 100 }; } return m; }
+    function otBCidx(rows) { const day = latestDay(rows, 2); const m = {}; for (let k = 1; k < rows.length; k++) { const r = rows[k]; const bc = r[1]; if (!bc || bc === 'Grand Total') continue; if (dstr(r[2]) !== day) continue; m[bc] = { vol: i(r[3]), ot: f(r[4]) * 100 }; } return m; }
+    const ttsAMm = gtcAMidx(gTtsA), ttsBCm = gtcBCidx(gTtsB);
+    const odrAMm = otAMidx(odrA), odrBCm = otBCidx(odrB);
+    const oprAMm = otAMidx(oprA), oprBCm = otBCidx(oprB);
+    let ttV = 0, ttN = 0; for (const bc in ttsBCm) { ttV += ttsBCm[bc].vol; ttN += ttsBCm[bc].ngtc; }
+    const vGtcTts = ttV > 0 ? Math.round(ttN / ttV * 1000) / 10 : null;
+    function vungOt(m) { let n = 0, d = 0; for (const bc in m) { n += m[bc].ot * m[bc].vol; d += m[bc].vol; } return d > 0 ? Math.round(n / d * 10) / 10 : null; }
+    const vOdr = vungOt(odrBCm), vOpr = vungOt(oprBCm);
+    const r1 = x => x == null ? null : Math.round(x * 10) / 10;
     // ===== build AM list (union GTC AM) =====
-    const amNames = new Set([...Object.keys(amGTC), ...Object.keys(FA.total)]);
+    const amNames = new Set([...Object.keys(amGTC), ...Object.keys(FA.total), ...Object.keys(ttsAMm), ...Object.keys(odrAMm), ...Object.keys(oprAMm)]);
     const am = [];
     amNames.forEach(name => {
       const g = amGTC[name] || { vol: 0, gan: 0, pct: 0, ngtc: 0 };
@@ -74,14 +90,14 @@ export default async function handler(req, res) {
       // BCs của AM này
       const bcs = Object.keys(bcGTC).filter(b => bc2am[b] === name).map(b => {
         const bg = bcGTC[b];
-        return { bc: b, vol: bg.vol, gan: Math.round(bg.gan * 10) / 10, pct: Math.round(bg.pct * 10) / 10, ngtc: bg.ngtc, fdTotal: FB.total[b] != null ? Math.round(FB.total[b] * 10) / 10 : null, fdSme: FB.sme[b] != null ? Math.round(FB.sme[b] * 10) / 10 : null, fdTts: FB.tts[b] != null ? Math.round(FB.tts[b] * 10) / 10 : null, fdShopee: FB.shopee[b] != null ? Math.round(FB.shopee[b] * 10) / 10 : null, nv: nsBC[b] || [] };
+        return { bc: b, vol: bg.vol, gan: Math.round(bg.gan * 10) / 10, pct: Math.round(bg.pct * 10) / 10, ngtc: bg.ngtc, fdTotal: FB.total[b] != null ? Math.round(FB.total[b] * 10) / 10 : null, fdSme: FB.sme[b] != null ? Math.round(FB.sme[b] * 10) / 10 : null, fdTts: FB.tts[b] != null ? Math.round(FB.tts[b] * 10) / 10 : null, fdShopee: FB.shopee[b] != null ? Math.round(FB.shopee[b] * 10) / 10 : null, nv: nsBC[b] || [], ttsVol: ttsBCm[b] ? ttsBCm[b].vol : null, ttsGan: ttsBCm[b] ? r1(ttsBCm[b].gan) : null, ttsPct: ttsBCm[b] ? r1(ttsBCm[b].pct) : null, ttsNgtc: ttsBCm[b] ? ttsBCm[b].ngtc : null, odr: odrBCm[b] ? r1(odrBCm[b].ot) : null, opr: oprBCm[b] ? r1(oprBCm[b].ot) : null };
       }).sort((a, b) => b.vol - a.vol);
-      am.push({ am: name, vol: g.vol, gan: Math.round(g.gan * 10) / 10, pct: Math.round(g.pct * 10) / 10, ngtc: g.ngtc, fdTotal: fdOf('total'), fdSme: fdOf('sme'), fdTts: fdOf('tts'), fdShopee: fdOf('shopee'), bc: bcs });
+      am.push({ am: name, vol: g.vol, gan: Math.round(g.gan * 10) / 10, pct: Math.round(g.pct * 10) / 10, ngtc: g.ngtc, fdTotal: fdOf('total'), fdSme: fdOf('sme'), fdTts: fdOf('tts'), fdShopee: fdOf('shopee'), ttsVol: ttsAMm[name] ? ttsAMm[name].vol : null, ttsGan: ttsAMm[name] ? r1(ttsAMm[name].gan) : null, ttsPct: ttsAMm[name] ? r1(ttsAMm[name].pct) : null, ttsNgtc: ttsAMm[name] ? ttsAMm[name].ngtc : null, odr: odrAMm[name] ? r1(odrAMm[name].ot) : null, opr: oprAMm[name] ? r1(oprAMm[name].ot) : null, bc: bcs });
     });
     am.sort((a, b) => b.vol - a.vol);
     const out = {
       day: gDay, updatedAt: new Date().toISOString(),
-      vung: { vol: vVol, gan: vVol > 0 ? Math.round(vGanNum / vVol * 1000) / 10 : 0, pct: vVol > 0 ? Math.round(vNgtc / vVol * 1000) / 10 : 0, ngtc: vNgtc, fdTotal: vungFD.total, fdSme: vungFD.sme, fdTts: vungFD.tts, fdShopee: vungFD.shopee },
+      vung: { vol: vVol, gan: vVol > 0 ? Math.round(vGanNum / vVol * 1000) / 10 : 0, pct: vVol > 0 ? Math.round(vNgtc / vVol * 1000) / 10 : 0, ngtc: vNgtc, fdTotal: vungFD.total, fdSme: vungFD.sme, fdTts: vungFD.tts, fdShopee: vungFD.shopee, gtcTts: vGtcTts, odrTts: vOdr, oprTts: vOpr },
       am
     };
     _cache = { t: now, data: out };

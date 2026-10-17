@@ -198,6 +198,12 @@ tr.amchild td:first-child{padding-left:16px;font-size:12.5px}
         <div class="ovcell"><span class="c">TTS</span><b id="n1FdTts">—</b></div>
         <div class="ovcell"><span class="c">Shopee</span><b id="n1FdShopee">—</b></div>
       </div>
+      <div class="sect" style="margin-top:14px">📦 Chỉ số TTS · toàn Vùng</div>
+      <div class="ovgrid">
+        <div class="ovcell"><span class="c">GTC TTS</span><b id="n1GtcTts" style="color:var(--orange)">—</b></div>
+        <div class="ovcell"><span class="c">ODR TTS (giao đúng giờ)</span><b id="n1Odr">—</b></div>
+        <div class="ovcell"><span class="c">OPR TTS (lấy đúng giờ)</span><b id="n1Opr">—</b></div>
+      </div>
     </div>
 
     <div class="card">
@@ -210,6 +216,18 @@ tr.amchild td:first-child{padding-left:16px;font-size:12.5px}
       <div class="sect">↩️ Tỉ lệ trả theo AM</div>
       <div class="mut" style="margin-bottom:6px">Bấm (+) để xổ Bưu Cục · thấp = tốt</div>
       <table><thead><tr><th>AM</th><th>Total</th><th>SME</th><th>TTS</th><th>Shopee</th></tr></thead><tbody id="n1FdBody"></tbody></table>
+    </div>
+
+    <div class="card">
+      <div class="sect">📦 GTC TTS theo AM</div>
+      <div class="mut" style="margin-bottom:6px">Bấm (+) để xổ Bưu Cục</div>
+      <table><thead><tr><th>AM</th><th>Vol</th><th>%Gán</th><th>%GTC</th><th>Đơn GTC</th></tr></thead><tbody id="n1TtsBody"></tbody></table>
+    </div>
+
+    <div class="card">
+      <div class="sect">⏱️ Ontime TTS theo AM</div>
+      <div class="mut" style="margin-bottom:6px">ODR = giao đúng giờ · OPR = lấy đúng giờ · bấm (+) xổ Bưu Cục</div>
+      <table><thead><tr><th>AM</th><th>ODR</th><th>OPR</th></tr></thead><tbody id="n1OntimeBody"></tbody></table>
     </div>
   </div>
 
@@ -413,6 +431,8 @@ function setTab(which){
   if(!live && !_n1loaded){ loadN1(); }
 }
 function fdCls(x){ return x==null?'mut':(x<=8?'ok':(x<=12?'mid':'lo')); }
+function odrCls(x){ return x==null?'mut':(x>=96?'ok':(x>=90?'mid':'lo')); }
+function oprCls(x){ return x==null?'mut':(x>=80?'ok':(x>=70?'mid':'lo')); }
 function nS(x){ return x==null?'—':(''+x).replace('.',',')+'%'; }
 async function loadN1(){
   // Ưu tiên /api/n1 (server đọc Google Sheet trực tiếp → tự cập nhật mỗi ngày)
@@ -464,6 +484,10 @@ function renderN1(d){
   document.getElementById('n1Ngtc').textContent=vn(v.ngtc)+' đơn';
   function setFd(id,x){ var el=document.getElementById(id); el.textContent=nS(x); el.className=''; el.style.color=({ok:'var(--green)',mid:'var(--orange)',lo:'var(--red)',mut:'var(--sub)'})[fdCls(x)]; }
   setFd('n1FdTotal',v.fdTotal); setFd('n1FdSme',v.fdSme); setFd('n1FdTts',v.fdTts); setFd('n1FdShopee',v.fdShopee);
+  // Chỉ số TTS toàn Vùng
+  document.getElementById('n1GtcTts').textContent=nS(v.gtcTts);
+  var setOt=function(id,x,ok,mid){ var el=document.getElementById(id); el.textContent=nS(x); el.style.color=x==null?'var(--sub)':(x>=ok?'var(--green)':(x>=mid?'var(--orange)':'var(--red)')); };
+  setOt('n1Odr',v.odrTts,96,90); setOt('n1Opr',v.oprTts,80,70);
 
   var byPctAsc=function(a,b){return (a.pct||0)-(b.pct||0);}; // %GTC thấp (tệ) lên đầu
   var byFdDesc=function(a,b){return (b.fdTotal==null?-1:b.fdTotal)-(a.fdTotal==null?-1:a.fdTotal);}; // Tỉ lệ trả cao (tệ) lên đầu
@@ -489,6 +513,30 @@ function renderN1(d){
       '<tr class="amchild hidden"><td>'+b.bc+'</td><td class="pct '+fdCls(b.fdTotal)+'">'+nS(b.fdTotal)+'</td><td class="pct '+fdCls(b.fdSme)+'">'+nS(b.fdSme)+'</td><td class="pct '+fdCls(b.fdTts)+'">'+nS(b.fdTts)+'</td><td class="pct '+fdCls(b.fdShopee)+'">'+nS(b.fdShopee)+'</td></tr>'); });
   });
   wireExp(fb);
+
+  // GTC TTS theo AM — tệ→tốt theo %GTC TTS
+  var ttsAsc=function(a,b){return (a.ttsPct==null?1e9:a.ttsPct)-(b.ttsPct==null?1e9:b.ttsPct);};
+  var tb=document.getElementById('n1TtsBody'); tb.innerHTML='';
+  d.am.filter(function(a){return a.ttsVol!=null&&a.ttsVol>0;}).sort(ttsAsc).forEach(function(a){
+    var bcs=a.bc.filter(function(b){return b.ttsVol!=null&&b.ttsVol>0;}).sort(ttsAsc);
+    tb.insertAdjacentHTML('beforeend',
+      '<tr class="amgrp"><td><span class="exp">+</span><b>'+a.am+'</b><div class="mut">'+bcs.length+' bưu cục</div></td><td>'+vn(a.ttsVol)+'</td><td>'+nS(a.ttsGan)+'</td><td class="pct '+cls(a.ttsPct)+'">'+nS(a.ttsPct)+'</td><td>'+vn(a.ttsNgtc)+'</td></tr>');
+    bcs.forEach(function(b){ tb.insertAdjacentHTML('beforeend',
+      '<tr class="amchild hidden"><td>'+b.bc+'</td><td>'+vn(b.ttsVol)+'</td><td>'+nS(b.ttsGan)+'</td><td class="pct '+cls(b.ttsPct)+'">'+nS(b.ttsPct)+'</td><td>'+vn(b.ttsNgtc)+'</td></tr>'); });
+  });
+  wireExp(tb);
+
+  // Ontime TTS (ODR/OPR) theo AM — tệ→tốt theo ODR
+  var odrAsc=function(a,b){return (a.odr==null?1e9:a.odr)-(b.odr==null?1e9:b.odr);};
+  var ob=document.getElementById('n1OntimeBody'); ob.innerHTML='';
+  d.am.filter(function(a){return a.odr!=null||a.opr!=null;}).sort(odrAsc).forEach(function(a){
+    var bcs=a.bc.filter(function(b){return b.odr!=null||b.opr!=null;}).sort(odrAsc);
+    ob.insertAdjacentHTML('beforeend',
+      '<tr class="amgrp"><td><span class="exp">+</span><b>'+a.am+'</b><div class="mut">'+bcs.length+' bưu cục</div></td><td class="pct '+odrCls(a.odr)+'">'+nS(a.odr)+'</td><td class="pct '+oprCls(a.opr)+'">'+nS(a.opr)+'</td></tr>');
+    bcs.forEach(function(b){ ob.insertAdjacentHTML('beforeend',
+      '<tr class="amchild hidden"><td>'+b.bc+'</td><td class="pct '+odrCls(b.odr)+'">'+nS(b.odr)+'</td><td class="pct '+oprCls(b.opr)+'">'+nS(b.opr)+'</td></tr>'); });
+  });
+  wireExp(ob);
 }
 </script>
 </body>
