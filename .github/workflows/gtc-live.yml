@@ -1,6 +1,8 @@
 name: GTC Live (TBB)
 on:
   workflow_dispatch:
+  schedule:
+    - cron: '*/30 * * * *'   # tu chay 30 phut/lan (gio UTC, 24/7)
 concurrency:
   group: gtc-live
   cancel-in-progress: false
