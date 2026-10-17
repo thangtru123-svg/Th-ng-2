@@ -35,12 +35,13 @@ export default async function handler(req, res) {
     const now = Date.now();
     if (_cache.data && now - _cache.t < 20 * 60 * 1000) { res.setHeader('x-cache', 'hit'); res.status(200).json(_cache.data); return; }
     const tok = await ownerToken();
-    const [gAM, gBC, fTA, fTB, fSA, fSB, fTtA, fTtB, fShA, fShB] = await Promise.all([
+    const [gAM, gBC, fTA, fTB, fSA, fSB, fTtA, fTtB, fShA, fShB, nsNV] = await Promise.all([
       getSheet(tok, 'GTC Total theo AM'), getSheet(tok, 'GTC Total theo Bưu Cục'),
       getSheet(tok, 'FD Total theo AM'), getSheet(tok, 'FD Total theo Bưu Cục'),
       getSheet(tok, 'FD SME theo AM'), getSheet(tok, 'FD SME theo Bưu Cục'),
       getSheet(tok, 'FD TTS theo AM'), getSheet(tok, 'FD TTS theo Bưu Cục'),
-      getSheet(tok, 'FD Shopee theo AM'), getSheet(tok, 'FD Shopee theo Bưu Cục')
+      getSheet(tok, 'FD Shopee theo AM'), getSheet(tok, 'FD Shopee theo Bưu Cục'),
+      getSheet(tok, 'Năng suất NV')
     ]);
     // ===== GTC =====
     const gDay = latestDay(gBC, 2);
@@ -56,6 +57,14 @@ export default async function handler(req, res) {
     const FB = { total: fdBC(fTB), sme: fdBC(fSB), tts: fdBC(fTtB), shopee: fdBC(fShB) };
     const vungFD = {}; // weighted Σ(fd×%Vol)/Σ(%Vol) over AM (đúng quy tắc toàn vùng)
     for (const cat of ['total', 'sme', 'tts', 'shopee']) { let num = 0, den = 0; for (const am in FA[cat]) { num += FA[cat][am].fd * FA[cat][am].vol; den += FA[cat][am].vol; } vungFD[cat] = den > 0 ? Math.round(num / den * 10) / 10 : null; }
+    // ===== Năng suất NV theo Bưu Cục (ngày N-1) =====
+    // cột: Bưu cục(0), Nhân viên(1), Ngày(2), Tổng đơn gán(3), Tổng đơn GTC(4), %GTC(5)
+    let nsDay = gDay, hasG = false;
+    for (let k = 1; k < nsNV.length; k++) { if (dstr(nsNV[k][2]) === gDay) { hasG = true; break; } }
+    if (!hasG) { let mx = ''; for (let k = 1; k < nsNV.length; k++) { const dd = dstr(nsNV[k][2]); if (dd && dd > mx) mx = dd; } nsDay = mx; }
+    const nsBC = {};
+    for (let k = 1; k < nsNV.length; k++) { const r = nsNV[k]; const bc = r[0]; if (!bc) continue; if (dstr(r[2]) !== nsDay) continue; const nv = String(r[1] || '').replace(/^\d+_/, '').trim(); const gan = i(r[3]), gtc = i(r[4]); const pct = gan > 0 ? Math.round(gtc / gan * 1000) / 10 : 0; (nsBC[bc] = nsBC[bc] || []).push({ nv, gan, gtc, pct }); }
+    for (const bc in nsBC) { nsBC[bc].sort((a, b) => b.gan - a.gan); }
     // ===== build AM list (union GTC AM) =====
     const amNames = new Set([...Object.keys(amGTC), ...Object.keys(FA.total)]);
     const am = [];
@@ -65,7 +74,7 @@ export default async function handler(req, res) {
       // BCs của AM này
       const bcs = Object.keys(bcGTC).filter(b => bc2am[b] === name).map(b => {
         const bg = bcGTC[b];
-        return { bc: b, vol: bg.vol, gan: Math.round(bg.gan * 10) / 10, pct: Math.round(bg.pct * 10) / 10, ngtc: bg.ngtc, fdTotal: FB.total[b] != null ? Math.round(FB.total[b] * 10) / 10 : null, fdSme: FB.sme[b] != null ? Math.round(FB.sme[b] * 10) / 10 : null, fdTts: FB.tts[b] != null ? Math.round(FB.tts[b] * 10) / 10 : null, fdShopee: FB.shopee[b] != null ? Math.round(FB.shopee[b] * 10) / 10 : null };
+        return { bc: b, vol: bg.vol, gan: Math.round(bg.gan * 10) / 10, pct: Math.round(bg.pct * 10) / 10, ngtc: bg.ngtc, fdTotal: FB.total[b] != null ? Math.round(FB.total[b] * 10) / 10 : null, fdSme: FB.sme[b] != null ? Math.round(FB.sme[b] * 10) / 10 : null, fdTts: FB.tts[b] != null ? Math.round(FB.tts[b] * 10) / 10 : null, fdShopee: FB.shopee[b] != null ? Math.round(FB.shopee[b] * 10) / 10 : null, nv: nsBC[b] || [] };
       }).sort((a, b) => b.vol - a.vol);
       am.push({ am: name, vol: g.vol, gan: Math.round(g.gan * 10) / 10, pct: Math.round(g.pct * 10) / 10, ngtc: g.ngtc, fdTotal: fdOf('total'), fdSme: fdOf('sme'), fdTts: fdOf('tts'), fdShopee: fdOf('shopee'), bc: bcs });
     });

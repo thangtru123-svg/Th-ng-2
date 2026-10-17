@@ -202,7 +202,7 @@ tr.amchild td:first-child{padding-left:16px;font-size:12.5px}
 
     <div class="card">
       <div class="sect">👤 GTC Total theo AM</div>
-      <div class="mut" style="margin-bottom:6px">Bấm (+) để xổ Bưu Cục</div>
+      <div class="mut" style="margin-bottom:6px">Bấm AM để xổ Bưu Cục · bấm (+) ở Bưu Cục để xem năng suất NV</div>
       <table><thead><tr><th>AM</th><th>Vol</th><th>%Gán</th><th>%GTC</th><th>Đơn GTC</th></tr></thead><tbody id="n1GtcBody"></tbody></table>
     </div>
 
@@ -434,6 +434,27 @@ function wireExp(tb){
     while(n && !n.classList.contains('amgrp')){ if(n.classList.contains('amchild')) n.classList.toggle('hidden', open); n=n.nextElementSibling; }
   };});
 }
+function nvTableN1(nvs){
+  if(!nvs||!nvs.length) return '<div class="mut" style="padding:6px">Không có dữ liệu nhân viên</div>';
+  var h='<div class="nvwrap"><table><thead><tr><th>Nhân viên</th><th>Đơn gán</th><th>GTC</th><th>%GTC</th></tr></thead><tbody>';
+  nvs.forEach(function(n){ h+='<tr><td>'+n.nv+'</td><td>'+vn(n.gan)+'</td><td>'+vn(n.gtc)+'</td><td class="pct '+cls(n.pct)+'">'+nS(n.pct)+'</td></tr>'; });
+  return h+'</tbody></table></div>';
+}
+function wireExpN1(tb){
+  // Header AM: xổ/thu các Bưu Cục con (và ẩn chi tiết NV)
+  [].forEach.call(tb.querySelectorAll('tr.amgrp'),function(h){ h.querySelector('td').onclick=function(){
+    var ex=h.querySelector('.exp'); var open=ex.textContent==='−'; ex.textContent=open?'+':'−';
+    var n=h.nextElementSibling;
+    while(n && !n.classList.contains('amgrp')){
+      if(n.classList.contains('amchild')) n.classList.toggle('hidden', open);
+      if(n.classList.contains('n1nvdetail')) n.classList.add('hidden');
+      if(n.classList.contains('bcrow')){ var e2=n.querySelector('.exp'); if(e2&&e2.textContent==='−')e2.textContent='+'; }
+      n=n.nextElementSibling;
+    }
+  };});
+  // Bưu Cục: xổ năng suất NV
+  [].forEach.call(tb.querySelectorAll('tr.bcrow'),function(r){ r.querySelector('td').onclick=function(){ var ex=r.querySelector('.exp'); if(ex.textContent==='·')return; var d=r.nextElementSibling; if(d&&d.classList.contains('n1nvdetail')){ d.classList.toggle('hidden'); ex.textContent=d.classList.contains('hidden')?'+':'−'; } }; });
+}
 function renderN1(d){
   var v=d.vung;
   document.getElementById('n1Day').textContent='dữ liệu ngày '+(d.day||'').split('-').reverse().join('/');
@@ -447,15 +468,17 @@ function renderN1(d){
   var byPctAsc=function(a,b){return (a.pct||0)-(b.pct||0);}; // %GTC thấp (tệ) lên đầu
   var byFdDesc=function(a,b){return (b.fdTotal==null?-1:b.fdTotal)-(a.fdTotal==null?-1:a.fdTotal);}; // Tỉ lệ trả cao (tệ) lên đầu
 
-  // GTC Total theo AM — tệ→tốt theo %GTC
+  // GTC Total theo AM — tệ→tốt theo %GTC (bấm BC để xổ năng suất NV)
   var gb=document.getElementById('n1GtcBody'); gb.innerHTML='';
   d.am.slice().sort(byPctAsc).forEach(function(a){
     gb.insertAdjacentHTML('beforeend',
       '<tr class="amgrp"><td><span class="exp">+</span><b>'+a.am+'</b><div class="mut">'+a.bc.length+' bưu cục</div></td><td>'+vn(a.vol)+'</td><td>'+nS(a.gan)+'</td><td class="pct '+cls(a.pct)+'">'+nS(a.pct)+'</td><td>'+vn(a.ngtc)+'</td></tr>');
-    a.bc.slice().sort(byPctAsc).forEach(function(b){ gb.insertAdjacentHTML('beforeend',
-      '<tr class="amchild hidden"><td>'+b.bc+'</td><td>'+vn(b.vol)+'</td><td>'+nS(b.gan)+'</td><td class="pct '+cls(b.pct)+'">'+nS(b.pct)+'</td><td>'+vn(b.ngtc)+'</td></tr>'); });
+    a.bc.slice().sort(byPctAsc).forEach(function(b){ var hasNv=b.nv&&b.nv.length;
+      gb.insertAdjacentHTML('beforeend',
+      '<tr class="amchild bcrow hidden"><td><span class="exp">'+(hasNv?'+':'·')+'</span>'+b.bc+'</td><td>'+vn(b.vol)+'</td><td>'+nS(b.gan)+'</td><td class="pct '+cls(b.pct)+'">'+nS(b.pct)+'</td><td>'+vn(b.ngtc)+'</td></tr>'+
+      '<tr class="n1nvdetail hidden"><td colspan="5">'+(hasNv?nvTableN1(b.nv):'')+'</td></tr>'); });
   });
-  wireExp(gb);
+  wireExpN1(gb);
 
   // Tỉ lệ trả theo AM (4 mục) — tệ→tốt theo Tỉ lệ trả Total (cao=tệ lên đầu)
   var fb=document.getElementById('n1FdBody'); fb.innerHTML='';
