@@ -184,12 +184,6 @@ tr.amchild td:first-child{padding-left:16px;font-size:12.5px}
 
   <div class="subpage hidden" data-sub="L-ambc">
   <div class="card">
-    <div class="sect">👤 Theo AM (cần giao cao → thấp)</div>
-    <div class="mut" style="margin-bottom:6px">%GTC = GTC÷gán · %Tot = GTC÷cần giao</div>
-    <table><thead><tr><th>AM</th><th>Cần giao</th><th>Đã gán</th><th>GTC</th><th>%GTC</th><th>%Tot</th></tr></thead><tbody id="amBody"></tbody></table>
-  </div>
-
-  <div class="card">
     <div class="sect">🏬 Bưu Cục theo AM</div>
     <input class="search" id="bcSearch" placeholder="Tìm bưu cục / AM…">
     <div class="mut" style="margin-bottom:6px">Bấm AM để xổ Bưu Cục · bấm (+) ở BC để xem NV</div>
@@ -375,13 +369,7 @@ function render(d){
   bc.filter(function(b){return (b.dTra48||0)>0;}).sort(function(a,b){return (b.dTra48||0)-(a.dTra48||0);}).forEach(function(b){ tt48.insertAdjacentHTML('beforeend','<tr><td>'+b.bc+'</td><td class="mut">'+b.am+'</td><td class="lo" style="font-weight:800">'+vn(b.dTra48)+'</td></tr>'); });
   if(!tt48.innerHTML) tt48.innerHTML='<tr><td colspan="3" class="mut">Không có đơn trả >48h 👍</td></tr>';
 
-  // AM table (+ %GTC Total) — xếp tệ→tốt theo %GTC
-  var ab=document.getElementById('amBody'); ab.innerHTML='';
-  am.sort(function(a,b){return pct(a.gtc,a.daGan)-pct(b.gtc,b.daGan);});
-  am.forEach(function(a,i){ var pp=pct(a.gtc,a.daGan), pt=pct(a.gtc,a.canGiao); ab.insertAdjacentHTML('beforeend',
-    '<tr><td>'+(i+1)+'. '+a.am+'</td><td>'+vn(a.canGiao)+'</td><td>'+vn(a.daGan)+'</td><td>'+vn(a.gtc)+'</td><td class="pct '+cls(pp)+'">'+pstr(pp)+'</td><td class="pct '+cls(pt)+'">'+pstr(pt)+'</td></tr>'); });
-
-  // BC table
+  // BC table (bảng Theo AM đã bỏ — bảng Bưu Cục theo AM đã gom đủ)
   window._bc=bc; renderBC();
   // Chuyến treo qua ngày
   if(v.hang!=null)document.getElementById('hangTotal').innerHTML=vn(v.hang)+'<span style="font-size:20px"> chuyến</span>';
