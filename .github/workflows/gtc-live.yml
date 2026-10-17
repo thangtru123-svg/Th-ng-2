@@ -30,5 +30,8 @@ jobs:
             echo "Khong co thay doi"
           else
             git commit -m "data(tbb): GTC live $(date -u +'%Y-%m-%d %H:%M')Z"
-            git push
+            for i in 1 2 3; do
+              git pull --rebase origin main && git push && break
+              echo "push ket qua loi, thu lai ($i)"; sleep 5
+            done
           fi
