@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Nút cập nhật token GHN</title>
+<style>
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;max-width:720px;margin:36px auto;padding:0 20px;line-height:1.6;color:#1a1a2e;background:#fafafa}
+h1{font-size:22px}
+.btn{display:inline-block;background:linear-gradient(180deg,#ff9f1c,#ff8300);color:#1a1200;font-weight:800;font-size:17px;padding:14px 26px;border-radius:12px;text-decoration:none;box-shadow:0 6px 18px rgba(255,140,0,.35);cursor:grab;user-select:none}
+.step{background:#fff;border:1px solid #eee;border-radius:12px;padding:14px 18px;margin:14px 0}
+.step b{color:#ff8300}
+.warn{background:#FFF7ED;border-left:4px solid #ff8300;padding:10px 14px;border-radius:8px;font-size:14px;color:#92400e;margin:10px 0}
+code{background:#f0f0f0;padding:1px 6px;border-radius:5px}
+.big{font-size:18px}
+</style>
+</head>
+<body>
+<h1>🔑 Nút cập nhật token GHN (cho Chrome máy tính)</h1>
+
+<div class="warn">⚠️ <b>ĐỪNG bấm</b> vào nút cam dưới đây. Hãy <b>KÉO (giữ chuột rồi rê)</b> nó <b>lên thanh dấu trang (bookmarks bar)</b> của Chrome.</div>
+
+<p class="big">👇 Kéo nút này lên thanh dấu trang:</p>
+<p><a class="btn" href="javascript:(function(){var t=localStorage.getItem('SESSION');if(!t){alert('Chua dang nhap nhanh.ghn.vn?');return;}fetch('https://th-ng-2.vercel.app/api/set-ghn',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token:t,key:'xbg-ghn-k7m2p9'})}).then(function(r){return r.json();}).then(function(j){alert(j.ok?('OK - '+(j.msg||'Da cap nhat token GHN')):('LOI - '+(j.error||'Loi')));}).catch(function(e){alert('LOI - '+e);});})();">🔑 Cập nhật token GHN</a></p>
+
+<div class="step"><b>Bước 1.</b> Hiện thanh dấu trang: nhấn <code>Cmd + Shift + B</code>.</div>
+<div class="step"><b>Bước 2.</b> <b>Kéo</b> nút cam ở trên <b>thả vào thanh dấu trang</b>. Xong — đã có nút.</div>
+<div class="step"><b>Bước 3 (cách dùng).</b> Khi số Trực tiếp đứng im: mở <b>nhanh.ghn.vn</b> (đang đăng nhập) → bấm nút <b>“Cập nhật token GHN”</b> trên thanh dấu trang → hiện <b>“OK - Đã cập nhật token GHN”</b> là xong. Lần quét kế tiếp dùng token mới.</div>
+
+<p style="color:#888;font-size:13px">Lưu ý: nút này chỉ hoạt động khi đang mở trang nhanh.ghn.vn (đã đăng nhập). Bấm ở trang khác sẽ báo “Chưa đăng nhập”.</p>
+</body>
+</html>
