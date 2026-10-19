@@ -125,6 +125,7 @@ tr.amchild td:first-child{padding-left:16px;font-size:12.5px}
     <div class="subtab" onclick="setSub('L','ton',this)">📦 Tồn đọng BC</div>
     <div class="subtab" onclick="setSub('L','ambc',this)">👤 Theo AM / BC</div>
     <div class="subtab" onclick="setSub('L','hang',this)">🧳 Chuyến treo</div>
+    <div class="subtab" onclick="setSub('L','cod',this)">💰 Check COD</div>
   </div>
 
   <div class="subpage" data-sub="L-ov">
@@ -204,6 +205,33 @@ tr.amchild td:first-child{padding-left:16px;font-size:12.5px}
     <table><thead><tr><th>AM / Bưu Cục</th><th>Số chuyến</th></tr></thead><tbody id="hangBody"></tbody></table>
   </div>
   </div><!-- /L-hang -->
+
+  <div class="subpage hidden" data-sub="L-cod">
+  <div class="card">
+    <div class="lbl">💰 Đơn giao thất bại có COD ≥ 1 triệu · cần đối soát</div>
+    <div class="row" style="margin-top:8px">
+      <div class="chip"><span class="c">⚠️ Số đơn</span><b id="codSoDon" style="color:#ff5d6c">—</b></div>
+      <div class="chip"><span class="c">💳 Tổng COD</span><b id="codTong" style="color:#ff5d6c">—</b></div>
+    </div>
+    <div class="row" style="margin-top:6px">
+      <div class="chip"><span class="c">📈 TB/đơn</span><b id="codTB">—</b></div>
+      <div class="chip"><span class="c">👥 Số NV</span><b id="codNV">—</b></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="subtabs" style="margin-bottom:10px">
+      <div class="subtab on" id="codSegTinh" onclick="codSeg('tinh')">Theo Tỉnh</div>
+      <div class="subtab" id="codSegAm" onclick="codSeg('am')">Theo AM</div>
+      <div class="subtab" id="codSegBc" onclick="codSeg('bc')">Theo Bưu cục</div>
+    </div>
+    <table><thead><tr><th id="codAggHead">Tỉnh</th><th>Số đơn</th><th>Tổng COD</th></tr></thead><tbody id="codAggBody"></tbody></table>
+  </div>
+  <div class="card">
+    <div class="sect">📋 Top đơn COD cao nhất</div>
+    <div class="mut" style="margin-bottom:6px" id="codOrderNote">—</div>
+    <table><thead><tr><th>Mã đơn / NV</th><th>COD</th></tr></thead><tbody id="codOrderBody"></tbody></table>
+  </div>
+  </div><!-- /L-cod -->
   </div><!-- /tabLive -->
 
   <div id="tabN1" class="hidden">
@@ -315,6 +343,7 @@ async function load(){
   }catch(e){ document.getElementById('updAt').textContent='Lỗi tải dữ liệu'; }
 }
 function render(d){
+  try{ renderCOD(d.cod); }catch(e){}
   var v=d.vung;
   var p = pct(v.gtc, v.daGan);
   document.getElementById('pctBig').innerHTML = pstr(p).replace('%','')+'<span>%</span>';
@@ -495,6 +524,30 @@ function setTab(which){
   // nút Cập nhật chỉ hiện ở tab trực tiếp (N-1 là số chốt từ Sheet)
   document.getElementById('refresh').classList.toggle('hidden', !live || _scanning);
   if(!live && !_n1loaded){ loadN1(); }
+}
+var _COD=null, _codSeg='tinh';
+function renderCOD(cod){
+  _COD=cod;
+  if(!cod||!cod.orders){ var s=document.getElementById('codSoDon'); if(s)s.textContent='—'; var nt=document.getElementById('codOrderNote'); if(nt)nt.textContent='Chưa có dữ liệu COD — chờ lần quét tới.'; return; }
+  var V=cod.vung;
+  var trv=function(x){return (x/1e6).toLocaleString('vi-VN',{minimumFractionDigits:1,maximumFractionDigits:1})+' tr';};
+  document.getElementById('codSoDon').textContent=vn(V.soDon);
+  document.getElementById('codTong').textContent=trv(V.tongCod);
+  document.getElementById('codTB').textContent=trv(V.codTB);
+  document.getElementById('codNV').textContent=vn(V.soNV);
+  codSeg(_codSeg);
+  var rows=(cod.orders||[]).slice(0,80).map(function(o){return '<tr><td><b>'+o.ma+'</b><div class="mut" style="font-size:11px">'+(o.nv||'')+' · '+o.bc+'</div></td><td style="text-align:right;color:#ff5d6c;font-weight:700">'+vn(o.cod)+' đ</td></tr>';}).join('');
+  document.getElementById('codOrderBody').innerHTML=rows;
+  document.getElementById('codOrderNote').textContent='Hiển thị '+Math.min(80,cod.orders.length)+'/'+vn(cod.orders.length)+' đơn (COD cao nhất)';
+}
+function codSeg(k){
+  _codSeg=k;
+  ['tinh','am','bc'].forEach(function(x){var e=document.getElementById('codSeg'+x.charAt(0).toUpperCase()+x.slice(1));if(e)e.className='subtab'+(x===k?' on':'');});
+  var hd=document.getElementById('codAggHead'); if(hd)hd.textContent=(k==='tinh'?'Tỉnh':(k==='am'?'AM':'Bưu cục'));
+  if(!_COD)return;
+  var arr=k==='tinh'?_COD.byTinh:(k==='am'?_COD.byAM:_COD.byBC);
+  var trv=function(x){return (x/1e6).toLocaleString('vi-VN',{minimumFractionDigits:1,maximumFractionDigits:1})+' tr';};
+  document.getElementById('codAggBody').innerHTML=(arr||[]).map(function(x){return '<tr><td>'+x.key+'</td><td style="text-align:center;color:#ff5d6c;font-weight:700">'+vn(x.soDon)+'</td><td style="text-align:right;font-weight:600">'+trv(x.tongCod)+'</td></tr>';}).join('');
 }
 function setSub(g,key,btn){
   var bar=document.getElementById(g==='L'?'subtabsLive':'subtabsN1');

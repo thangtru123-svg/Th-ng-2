@@ -226,6 +226,7 @@ tr.tot td{background:#FFF0EB!important;font-weight:800!important;border-top:2px 
  <button class="nav-item" onclick="show('p35',this)" style="background:linear-gradient(135deg,rgba(220,38,38,0.16),rgba(241,93,41,0.08));border:1px solid rgba(220,38,38,0.32);font-weight:700"><span class="icon">🚨</span>Quá Hạn / Truy Thu</button>
  <button class="nav-item" onclick="show('p38',this)" style="background:linear-gradient(135deg,rgba(220,38,38,0.16),rgba(241,93,41,0.08));border:1px solid rgba(220,38,38,0.32);font-weight:700"><span class="icon">🔁</span>Tổng quan truy thu XBG</button>
  <button class="nav-item" onclick="show('p41',this)" style="background:linear-gradient(135deg,rgba(22,101,52,0.16),rgba(34,197,94,0.1));border:1px solid rgba(22,101,52,0.35);font-weight:700"><span class="icon">🚚</span>Báo cáo GTC realtime trong ngày</button>
+ <button class="nav-item" onclick="show('p42',this)" style="background:linear-gradient(135deg,rgba(220,38,38,0.16),rgba(241,93,41,0.08));border:1px solid rgba(220,38,38,0.32);font-weight:700"><span class="icon">💰</span>Check COD giá trị cao</button>
  <button class="nav-item" onclick="show('p37',this)" style="background:linear-gradient(135deg,rgba(220,38,38,0.16),rgba(241,93,41,0.08));border:1px solid rgba(220,38,38,0.32);font-weight:700"><span class="icon">📮</span>Đơn TTS · Shopee (BG)</button>
  <div class="nav-section">GTC</div>
  <button class="nav-item" onclick="show('p1',this)"><span class="icon">📦</span>Tổng quan GTC Total</button>
@@ -288,6 +289,7 @@ tr.tot td{background:#FFF0EB!important;font-weight:800!important;border-top:2px 
 <div class="page" id="p38"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
 <div class="page" id="p39"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
 <div class="page" id="p41"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
+<div class="page" id="p42"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
 </main>
 
 <script>
@@ -4221,11 +4223,91 @@ function _grtVN(n){return (+n||0).toLocaleString('vi-VN');}
 function _grtPct(a,b){return (+b>0)?((+a/+b*100).toFixed(1).replace('.',',')+'%'):'—';}
 function _grtStrip(s){return (s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/đ/g,'d').replace(/Đ/g,'D').toLowerCase();}
 function grtFilter(q){const t=_grtStrip(q);document.querySelectorAll('#p41 tr[data-grt]').forEach(tr=>{tr.style.display=(!t||tr.getAttribute('data-grt').indexOf(t)>=0)?'':'none';});}
+/* ===== p42 — Check COD giá trị cao (đơn giao thất bại có COD>=1tr, cần đối soát) =====
+   Nguồn: gtc_live.json.cod (Action pull_gtc.js chạy 30'/lần). Tự cập nhật 30'. */
+function _codTab(k){
+ ['tinh','am','bc'].forEach(x=>{
+  const t=document.getElementById('codTab_'+x), p=document.getElementById('codPane_'+x);
+  if(t){t.style.background=(x===k?'var(--orange)':'#F3F4F6');t.style.color=(x===k?'#fff':'var(--text-main)');}
+  if(p)p.style.display=(x===k?'block':'none');
+ });
+}
+function _codCSV(){
+ const C=window._CODDATA; if(!C)return;
+ const head=['Mã đơn','COD (đ)','NV giao','ID NV','Bưu cục','AM','Tỉnh','Lý do thất bại'];
+ const rows=C.orders.map(o=>[o.ma,o.cod,o.nv,o.idnv,o.bc,o.am,o.tinh,(o.note||'').replace(/[\n,"]/g,' ')]);
+ const csv='﻿'+[head,...rows].map(r=>r.map(x=>/[",;\n]/.test(String(x))?'"'+String(x).replace(/"/g,'""')+'"':x).join(',')).join('\n');
+ const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));a.download='check_cod_'+(new Date().toISOString().slice(0,10))+'.csv';a.click();
+}
+async function buildCodCheckPage(){
+ const el=document.getElementById('p42'); if(!el) return;
+ const trv=v=>((+v||0)/1e6).toLocaleString('vi-VN',{minimumFractionDigits:1,maximumFractionDigits:1})+' tr';
+ const dv=v=>(+v||0).toLocaleString('vi-VN')+' đ';
+ const render=async()=>{
+  try{
+   let r=await fetch('gtc_live.json?t='+Date.now());
+   if(!r.ok) throw new Error('HTTP '+r.status);
+   const d=await r.json(); const C=d.cod;
+   if(!C||!C.orders){ el.innerHTML='<div class="page-header"><div class="page-title">💰 Check COD giá trị cao</div></div><div class="analysis-box">Chưa có dữ liệu COD trong gtc_live.json — chờ lần quét tới (mỗi 30 phút). Bấm nút "Cập nhật dữ liệu" hoặc đợi Action chạy.</div>'; return; }
+   window._CODDATA=C;
+   const V=C.vung; const upd=new Date(d.updatedAt);
+   const updStr=isNaN(upd)?'—':upd.toLocaleString('vi-VN',{hour:'2-digit',minute:'2-digit',day:'2-digit',month:'2-digit'});
+   const kpi=(t,v,s,c)=>`<div style="flex:1;min-width:150px;background:#fff;border:1px solid var(--border);border-radius:14px;padding:13px 16px;box-shadow:var(--shadow-sm)"><div style="font-size:12px;color:var(--text-sub);font-weight:600">${t}</div><div style="font-size:23px;font-weight:800;color:${c||'var(--text-main)'};margin-top:2px">${v}</div><div style="font-size:11.5px;color:var(--text-sub);margin-top:1px">${s}</div></div>`;
+   const TH='style="background:#1F3864;color:#fff;padding:7px 11px;font-size:12px;font-weight:700;white-space:nowrap"';
+   const tc='style="text-align:center;padding:6px 10px;font-size:12.5px;border-bottom:1px solid var(--border);white-space:nowrap"';
+   const tl='style="text-align:left;padding:6px 10px;font-size:12.5px;border-bottom:1px solid var(--border);white-space:nowrap"';
+   const tr2='style="text-align:right;padding:6px 10px;font-size:12.5px;border-bottom:1px solid var(--border);white-space:nowrap"';
+   const aggTable=(arr,label)=>{
+    let tot={soDon:0,tongCod:0,nvSet:0};arr.forEach(x=>{tot.soDon+=x.soDon;tot.tongCod+=x.tongCod;});
+    let h=`<div class="table-wrap" style="overflow-x:auto"><table style="border-collapse:collapse;min-width:640px"><thead><tr>
+     <th ${TH} style="background:#1F3864;color:#fff;text-align:left">${label}</th><th ${TH} style="text-align:center">SỐ ĐƠN</th><th ${TH} style="text-align:center">SỐ NV</th><th ${TH} style="text-align:right">TỔNG COD</th><th ${TH} style="text-align:right">COD TB/ĐƠN</th><th ${TH} style="text-align:right">COD CAO NHẤT</th></tr></thead><tbody>`;
+    arr.forEach(x=>{h+=`<tr><td ${tl} style="font-weight:600">${x.key}</td><td ${tc} style="color:#DC2626;font-weight:700">${fmt(x.soDon)}</td><td ${tc}>${fmt(x.soNV)}</td><td ${tr2} style="font-weight:700">${trv(x.tongCod)}</td><td ${tr2} style="color:var(--orange-dark)">${trv(x.codTB)}</td><td ${tr2}>${trv(x.codMax)}</td></tr>`;});
+    h+=`<tr style="background:#FFF7ED;font-weight:800"><td ${tl}>Tổng</td><td ${tc} style="color:#DC2626">${fmt(tot.soDon)}</td><td ${tc}>—</td><td ${tr2}>${trv(tot.tongCod)}</td><td ${tr2} style="color:var(--orange-dark)">${trv(tot.soDon?Math.round(tot.tongCod/tot.soDon):0)}</td><td ${tr2}>—</td></tr>`;
+    return h+'</tbody></table></div>';
+   };
+   const CAP=600;
+   const orderRows=C.orders.slice(0,CAP).map(o=>`<tr><td ${tl} style="font-family:monospace;font-weight:600">${o.ma}</td><td ${tr2} style="color:#DC2626;font-weight:700">${dv(o.cod)}</td><td ${tl}>${o.nv||'—'}</td><td ${tc} style="color:var(--text-sub)">${o.idnv||'—'}</td><td ${tl}>${o.bc}</td><td ${tl}>${o.am}</td><td ${tl} style="color:var(--text-sub);font-size:11.5px">${o.note||'—'}</td></tr>`).join('');
+   el.innerHTML=`
+    <div class="page-header">
+     <div class="page-title">💰 Check COD giá trị cao</div>
+     <div class="page-meta">
+      <span style="color:var(--text-sub);font-size:13px">Đơn <b>giao thất bại</b> có COD từ <b>1.000.000đ</b> trở lên — cần đối soát tiền hàng.</span>
+      <span style="background:#ECFDF5;color:#166534;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:700">🕒 Quét: ${updStr} · ${V.hubsOk||C.hubsOk||''} bưu cục</span>
+      <button class="tg-inpage-btn" style="background:#16A34A;border-color:#16A34A" onclick="window._codRender&&window._codRender()">🔄 Tải lại</button>
+     </div>
+    </div>
+    <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px">
+     ${kpi('⚠️ Đơn giao thất bại COD cao',fmt(V.soDon),'Ngưỡng ≥ 1 triệu','#DC2626')}
+     ${kpi('💳 Tổng giá trị COD',trv(V.tongCod),dv(V.tongCod),'#DC2626')}
+     ${kpi('📈 COD trung bình / đơn',trv(V.codTB),'Cao nhất '+trv(V.codMax),'var(--orange-dark)')}
+     ${kpi('👥 Số nhân viên liên quan',fmt(V.soNV),'Trên '+(C.byBC?C.byBC.length:0)+' bưu cục','var(--text-main)')}
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:12px">
+     <button id="codTab_tinh" onclick="_codTab('tinh')" style="padding:7px 16px;border:none;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer;background:var(--orange);color:#fff">Theo Tỉnh</button>
+     <button id="codTab_am" onclick="_codTab('am')" style="padding:7px 16px;border:none;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer;background:#F3F4F6;color:var(--text-main)">Theo AM</button>
+     <button id="codTab_bc" onclick="_codTab('bc')" style="padding:7px 16px;border:none;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer;background:#F3F4F6;color:var(--text-main)">Theo Bưu cục</button>
+    </div>
+    <div class="card" style="margin-bottom:18px"><div id="codPane_tinh" style="display:block">${aggTable(C.byTinh,'TỈNH')}</div><div id="codPane_am" style="display:none">${aggTable(C.byAM,'AM')}</div><div id="codPane_bc" style="display:none">${aggTable(C.byBC,'BƯU CỤC')}</div></div>
+    <div class="card">
+     <div class="card-header"><div class="card-title"><div class="card-icon">📋</div>Toàn bộ đơn — sắp theo COD giảm dần (${fmt(C.orders.length)} đơn)</div>
+      <button class="tg-inpage-btn" style="background:var(--orange);border-color:var(--orange)" onclick="_codCSV()">⬇️ Tải dữ liệu (CSV)</button></div>
+     <div class="table-wrap" style="overflow:auto;max-height:620px"><table style="border-collapse:collapse;min-width:820px"><thead style="position:sticky;top:0;z-index:2"><tr>
+      <th ${TH} style="text-align:left">MÃ ĐƠN</th><th ${TH} style="text-align:right">COD</th><th ${TH} style="text-align:left">NV GIAO</th><th ${TH} style="text-align:center">ID NV</th><th ${TH} style="text-align:left">BƯU CỤC</th><th ${TH} style="text-align:left">AM</th><th ${TH} style="text-align:left">LÝ DO THẤT BẠI</th></tr></thead><tbody>${orderRows}</tbody></table></div>
+     ${C.orders.length>CAP?`<div style="padding:9px 12px;color:var(--text-sub);font-size:12px">Hiển thị ${CAP}/${fmt(C.orders.length)} đơn COD cao nhất — bấm <b>Tải dữ liệu (CSV)</b> để xem đủ.</div>`:''}
+    </div>`;
+  }catch(e){ el.innerHTML='<div class="page-header"><div class="page-title">💰 Check COD giá trị cao</div></div><div class="analysis-box">Lỗi tải dữ liệu: '+(e&&e.message||e)+'</div>'; }
+ };
+ window._codRender=render;
+ await render();
+ if(window._codTimer)clearInterval(window._codTimer);
+ window._codTimer=setInterval(render,30*60*1000); // tự cập nhật 30 phút
+}
 async function buildGTCRealtimePage(){
  const el=document.getElementById('p41');
  el.innerHTML='<div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải GTC realtime…</div></div>';
  try{
-  const r=await fetch('gtc_realtime.json?t='+Date.now());
+  let r=await fetch('gtc_live.json?t='+Date.now());  // file Action 30' (có cả cod); fallback snapshot thủ công
+  if(!r.ok) r=await fetch('gtc_realtime.json?t='+Date.now());
   if(!r.ok) throw new Error('HTTP '+r.status);
   const d=await r.json(); window._GTCRT=d;
   const V=d.vung||{canGiao:0,daGan:0,gtc:0};
@@ -4421,8 +4503,10 @@ async function init(){
  buildTruyThuPage().catch(e=>console.warn('Truy thu LC:',e&&e.message||e));
  // p39 — Báo cáo GTC khu vực 13 BC (không chặn init)
  buildGKPage().catch(e=>console.warn('GTC khu vực:',e&&e.message||e));
- // p41 — Báo cáo GTC realtime trong ngày (đọc snapshot gtc_realtime.json)
+ // p41 — Báo cáo GTC realtime trong ngày (đọc gtc_live.json, tự cập nhật 30')
  buildGTCRealtimePage().catch(e=>console.warn('GTC realtime:',e&&e.message||e));
+ // p42 — Check COD giá trị cao (đọc gtc_live.json.cod, tự cập nhật 30')
+ buildCodCheckPage().catch(e=>console.warn("COD:",e&&e.message||e));
  // p16 — Báo Cáo Vận Hành Ngày
  const p16el=document.getElementById('p16');
  if(R['GTC ca 1,2 theo AM']){
