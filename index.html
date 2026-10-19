@@ -489,6 +489,7 @@ function _2TConfig(id,name,gid){
     if(/theo Bưu Cục$/.test(n)) return {mode:'bc',col:/^FD /.test(n)?0:1};
     if(/- Bưu Cục$/.test(n))   return {mode:'bc',col:1};        // ODR/OPR TTS - Bưu Cục
     if(/theo AM$/.test(n)||/- AM$/.test(n)) return {mode:'am',col:0};
+    if(!n && String(gid)==='201703493') return {mode:'bc',col:1}; // p19 GTC ca 1,2 theo Bưu Cục: BC=1
     return null;
   }
   if(id===AGING_SHEET_ID){
@@ -510,7 +511,7 @@ function _2TConfig(id,name,gid){
     if(String(gid)==='1869789258') return {mode:'bc',col:5};     // Shopee: BC=5
     return {mode:'bc',col:3};                                    // TTS (gid 0): BC=3
   }
-  // p18 Volume (1BsqjK...) TẠM BỎ: sheet có nhiều dòng "Grand Total" subtotal theo tỉnh, lọc dễ rỗng — kiểm cấu trúc kỹ rồi thêm sau
+  if(id==='1BsqjKaWRHSq8RaiQ0AD-cGBU3jsF-fu0fEwqHmt6gu4') return {mode:'bc',col:1}; // p18 Volume: cột Bưu Cục=1 (có tiền tố, bỏ dòng Grand Total/tỉnh khác)
   return null;
 }
 async function _filter2T(id,name,gid,csv){
