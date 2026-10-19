@@ -82,7 +82,8 @@ export default async function handler(req, res) {
     const vOdr = vungOt(odrBCm), vOpr = vungOt(oprBCm);
     const r1 = x => x == null ? null : Math.round(x * 10) / 10;
     // ===== build AM list (union GTC AM) =====
-    const amNames = new Set([...Object.keys(amGTC), ...Object.keys(FA.total), ...Object.keys(ttsAMm), ...Object.keys(odrAMm), ...Object.keys(oprAMm)]);
+    // Chỉ lấy AM có thật trong GTC (sheet AM) hoặc đang sở hữu Bưu Cục — tránh rác tên ghép/biến thể từ sheet FD/TTS/ODR
+    const amNames = new Set([...Object.keys(amGTC), ...Object.values(bc2am)]);
     const am = [];
     amNames.forEach(name => {
       const g = amGTC[name] || { vol: 0, gan: 0, pct: 0, ngtc: 0 };
