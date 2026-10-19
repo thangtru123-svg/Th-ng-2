@@ -495,9 +495,22 @@ function _2TConfig(id,name,gid){
     if(n==='Cơ cấu AM') return null;                             // cần đủ để dựng map, KHÔNG lọc
     if(n===AGING_HIST_SHEET) return {mode:'bc',col:1};           // Lịch sử Aging: cột bc=1
     if(n===AGING_RAW_SHEET)  return {mode:'bc',col:3};           // Aging> 5 Ngày: cột bc=3
+    if(!n && String(gid)==='1544692169') return {mode:'bc',col:5}; // p38 Truy thu: cột Kho=5 (có tiền tố)
     if(!n && String(gid)===String(AGING_GID)) return {mode:'bc',col:2}; // Export: cột bc=2
     return null;
   }
+  // ===== Các trang bắn TG khác (file riêng) =====
+  if(id==='1kNe1tsvV_kqXqMUsr2pnxN9lfG3_CwGFyN5JtiVldrs'){       // Rớt LC / Tồn đọng chờ chuyển trả
+    if(String(gid)==='406146643') return {mode:'provcol',col:3}; // p27 Rớt LC: BC không tiền tố → lọc cột Tỉnh=3
+    if(String(gid)==='397128643') return {mode:'bc',col:4};      // p28 Tồn đọng: cột Bưu Cục=4 (có tiền tố)
+    return null;
+  }
+  if(id==='1VB4bdj6dMftDF8RgTG_vpYPl3YaDF1RN28u-AKqC4zY') return {mode:'bc',col:1}; // p30 Khoá ID: BC=1
+  if(id==='11hgHBTqUw8pjeMqCG-JrEvlaY9uFbeekbTCL9Uh61uQ'){       // p35 Quá hạn backlog
+    if(String(gid)==='1869789258') return {mode:'bc',col:5};     // Shopee: BC=5
+    return {mode:'bc',col:3};                                    // TTS (gid 0): BC=3
+  }
+  // p18 Volume (1BsqjK...) TẠM BỎ: sheet có nhiều dòng "Grand Total" subtotal theo tỉnh, lọc dễ rỗng — kiểm cấu trúc kỹ rồi thêm sau
   return null;
 }
 async function _filter2T(id,name,gid,csv){
@@ -515,6 +528,7 @@ async function _filter2T(id,name,gid,csv){
       let keep=false;
       if(cfg.mode==='bc') keep=_2T_PFX.test((r[cfg.col]||'').trim());   // chỉ xét đúng cột bc (tránh cột phụ)
       else if(cfg.mode==='am') (r[cfg.col]||'').split(',').forEach(a=>{if(amSet.has(a.trim()))keep=true;});
+      else if(cfg.mode==='provcol') keep=/Lạng Sơn|Quảng Ninh/.test(r[cfg.col]||''); // lọc theo cột Tỉnh (BC không có tiền tố)
       if(keep) out.push(r);
     }
     if(out.length<=1 && rows.length>1){ console.warn('[2T] lọc ra 0 dòng → giữ nguyên',name||gid); return csv; } // van an toàn
