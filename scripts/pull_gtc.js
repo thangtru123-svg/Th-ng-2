@@ -161,10 +161,7 @@ async function pool(items, n, fn) {
     am: Object.values(amM).sort((a, b) => b.canGiao - a.canGiao),
     bc: bcL.sort((a, b) => b.canGiao - a.canGiao)
   };
-  fs.writeFileSync(path.join(ROOT, 'gtc_live.json'), JSON.stringify(out));
-  console.log(`[pull] OK hubsOk=${hubs.length} err=${errN} GTC=${vung.gtc} daGan=${vung.daGan} canGiao=${vung.canGiao}`);
-
-  // ===== Đơn giao thất bại có COD >= 1tr (đối soát tiền hàng) → cod_live.json =====
+  // ===== Đơn giao thất bại có COD >= 1tr (đối soát tiền hàng) — nhúng vào gtc_live.json =====
   const codOrders = [...codMap.values()].sort((a, b) => b.cod - a.cod);
   const codAgg = (keyFn) => {
     const m = {};
@@ -173,14 +170,15 @@ async function pool(items, n, fn) {
   };
   const codNV = new Set(); codOrders.forEach(o => codNV.add(o.idnv || o.nv));
   const codTong = codOrders.reduce((s, o) => s + o.cod, 0);
-  const codOut = {
-    updatedAt: out.updatedAt, nguong: 1000000, hubsOk: hubs.length,
+  out.cod = {
+    nguong: 1000000, hubsOk: hubs.length,
     vung: { soDon: codOrders.length, tongCod: codTong, codTB: codOrders.length ? Math.round(codTong / codOrders.length) : 0, codMax: codOrders.length ? codOrders[0].cod : 0, soNV: codNV.size },
     byTinh: codAgg(o => o.tinh), byAM: codAgg(o => o.am), byBC: codAgg(o => o.bc),
     orders: codOrders
   };
-  fs.writeFileSync(path.join(ROOT, 'cod_live.json'), JSON.stringify(codOut));
-  console.log(`[pull] COD OK soDon=${codOut.vung.soDon} tongCod=${codTong} soNV=${codNV.size}`);
+
+  fs.writeFileSync(path.join(ROOT, 'gtc_live.json'), JSON.stringify(out));
+  console.log(`[pull] OK hubsOk=${hubs.length} err=${errN} GTC=${vung.gtc} daGan=${vung.daGan} canGiao=${vung.canGiao} COD soDon=${out.cod.vung.soDon} tongCod=${codTong}`);
 
   // nối lịch sử (giữ 14 ngày gần nhất) để so cùng giờ hôm qua
   const hp = path.join(ROOT, 'gtc_history.json');
