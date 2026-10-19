@@ -434,19 +434,92 @@ async function _sheetViaApi(url){
   if(window._apiCache[ck]!=null)return new Response(window._apiCache[ck],{status:200,headers:{'Content-Type':'text/csv'}});
   if(_apiInflight[ck]){const csv=await _apiInflight[ck];return new Response(csv,{status:200,headers:{'Content-Type':'text/csv'}});}
   const job=(async()=>{
+    let raw=null;
     if(_proxyOk!==false){
-      try{ const csv=await _sheetViaProxy(id,name,gid); _proxyOk=true; window._apiCache[ck]=csv; return csv; }
+      try{ raw=await _sheetViaProxy(id,name,gid); _proxyOk=true; }
       catch(e){ // 500 not_configured ⇒ chưa set env ⇒ fallback; lỗi khác sau khi proxy đã OK ⇒ ném ra
         if(_proxyOk===true) throw e;
         if(e&&e._status&&e._status!==500) throw e; // vd 403 (không phải @ghn) thì không fallback vô ích
         _proxyOk=false;
       }
     }
-    const csv=await _sheetDirectCsv(id,name,gid); window._apiCache[ck]=csv; return csv;
+    if(raw==null) raw=await _sheetDirectCsv(id,name,gid);
+    const csv=await _filter2T(id,name,gid,raw); // lọc 2 tỉnh (LS+QN) nếu bật
+    window._apiCache[ck]=csv; return csv;
   })();
   _apiInflight[ck]=job;
   try{const csv=await job; return new Response(csv,{status:200,headers:{'Content-Type':'text/csv'}});}
   finally{delete _apiInflight[ck];}
+}
+/* ===== LỌC 2 TỈNH: Lạng Sơn (LSO) + Quảng Ninh (QNI) — áp cho MỌI trang bắn TG =====
+   Hook 1 điểm: lọc CSV ngay khi Sheet trả về. Cấu hình theo từng sheet; sheet nào
+   không khai báo thì GIỮ NGUYÊN (không rủi ro). Van an toàn: nếu lọc còn 0 dòng → trả
+   nguyên bản (tránh làm trắng trang). Bỏ dòng "Grand Total" để các trang tự cộng lại = 2 tỉnh.
+   Tắt tạm thời: window._ONLY_2T=false (trên console). */
+window._ONLY_2T = (window._ONLY_2T!==false);
+const _2T_PFX=/^\((QNI|LSO)\)/;                 // mã BC thuộc 2 tỉnh (QNI=Quảng Ninh, LSO=Lạng Sơn)
+let _clusterAM=null,_clusterAMp=null;
+// đọc CSV thô KHÔNG qua bộ lọc (tránh đệ quy khi dựng danh sách AM cụm)
+async function _rawSheetCsv(id,name,gid){
+  if(_proxyOk!==false){ try{ const c=await _sheetViaProxy(id,name,gid); _proxyOk=true; return c; }
+    catch(e){ if(_proxyOk===true) throw e; if(e&&e._status&&e._status!==500) throw e; _proxyOk=false; } }
+  return await _sheetDirectCsv(id,name,gid);
+}
+// Tập AM thuộc cụm 2 tỉnh = AM quản lý ≥1 BC (QNI|LSO) theo sheet "GTC Total theo Bưu Cục"
+async function _ensureClusterAM(){
+  if(_clusterAM) return _clusterAM;
+  if(_clusterAMp) return _clusterAMp;
+  _clusterAMp=(async()=>{
+    const set=new Set();
+    try{
+      const rows=parseCSV(await _rawSheetCsv(SID,'GTC Total theo Bưu Cục',null));
+      rows.slice(1).forEach(r=>{ const am=(r[0]||'').trim(), bc=(r[1]||'');
+        if(_2T_PFX.test(bc) && am && !/grand total/i.test(am))
+          am.split(',').forEach(a=>{const t=a.trim(); if(t) set.add(t);}); });
+    }catch(e){ console.warn('[2T] clusterAM',e&&e.message); }
+    _clusterAM=set; return set;
+  })();
+  return _clusterAMp;
+}
+// Cấu hình lọc theo sheet → {mode:'bc',col} | {mode:'am',col} | null(bỏ qua)
+function _2TConfig(id,name,gid){
+  if(!window._ONLY_2T) return null;
+  const n=(name||'').trim();
+  if(id===SID){
+    if(/theo Bưu Cục$/.test(n)) return {mode:'bc',col:/^FD /.test(n)?0:1};
+    if(/- Bưu Cục$/.test(n))   return {mode:'bc',col:1};        // ODR/OPR TTS - Bưu Cục
+    if(/theo AM$/.test(n)||/- AM$/.test(n)) return {mode:'am',col:0};
+    return null;
+  }
+  if(id===AGING_SHEET_ID){
+    if(n==='Cơ cấu AM') return null;                             // cần đủ để dựng map, KHÔNG lọc
+    if(n===AGING_HIST_SHEET) return {mode:'bc',col:1};           // Lịch sử Aging: cột bc=1
+    if(n===AGING_RAW_SHEET)  return {mode:'bc',col:3};           // Aging> 5 Ngày: cột bc=3
+    if(!n && String(gid)===String(AGING_GID)) return {mode:'bc',col:2}; // Export: cột bc=2
+    return null;
+  }
+  return null;
+}
+async function _filter2T(id,name,gid,csv){
+  try{
+    const cfg=_2TConfig(id,name,gid);
+    if(!cfg) return csv;
+    let amSet=null;
+    if(cfg.mode==='am'){ amSet=await _ensureClusterAM(); if(!amSet||!amSet.size) return csv; }
+    const rows=parseCSV(csv);
+    if(rows.length<2) return csv;
+    const out=[rows[0]];
+    for(let i=1;i<rows.length;i++){
+      const r=rows[i];
+      if(/grand total/i.test(r.join(' '))) continue;             // bỏ tổng vùng → trang tự cộng lại = 2 tỉnh
+      let keep=false;
+      if(cfg.mode==='bc') keep=_2T_PFX.test((r[cfg.col]||'').trim());   // chỉ xét đúng cột bc (tránh cột phụ)
+      else if(cfg.mode==='am') (r[cfg.col]||'').split(',').forEach(a=>{if(amSet.has(a.trim()))keep=true;});
+      if(keep) out.push(r);
+    }
+    if(out.length<=1 && rows.length>1){ console.warn('[2T] lọc ra 0 dòng → giữ nguyên',name||gid); return csv; } // van an toàn
+    return _rowsToCsv(out);
+  }catch(e){ console.warn('[2T] lỗi lọc, giữ nguyên',e&&e.message); return csv; }
 }
 window.fetch=async function(input,opts){
   const url=(typeof input==='string')?input:(input&&input.url)||'';
