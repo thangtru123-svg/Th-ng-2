@@ -1668,10 +1668,13 @@ function renderChartOntime(){
 
 function buildOverviewPage(){
  const el=document.getElementById('p0');if(!el)return;
- // GTC Grand Total
- const gtcRows=(window._D.gtcTotalAM||[]).slice(1).filter(r=>(r[0]||'').toLowerCase().includes('grand total')&&r.length>4);
+ // GTC Grand Total — TỰ CỘNG từ các dòng AM (bộ lọc 2 tỉnh đã bỏ dòng Grand Total của sheet)
  const gtcByDate={};
- gtcRows.forEach(r=>{const d=isoD(r[1]);if(d)gtcByDate[d]={vol:Math.round(parseFloat(r[2])||0),gan:(parseFloat(r[3])||0)*100,gtc:(parseFloat(r[4])||0)*100};});
+ (window._D.gtcTotalAM||[]).slice(1).forEach(r=>{const nm=(r[0]||'').trim();if(!nm||nm.toLowerCase().includes('grand total')||r.length<5)return;const d=isoD(r[1]);if(!d)return;
+  const vol=Math.round(parseFloat(r[2])||0),gan=parseFloat(r[3])||0,ngtc=Math.round(parseFloat(r[5])||0);
+  if(!gtcByDate[d])gtcByDate[d]={vol:0,nGTC:0,_gw:0};
+  gtcByDate[d].vol+=vol;gtcByDate[d].nGTC+=ngtc;gtcByDate[d]._gw+=vol*gan;});
+ Object.keys(gtcByDate).forEach(d=>{const o=gtcByDate[d];o.gan=o.vol>0?o._gw/o.vol*100:0;o.gtc=o.vol>0?o.nGTC/o.vol*100:0;});
  const gtcDates=Object.keys(gtcByDate).sort((a,b)=>a.localeCompare(b)).slice(-15);
  // FD Grand Total theo ngày — 4 nhóm (weighted avg vol×fd)
  const _calcFdGT=rows=>{const bd={};(rows||[]).slice(1).forEach(r=>{const d=isoD(r[1]);if(!d)return;const vol=parsePct(r[2]),fd=parsePct(r[3]);if(vol>0&&!(r[0]||'').toLowerCase().includes('grand total')){if(!bd[d])bd[d]={sv:0,sf:0};bd[d].sv+=vol;bd[d].sf+=fd*vol;}});const gt={};Object.keys(bd).forEach(d=>{if(bd[d].sv>0)gt[d]=bd[d].sf/bd[d].sv;});return gt;};
