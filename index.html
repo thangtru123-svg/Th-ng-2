@@ -679,8 +679,8 @@ function renderGTCAmTable(rows,dates){
  const gRows=data.filter(r=>isGrand(r));
  const pivot={};
  amRows.forEach(r=>{const name=(r[0]||'').trim(),d=isoD(r[1]);if(!name||!dates.includes(d))return;if(!pivot[name])pivot[name]={};pivot[name][d]={vol:Math.round(parseFloat(r[2])||0),gan:(parseFloat(r[3])||0)*100,gtc:(parseFloat(r[4])||0)*100,nGTC:Math.round(parseFloat(r[5])||0)};});
- const gPivot={};
- gRows.forEach(r=>{const d=isoD(r[1]);if(!dates.includes(d))return;gPivot[d]={vol:Math.round(parseFloat(r[2])||0),gan:(parseFloat(r[3])||0)*100,gtc:(parseFloat(r[4])||0)*100,nGTC:Math.round(parseFloat(r[5])||0)};});
+ const gPivot={}; // Grand Total = tự cộng từ các dòng AM đang hiển thị (khớp 2 tỉnh, không đọc dòng Grand Total sheet đã bị lọc)
+ dates.forEach(d=>{let v=0,n=0,gw=0;Object.values(pivot).forEach(row=>{const c=row[d];if(c){v+=c.vol;n+=c.nGTC;gw+=c.vol*c.gan/100;}});if(v>0)gPivot[d]={vol:v,gan:gw/v*100,gtc:n/v*100,nGTC:n};});
  const latest=dates[0];
  const names=Object.keys(pivot).sort((a,b)=>(pivot[a][latest]?.gtc??999)-(pivot[b][latest]?.gtc??999));
  const cs='padding:3px 7px;font-size:12px;';
@@ -734,8 +734,8 @@ function renderGTCBcTable(rows,dates,last5D){
  const gRows=data.filter(r=>isGrand(r));
  const pivot={};
  bcRows.forEach(r=>{const am=(r[0]||'').trim(),bc=(r[1]||'').trim(),d=isoD(r[2]);if(!bc)return;if(!pivot[bc])pivot[bc]={am,allD:{}};const nGTC=Math.round(parseFloat(r[6])||0);pivot[bc].allD[d]=nGTC;if(dates.includes(d))pivot[bc][d]={vol:Math.round(parseFloat(r[3])||0),gan:(parseFloat(r[4])||0)*100,gtc:(parseFloat(r[5])||0)*100,nGTC};});
- const gPivot={};
- gRows.forEach(r=>{const d=isoD(r[2]);if(!dates.includes(d))return;gPivot[d]={vol:Math.round(parseFloat(r[3])||0),gan:(parseFloat(r[4])||0)*100,gtc:(parseFloat(r[5])||0)*100,nGTC:Math.round(parseFloat(r[6])||0)};});
+ const gPivot={}; // Grand Total = tự cộng từ các Bưu Cục đang hiển thị (2 tỉnh)
+ dates.forEach(d=>{let v=0,n=0,gw=0;Object.values(pivot).forEach(row=>{const c=row[d];if(c){v+=c.vol;n+=c.nGTC;gw+=c.vol*c.gan/100;}});if(v>0)gPivot[d]={vol:v,gan:gw/v*100,gtc:n/v*100,nGTC:n};});
  const activeNames=Object.keys(pivot).filter(bc=>[...last5D].some(d=>(pivot[bc].allD[d]??0)>0));
  const latest=dates[0];
  const displayNames=activeNames.sort((a,b)=>(pivot[a][latest]?.gtc??999)-(pivot[b][latest]?.gtc??999));
@@ -3297,15 +3297,18 @@ function buildDailyReportPage(rowsCa12,rowsLTC,rowsCa12TTS,rowsODR,rowsOPR,selDa
    if(!pivot[am])pivot[am]={};
    pivot[am][loai]={vol:Math.round(parseFloat(r[3])||0),gan:(parseFloat(r[4])||0)*100,gtc:(parseFloat(r[5])||0)*100,nGTC:Math.round(parseFloat(r[6])||0)};
   });
+  // Grand Total = TỰ CỘNG từ các dòng AM (không đọc dòng Grand Total của sheet — đã bị lọc 2 tỉnh bỏ đi)
   const grandByLoai={};
-  data.filter(r=>isoD(r[2])===latest&&isGrand(r)).forEach(r=>{
-   const loai=(r[1]||'').trim();if(!loai)return;
-   grandByLoai[loai]={vol:Math.round(parseFloat(r[3])||0),gan:(parseFloat(r[4])||0)*100,gtc:(parseFloat(r[5])||0)*100,nGTC:Math.round(parseFloat(r[6])||0)};
-  });
+  Object.keys(pivot).forEach(am=>Object.keys(pivot[am]).forEach(loai=>{
+   const d=pivot[am][loai];const g=grandByLoai[loai]=grandByLoai[loai]||{vol:0,nGTC:0,_gw:0};
+   g.vol+=d.vol;g.nGTC+=d.nGTC;g._gw+=d.vol*d.gan/100;
+  }));
+  Object.keys(grandByLoai).forEach(l=>{const g=grandByLoai[l];g.gan=g.vol>0?g._gw/g.vol*100:0;g.gtc=g.vol>0?g.nGTC/g.vol*100:0;});
   const prevGrand={};
-  if(prev)data.filter(r=>isoD(r[2])===prev&&isGrand(r)).forEach(r=>{
+  if(prev)data.filter(r=>isoD(r[2])===prev&&!isGrand(r)).forEach(r=>{
    const loai=(r[1]||'').trim();if(!loai)return;
-   prevGrand[loai]={vol:Math.round(parseFloat(r[3])||0),nGTC:Math.round(parseFloat(r[6])||0)};
+   const g=prevGrand[loai]=prevGrand[loai]||{vol:0,nGTC:0};
+   g.vol+=Math.round(parseFloat(r[3])||0);g.nGTC+=Math.round(parseFloat(r[6])||0);
   });
   return{pivot,grandByLoai,prevGrand,latest,prev};
  }
@@ -3321,6 +3324,8 @@ function buildDailyReportPage(rowsCa12,rowsLTC,rowsCa12TTS,rowsODR,rowsOPR,selDa
    const key=isGrand?'__grand__':am;
    ltc[key]={vol:Math.round(parseFloat(r[2])||0),gan:(parseFloat(r[3])||0)*100,pctLTC:(parseFloat(r[4])||0)*100};
   });
+  // LTC Grand = tự cộng từ các AM nếu dòng Grand của sheet đã bị lọc bỏ
+  if(!ltc['__grand__']){let v=0,gw=0,lw=0;Object.keys(ltc).forEach(k=>{const o=ltc[k];if(o&&o.vol){v+=o.vol;gw+=o.vol*o.gan/100;lw+=o.vol*o.pctLTC/100;}});if(v>0)ltc['__grand__']={vol:v,gan:gw/v*100,pctLTC:lw/v*100};}
   return ltc;
  }
  function parseOntime(rows,forceDate){
