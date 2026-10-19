@@ -490,6 +490,8 @@ function _2TConfig(id,name,gid){
     if(/- Bưu Cục$/.test(n))   return {mode:'bc',col:1};        // ODR/OPR TTS - Bưu Cục
     if(/theo AM$/.test(n)||/- AM$/.test(n)) return {mode:'am',col:0};
     if(!n && String(gid)==='201703493') return {mode:'bc',col:1}; // p19 GTC ca 1,2 theo Bưu Cục: BC=1
+    if(n==='Năng suất NV' || (!n && String(gid)==='1723871284')) return {mode:'bc',col:0}; // Năng suất NV (p20/p32): BC=0
+    if(!n && String(gid)==='1639392945') return {mode:'bc',col:0}; // Bưu Cục bất ổn: BC=0
     return null;
   }
   if(id===AGING_SHEET_ID){
