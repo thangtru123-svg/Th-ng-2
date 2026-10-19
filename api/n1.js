@@ -50,11 +50,11 @@ export default async function handler(req, res) {
     const gDay = latestDay(gBC, 2);
     const amGTC = {}; // am -> {vol,gan_num,ngtc}
     const dayAM = latestDay(gAM, 1);
-    for (let k = 1; k < gAM.length; k++) { const r = gAM[k]; const am = r[0]; if (!am || am === 'Grand Total' || am.indexOf(',') >= 0) continue; if (dstr(r[1]) !== dayAM) continue; amGTC[am] = { vol: i(r[2]), gan: f(r[3]) * 100, pct: f(r[4]) * 100, ngtc: i(r[5]) }; }
+    for (let k = 1; k < gAM.length; k++) { const r = gAM[k]; const am = r[0]; if (!am || am === 'Grand Total') continue; if (dstr(r[1]) !== dayAM) continue; amGTC[am] = { vol: i(r[2]), gan: f(r[3]) * 100, pct: f(r[4]) * 100, ngtc: i(r[5]) }; }
     const bcGTC = {}; const bc2am = {}; let vVol = 0, vNgtc = 0, vGanNum = 0;
-    for (let k = 1; k < gBC.length; k++) { const r = gBC[k]; const bc = r[1]; if (!bc || bc === 'Grand Total') continue; if (dstr(r[2]) !== gDay) continue; const am = (r[0] || '').split(',')[0].trim(); bc2am[bc] = am; const vol = i(r[3]); bcGTC[bc] = { am, vol, gan: f(r[4]) * 100, pct: f(r[5]) * 100, ngtc: i(r[6]) }; vVol += vol; vNgtc += i(r[6]); vGanNum += f(r[4]) * vol; }
+    for (let k = 1; k < gBC.length; k++) { const r = gBC[k]; const bc = r[1]; if (!bc || bc === 'Grand Total') continue; if (dstr(r[2]) !== gDay) continue; const am = (r[0] || '').trim(); bc2am[bc] = am; const vol = i(r[3]); bcGTC[bc] = { am, vol, gan: f(r[4]) * 100, pct: f(r[5]) * 100, ngtc: i(r[6]) }; vVol += vol; vNgtc += i(r[6]); vGanNum += f(r[4]) * vol; }
     // ===== FD helper =====
-    function fdAM(rows) { const day = latestDay(rows, 1); const m = {}; for (let k = 1; k < rows.length; k++) { const r = rows[k]; const name = r[0]; if (!name || name === 'Grand Total' || name.indexOf(',') >= 0) continue; if (dstr(r[1]) !== day) continue; m[name] = { fd: f(r[3]) * 100, trat: f(r[4]), vol: f(r[2]) }; } return m; }
+    function fdAM(rows) { const day = latestDay(rows, 1); const m = {}; for (let k = 1; k < rows.length; k++) { const r = rows[k]; const name = r[0]; if (!name || name === 'Grand Total') continue; if (dstr(r[1]) !== day) continue; m[name] = { fd: f(r[3]) * 100, trat: f(r[4]), vol: f(r[2]) }; } return m; }
     function fdBC(rows) { const day = latestDay(rows, 1); const m = {}; for (let k = 1; k < rows.length; k++) { const r = rows[k]; const bc = r[0]; if (!bc || bc === 'Grand Total') continue; if (dstr(r[1]) !== day) continue; m[bc] = f(r[3]) * 100; } return m; }
     const FA = { total: fdAM(fTA), sme: fdAM(fSA), tts: fdAM(fTtA), shopee: fdAM(fShA) };
     const FB = { total: fdBC(fTB), sme: fdBC(fSB), tts: fdBC(fTtB), shopee: fdBC(fShB) };
@@ -69,9 +69,9 @@ export default async function handler(req, res) {
     for (let k = 1; k < nsNV.length; k++) { const r = nsNV[k]; const bc = r[0]; if (!bc) continue; if (dstr(r[2]) !== nsDay) continue; const nv = String(r[1] || '').replace(/^\d+_/, '').trim(); const gan = i(r[3]), gtc = i(r[4]); const pct = gan > 0 ? Math.round(gtc / gan * 1000) / 10 : 0; (nsBC[bc] = nsBC[bc] || []).push({ nv, gan, gtc, pct }); }
     for (const bc in nsBC) { nsBC[bc].sort((a, b) => b.gan - a.gan); }
     // ===== TTS: GTC TTS + ODR + OPR =====
-    function gtcAMidx(rows) { const day = latestDay(rows, 1); const m = {}; for (let k = 1; k < rows.length; k++) { const r = rows[k]; const nm = r[0]; if (!nm || nm === 'Grand Total' || nm.indexOf(',') >= 0) continue; if (dstr(r[1]) !== day) continue; m[nm] = { vol: i(r[2]), gan: f(r[3]) * 100, pct: f(r[4]) * 100, ngtc: i(r[5]) }; } return m; }
+    function gtcAMidx(rows) { const day = latestDay(rows, 1); const m = {}; for (let k = 1; k < rows.length; k++) { const r = rows[k]; const nm = r[0]; if (!nm || nm === 'Grand Total') continue; if (dstr(r[1]) !== day) continue; m[nm] = { vol: i(r[2]), gan: f(r[3]) * 100, pct: f(r[4]) * 100, ngtc: i(r[5]) }; } return m; }
     function gtcBCidx(rows) { const day = latestDay(rows, 2); const m = {}; for (let k = 1; k < rows.length; k++) { const r = rows[k]; const bc = r[1]; if (!bc || bc === 'Grand Total') continue; if (dstr(r[2]) !== day) continue; m[bc] = { vol: i(r[3]), gan: f(r[4]) * 100, pct: f(r[5]) * 100, ngtc: i(r[6]) }; } return m; }
-    function otAMidx(rows) { const day = latestDay(rows, 1); const m = {}; for (let k = 1; k < rows.length; k++) { const r = rows[k]; const nm = r[0]; if (!nm || nm === 'Grand Total' || nm.indexOf(',') >= 0) continue; if (dstr(r[1]) !== day) continue; m[nm] = { vol: i(r[2]), ot: f(r[3]) * 100 }; } return m; }
+    function otAMidx(rows) { const day = latestDay(rows, 1); const m = {}; for (let k = 1; k < rows.length; k++) { const r = rows[k]; const nm = r[0]; if (!nm || nm === 'Grand Total') continue; if (dstr(r[1]) !== day) continue; m[nm] = { vol: i(r[2]), ot: f(r[3]) * 100 }; } return m; }
     function otBCidx(rows) { const day = latestDay(rows, 2); const m = {}; for (let k = 1; k < rows.length; k++) { const r = rows[k]; const bc = r[1]; if (!bc || bc === 'Grand Total') continue; if (dstr(r[2]) !== day) continue; m[bc] = { vol: i(r[3]), ot: f(r[4]) * 100 }; } return m; }
     const ttsAMm = gtcAMidx(gTtsA), ttsBCm = gtcBCidx(gTtsB);
     const odrAMm = otAMidx(odrA), odrBCm = otBCidx(odrB);
