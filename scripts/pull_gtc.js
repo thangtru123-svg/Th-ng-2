@@ -66,6 +66,7 @@ async function proc(h) {
   } catch (e) { if (e.auth) throw e; }
   // --- chuyến tạo hôm nay: đã gán + GTC + theo nhân viên (tài xế) ---
   const seen = {}; let carry = 0; const nvM = {}; const hangM = {}; // hangM: chuyến treo qua ngày chưa kết thúc (ON_TRIP, tạo trước hôm nay)
+  const codFail = []; // đơn giao thất bại có COD >= 1tr (cần đối soát tiền hàng)
   const nvOf = (name) => nvM[name] || (nvM[name] = { nv: name || '(không rõ)', ganGiao: 0, ganLay: 0, gtc: 0 });
   const fmtCd = (cd) => { const s = String(cd); return s.length === 8 ? `${s.slice(6, 8)}/${s.slice(4, 6)}` : String(cd); };
   for (const st of ['FINISHED', 'ON_TRIP']) {
@@ -75,7 +76,7 @@ async function proc(h) {
       a.forEach(x => {
         const c = x.tripCode, cd = x.createDateIndex, ed = x.endDateIndex;
         if (cd === TODAY) {
-          seen[c] = { dc: x.deliverCount || 0, ended: ed === TODAY, driver: x.driverName || '' };
+          seen[c] = { dc: x.deliverCount || 0, ended: ed === TODAY, driver: x.driverName || '', driverId: String(x.driverId || '') };
           const nv = nvOf(x.driverName || '');
           nv.ganGiao += x.deliverCount || 0; nv.ganLay += x.pickCount || 0;
         }
@@ -97,7 +98,12 @@ async function proc(h) {
     for (let pg = 1; pg <= 15; pg++) {
       const j = await api('/api/lastmile/trip/get-trip-items', { trip_code: c, tripCode: c, typeList: ['DELIVER'], offset: (pg - 1) * 100, limit: 100, page: pg, size: 100 });
       const a = j.data || []; if (!a.length) break;
-      a.forEach(it => { if (it.isSucceeded === true) g++; });
+      a.forEach(it => {
+        if (it.isSucceeded === true) g++;
+        else if (it.isSucceeded === false && (it.collectAmount || 0) >= 1000000) {
+          codFail.push({ ma: it.orderCode, cod: it.collectAmount, nv: v.driver, idnv: v.driverId, note: it.failNote || '' });
+        }
+      });
       if (a.length < 100) break;
     }
     gtc += g; nvOf(v.driver).gtc += g;
@@ -106,7 +112,7 @@ async function proc(h) {
     .map(n => ({ nv: n.nv, ganGiao: n.ganGiao, ganLay: n.ganLay, gtc: n.gtc, pct: n.ganGiao > 0 ? Math.round(n.gtc / n.ganGiao * 1000) / 10 : 0 }))
     .sort((a, b) => b.ganGiao - a.ganGiao);
   const hangTrips = Object.values(hangM).sort((a, b) => a.cd - b.cd).map(t => ({ nv: t.nv, ngay: t.ngay }));
-  return { name: h.name, am: h.am, tinh: h.tinh, chuaGan, daGan, gtc, nTripToday, nChuaXong, carry, canGiaoSnap, wPick, wDeliver, wReturn, oPick, oReturn, dGiao5, dGiao8, dTra48, nv, hangTrips };
+  return { name: h.name, am: h.am, tinh: h.tinh, chuaGan, daGan, gtc, nTripToday, nChuaXong, carry, canGiaoSnap, wPick, wDeliver, wReturn, oPick, oReturn, dGiao5, dGiao8, dTra48, nv, hangTrips, codFail };
 }
 
 // ----- pool song song -----
@@ -130,6 +136,7 @@ async function pool(items, n, fn) {
   const amM = {}, bcL = [];
   let sum = { chuaGan: 0, daGan: 0, gtc: 0, nTripToday: 0, nChuaXong: 0, carry: 0, wPick: 0, wDeliver: 0, wReturn: 0, oPick: 0, oReturn: 0, canGiaoSnap: 0, dGiao5: 0, dGiao8: 0, dTra48: 0 };
   let hangTotal = 0;
+  const codMap = new Map(); // dedup đơn COD giao thất bại theo mã đơn
   for (const h of hubs) {
     const cg = h.chuaGan + h.daGan;
     const hangTrips = h.hangTrips || [];
@@ -137,6 +144,7 @@ async function pool(items, n, fn) {
     const a = amM[h.am] || (amM[h.am] = { am: h.am, canGiao: 0, daGan: 0, gtc: 0, hang: 0 });
     a.canGiao += cg; a.daGan += h.daGan; a.gtc += h.gtc; a.hang += hangTrips.length;
     hangTotal += hangTrips.length;
+    (h.codFail || []).forEach(o => codMap.set(o.ma, { ma: o.ma, cod: o.cod, nv: o.nv, idnv: o.idnv, bc: h.name, am: h.am, tinh: h.tinh, note: o.note }));
     for (const k in sum) sum[k] += h[k] || 0;
   }
   const vung = {
@@ -155,6 +163,24 @@ async function pool(items, n, fn) {
   };
   fs.writeFileSync(path.join(ROOT, 'gtc_live.json'), JSON.stringify(out));
   console.log(`[pull] OK hubsOk=${hubs.length} err=${errN} GTC=${vung.gtc} daGan=${vung.daGan} canGiao=${vung.canGiao}`);
+
+  // ===== Đơn giao thất bại có COD >= 1tr (đối soát tiền hàng) → cod_live.json =====
+  const codOrders = [...codMap.values()].sort((a, b) => b.cod - a.cod);
+  const codAgg = (keyFn) => {
+    const m = {};
+    codOrders.forEach(o => { const k = keyFn(o); const g = m[k] || (m[k] = { key: k, soDon: 0, tongCod: 0, nvSet: new Set(), codMax: 0 }); g.soDon++; g.tongCod += o.cod; g.nvSet.add(o.idnv || o.nv); if (o.cod > g.codMax) g.codMax = o.cod; });
+    return Object.values(m).map(g => ({ key: g.key, soDon: g.soDon, soNV: g.nvSet.size, tongCod: g.tongCod, codTB: g.soDon ? Math.round(g.tongCod / g.soDon) : 0, codMax: g.codMax })).sort((a, b) => b.tongCod - a.tongCod);
+  };
+  const codNV = new Set(); codOrders.forEach(o => codNV.add(o.idnv || o.nv));
+  const codTong = codOrders.reduce((s, o) => s + o.cod, 0);
+  const codOut = {
+    updatedAt: out.updatedAt, nguong: 1000000, hubsOk: hubs.length,
+    vung: { soDon: codOrders.length, tongCod: codTong, codTB: codOrders.length ? Math.round(codTong / codOrders.length) : 0, codMax: codOrders.length ? codOrders[0].cod : 0, soNV: codNV.size },
+    byTinh: codAgg(o => o.tinh), byAM: codAgg(o => o.am), byBC: codAgg(o => o.bc),
+    orders: codOrders
+  };
+  fs.writeFileSync(path.join(ROOT, 'cod_live.json'), JSON.stringify(codOut));
+  console.log(`[pull] COD OK soDon=${codOut.vung.soDon} tongCod=${codTong} soNV=${codNV.size}`);
 
   // nối lịch sử (giữ 14 ngày gần nhất) để so cùng giờ hôm qua
   const hp = path.join(ROOT, 'gtc_history.json');
