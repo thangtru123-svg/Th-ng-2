@@ -67,6 +67,7 @@ async function proc(h) {
   // --- chuyến tạo hôm nay: đã gán + GTC + theo nhân viên (tài xế) ---
   const seen = {}; let carry = 0; const nvM = {}; const hangM = {}; // hangM: chuyến treo qua ngày chưa kết thúc (ON_TRIP, tạo trước hôm nay)
   const codFail = []; // đơn giao thất bại có COD >= 1tr (cần đối soát tiền hàng)
+  const okOrders = new Set(); // mã đơn ĐÃ giao thành công (isSucceeded) ở bất kỳ chuyến nào → loại khỏi codFail
   const nvOf = (name) => nvM[name] || (nvM[name] = { nv: name || '(không rõ)', ganGiao: 0, ganLay: 0, gtc: 0 });
   const fmtCd = (cd) => { const s = String(cd); return s.length === 8 ? `${s.slice(6, 8)}/${s.slice(4, 6)}` : String(cd); };
   for (const st of ['FINISHED', 'ON_TRIP']) {
@@ -99,7 +100,7 @@ async function proc(h) {
       const j = await api('/api/lastmile/trip/get-trip-items', { trip_code: c, tripCode: c, typeList: ['DELIVER'], offset: (pg - 1) * 100, limit: 100, page: pg, size: 100 });
       const a = j.data || []; if (!a.length) break;
       a.forEach(it => {
-        if (it.isSucceeded === true) g++;
+        if (it.isSucceeded === true) { g++; okOrders.add(it.orderCode); }
         else if (it.isSucceeded === false && (it.collectAmount || 0) >= 1000000) {
           codFail.push({ ma: it.orderCode, cod: it.collectAmount, nv: v.driver, idnv: v.driverId, note: it.failNote || '' });
         }
@@ -112,7 +113,7 @@ async function proc(h) {
     .map(n => ({ nv: n.nv, ganGiao: n.ganGiao, ganLay: n.ganLay, gtc: n.gtc, pct: n.ganGiao > 0 ? Math.round(n.gtc / n.ganGiao * 1000) / 10 : 0 }))
     .sort((a, b) => b.ganGiao - a.ganGiao);
   const hangTrips = Object.values(hangM).sort((a, b) => a.cd - b.cd).map(t => ({ nv: t.nv, ngay: t.ngay }));
-  return { name: h.name, am: h.am, tinh: h.tinh, chuaGan, daGan, gtc, nTripToday, nChuaXong, carry, canGiaoSnap, wPick, wDeliver, wReturn, oPick, oReturn, dGiao5, dGiao8, dTra48, nv, hangTrips, codFail };
+  return { name: h.name, am: h.am, tinh: h.tinh, chuaGan, daGan, gtc, nTripToday, nChuaXong, carry, canGiaoSnap, wPick, wDeliver, wReturn, oPick, oReturn, dGiao5, dGiao8, dTra48, nv, hangTrips, codFail, okOrders: [...okOrders] };
 }
 
 // ----- pool song song -----
@@ -137,6 +138,8 @@ async function pool(items, n, fn) {
   let sum = { chuaGan: 0, daGan: 0, gtc: 0, nTripToday: 0, nChuaXong: 0, carry: 0, wPick: 0, wDeliver: 0, wReturn: 0, oPick: 0, oReturn: 0, canGiaoSnap: 0, dGiao5: 0, dGiao8: 0, dTra48: 0 };
   let hangTotal = 0;
   const codMap = new Map(); // dedup đơn COD giao thất bại theo mã đơn
+  const okAll = new Set();  // mã đơn ĐÃ giao thành công (toàn Vùng) → loại khỏi danh sách COD
+  for (const h of hubs) (h.okOrders || []).forEach(c => okAll.add(c));
   for (const h of hubs) {
     const cg = h.chuaGan + h.daGan;
     const hangTrips = h.hangTrips || [];
@@ -144,7 +147,7 @@ async function pool(items, n, fn) {
     const a = amM[h.am] || (amM[h.am] = { am: h.am, canGiao: 0, daGan: 0, gtc: 0, hang: 0 });
     a.canGiao += cg; a.daGan += h.daGan; a.gtc += h.gtc; a.hang += hangTrips.length;
     hangTotal += hangTrips.length;
-    (h.codFail || []).forEach(o => codMap.set(o.ma, { ma: o.ma, cod: o.cod, nv: o.nv, idnv: o.idnv, bc: h.name, am: h.am, tinh: h.tinh, note: o.note }));
+    (h.codFail || []).forEach(o => { if (okAll.has(o.ma)) return; codMap.set(o.ma, { ma: o.ma, cod: o.cod, nv: o.nv, idnv: o.idnv, bc: h.name, am: h.am, tinh: h.tinh, note: o.note }); });
     for (const k in sum) sum[k] += h[k] || 0;
   }
   const vung = {
