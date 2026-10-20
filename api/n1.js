@@ -1,12 +1,12 @@
-// /api/n1 — chỉ số 10 ngày gần nhất (gồm N-1) cho app XBG.
-// GTC Total + Tỉ lệ trả 4 loại + GTC TTS + ODR/OPR + Năng suất NV, mỗi ngày 1 khối (Vùng/AM/BC/NV).
-// Trả { days:[...], data:{ day:{vung,am} }, + day/vung/am = ngày mới nhất (tương thích app cũ) }.
-// Dùng GOOGLE_REFRESH_TOKEN (env Vercel, giống /api/sheet). KHÔNG cần caller login.
+// /api/n1 — chỉ số 45 ngày gần nhất + gộp theo TUẦN (T2→CN) cho app XBG.
+// GTC Total + Tỉ lệ trả 4 loại + GTC TTS + ODR/OPR + Năng suất NV, gộp lại từ SỐ GỐC (không avg %).
+// Trả { days:[...45], data:{d:{vung,am}}, weeks:[...], wdata:{key:{vung,am,label}}, + day/vung/am = ngày mới nhất (tương thích app cũ) }.
 const CLIENT_ID = process.env.GOOGLE_OAUTH_CLIENT_ID;
 const CLIENT_SECRET = process.env.GOOGLE_OAUTH_CLIENT_SECRET;
 const REFRESH_TOKEN = process.env.GOOGLE_REFRESH_TOKEN;
 const SID = '1Ec4qUpehq5ruroCTmw20cRDzkQiGmj9GLpS5f18UFE8';
-const NDAYS = 10;
+const NDAYS = 45;      // số ngày lịch sử
+const NV_DAYS = 12;    // số ngày gần nhất còn giữ chi tiết Năng suất NV (giữ payload gọn)
 
 let _owner = { token: null, exp: 0 };
 async function ownerToken() {
@@ -28,13 +28,17 @@ async function getSheet(tok, name) {
 const dstr = s => { const m = /(\d{4}-\d{2}-\d{2})/.exec(s || ''); return m ? m[1] : null; };
 const f = x => { const v = parseFloat(String(x == null ? '' : x).replace(',', '.')); return isNaN(v) ? 0 : v; };
 const i = x => { const v = parseInt(String(x == null ? '' : x).replace(/[^0-9\-]/g, '')); return isNaN(v) ? 0 : v; };
+const r1 = x => x == null ? null : Math.round(x * 10) / 10;
+// ISO tuần (T2→CN)
+const mondayOf = ds => { const dt = new Date(ds + 'T00:00:00Z'); const off = (dt.getUTCDay() + 6) % 7; dt.setUTCDate(dt.getUTCDate() - off); return dt; };
+const isoWeekNum = ds => { const dt = new Date(ds + 'T00:00:00Z'); const off = (dt.getUTCDay() + 6) % 7; dt.setUTCDate(dt.getUTCDate() - off + 3); const firstThu = new Date(Date.UTC(dt.getUTCFullYear(), 0, 4)); const fOff = (firstThu.getUTCDay() + 6) % 7; return 1 + Math.round(((dt - firstThu) / 86400000 - 3 + fOff) / 7); };
+const fmtDM = dt => String(dt.getUTCDate()).padStart(2, '0') + '/' + String(dt.getUTCMonth() + 1).padStart(2, '0');
 
 let _cache = { t: 0, data: null };
 export default async function handler(req, res) {
   try {
     if (!REFRESH_TOKEN) { res.status(500).json({ ok: false, error: 'Chưa cấu hình GOOGLE_REFRESH_TOKEN' }); return; }
     const now = Date.now();
-    // Cache CDN: phục vụ ngay từ edge + revalidate nền → không phải chờ cold-start ~9s
     res.setHeader('Cache-Control', 'public, s-maxage=1800, stale-while-revalidate=86400');
     if (_cache.data && now - _cache.t < 20 * 60 * 1000) { res.setHeader('x-cache', 'hit'); res.status(200).json(_cache.data); return; }
     const tok = await ownerToken();
@@ -50,54 +54,76 @@ export default async function handler(req, res) {
       getSheet(tok, 'OPR TTS - AM'), getSheet(tok, 'OPR TTS - Bưu Cục')
     ]);
 
-    // ===== index helpers (lọc theo đúng 1 ngày) =====
-    const r1 = x => x == null ? null : Math.round(x * 10) / 10;
-    const gtcAMidx = (rows, day) => { const m = {}; for (let k = 1; k < rows.length; k++) { const r = rows[k]; const nm = r[0]; if (!nm || nm === 'Grand Total') continue; if (dstr(r[1]) !== day) continue; m[nm] = { vol: i(r[2]), gan: f(r[3]) * 100, pct: f(r[4]) * 100, ngtc: i(r[5]) }; } return m; };
-    const gtcBCidx = (rows, day) => { const m = {}; for (let k = 1; k < rows.length; k++) { const r = rows[k]; const bc = r[1]; if (!bc || bc === 'Grand Total') continue; if (dstr(r[2]) !== day) continue; m[bc] = { am: (r[0] || '').trim(), vol: i(r[3]), gan: f(r[4]) * 100, pct: f(r[5]) * 100, ngtc: i(r[6]) }; } return m; };
-    const fdAMidx = (rows, day) => { const m = {}; for (let k = 1; k < rows.length; k++) { const r = rows[k]; const name = r[0]; if (!name || name === 'Grand Total') continue; if (dstr(r[1]) !== day) continue; m[name] = { fd: f(r[3]) * 100, vol: f(r[2]) }; } return m; };
-    const fdBCidx = (rows, day) => { const m = {}; for (let k = 1; k < rows.length; k++) { const r = rows[k]; const bc = r[0]; if (!bc || bc === 'Grand Total') continue; if (dstr(r[1]) !== day) continue; m[bc] = f(r[3]) * 100; } return m; };
-    const otAMidx = (rows, day) => { const m = {}; for (let k = 1; k < rows.length; k++) { const r = rows[k]; const nm = r[0]; if (!nm || nm === 'Grand Total') continue; if (dstr(r[1]) !== day) continue; m[nm] = { vol: i(r[2]), ot: f(r[3]) * 100 }; } return m; };
-    const otBCidx = (rows, day) => { const m = {}; for (let k = 1; k < rows.length; k++) { const r = rows[k]; const bc = r[1]; if (!bc || bc === 'Grand Total') continue; if (dstr(r[2]) !== day) continue; m[bc] = { vol: i(r[3]), ot: f(r[4]) * 100 }; } return m; };
-    const nsIdx = (rows, day) => { const m = {}; for (let k = 1; k < rows.length; k++) { const r = rows[k]; const bc = r[0]; if (!bc) continue; if (dstr(r[2]) !== day) continue; const nv = String(r[1] || '').replace(/^\d+_/, '').trim(); const gan = i(r[3]), gtc = i(r[4]); const pct = gan > 0 ? Math.round(gtc / gan * 1000) / 10 : 0; (m[bc] = m[bc] || []).push({ nv, gan, gtc, pct }); } for (const bc in m) m[bc].sort((a, b) => b.gan - a.gan); return m; };
+    // ===== accumulators: gộp SỐ GỐC trên tập ngày (ds=Set) → tính % ở cuối =====
+    // GTC AM/BC (cũng dùng cho GTC TTS): cộng vol, gánCount(=%gán×vol), ngtc
+    const accGTC = (rows, ds, bcMode) => {
+      const m = {}; const dcol = bcMode ? 2 : 1, vcol = bcMode ? 3 : 2, gcol = bcMode ? 4 : 3, ncol = bcMode ? 6 : 5;
+      for (let k = 1; k < rows.length; k++) { const r = rows[k]; const key = bcMode ? r[1] : r[0]; if (!key || key === 'Grand Total') continue; if (!ds.has(dstr(r[dcol]))) continue; const vol = i(r[vcol]); const o = m[key] || (m[key] = { vol: 0, ganCnt: 0, ngtc: 0, am: bcMode ? (r[0] || '').trim() : undefined }); o.vol += vol; o.ganCnt += f(r[gcol]) * vol; o.ngtc += i(r[ncol]); }
+      return m;
+    };
+    // FD AM/BC: weighted Σ(%FD×%Vol)/Σ(%Vol) — cả AM lẫn BC đều có %Vol ở col2
+    const accFd = (rows, ds) => { const m = {}; for (let k = 1; k < rows.length; k++) { const r = rows[k]; const key = r[0]; if (!key || key === 'Grand Total') continue; if (!ds.has(dstr(r[1]))) continue; const vw = f(r[2]); const o = m[key] || (m[key] = { num: 0, vw: 0 }); o.num += f(r[3]) * vw; o.vw += vw; } return m; };
+    // ODR/OPR AM/BC: weighted Σ(%ot×vol)/Σvol
+    const accOt = (rows, ds, bcMode) => { const m = {}; const dcol = bcMode ? 2 : 1, vcol = bcMode ? 3 : 2, ocol = bcMode ? 4 : 3; for (let k = 1; k < rows.length; k++) { const r = rows[k]; const key = bcMode ? r[1] : r[0]; if (!key || key === 'Grand Total') continue; if (!ds.has(dstr(r[dcol]))) continue; const vol = i(r[vcol]); const o = m[key] || (m[key] = { num: 0, vol: 0 }); o.num += f(r[ocol]) * vol; o.vol += vol; } return m; };
+    // Năng suất NV theo BC: cộng gán, gtc từng NV qua các ngày
+    const accNs = (rows, ds) => { const m = {}; for (let k = 1; k < rows.length; k++) { const r = rows[k]; const bc = r[0]; if (!bc) continue; if (!ds.has(dstr(r[2]))) continue; const nv = String(r[1] || '').replace(/^\d+_/, '').trim(); const mb = m[bc] || (m[bc] = {}); const e = mb[nv] || (mb[nv] = { nv, gan: 0, gtc: 0 }); e.gan += i(r[3]); e.gtc += i(r[4]); } return m; };
 
-    function buildDay(gDay) {
-      const amGTC = gtcAMidx(gAM, gDay);
-      const bcm = gtcBCidx(gBC, gDay);
-      const bcGTC = {}, bc2am = {}; let vVol = 0, vNgtc = 0, vGanNum = 0;
-      for (const bc in bcm) { const b = bcm[bc]; bc2am[bc] = b.am; bcGTC[bc] = b; vVol += b.vol; vNgtc += b.ngtc; vGanNum += (b.gan / 100) * b.vol; }
-      const FA = { total: fdAMidx(fTA, gDay), sme: fdAMidx(fSA, gDay), tts: fdAMidx(fTtA, gDay), shopee: fdAMidx(fShA, gDay) };
-      const FB = { total: fdBCidx(fTB, gDay), sme: fdBCidx(fSB, gDay), tts: fdBCidx(fTtB, gDay), shopee: fdBCidx(fShB, gDay) };
-      const vungFD = {}; for (const cat of ['total', 'sme', 'tts', 'shopee']) { let num = 0, den = 0; for (const a in FA[cat]) { num += FA[cat][a].fd * FA[cat][a].vol; den += FA[cat][a].vol; } vungFD[cat] = den > 0 ? Math.round(num / den * 10) / 10 : null; }
-      const nsBC = nsIdx(nsNV, gDay);
-      const ttsAMm = gtcAMidx(gTtsA, gDay), ttsBCm = gtcBCidx(gTtsB, gDay);
-      const odrAMm = otAMidx(odrA, gDay), odrBCm = otBCidx(odrB, gDay);
-      const oprAMm = otAMidx(oprA, gDay), oprBCm = otBCidx(oprB, gDay);
+    const pctGan = o => o.vol > 0 ? r1(o.ganCnt / o.vol * 100) : 0;
+    const pctGtc = o => o.vol > 0 ? r1(o.ngtc / o.vol * 100) : 0;
+    const fdv = o => (o && o.vw > 0) ? r1(o.num / o.vw * 100) : null;
+    const otv = o => (o && o.vol > 0) ? r1(o.num / o.vol * 100) : null;
+
+    function buildAgg(ds, includeNV) {
+      const amGTC = accGTC(gAM, ds, false);
+      const bcm = accGTC(gBC, ds, true);
+      const bc2am = {}; let vVol = 0, vNgtc = 0, vGan = 0;
+      for (const bc in bcm) { const b = bcm[bc]; bc2am[bc] = b.am; vVol += b.vol; vNgtc += b.ngtc; vGan += b.ganCnt; }
+      const FA = { total: accFd(fTA, ds), sme: accFd(fSA, ds), tts: accFd(fTtA, ds), shopee: accFd(fShA, ds) };
+      const FB = { total: accFd(fTB, ds), sme: accFd(fSB, ds), tts: accFd(fTtB, ds), shopee: accFd(fShB, ds) };
+      const vungFD = {}; for (const cat of ['total', 'sme', 'tts', 'shopee']) { let num = 0, den = 0; for (const a in FA[cat]) { num += FA[cat][a].num; den += FA[cat][a].vw; } vungFD[cat] = den > 0 ? r1(num / den * 100) : null; }
+      const nvByBC = {}; if (includeNV) { const raw = accNs(nsNV, ds); for (const bc in raw) { nvByBC[bc] = Object.values(raw[bc]).map(e => ({ nv: e.nv, gan: e.gan, gtc: e.gtc, pct: e.gan > 0 ? r1(e.gtc / e.gan * 100) : 0 })).sort((a, b) => b.gan - a.gan); } }
+      const ttsAMm = accGTC(gTtsA, ds, false), ttsBCm = accGTC(gTtsB, ds, true);
+      const odrAMm = accOt(odrA, ds, false), odrBCm = accOt(odrB, ds, true);
+      const oprAMm = accOt(oprA, ds, false), oprBCm = accOt(oprB, ds, true);
       let ttV = 0, ttN = 0; for (const bc in ttsBCm) { ttV += ttsBCm[bc].vol; ttN += ttsBCm[bc].ngtc; }
-      const vGtcTts = ttV > 0 ? Math.round(ttN / ttV * 1000) / 10 : null;
-      const vungOt = m => { let n = 0, d = 0; for (const bc in m) { n += m[bc].ot * m[bc].vol; d += m[bc].vol; } return d > 0 ? Math.round(n / d * 10) / 10 : null; };
-      const vOdr = vungOt(odrBCm), vOpr = vungOt(oprBCm);
+      const vGtcTts = ttV > 0 ? r1(ttN / ttV * 100) : null;
+      let on = 0, ov = 0; for (const bc in odrBCm) { on += odrBCm[bc].num; ov += odrBCm[bc].vol; } const vOdr = ov > 0 ? r1(on / ov * 100) : null;
+      let pn = 0, pv = 0; for (const bc in oprBCm) { pn += oprBCm[bc].num; pv += oprBCm[bc].vol; } const vOpr = pv > 0 ? r1(pn / pv * 100) : null;
       const amNames = new Set([...Object.keys(amGTC), ...Object.values(bc2am)]);
       const am = [];
       amNames.forEach(name => {
-        const g = amGTC[name] || { vol: 0, gan: 0, pct: 0, ngtc: 0 };
-        const fdOf = cat => (FA[cat][name] ? Math.round(FA[cat][name].fd * 10) / 10 : null);
-        const bcs = Object.keys(bcGTC).filter(b => bc2am[b] === name).map(b => {
-          const bg = bcGTC[b];
-          return { bc: b, vol: bg.vol, gan: Math.round(bg.gan * 10) / 10, pct: Math.round(bg.pct * 10) / 10, ngtc: bg.ngtc, fdTotal: FB.total[b] != null ? Math.round(FB.total[b] * 10) / 10 : null, fdSme: FB.sme[b] != null ? Math.round(FB.sme[b] * 10) / 10 : null, fdTts: FB.tts[b] != null ? Math.round(FB.tts[b] * 10) / 10 : null, fdShopee: FB.shopee[b] != null ? Math.round(FB.shopee[b] * 10) / 10 : null, nv: nsBC[b] || [], ttsVol: ttsBCm[b] ? ttsBCm[b].vol : null, ttsGan: ttsBCm[b] ? r1(ttsBCm[b].gan) : null, ttsPct: ttsBCm[b] ? r1(ttsBCm[b].pct) : null, ttsNgtc: ttsBCm[b] ? ttsBCm[b].ngtc : null, odr: odrBCm[b] ? r1(odrBCm[b].ot) : null, opr: oprBCm[b] ? r1(oprBCm[b].ot) : null };
+        const g = amGTC[name] || { vol: 0, ganCnt: 0, ngtc: 0 };
+        const bcs = Object.keys(bcm).filter(b => bc2am[b] === name).map(b => {
+          const bg = bcm[b]; const tt = ttsBCm[b];
+          return { bc: b, vol: bg.vol, gan: pctGan(bg), pct: pctGtc(bg), ngtc: bg.ngtc, fdTotal: fdv(FB.total[b]), fdSme: fdv(FB.sme[b]), fdTts: fdv(FB.tts[b]), fdShopee: fdv(FB.shopee[b]), nv: nvByBC[b] || [], ttsVol: tt ? tt.vol : null, ttsGan: tt ? pctGan(tt) : null, ttsPct: tt ? pctGtc(tt) : null, ttsNgtc: tt ? tt.ngtc : null, odr: otv(odrBCm[b]), opr: otv(oprBCm[b]) };
         }).sort((a, b) => b.vol - a.vol);
-        am.push({ am: name, vol: g.vol, gan: Math.round(g.gan * 10) / 10, pct: Math.round(g.pct * 10) / 10, ngtc: g.ngtc, fdTotal: fdOf('total'), fdSme: fdOf('sme'), fdTts: fdOf('tts'), fdShopee: fdOf('shopee'), ttsVol: ttsAMm[name] ? ttsAMm[name].vol : null, ttsGan: ttsAMm[name] ? r1(ttsAMm[name].gan) : null, ttsPct: ttsAMm[name] ? r1(ttsAMm[name].pct) : null, ttsNgtc: ttsAMm[name] ? ttsAMm[name].ngtc : null, odr: odrAMm[name] ? r1(odrAMm[name].ot) : null, opr: oprAMm[name] ? r1(oprAMm[name].ot) : null, bc: bcs });
+        const tA = ttsAMm[name];
+        am.push({ am: name, vol: g.vol, gan: pctGan(g), pct: pctGtc(g), ngtc: g.ngtc, fdTotal: fdv(FA.total[name]), fdSme: fdv(FA.sme[name]), fdTts: fdv(FA.tts[name]), fdShopee: fdv(FA.shopee[name]), ttsVol: tA ? tA.vol : null, ttsGan: tA ? pctGan(tA) : null, ttsPct: tA ? pctGtc(tA) : null, ttsNgtc: tA ? tA.ngtc : null, odr: otv(odrAMm[name]), opr: otv(oprAMm[name]), bc: bcs });
       });
       am.sort((a, b) => b.vol - a.vol);
-      const vung = { vol: vVol, gan: vVol > 0 ? Math.round(vGanNum / vVol * 1000) / 10 : 0, pct: vVol > 0 ? Math.round(vNgtc / vVol * 1000) / 10 : 0, ngtc: vNgtc, fdTotal: vungFD.total, fdSme: vungFD.sme, fdTts: vungFD.tts, fdShopee: vungFD.shopee, gtcTts: vGtcTts, odrTts: vOdr, oprTts: vOpr };
-      return { day: gDay, vung, am };
+      const vung = { vol: vVol, gan: vVol > 0 ? r1(vGan / vVol * 100) : 0, pct: vVol > 0 ? r1(vNgtc / vVol * 100) : 0, ngtc: vNgtc, fdTotal: vungFD.total, fdSme: vungFD.sme, fdTts: vungFD.tts, fdShopee: vungFD.shopee, gtcTts: vGtcTts, odrTts: vOdr, oprTts: vOpr };
+      return { vung, am };
     }
 
-    // 10 ngày mới nhất lấy từ GTC Total theo Bưu Cục (cột Ngày = col 2)
+    // ===== 45 ngày mới nhất (từ GTC Total theo Bưu Cục, cột Ngày = col2) =====
     const daySet = new Set(); for (let k = 1; k < gBC.length; k++) { const d = dstr(gBC[k][2]); if (d) daySet.add(d); }
     const days = [...daySet].sort().reverse().slice(0, NDAYS);
-    const data = {}; days.forEach(d => { data[d] = buildDay(d); });
-    const d0 = days[0] ? data[days[0]] : { day: null, vung: {}, am: [] };
-    const out = { days, data, updatedAt: new Date().toISOString(), day: d0.day, vung: d0.vung, am: d0.am };
+    const data = {};
+    days.forEach((d, idx) => { const o = buildAgg(new Set([d]), idx < NV_DAYS); o.day = d; o.label = 'dữ liệu ngày ' + d.split('-').reverse().join('/'); data[d] = o; });
+
+    // ===== gộp theo TUẦN (T2→CN) =====
+    const weekMap = {}; days.forEach(d => { const key = mondayOf(d).toISOString().slice(0, 10); (weekMap[key] = weekMap[key] || []).push(d); });
+    const weekKeys = Object.keys(weekMap).sort().reverse();
+    const weeks = []; const wdata = {};
+    weekKeys.forEach(mk => {
+      const ds = weekMap[mk]; const mon = new Date(mk + 'T00:00:00Z'); const sun = new Date(mon); sun.setUTCDate(sun.getUTCDate() + 6);
+      const label = 'Tuần ' + isoWeekNum(mk) + ' (' + fmtDM(mon) + '–' + fmtDM(sun) + ')';
+      weeks.push({ key: mk, label, nDays: ds.length });
+      const o = buildAgg(new Set(ds), false); o.day = mk; o.label = label + (ds.length < 7 ? ' · ' + ds.length + ' ngày' : ''); wdata[mk] = o;
+    });
+
+    const d0 = days[0] ? data[days[0]] : { vung: {}, am: [] };
+    const out = { days, data, weeks, wdata, updatedAt: new Date().toISOString(), day: days[0] || null, vung: d0.vung, am: d0.am };
     _cache = { t: now, data: out };
     res.setHeader('x-cache', 'miss');
     res.status(200).json(out);
