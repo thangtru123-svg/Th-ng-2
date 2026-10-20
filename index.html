@@ -220,6 +220,7 @@ tr.tot td{background:#FFF0EB!important;font-weight:800!important;border-top:2px 
  </div>
  <div class="nav-section">Tổng Quan</div>
  <button class="nav-item active" onclick="show('p0',this)"><span class="icon">📊</span>Dashboard Tổng Quan</button>
+ <button class="nav-item" onclick="show('p43',this)" style="background:linear-gradient(135deg,rgba(22,101,52,0.16),rgba(34,197,94,0.1));border:1px solid rgba(22,101,52,0.35);font-weight:700"><span class="icon">🎯</span>Tổng Quan Target</button>
  <button class="nav-item" onclick="show('p27',this)" style="background:linear-gradient(135deg,rgba(220,38,38,0.16),rgba(241,93,41,0.08));border:1px solid rgba(220,38,38,0.32);font-weight:700"><span class="icon">📉</span>Rớt LC theo ngày</button>
  <button class="nav-item" onclick="show('p30',this)" style="background:linear-gradient(135deg,rgba(220,38,38,0.16),rgba(241,93,41,0.08));border:1px solid rgba(220,38,38,0.32);font-weight:700"><span class="icon">🔒</span>Khoá ID vi phạm</button>
  <button class="nav-item" onclick="show('p32',this)" style="background:linear-gradient(135deg,rgba(37,99,235,0.14),rgba(59,130,246,0.08));border:1px solid rgba(37,99,235,0.3);font-weight:700"><span class="icon">📑</span>Báo Cáo Tồn / LC / 48H</button>
@@ -261,6 +262,7 @@ tr.tot td{background:#FFF0EB!important;font-weight:800!important;border-top:2px 
 
 <main class="main">
  <div class="page active" id="p0"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
+<div class="page" id="p43"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
  <div class="page" id="p1"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
  <div class="page" id="p2"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
  <div class="page" id="p3"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
@@ -2678,6 +2680,12 @@ async function sendAllToTelegram(){
    }
   }
   {
+   // Tổng Quan Target (text) — so số thật với mục tiêu Sếp
+   if(btn)btn.innerHTML='⏳ Đang gửi: Tổng Quan Target...';
+   try{ if(!window._TGTDATA)await buildTargetPage(); if(window._TGTDATA){const res=await _tgSend(TG_AGING_CHAT,TG_VH_THREAD,_tgtCaption());if(!res||!res.ok)console.warn('Target TG loi:',res&&res.description);} }catch(_e){console.warn('Target TG lỗi:',_e&&_e.message);}
+   await new Promise(r=>setTimeout(r,600));
+  }
+  {
    const p16b=document.getElementById('p16-card-b');
    if(p16b&&p16b.innerHTML.trim()){
     if(btn)btn.innerHTML='⏳ Đang gửi: Báo Cáo GTC TTS...';
@@ -4235,6 +4243,122 @@ function _codCSV(){
  const csv='﻿'+[head,...rows].map(r=>r.map(x=>/[",;\n]/.test(String(x))?'"'+String(x).replace(/"/g,'""')+'"':x).join(',')).join('\n');
  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));a.download='check_cod_'+(new Date().toISOString().slice(0,10))+'.csv';a.click();
 }
+/* ===== p43 — Tổng Quan Target (so số thật đạt với mục tiêu Sếp) ===== */
+const _TGT_ISO=s=>{const m=(''+s).match(/(\d{4})-(\d{2})-(\d{2})/);return m?m[0]:'';};
+const _TGT_latest=(rows,dc)=>{const ds=[...new Set((rows||[]).slice(1).map(r=>_TGT_ISO(r[dc])).filter(Boolean))];return ds.sort().pop()||'';};
+const _TGT_isG=s=>!(''+s).trim()||/grand total/i.test(''+s);
+function _tgtRate(rows,volC,numC){ // GTC/ODR/OPR: val = Σnum/Σvol *100
+ if(!rows||rows.length<2)return null;const day=_TGT_latest(rows,1);const per={};let tv=0,tn=0;
+ rows.slice(1).forEach(r=>{const am=(r[0]||'').trim();if(_TGT_isG(am)||_TGT_ISO(r[1])!==day)return;const v=+r[volC]||0,n=+r[numC]||0;per[am]=per[am]||{v:0,n:0};per[am].v+=v;per[am].n+=n;tv+=v;tn+=n;});
+ const amVals=Object.entries(per).filter(([a,o])=>o.v>0).map(([am,o])=>({am,val:o.n/o.v*100,vol:o.v}));
+ return {day,vung:tv>0?tn/tv*100:0,amVals};
+}
+function _tgtFD(rows){ // FD weighted: Σ(fd×vol)/Σvol
+ if(!rows||rows.length<2)return null;const day=_TGT_latest(rows,1);const per={};let sv=0,sf=0;
+ rows.slice(1).forEach(r=>{const am=(r[0]||'').trim();if(_TGT_isG(am)||_TGT_ISO(r[1])!==day)return;const vol=parsePct(r[2]),fd=parsePct(r[3]);per[am]=per[am]||{sv:0,sf:0};per[am].sv+=vol;per[am].sf+=fd*vol;sv+=vol;sf+=fd*vol;});
+ const amVals=Object.entries(per).filter(([a,o])=>o.sv>0).map(([am,o])=>({am,val:o.sf/o.sv}));
+ return {day,vung:sv>0?sf/sv:0,amVals};
+}
+function _tgtFval(rw,v){if(v==null)return'—';if(rw.unit==='%')return v.toFixed(1).replace('.',',')+'%';if(rw.isCount)return fmt(v)+' đơn';return v.toFixed(1).replace('.',',')+' đơn';}
+async function buildTargetPage(){
+ const el=document.getElementById('p43'); if(!el) return;
+ const pc1=x=>(x==null?'—':x.toFixed(1).replace('.',',')+'%');
+ const render=async()=>{
+  try{
+   const D=window._D||{},FD=window._FD||{};
+   // ===== Năng suất NV (gid 1723871284): per-AM NS = GTC ÷ số NV =====
+   let ns=null;
+   try{
+    const r=await fetch(`https://docs.google.com/spreadsheets/d/${SID}/gviz/tq?tqx=out:csv&gid=1723871284&_=${Date.now()}`);
+    const nsRows=parseCSV(await r.text());
+    const day=_TGT_latest(nsRows,2);const cc=window._CC_BCAM||{};const amG={};let tg=0;const tnv=new Set();
+    nsRows.slice(1).forEach(rr=>{const bc=(rr[0]||'').trim();if(_TGT_ISO(rr[2])!==day)return;const nv=(rr[1]||'').trim();const gtc=+rr[4]||0;const am=(cc[bc]&&cc[bc][0])||'(chưa map AM)';const g=amG[am]||(amG[am]={gtc:0,nv:new Set()});g.gtc+=gtc;if(nv&&gtc>0)g.nv.add(nv);tg+=gtc;if(nv&&gtc>0)tnv.add(bc+'|'+nv);}); // NV đếm khi GTC>0 (giống dashboard Năng suất NV p20)
+    const amVals=Object.entries(amG).map(([am,o])=>({am,val:o.nv.size>0?o.gtc/o.nv.size:0}));
+    ns={day,vung:tnv.size>0?tg/tnv.size:0,amVals};
+   }catch(e){ns=null;}
+   // ===== Aging =====
+   let ag=null;
+   if(window._agingRows){const rows=window._agingRows;const day=[...new Set(rows.map(r=>r[11]).filter(d=>/^\d{4}-\d{2}-\d{2}$/.test(d)))].sort().pop();
+    let t5=0,t8=0;const am8={};rows.filter(r=>r[11]===day).forEach(r=>{t5++;const ge8=_lowAgGe8(r);if(ge8)t8++;const am=(r[10]||'').trim();if(ge8&&am&&!am.startsWith('#'))am8[am]=(am8[am]||0)+1;});
+    ag={day,t5,t8,am8};}
+   // ===== các chỉ tiêu =====
+   const gtc=_tgtRate(D.gtcTotalAM,2,5);
+   const odr=_tgtRate(D.odrAM,2,4);
+   const opr=_tgtRate(D.oprAM,2,4);
+   const fdT=_tgtFD(FD.totalAM),fdS=_tgtFD(FD.smeAM),fdTt=_tgtFD(FD.ttsAM);
+   // mỗi chỉ tiêu: {label, target, thucDat, dat(bool), fails:[{am,val}], fmtVal}
+   const rows=[];
+   const addRate=(key,label,m,tgt,cmp,unit)=>{if(!m){rows.push({label,target:tgt,val:null,dat:null,fails:[],unit});return;}
+    const pass=cmp(m.vung,tgt);const hi=(cmp===ge||cmp===gt);const fails=m.amVals.filter(a=>!cmp(a.val,tgt)).sort((a,b)=>hi?a.val-b.val:b.val-a.val);
+    rows.push({label,target:tgt,val:m.vung,dat:pass,fails,unit,day:m.day});};
+   const ge=(v,t)=>v>=t, gt=(v,t)=>v>t, lt=(v,t)=>v<t, le=(v,t)=>v<=t;
+   addRate('gtc','GTC %',gtc,70,ge,'%');
+   addRate('fdT','FD Total %',fdT,7,le,'%');
+   addRate('fdS','FD SME %',fdS,8,lt,'%');
+   addRate('fdTt','FD TTS %',fdTt,5,lt,'%');
+   addRate('odr','ODR %',odr,94,gt,'%');
+   addRate('opr','OPR %',opr,80,gt,'%');
+   addRate('ns','Năng suất GTC (đơn/NV/ngày)',ns,70,gt,'đơn');
+   // Aging (vùng-level + AM >8)
+   const agRows=[];
+   if(ag){
+    agRows.push({label:'Aging > 5 ngày (tổng đơn)',target:'< 100',val:ag.t5,dat:ag.t5<100,fails:[],unit:'đơn',isCount:true});
+    const am8Fails=Object.entries(ag.am8).map(([am,c])=>({am,val:c})).sort((a,b)=>b.val-a.val);
+    agRows.push({label:'Aging > 8 ngày (tổng đơn)',target:'= 0',val:ag.t8,dat:ag.t8===0,fails:am8Fails,unit:'đơn',isCount:true});
+   }
+   window._TGTDATA={rows,agRows,gtcDay:gtc?gtc.day:(ag?ag.day:'')};
+   // ===== render =====
+   const TH='style="background:#1F3864;color:#fff;padding:8px 12px;font-size:12.5px;font-weight:700;white-space:nowrap"';
+   const tdc='style="text-align:center;padding:7px 12px;font-size:13px;border-bottom:1px solid var(--border);white-space:nowrap"';
+   const tdl='style="text-align:left;padding:7px 12px;font-size:13px;border-bottom:1px solid var(--border)"';
+   const badge=d=>d===null?'<span style="color:var(--text-sub)">—</span>':(d?'<span style="background:#DCFCE7;color:#15803D;padding:2px 10px;border-radius:12px;font-weight:700">✅ Đạt</span>':'<span style="background:#FEE2E2;color:#DC2626;padding:2px 10px;border-radius:12px;font-weight:700">❌ Chưa đạt</span>');
+   const valStr=rw=>_tgtFval(rw,rw.val);
+   let main=`<div class="table-wrap" style="overflow-x:auto"><table style="border-collapse:collapse;min-width:720px;width:100%"><thead><tr>
+    <th ${TH} style="text-align:left">CHỈ TIÊU</th><th ${TH} style="text-align:center">TARGET SẾP</th><th ${TH} style="text-align:center">THỰC ĐẠT (VÙNG)</th><th ${TH} style="text-align:center">KẾT QUẢ</th><th ${TH} style="text-align:center">SỐ AM CHƯA ĐẠT</th></tr></thead><tbody>`;
+   [...rows,...agRows].forEach(rw=>{const c=rw.dat===false?'#DC2626':(rw.dat?'#15803D':'var(--text-main)');
+    main+=`<tr><td ${tdl} style="font-weight:600">${rw.label}</td><td ${tdc} style="color:var(--orange-dark);font-weight:700">${typeof rw.target==='string'?rw.target:(rw.unit==='%'?rw.target+'%':'> '+rw.target)}</td><td ${tdc} style="font-weight:800;color:${c}">${valStr(rw)}</td><td ${tdc}>${badge(rw.dat)}</td><td ${tdc} style="font-weight:700;color:${rw.fails&&rw.fails.length?'#DC2626':'var(--text-sub)'}">${rw.fails?rw.fails.length:0}</td></tr>`;});
+   main+='</tbody></table></div>';
+   // chi tiết AM không đạt
+   let detail='';
+   [...rows,...agRows].forEach(rw=>{ if(!rw.fails||!rw.fails.length)return;
+    detail+=`<div style="margin-top:12px"><div style="font-weight:700;color:#DC2626;margin-bottom:5px">❌ ${rw.label} — AM chưa đạt (${rw.fails.length}):</div><div style="display:flex;gap:7px;flex-wrap:wrap">`;
+    rw.fails.forEach(f=>{detail+=`<span style="background:#FEE2E2;color:#991B1B;padding:3px 10px;border-radius:9px;font-size:12.5px;font-weight:600">${f.am}: <b>${_tgtFval(rw,f.val)}</b></span>`;});
+    detail+='</div></div>';});
+   const dayStr=window._TGTDATA.gtcDay?shortD(window._TGTDATA.gtcDay):'—';
+   el.innerHTML=`
+    <div class="page-header">
+     <div class="page-title">🎯 Tổng Quan Target — So với mục tiêu Sếp</div>
+     <div class="page-meta">
+      <span style="background:var(--orange-light);color:var(--orange-dark);padding:3px 10px;border-radius:20px;font-size:12px;font-weight:700">📅 Ngày ${dayStr}</span>
+      <span style="color:var(--text-sub);font-size:12.5px">GTC≥70% · FD Total≤7% / SME&lt;8% / TTS&lt;5% · ODR&gt;94% · OPR&gt;80% · Aging5&lt;100 · Aging8=0 · NS&gt;70</span>
+      <button class="tg-inpage-btn" style="background:#16A34A;border-color:#16A34A" onclick="buildTargetPage()">🔄 Tải lại</button>
+      <button class="tg-inpage-btn" onclick="sendTargetToTelegram()">📤 Bắn Target TG</button>
+     </div>
+    </div>
+    <div class="card" style="margin-bottom:14px">${main}</div>
+    ${detail?`<div class="card"><div class="card-header"><div class="card-title"><div class="card-icon">📝</div>Chi tiết AM chưa đạt theo từng chỉ tiêu</div></div><div style="padding:4px 14px 14px">${detail}</div></div>`:'<div class="analysis-box">🎉 Tất cả chỉ tiêu đều đạt — không có AM nào chưa đạt.</div>'}`;
+  }catch(e){ el.innerHTML='<div class="page-header"><div class="page-title">🎯 Tổng Quan Target</div></div><div class="analysis-box">Lỗi: '+(e&&e.message||e)+'</div>'; console.error('Target page:',e); }
+ };
+ await render();
+}
+/* ── Caption + gửi Target lên Telegram (thread Vận hành chung) ── */
+function _tgtCaption(){
+ const T=window._TGTDATA; if(!T)return'';
+ let c=`🎯 <b>TỔNG QUAN TARGET — Ngày ${T.gtcDay?shortD(T.gtcDay):'—'}</b>\n`;
+ const line=rw=>{const ok=rw.dat?'✅':'❌';const v=_tgtFval(rw,rw.val);const tgt=typeof rw.target==='string'?rw.target:(rw.unit==='%'?rw.target+'%':'>'+rw.target);return `${ok} ${rw.label}: <b>${v}</b> (MT ${tgt})`;};
+ [...T.rows,...T.agRows].forEach(rw=>{c+=line(rw)+'\n';});
+ c+='\n';
+ let hasFail=false;
+ [...T.rows,...T.agRows].forEach(rw=>{if(rw.fails&&rw.fails.length){hasFail=true;c+=`❌ <b>${rw.label}</b> chưa đạt: ${rw.fails.map(f=>`${f.am} (${rw.isCount?fmt(f.val)+'đơn':f.val.toFixed(1).replace('.',',')+'%'})`).join(' · ')}\n`;}});
+ if(!hasFail)c+='🎉 Tất cả AM đều đạt target.';
+ return c;
+}
+async function sendTargetToTelegram(){
+ if(!window._TGTDATA){alert('Chưa có dữ liệu Target — mở trang và chờ tải xong.');return;}
+ try{ const res=await _tgSend(TG_AGING_CHAT,TG_VH_THREAD,_tgtCaption());
+  if(res&&res.ok)alert('✅ Đã bắn Target lên Telegram (Vận hành chung).'); else alert('Lỗi TG: '+((res&&res.description)||JSON.stringify(res)));
+ }catch(e){alert('Lỗi gửi Telegram: '+e.message);}
+}
 async function buildCodCheckPage(){
  const el=document.getElementById('p42'); if(!el) return;
  const trv=v=>((+v||0)/1e6).toLocaleString('vi-VN',{minimumFractionDigits:1,maximumFractionDigits:1})+' tr';
@@ -4503,6 +4627,8 @@ async function init(){
  buildGTCRealtimePage().catch(e=>console.warn('GTC realtime:',e&&e.message||e));
  // p42 — Check COD giá trị cao (đọc gtc_live.json.cod, tự cập nhật 30')
  buildCodCheckPage().catch(e=>console.warn("COD:",e&&e.message||e));
+ // p43 — Tổng Quan Target (so số thật với mục tiêu Sếp)
+ buildTargetPage().catch(e=>console.warn('Target:',e&&e.message||e));
  // p16 — Báo Cáo Vận Hành Ngày
  const p16el=document.getElementById('p16');
  if(R['GTC ca 1,2 theo AM']){
