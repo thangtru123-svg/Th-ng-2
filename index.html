@@ -2488,8 +2488,9 @@ async function sendAllToTelegram(){
   });
   Object.keys(pivot).forEach(am=>{pivot[am].gtc=pivot[am].vol>0?pivot[am].nGTC/pivot[am].vol*100:0;});
   const gL={vol:0,nGTC:0},gP={vol:0,nGTC:0};
-  data.filter(r=>isGrand(r)&&isoD(r[2])===latest).forEach(r=>{gL.vol+=Math.round(parseFloat(r[3])||0);gL.nGTC+=Math.round(parseFloat(r[6])||0);});
-  if(prev)data.filter(r=>isGrand(r)&&isoD(r[2])===prev).forEach(r=>{gP.vol+=Math.round(parseFloat(r[3])||0);gP.nGTC+=Math.round(parseFloat(r[6])||0);});
+  // Grand = TỰ CỘNG từ các dòng AM (bộ lọc 2 tỉnh đã bỏ dòng Grand Total của sheet → không đọc được nữa)
+  Object.values(pivot).forEach(p=>{gL.vol+=p.vol;gL.nGTC+=p.nGTC;});
+  if(prev)data.filter(r=>!isGrand(r)&&isoD(r[2])===prev).forEach(r=>{gP.vol+=Math.round(parseFloat(r[3])||0);gP.nGTC+=Math.round(parseFloat(r[6])||0);});
   gL.gtc=gL.vol>0?gL.nGTC/gL.vol*100:0;gP.gtc=gP.vol>0?gP.nGTC/gP.vol*100:0;
   const names=Object.keys(pivot).sort((a,b)=>pivot[a].gtc-pivot[b].gtc);
   const worst=names[0],best=names[names.length-1];
