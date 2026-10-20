@@ -5672,11 +5672,12 @@ async function buildNangSuatPage(){
    selDates.forEach(d=>{Object.keys(bB).forEach(bc=>{bB[bc].vol+=(volBCPD[bc+'|'+d]||0);});});
    const tA=Object.entries(bT).sort((a,b)=>(a[1].nvs.size>0?a[1].gtc/a[1].nvs.size:0)-(b[1].nvs.size>0?b[1].gtc/b[1].nvs.size:0));
    const bA=Object.entries(bB).sort((a,b)=>(a[1].nvs.size>0?a[1].gtc/a[1].nvs.size:0)-(b[1].nvs.size>0?b[1].gtc/b[1].nvs.size:0));
-   // Tổng hợp theo AM (r[7]=AM)
-   const bcAM={};f.forEach(r=>{const bc=(r[0]||'').trim(),am=(r[7]||'').trim();if(bc&&am)bcAM[bc]=am;});
-   const bAM={};f.forEach(r=>{const am=(r[7]||'Khác').trim();const gan=parseFloat(r[3])||0,gtc=parseFloat(r[4])||0;if(!bAM[am])bAM[am]={nvs:new Set(),gan:0,gtc:0,vol:0};if(gtc>0)bAM[am].nvs.add((r[1]||'').trim());bAM[am].gan+=gan;bAM[am].gtc+=gtc;});
+   // Tổng hợp theo AM — cột AM trong sheet TRỐNG → gom BC→AM theo Cơ cấu AM (_CC_BCAM[bc][0]), giống p43
+   const _ccAM=window._CC_BCAM||{};
+   const bcAM={};f.forEach(r=>{const bc=(r[0]||'').trim();if(bc&&!bcAM[bc])bcAM[bc]=(_ccAM[bc]&&_ccAM[bc][0])||'(chưa map AM)';});
+   const bAM={};f.forEach(r=>{const bc=(r[0]||'').trim();const am=bcAM[bc]||'(chưa map AM)';const gan=parseFloat(r[3])||0,gtc=parseFloat(r[4])||0;if(!bAM[am])bAM[am]={nvs:new Set(),gan:0,gtc:0,vol:0};if(gtc>0)bAM[am].nvs.add((r[1]||'').trim());bAM[am].gan+=gan;bAM[am].gtc+=gtc;});
    Object.entries(volBCPD).forEach(([key,vol])=>{const sep=key.lastIndexOf('|');const bc=key.substring(0,sep),dt=key.substring(sep+1);if(!selDates.includes(dt))return;const am=bcAM[bc];if(am&&bAM[am])bAM[am].vol+=vol;});
-   const amA=Object.entries(bAM).filter(([am])=>am&&am!=='Khác').sort((a,b)=>(a[1].nvs.size>0?a[1].gtc/a[1].nvs.size:0)-(b[1].nvs.size>0?b[1].gtc/b[1].nvs.size:0));
+   const amA=Object.entries(bAM).sort((a,b)=>(a[1].nvs.size>0?a[1].gtc/a[1].nvs.size:0)-(b[1].nvs.size>0?b[1].gtc/b[1].nvs.size:0));
    // Bộ lọc compact: 2 dropdown
    const fHtml=`<span style="font-size:12px;font-weight:600;color:var(--text-sub)">Ngày 1:</span>
     <select id="ns-d1" style="${selStyle}" onchange="window._nsChgDrop()">${dates.map(d=>`<option value="${d}" ${d===(window._nsD1||selDates[0])?'selected':''}>${shortD(d)}</option>`).join('')}</select>
