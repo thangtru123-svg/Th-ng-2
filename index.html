@@ -4344,13 +4344,17 @@ async function buildTargetPage(){
 /* ── Caption + gửi Target lên Telegram (thread Vận hành chung) ── */
 function _tgtCaption(){
  const T=window._TGTDATA; if(!T)return'';
- let c=`🎯 <b>TỔNG QUAN TARGET — Ngày ${T.gtcDay?shortD(T.gtcDay):'—'}</b>\n`;
- const line=rw=>{const ok=rw.dat?'✅':'❌';const v=_tgtFval(rw,rw.val);const tgt=typeof rw.target==='string'?rw.target:(rw.unit==='%'?rw.target+'%':'>'+rw.target);return `${ok} ${rw.label}: <b>${v}</b> (MT ${tgt})`;};
- [...T.rows,...T.agRows].forEach(rw=>{c+=line(rw)+'\n';});
- c+='\n';
- let hasFail=false;
- [...T.rows,...T.agRows].forEach(rw=>{if(rw.fails&&rw.fails.length){hasFail=true;c+=`❌ <b>${rw.label}</b> chưa đạt: ${rw.fails.map(f=>`${f.am} (${rw.isCount?fmt(f.val)+'đơn':f.val.toFixed(1).replace('.',',')+'%'})`).join(' · ')}\n`;}});
- if(!hasFail)c+='🎉 Tất cả AM đều đạt target.';
+ const esc=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); // escape cho Telegram HTML
+ const all=[...T.rows,...T.agRows];
+ const nPass=all.filter(r=>r.dat===true).length, nTot=all.filter(r=>r.dat!==null).length;
+ const tgtStr=rw=>esc(typeof rw.target==='string'?rw.target:((rw.op||'')+rw.target+(rw.unit==='%'?'%':' đơn')));
+ const fval=(rw,v)=>v==null?'—':esc(rw.unit==='%'?v.toFixed(1).replace('.',',')+'%':(rw.isCount?fmt(v)+' đơn':v.toFixed(1).replace('.',',')+' đơn'));
+ let c=`🎯 <b>TỔNG QUAN TARGET — Ngày ${esc(T.gtcDay?shortD(T.gtcDay):'—')}</b>\n`;
+ c+=`📊 <b>${nPass}/${nTot}</b> chỉ tiêu Vùng đạt\n\n`;
+ all.forEach(rw=>{c+=`${rw.dat?'✅':'❌'} ${esc(rw.label)}: <b>${fval(rw,rw.val)}</b> (MT ${tgtStr(rw)})\n`;});
+ let d='';
+ all.forEach(rw=>{if(rw.fails&&rw.fails.length){d+=`\n❌ <b>${esc(rw.label)}</b> — ${rw.fails.length} AM chưa đạt:\n${rw.fails.map(f=>`• ${esc(f.am)}: ${fval(rw,f.val)}`).join('\n')}\n`;}});
+ c+= d ? '\n━━━━━ <b>AM CHƯA ĐẠT</b> ━━━━━'+d : '\n🎉 Tất cả AM đều đạt target.';
  return c;
 }
 async function sendTargetToTelegram(){
