@@ -227,7 +227,6 @@ tr.tot td{background:#FFF0EB!important;font-weight:800!important;border-top:2px 
  <button class="nav-item" onclick="show('p38',this)" style="background:linear-gradient(135deg,rgba(220,38,38,0.16),rgba(241,93,41,0.08));border:1px solid rgba(220,38,38,0.32);font-weight:700"><span class="icon">🔁</span>Tổng quan truy thu XBG</button>
  <button class="nav-item" onclick="show('p41',this)" style="background:linear-gradient(135deg,rgba(22,101,52,0.16),rgba(34,197,94,0.1));border:1px solid rgba(22,101,52,0.35);font-weight:700"><span class="icon">🚚</span>Báo cáo GTC realtime trong ngày</button>
  <button class="nav-item" onclick="show('p42',this)" style="background:linear-gradient(135deg,rgba(220,38,38,0.16),rgba(241,93,41,0.08));border:1px solid rgba(220,38,38,0.32);font-weight:700"><span class="icon">💰</span>Check COD giá trị cao</button>
- <button class="nav-item" onclick="show('p37',this)" style="background:linear-gradient(135deg,rgba(220,38,38,0.16),rgba(241,93,41,0.08));border:1px solid rgba(220,38,38,0.32);font-weight:700"><span class="icon">📮</span>Đơn TTS · Shopee (BG)</button>
  <div class="nav-section">GTC</div>
  <button class="nav-item" onclick="show('p1',this)"><span class="icon">📦</span>Tổng quan GTC Total</button>
  <button class="nav-item" onclick="show('p2',this)"><span class="icon">🎯</span>Tổng quan GTC TTS</button>
@@ -248,7 +247,6 @@ tr.tot td{background:#FFF0EB!important;font-weight:800!important;border-top:2px 
  <button class="nav-item" onclick="show('p25',this)" style="background:linear-gradient(135deg,rgba(220,38,38,0.16),rgba(241,93,41,0.08));border:1px solid rgba(220,38,38,0.32);font-weight:700"><span class="icon">📥</span>Cảnh báo Volume hàng về</button>
  <button class="nav-item" onclick="show('p19',this)"><span class="icon">🎯</span>GTC TTS Ca 1,2 theo BC</button>
  <button class="nav-item" onclick="show('p20',this)"><span class="icon">👷</span>Năng suất nhân viên</button>
- <button class="nav-item" onclick="show('p26',this)" style="background:linear-gradient(135deg,rgba(241,93,41,0.16),rgba(255,138,61,0.08));border:1px solid rgba(241,93,41,0.3);font-weight:700"><span class="icon">📈</span>Năng suất GTC — Bắc Giang</button>
  <button class="nav-item" onclick="show('p31',this)" style="background:linear-gradient(135deg,rgba(220,38,38,0.16),rgba(241,93,41,0.08));border:1px solid rgba(220,38,38,0.32);font-weight:700"><span class="icon">🚨</span>Bưu Cục Bất Ổn XBG</button>
  <div class="nav-section">Kinh Doanh</div>
  <button class="nav-item" onclick="show('p22',this)"><span class="icon">💼</span>Kinh Doanh XBG</button>
@@ -278,11 +276,9 @@ tr.tot td{background:#FFF0EB!important;font-weight:800!important;border-top:2px 
 <div class="page" id="p20"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
 <div class="page" id="p22"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
 <div class="page" id="p25"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
-<div class="page" id="p26"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
 <div class="page" id="p27"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
 <div class="page" id="p28"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
 <div class="page" id="p35"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
-<div class="page" id="p37"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
 <div class="page" id="p30"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
 <div class="page" id="p31"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
 <div class="page" id="p32"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
@@ -628,7 +624,6 @@ function injectAllTgBtns(){
  injectTgBtn('p30',()=>sendKhoaIDToTelegram(),'Bắn Khoá ID TG');
  injectTgBtn('p32',()=>sendBaoCaoToTelegram(),'Bắn Task Thắng TG');
  injectTgBtn('p35',()=>sendQuaHanToTelegram(),'Bắn Quá Hạn TG');
- injectTgBtn('p37',()=>sendT2ToTelegram(),'Bắn text TG');
 }
 function fmt(n){return(+n||0).toLocaleString('vi-VN');}
 function isoD(d){return(d||'').match(/\d{4}-\d{2}-\d{2}/)?.[0]||'';}
@@ -4526,8 +4521,6 @@ async function init(){
  await buildGTCBCReport();
  // p20 — Năng suất nhân viên
  await buildNangSuatPage();
- // p26 — Năng suất GTC nhân viên Bắc Giang
- await buildNSBGPage();
  // p27 — Rớt LC theo ngày
  await buildRotLCPage();
  // p28 — Tồn đọng chờ chuyển trả
@@ -4540,8 +4533,6 @@ async function init(){
  await buildBatOnPage();
  // p35 — Quá hạn / Truy thu (TTS + Shopee)
  await buildQuaHanPage();
- // p37 — Đơn TTS/Shopee Bắc Giang
- await buildTTSShopeeBGPage();
  // p22 — Kinh Doanh XBG
  await buildKinhDoanhPage();
  // p0 — Tổng quan (sau khi có đủ data)
