@@ -4318,7 +4318,7 @@ async function buildTargetPage(){
     return `<div style="flex:1 1 205px;min-width:195px;max-width:275px;background:${bg};border:1px solid ${bd};border-left:4px solid ${col};border-radius:13px;padding:11px 14px;box-shadow:var(--shadow-sm)">
      <div style="font-size:12px;color:var(--text-sub);font-weight:700">${rw.label}</div>
      <div style="display:flex;align-items:baseline;gap:8px;margin:5px 0 3px"><span style="font-size:25px;font-weight:800;color:${col}">${_tgtFval(rw,rw.val)}</span>${bdg}</div>
-     <div style="font-size:11.5px;color:var(--text-sub)">MT ${tgtStr(rw)}${nf>0?` · <b style="color:#DC2626">${nf} AM chưa đạt</b>`:''}</div></div>`;}).join('');
+     <div style="font-size:11.5px;color:var(--text-sub)">MT ${tgtStr(rw)}${(()=>{const gp=_tgtGap(rw);return gp?` · <b style="color:#DC2626">${gp}</b>`:'';})()}${nf>0?` · <b style="color:#DC2626">${nf} AM chưa đạt</b>`:''}</div></div>`;}).join('');
    const detCards=all.filter(rw=>rw.fails&&rw.fails.length).map(rw=>{
     const chips=rw.fails.map(f=>`<span style="background:#FEE2E2;color:#991B1B;padding:3px 9px;border-radius:8px;font-size:12px;white-space:nowrap"><b>${_tgtFval(rw,f.val)}</b> · ${f.am}</span>`).join('');
     return `<div style="border:1px solid #FECACA;border-radius:12px;overflow:hidden;background:#fff">
@@ -4341,6 +4341,17 @@ async function buildTargetPage(){
  };
  await render();
 }
+/* ── Khoảng cách tới mục tiêu (còn thiếu / vượt ngưỡng) ── */
+function _tgtGap(rw){
+ if(rw==null||rw.val==null)return'';
+ let tn,hi; // hi=true: cao hơn là tốt (≥ / >)
+ if(typeof rw.target==='number'){tn=rw.target;hi=(rw.op==='≥'||rw.op==='>');}
+ else{const m=String(rw.target).match(/-?\d+(?:[.,]\d+)?/);if(!m)return'';tn=parseFloat(m[0].replace(',','.'));hi=false;} // Aging: thấp hơn là tốt
+ const diff=hi?(tn-rw.val):(rw.val-tn); // >0 nghĩa là CHƯA đạt (còn cách ngưỡng)
+ if(diff<=0.0001)return''; // đã đạt → không hiển thị
+ if(rw.unit==='%'){const s=diff.toFixed(1).replace('.',',');return hi?`thiếu ${s} điểm %`:`vượt ngưỡng ${s} điểm %`;}
+ const s=fmt(Math.round(diff));return hi?`thiếu ${s} đơn`:`vượt ngưỡng ${s} đơn`;
+}
 /* ── Caption + gửi Target lên Telegram (thread Vận hành chung) ── */
 function _tgtCaption(){
  const T=window._TGTDATA; if(!T)return'';
@@ -4351,7 +4362,7 @@ function _tgtCaption(){
  const fval=(rw,v)=>v==null?'—':esc(rw.unit==='%'?v.toFixed(1).replace('.',',')+'%':(rw.isCount?fmt(v)+' đơn':v.toFixed(1).replace('.',',')+' đơn'));
  let c=`🎯 <b>TỔNG QUAN TARGET — Ngày ${esc(T.gtcDay?shortD(T.gtcDay):'—')}</b>\n`;
  c+=`📊 <b>${nPass}/${nTot}</b> chỉ tiêu Vùng đạt\n\n`;
- all.forEach(rw=>{c+=`${rw.dat?'✅':'❌'} ${esc(rw.label)}: <b>${fval(rw,rw.val)}</b> (MT ${tgtStr(rw)})\n`;});
+ all.forEach(rw=>{const gp=_tgtGap(rw);c+=`${rw.dat?'✅':'❌'} ${esc(rw.label)}: <b>${fval(rw,rw.val)}</b> (MT ${tgtStr(rw)})${gp?` → <b>${esc(gp)}</b>`:''}\n`;});
  let d='';
  all.forEach(rw=>{if(rw.fails&&rw.fails.length){d+=`\n❌ <b>${esc(rw.label)}</b> — ${rw.fails.length} AM chưa đạt:\n${rw.fails.map(f=>`• ${esc(f.am)}: ${fval(rw,f.val)}`).join('\n')}\n`;}});
  c+= d ? '\n━━━━━ <b>AM CHƯA ĐẠT</b> ━━━━━'+d : '\n🎉 Tất cả AM đều đạt target.';
