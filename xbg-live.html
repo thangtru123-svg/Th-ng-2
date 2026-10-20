@@ -243,6 +243,11 @@ tr.amchild td:first-child{padding-left:16px;font-size:12.5px}
       <div class="subtab" onclick="setSub('N','ont',this)">⏱️ Ontime</div>
     </div>
 
+    <div id="n1DateBar" style="display:flex;align-items:center;gap:8px;margin:2px 0 10px;flex-wrap:wrap">
+      <span class="mut" style="font-size:12px">📅 Chọn ngày:</span>
+      <select id="n1DaySel" onchange="n1PickDay(this.value)" style="flex:1;min-width:150px;background:var(--card2);color:var(--txt);border:1px solid var(--line);border-radius:10px;padding:8px 12px;font-size:14px;font-weight:700"></select>
+    </div>
+
     <div class="subpage" data-sub="N-ov">
     <div class="card">
       <div class="lbl">📅 Ngày N-1 <span class="n1day" id="n1Day">—</span></div>
@@ -273,6 +278,7 @@ tr.amchild td:first-child{padding-left:16px;font-size:12.5px}
     <div class="card">
       <div class="sect">👤 GTC Total theo AM</div>
       <div class="mut" style="margin-bottom:6px">Bấm AM để xổ Bưu Cục · bấm (+) ở Bưu Cục để xem năng suất NV</div>
+      <input class="search" placeholder="🔍 Tìm AM hoặc Bưu Cục…" oninput="n1Filter('n1GtcBody',this.value)">
       <table><thead><tr><th>AM</th><th>Vol</th><th>%Gán</th><th>%GTC</th><th>Đơn GTC</th></tr></thead><tbody id="n1GtcBody"></tbody></table>
     </div>
     </div><!-- /N-gtc -->
@@ -281,6 +287,7 @@ tr.amchild td:first-child{padding-left:16px;font-size:12.5px}
     <div class="card">
       <div class="sect">↩️ Tỉ lệ trả theo AM</div>
       <div class="mut" style="margin-bottom:6px">Bấm (+) để xổ Bưu Cục · thấp = tốt</div>
+      <input class="search" placeholder="🔍 Tìm AM hoặc Bưu Cục…" oninput="n1Filter('n1FdBody',this.value)">
       <table><thead><tr><th>AM</th><th>Total</th><th>SME</th><th>TTS</th><th>Shopee</th></tr></thead><tbody id="n1FdBody"></tbody></table>
     </div>
     </div><!-- /N-fd -->
@@ -289,6 +296,7 @@ tr.amchild td:first-child{padding-left:16px;font-size:12.5px}
     <div class="card">
       <div class="sect">📦 GTC TTS theo AM</div>
       <div class="mut" style="margin-bottom:6px">Bấm (+) để xổ Bưu Cục</div>
+      <input class="search" placeholder="🔍 Tìm AM hoặc Bưu Cục…" oninput="n1Filter('n1TtsBody',this.value)">
       <table><thead><tr><th>AM</th><th>Vol</th><th>%Gán</th><th>%GTC</th><th>Đơn GTC</th></tr></thead><tbody id="n1TtsBody"></tbody></table>
     </div>
     </div><!-- /N-tts -->
@@ -297,6 +305,7 @@ tr.amchild td:first-child{padding-left:16px;font-size:12.5px}
     <div class="card">
       <div class="sect">⏱️ Ontime TTS theo AM</div>
       <div class="mut" style="margin-bottom:6px">ODR = giao đúng giờ · OPR = lấy đúng giờ · bấm (+) xổ Bưu Cục</div>
+      <input class="search" placeholder="🔍 Tìm AM hoặc Bưu Cục…" oninput="n1Filter('n1OntimeBody',this.value)">
       <table><thead><tr><th>AM</th><th>ODR</th><th>OPR</th></tr></thead><tbody id="n1OntimeBody"></tbody></table>
     </div>
     </div><!-- /N-ont -->
@@ -560,18 +569,58 @@ function fdCls(x){ return x==null?'mut':(x<=8?'ok':(x<=12?'mid':'lo')); }
 function odrCls(x){ return x==null?'mut':(x>=96?'ok':(x>=90?'mid':'lo')); }
 function oprCls(x){ return x==null?'mut':(x>=80?'ok':(x>=70?'mid':'lo')); }
 function nS(x){ return x==null?'—':(''+x).replace('.',',')+'%'; }
+var _N1ALL=null, _n1cur=null;
+function _deac(s){ try{return (s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/đ/g,'d');}catch(e){return (s||'').toLowerCase();} }
+function n1Ingest(d){
+  if(d && d.days && d.data){ return { days:d.days, data:d.data }; }           // định dạng 10 ngày
+  if(d && d.day && d.vung){ var o={}; o[d.day]={day:d.day,vung:d.vung,am:d.am||[]}; return { days:[d.day], data:o }; } // tương thích 1 ngày
+  return null;
+}
+function n1PopulateDates(){
+  var sel=document.getElementById('n1DaySel'); if(!sel||!_N1ALL)return;
+  sel.innerHTML=_N1ALL.days.map(function(d,idx){ return '<option value="'+d+'">'+d.split('-').reverse().join('/')+(idx===0?' (N-1)':'')+'</option>'; }).join('');
+  sel.value=_n1cur;
+}
+function n1PickDay(day){
+  if(!_N1ALL||!_N1ALL.data[day])return;
+  _n1cur=day; renderN1(_N1ALL.data[day]);
+  ['n1GtcBody','n1FdBody','n1TtsBody','n1OntimeBody'].forEach(function(id){ var inp=document.querySelector('input.search[oninput*="'+id+'"]'); if(inp&&inp.value) n1Filter(id, inp.value); });
+}
+function n1Filter(bodyId, q){
+  var tb=document.getElementById(bodyId); if(!tb)return;
+  var qq=_deac((q||'').trim()); var rows=[].slice.call(tb.children); var idx=0;
+  while(idx<rows.length){
+    var g=rows[idx];
+    if(!g.classList.contains('amgrp')){ idx++; continue; }
+    var kids=[], j=idx+1;
+    while(j<rows.length && !rows[j].classList.contains('amgrp')){ kids.push(rows[j]); j++; }
+    if(qq===''){
+      g.classList.remove('hidden'); var ex=g.querySelector('.exp'); if(ex)ex.textContent='+';
+      kids.forEach(function(k){ k.classList.add('hidden'); });
+    } else {
+      var amMatch=_deac(g.textContent).indexOf(qq)>=0, anyChild=false;
+      kids.forEach(function(k){
+        if(k.classList.contains('n1nvdetail')){ k.classList.add('hidden'); return; }
+        var m=_deac(k.textContent).indexOf(qq)>=0;
+        if(amMatch||m){ k.classList.remove('hidden'); if(m)anyChild=true; } else k.classList.add('hidden');
+      });
+      var show=amMatch||anyChild;
+      g.classList.toggle('hidden', !show);
+      var ex2=g.querySelector('.exp'); if(ex2)ex2.textContent=show?'−':'+';
+    }
+    idx=j;
+  }
+}
 async function loadN1(){
-  // Ưu tiên /api/n1 (server đọc Google Sheet trực tiếp → tự cập nhật mỗi ngày)
-  try{
-    var d = await fetch('/api/n1?t='+Date.now()).then(function(r){return r.json();});
-    if(d && d.vung && d.day){ _n1loaded=true; renderN1(d); return; }
-  }catch(e){}
-  // Dự phòng: file tĩnh n1.json
-  try{
-    var d2 = await fetch('n1.json?t='+Date.now()).then(function(r){return r.json();});
-    _n1loaded=true; renderN1(d2); return;
-  }catch(e2){}
-  document.getElementById('n1Day').textContent='Lỗi tải dữ liệu N-1';
+  document.getElementById('n1Day').textContent='đang tải…';
+  var raw=null;
+  try{ raw = await fetch('/api/n1?t='+Date.now()).then(function(r){return r.json();}); }catch(e){}
+  var norm = n1Ingest(raw);
+  if(!norm){ try{ raw = await fetch('n1.json?t='+Date.now()).then(function(r){return r.json();}); norm=n1Ingest(raw); }catch(e2){} }
+  if(!norm){ document.getElementById('n1Day').textContent='Lỗi tải dữ liệu N-1'; return; }
+  _N1ALL=norm; _n1cur=norm.days[0]; _n1loaded=true;
+  n1PopulateDates();
+  renderN1(norm.data[_n1cur]);
 }
 function wireExp(tb){
   [].forEach.call(tb.querySelectorAll('tr.amgrp'),function(h){ h.querySelector('td').onclick=function(){
