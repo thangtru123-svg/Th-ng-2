@@ -224,12 +224,13 @@ tr.amchild td:first-child{padding-left:16px;font-size:12.5px}
       <div class="subtab" id="codSegAm" onclick="codSeg('am')">Theo AM</div>
       <div class="subtab" id="codSegBc" onclick="codSeg('bc')">Theo Bưu cục</div>
     </div>
-    <table><thead><tr><th id="codAggHead">Tỉnh</th><th>Số đơn</th><th>Tổng COD</th></tr></thead><tbody id="codAggBody"></tbody></table>
+    <input class="search" id="codSearch" placeholder="🔍 Tìm AM hoặc Bưu Cục…" oninput="codFilter(this.value)">
+    <table><thead><tr><th style="width:26px;text-align:center">#</th><th id="codAggHead">Tỉnh</th><th>Số đơn</th><th>Tổng COD</th></tr></thead><tbody id="codAggBody"></tbody></table>
   </div>
   <div class="card">
     <div class="sect">📋 Top đơn COD cao nhất</div>
     <div class="mut" style="margin-bottom:6px" id="codOrderNote">—</div>
-    <table><thead><tr><th>Mã đơn / NV</th><th>COD</th></tr></thead><tbody id="codOrderBody"></tbody></table>
+    <table><thead><tr><th style="width:26px;text-align:center">#</th><th>Mã đơn / NV</th><th>COD</th></tr></thead><tbody id="codOrderBody"></tbody></table>
   </div>
   </div><!-- /L-cod -->
   </div><!-- /tabLive -->
@@ -538,29 +539,37 @@ function setTab(which){
   document.getElementById('refresh').classList.toggle('hidden', !live || _scanning);
   if(!live && !_n1loaded){ loadN1(); }
 }
-var _COD=null, _codSeg='tinh';
+var _COD=null, _codSeg='tinh', _codQ='';
+var _codTrv=function(x){return (x/1e6).toLocaleString('vi-VN',{minimumFractionDigits:1,maximumFractionDigits:1})+' tr';};
 function renderCOD(cod){
   _COD=cod;
   if(!cod||!cod.orders){ var s=document.getElementById('codSoDon'); if(s)s.textContent='—'; var nt=document.getElementById('codOrderNote'); if(nt)nt.textContent='Chưa có dữ liệu COD — chờ lần quét tới.'; return; }
   var V=cod.vung;
-  var trv=function(x){return (x/1e6).toLocaleString('vi-VN',{minimumFractionDigits:1,maximumFractionDigits:1})+' tr';};
   document.getElementById('codSoDon').textContent=vn(V.soDon);
-  document.getElementById('codTong').textContent=trv(V.tongCod);
-  document.getElementById('codTB').textContent=trv(V.codTB);
+  document.getElementById('codTong').textContent=_codTrv(V.tongCod);
+  document.getElementById('codTB').textContent=_codTrv(V.codTB);
   document.getElementById('codNV').textContent=vn(V.soNV);
-  codSeg(_codSeg);
-  var rows=(cod.orders||[]).slice(0,80).map(function(o){return '<tr><td><b>'+o.ma+'</b><div class="mut" style="font-size:11px">'+(o.nv||'')+' · '+o.bc+'</div></td><td style="text-align:right;color:#ff5d6c;font-weight:700">'+vn(o.cod)+' đ</td></tr>';}).join('');
-  document.getElementById('codOrderBody').innerHTML=rows;
-  document.getElementById('codOrderNote').textContent='Hiển thị '+Math.min(80,cod.orders.length)+'/'+vn(cod.orders.length)+' đơn (COD cao nhất)';
+  codSeg(_codSeg); codOrders();
 }
+function codFilter(q){ _codQ=q||''; codSeg(_codSeg); codOrders(); }
 function codSeg(k){
   _codSeg=k;
   ['tinh','am','bc'].forEach(function(x){var e=document.getElementById('codSeg'+x.charAt(0).toUpperCase()+x.slice(1));if(e)e.className='subtab'+(x===k?' on':'');});
   var hd=document.getElementById('codAggHead'); if(hd)hd.textContent=(k==='tinh'?'Tỉnh':(k==='am'?'AM':'Bưu cục'));
   if(!_COD)return;
-  var arr=k==='tinh'?_COD.byTinh:(k==='am'?_COD.byAM:_COD.byBC);
-  var trv=function(x){return (x/1e6).toLocaleString('vi-VN',{minimumFractionDigits:1,maximumFractionDigits:1})+' tr';};
-  document.getElementById('codAggBody').innerHTML=(arr||[]).map(function(x){return '<tr><td>'+x.key+'</td><td style="text-align:center;color:#ff5d6c;font-weight:700">'+vn(x.soDon)+'</td><td style="text-align:right;font-weight:600">'+trv(x.tongCod)+'</td></tr>';}).join('');
+  var arr=(k==='tinh'?_COD.byTinh:(k==='am'?_COD.byAM:_COD.byBC))||[];
+  var qq=_deac(_codQ.trim());
+  if(qq) arr=arr.filter(function(x){return _deac(x.key).indexOf(qq)>=0;});
+  document.getElementById('codAggBody').innerHTML=arr.map(function(x,i){return '<tr><td style="text-align:center;color:var(--sub)">'+(i+1)+'</td><td>'+x.key+'</td><td style="text-align:center;color:#ff5d6c;font-weight:700">'+vn(x.soDon)+'</td><td style="text-align:right;font-weight:600">'+_codTrv(x.tongCod)+'</td></tr>';}).join('')||'<tr><td colspan="4" class="mut" style="text-align:center;padding:10px">Không có kết quả</td></tr>';
+}
+function codOrders(){
+  if(!_COD||!_COD.orders)return;
+  var qq=_deac(_codQ.trim());
+  var list=_COD.orders;
+  if(qq) list=list.filter(function(o){return _deac((o.am||'')+' '+(o.bc||'')+' '+(o.nv||'')).indexOf(qq)>=0;});
+  var show=list.slice(0,80);
+  document.getElementById('codOrderBody').innerHTML=show.map(function(o,i){return '<tr><td style="text-align:center;color:var(--sub)">'+(i+1)+'</td><td><b>'+o.ma+'</b><div class="mut" style="font-size:11px">'+(o.nv||'')+' · '+o.bc+'</div></td><td style="text-align:right;color:#ff5d6c;font-weight:700">'+vn(o.cod)+' đ</td></tr>';}).join('')||'<tr><td colspan="3" class="mut" style="text-align:center;padding:10px">Không có đơn khớp</td></tr>';
+  document.getElementById('codOrderNote').textContent=(qq?'Lọc "'+_codQ.trim()+'": ':'')+'Hiển thị '+Math.min(80,list.length)+'/'+vn(list.length)+' đơn (COD cao nhất)';
 }
 function setSub(g,key,btn){
   var bar=document.getElementById(g==='L'?'subtabsLive':'subtabsN1');
