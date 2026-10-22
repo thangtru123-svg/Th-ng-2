@@ -92,13 +92,22 @@ export default async function handler(req, res) {
       const amNames = new Set([...Object.keys(amGTC), ...Object.values(bc2am)]);
       const am = [];
       amNames.forEach(name => {
-        const g = amGTC[name] || { vol: 0, ganCnt: 0, ngtc: 0 };
-        const bcs = Object.keys(bcm).filter(b => bc2am[b] === name).map(b => {
+        const myBCs = Object.keys(bcm).filter(b => bc2am[b] === name);
+        // GTC: ưu tiên sheet GTC theo AM; thiếu (AM tên ghép) → gộp từ BC con
+        let g = amGTC[name];
+        if (!g) { let v = 0, gc = 0, ng = 0; myBCs.forEach(b => { const o = bcm[b]; v += o.vol; gc += o.ganCnt; ng += o.ngtc; }); g = { vol: v, ganCnt: gc, ngtc: ng }; }
+        // FD theo AM: ưu tiên sheet FD theo AM; thiếu → gộp Σnum/Σ%Vol từ BC con
+        const fdOf = cat => { const fa = FA[cat][name]; if (fa && fa.vw > 0) return r1(fa.num / fa.vw * 100); let n = 0, w = 0; myBCs.forEach(b => { const o = FB[cat][b]; if (o) { n += o.num; w += o.vw; } }); return w > 0 ? r1(n / w * 100) : null; };
+        // GTC TTS theo AM: thiếu → gộp BC con
+        let tA = ttsAMm[name];
+        if (!tA) { let has = false, v = 0, gc = 0, ng = 0; myBCs.forEach(b => { const o = ttsBCm[b]; if (o) { has = true; v += o.vol; gc += o.ganCnt; ng += o.ngtc; } }); tA = has ? { vol: v, ganCnt: gc, ngtc: ng } : null; }
+        // ODR/OPR theo AM: thiếu → gộp weighted từ BC con
+        const otOf = (amv, bcMap) => { if (amv && amv.vol > 0) return r1(amv.num / amv.vol * 100); let n = 0, v = 0; myBCs.forEach(b => { const o = bcMap[b]; if (o) { n += o.num; v += o.vol; } }); return v > 0 ? r1(n / v * 100) : null; };
+        const bcs = myBCs.map(b => {
           const bg = bcm[b]; const tt = ttsBCm[b];
           return { bc: b, vol: bg.vol, gan: pctGan(bg), pct: pctGtc(bg), ngtc: bg.ngtc, fdTotal: fdv(FB.total[b]), fdSme: fdv(FB.sme[b]), fdTts: fdv(FB.tts[b]), fdShopee: fdv(FB.shopee[b]), nv: nvByBC[b] || [], ttsVol: tt ? tt.vol : null, ttsGan: tt ? pctGan(tt) : null, ttsPct: tt ? pctGtc(tt) : null, ttsNgtc: tt ? tt.ngtc : null, odr: otv(odrBCm[b]), opr: otv(oprBCm[b]) };
         }).sort((a, b) => b.vol - a.vol);
-        const tA = ttsAMm[name];
-        am.push({ am: name, vol: g.vol, gan: pctGan(g), pct: pctGtc(g), ngtc: g.ngtc, fdTotal: fdv(FA.total[name]), fdSme: fdv(FA.sme[name]), fdTts: fdv(FA.tts[name]), fdShopee: fdv(FA.shopee[name]), ttsVol: tA ? tA.vol : null, ttsGan: tA ? pctGan(tA) : null, ttsPct: tA ? pctGtc(tA) : null, ttsNgtc: tA ? tA.ngtc : null, odr: otv(odrAMm[name]), opr: otv(oprAMm[name]), bc: bcs });
+        am.push({ am: name, vol: g.vol, gan: pctGan(g), pct: pctGtc(g), ngtc: g.ngtc, fdTotal: fdOf('total'), fdSme: fdOf('sme'), fdTts: fdOf('tts'), fdShopee: fdOf('shopee'), ttsVol: tA ? tA.vol : null, ttsGan: tA ? pctGan(tA) : null, ttsPct: tA ? pctGtc(tA) : null, ttsNgtc: tA ? tA.ngtc : null, odr: otOf(odrAMm[name], odrBCm), opr: otOf(oprAMm[name], oprBCm), bc: bcs });
       });
       am.sort((a, b) => b.vol - a.vol);
       const vung = { vol: vVol, gan: vVol > 0 ? r1(vGan / vVol * 100) : 0, pct: vVol > 0 ? r1(vNgtc / vVol * 100) : 0, ngtc: vNgtc, fdTotal: vungFD.total, fdSme: vungFD.sme, fdTts: vungFD.tts, fdShopee: vungFD.shopee, gtcTts: vGtcTts, odrTts: vOdr, oprTts: vOpr };
