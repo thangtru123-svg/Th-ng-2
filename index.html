@@ -221,6 +221,7 @@ tr.tot td{background:#FFF0EB!important;font-weight:800!important;border-top:2px 
  <div class="nav-section">Tổng Quan</div>
  <button class="nav-item active" onclick="show('p0',this)"><span class="icon">📊</span>Dashboard Tổng Quan</button>
  <button class="nav-item" onclick="show('p43',this)" style="background:linear-gradient(135deg,rgba(22,101,52,0.16),rgba(34,197,94,0.1));border:1px solid rgba(22,101,52,0.35);font-weight:700"><span class="icon">🎯</span>Tổng Quan Target</button>
+ <button class="nav-item" onclick="show('p44',this)" style="background:linear-gradient(135deg,rgba(220,38,38,0.2),rgba(241,93,41,0.1));border:1px solid rgba(220,38,38,0.4);font-weight:700"><span class="icon">🚨</span>Bưu Cục làm kém bất thường</button>
  <button class="nav-item" onclick="show('p27',this)" style="background:linear-gradient(135deg,rgba(220,38,38,0.16),rgba(241,93,41,0.08));border:1px solid rgba(220,38,38,0.32);font-weight:700"><span class="icon">📉</span>Rớt LC theo ngày</button>
  <button class="nav-item" onclick="show('p30',this)" style="background:linear-gradient(135deg,rgba(220,38,38,0.16),rgba(241,93,41,0.08));border:1px solid rgba(220,38,38,0.32);font-weight:700"><span class="icon">🔒</span>Khoá ID vi phạm</button>
  <button class="nav-item" onclick="show('p32',this)" style="background:linear-gradient(135deg,rgba(37,99,235,0.14),rgba(59,130,246,0.08));border:1px solid rgba(37,99,235,0.3);font-weight:700"><span class="icon">📑</span>Báo Cáo Tồn / LC / 48H</button>
@@ -263,6 +264,7 @@ tr.tot td{background:#FFF0EB!important;font-weight:800!important;border-top:2px 
 <main class="main">
  <div class="page active" id="p0"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
 <div class="page" id="p43"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
+<div class="page" id="p44"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
  <div class="page" id="p1"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
  <div class="page" id="p2"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
  <div class="page" id="p3"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
@@ -4377,6 +4379,98 @@ async function sendTargetToTelegram(){
   if(res&&res.ok)alert('✅ Đã bắn Target lên Telegram (Vận hành chung).'); else alert('Lỗi TG: '+((res&&res.description)||JSON.stringify(res)));
  }catch(e){alert('Lỗi gửi Telegram: '+e.message);}
 }
+/* ===== p44 — BƯU CỤC LÀM KÉM BẤT THƯỜNG ===== */
+async function buildBatThuongPage(){
+ const el=document.getElementById('p44'); if(!el)return;
+ try{
+  const dt=s=>(String(s==null?'':s).match(/\d{4}-\d{2}-\d{2}/)||[''])[0];
+  const P=v=>{const n=parseFloat(String(v==null?'':v).replace(/,/g,''));return isNaN(n)?null:n;};
+  const datesOf=map=>{const s=new Set();Object.values(map).forEach(o=>Object.keys(o).forEach(d=>s.add(d)));return [...s].sort();};
+  // ---- %GTC per BC per day (col: AM0 BC1 Ngày2 Vol3 %Gán4 %GTC5 nGTC6; %GTC fraction) ----
+  const gBC=window._D&&window._D.gtcTotalBC||[];
+  const gtcMap={};
+  gBC.slice(1).forEach(r=>{const bc=(r[1]||'').trim();if(!bc||/grand total/i.test(bc))return;const d=dt(r[2]);if(!d)return;const p=P(r[5]);if(p==null)return;(gtcMap[bc]=gtcMap[bc]||{})[d]=p*100;});
+  const gD=datesOf(gtcMap);const gLatest=gD[gD.length-1],gPrev=gD[gD.length-2],g7=gD.slice(-7);
+  // ---- FD per BC per day (BC0 Ngày1 %Vol2 %FD3; fraction) ----
+  const fdMap=rows=>{const m={};(rows||[]).slice(1).forEach(r=>{const bc=(r[0]||'').trim();if(!bc||/grand total/i.test(bc))return;const d=dt(r[1]);if(!d)return;const v=P(r[3]);if(v==null)return;(m[bc]=m[bc]||{})[d]=v*100;});return m;};
+  const fdT=fdMap(window._FD&&window._FD.totalBC),fdTts=fdMap(window._FD&&window._FD.ttsBC);
+  const fTD=datesOf(fdT),fTl=fTD[fTD.length-1],fTp=fTD[fTD.length-2];
+  const fSD=datesOf(fdTts),fSl=fSD[fSD.length-1],fSp=fSD[fSD.length-2];
+  // ---- Aging đơn per BC (ngày mới nhất) ----
+  const ag=window._agingRows||[];
+  const agD=[...new Set(ag.map(r=>dt(r[11])).filter(Boolean))].sort();const agLatest=agD[agD.length-1];
+  const agMap={};ag.forEach(r=>{if(dt(r[11])!==agLatest)return;const bc=(r[2]||'').trim();if(bc)agMap[bc]=(agMap[bc]||0)+1;});
+  // ---- NS TB/NV per BC per day (BC0 NV1 Ngày2 gán3 GTC4) ----
+  let nsRaw=window._nsRaw;
+  if(!nsRaw){try{const res=await fetch(`https://docs.google.com/spreadsheets/d/${SID}/gviz/tq?tqx=out:csv&gid=1723871284`);nsRaw=parseCSV(await res.text()).slice(1).filter(r=>r[0]&&r[2]&&r[3]);window._nsRaw=nsRaw;}catch(_){nsRaw=[];}}
+  const nsAgg={};nsRaw.forEach(r=>{const bc=(r[0]||'').trim();const d=dt(r[2]);if(!bc||!d)return;const gtc=P(r[4])||0;const nv=(r[1]||'').trim();const o=(nsAgg[bc]=nsAgg[bc]||{});const e=o[d]||(o[d]={gtc:0,nvs:new Set()});e.gtc+=gtc;if(gtc>0&&nv)e.nvs.add(nv);});
+  const nsOf=(bc,d)=>{const o=nsAgg[bc]&&nsAgg[bc][d];return (o&&o.nvs.size>0)?o.gtc/o.nvs.size:null;};
+  const nsD=datesOf(nsAgg),nsLatest=nsD[nsD.length-1],nsPrev=nsD[nsD.length-2];
+  // ---- đánh giá từng BC ----
+  const cc=window._CC_BCAM||{};
+  const allBC=new Set([...Object.keys(gtcMap),...Object.keys(agMap)]);
+  const rows=[];
+  allBC.forEach(bc=>{
+   const gN1=gtcMap[bc]&&gtcMap[bc][gLatest],gN2=gtcMap[bc]&&gtcMap[bc][gPrev];
+   const arr7=g7.map(d=>gtcMap[bc]&&gtcMap[bc][d]).filter(v=>v!=null);const gAvg7=arr7.length?arr7.reduce((s,v)=>s+v,0)/arr7.length:null;
+   const ftN1=fdT[bc]&&fdT[bc][fTl],ftN2=fdT[bc]&&fdT[bc][fTp];
+   const fsN1=fdTts[bc]&&fdTts[bc][fSl],fsN2=fdTts[bc]&&fdTts[bc][fSp];
+   const agN=agMap[bc]||0;
+   const nsN1=nsOf(bc,nsLatest),nsN2=nsOf(bc,nsPrev);
+   const c1=(gN1!=null&&gN2!=null)&&((gN2-gN1)>5);
+   const c2=(gN1!=null&&gAvg7!=null)&&((gAvg7-gN1)>=5);
+   const c3=(ftN1!=null&&ftN2!=null)&&((ftN1-ftN2)>=2);
+   const c4=(fsN1!=null&&fsN2!=null)&&((fsN1-fsN2)>=2);
+   const c5=agN>50;
+   const c6=(nsN1!=null&&nsN2!=null)&&((nsN2-nsN1)>5);
+   const flags={c1,c2,c3,c4,c5,c6};const n=[c1,c2,c3,c4,c5,c6].filter(Boolean).length;
+   if(n>0)rows.push({bc,am:(cc[bc]&&cc[bc].join(', '))||'—',gN1,gN2,gAvg7,ftN1,ftN2,fsN1,fsN2,agN,nsN1,nsN2,flags,n});
+  });
+  rows.sort((a,b)=>b.n-a.n||b.agN-a.agN);
+  // ---- render ----
+  const pc=v=>v==null?'—':v.toFixed(1).replace('.',',')+'%';
+  const fD=iso=>{if(!iso)return'—';const p=iso.split('-');return p.length===3?`${p[2]}/${p[1]}`:iso;};
+  // ô tiêu chí: giá trị chính + delta nhỏ, tô đỏ khi phạm
+  const crit=(main,delta,tripped,unit,arrowDir)=>{const bg=tripped?'background:#FEF2F2;':'';const col=tripped?'#B91C1C':'var(--text-main)';let sub='';if(delta!=null){const ar=arrowDir==='down'?(delta<0?'▼':'▲'):(delta>0?'▲':'▼');sub=`<div style="font-size:10px;font-weight:700;color:${tripped?'#B91C1C':'var(--text-sub)'}">${ar} ${Math.abs(delta).toFixed(1).replace('.',',')}${unit||''}</div>`;}return `<td style="${bg}padding:8px 10px;text-align:center;font-weight:${tripped?800:600};color:${col}">${main}${sub}</td>`;};
+  const nTrip={c1:0,c2:0,c3:0,c4:0,c5:0,c6:0};rows.forEach(r=>Object.keys(nTrip).forEach(k=>{if(r.flags[k])nTrip[k]++;}));
+  const kpi=(lbl,val,col)=>`<div style="flex:1;min-width:130px;background:var(--card);border:1px solid var(--border);border-top:3px solid ${col};border-radius:12px;padding:12px 14px;text-align:center"><div style="font-size:11px;font-weight:700;color:var(--text-sub);text-transform:uppercase;letter-spacing:.4px">${lbl}</div><div style="font-size:26px;font-weight:800;color:${col};line-height:1.1;margin-top:3px">${val}</div></div>`;
+  let h=`<div class="page-header"><div class="page-title">🚨 Bưu Cục làm kém bất thường</div><div class="page-meta"><span class="tag tag-orange">📅 N-1 = ${fD(gLatest)} · N-2 = ${fD(gPrev)} · TB 7 ngày</span><button class="tg-inpage-btn" style="background:#16A34A;border-color:#16A34A" onclick="buildBatThuongPage()">🔄 Tải lại</button></div></div>`;
+  h+=`<div class="analysis-box" style="margin-bottom:16px;font-size:12.5px;line-height:1.9">⚠️ <b>Bưu Cục dính BẤT KỲ 1 trong 6 tín hiệu dưới đây là vào danh sách</b> (ô tô đỏ = tiêu chí đang phạm):<br>
+  <b>1. %GTC ↓ vs N-2 &gt; 5 điểm %</b> · <b>2. %GTC ↓ vs TB7 ≥ 5 điểm %</b> · <b>3. FD Total ↑ vs N-2 ≥ 2 điểm %</b> · <b>4. FD TTS ↑ vs N-2 ≥ 2 điểm %</b> · <b>5. Aging &gt;5 ngày &gt; 50 đơn</b> · <b>6. NS TB/NV ↓ vs N-2 &gt; 5 đơn</b></div>`;
+  h+=`<div style="display:flex;gap:11px;flex-wrap:wrap;margin-bottom:18px">
+   ${kpi('BC bất thường',rows.length,'var(--red)')}
+   ${kpi('GTC ↓ N-2',nTrip.c1,'#DC2626')}${kpi('GTC ↓ TB7',nTrip.c2,'#DC2626')}
+   ${kpi('FD Total ↑',nTrip.c3,'#EA580C')}${kpi('FD TTS ↑',nTrip.c4,'#EA580C')}
+   ${kpi('Aging >50',nTrip.c5,'#B91C1C')}${kpi('NS ↓ N-2',nTrip.c6,'#9333EA')}</div>`;
+  if(!rows.length){h+='<div class="analysis-box">🎉 Không có Bưu Cục nào làm kém bất thường ở ngày N-1.</div>';el.innerHTML=h;return;}
+  const th=(t,sub)=>`<th style="padding:9px 10px;text-align:center;font-weight:700;font-size:11px;color:var(--text-sub);white-space:nowrap">${t}${sub?`<div style="font-size:9px;font-weight:600;opacity:.8">${sub}</div>`:''}</th>`;
+  let t=`<div class="card"><div class="card-header"><div class="card-title"><div class="card-icon">📋</div>Danh sách Bưu Cục bất thường</div><div class="card-info">${rows.length} bưu cục · sắp xếp theo số tiêu chí phạm</div></div>
+   <div class="table-wrap" style="overflow-x:auto"><table style="border-collapse:collapse;font-size:13px;white-space:nowrap"><thead><tr style="background:#F8F9FA;border-bottom:2px solid var(--border)">
+   <th style="padding:9px 10px;text-align:center;font-weight:700;font-size:11px;color:var(--text-sub);width:34px">#</th>
+   <th style="padding:9px 14px;text-align:left;font-weight:700;font-size:11px;color:var(--text-sub)">Bưu Cục</th>
+   <th style="padding:9px 14px;text-align:left;font-weight:700;font-size:11px;color:var(--text-sub)">AM</th>
+   ${th('%GTC N-1')}${th('GTC ↓ N-2','>5đ%')}${th('GTC ↓ TB7','≥5đ%')}${th('FD Total','↑N-2 ≥2đ%')}${th('FD TTS','↑N-2 ≥2đ%')}${th('Aging','>50 đơn')}${th('NS N-1','↓N-2 >5')}
+   <th style="padding:9px 10px;text-align:center;font-weight:700;font-size:11px;color:var(--text-sub)">Cờ</th></tr></thead><tbody>`;
+  rows.forEach((r,i)=>{
+   const bg=i%2?'#FAFAFA':'#FFF';
+   t+=`<tr style="background:${bg};border-bottom:1px solid var(--border)">
+    <td style="padding:8px 10px;text-align:center;font-weight:700;color:${i<3?'var(--red)':'var(--text-sub)'}">${i+1}</td>
+    <td style="padding:8px 14px;font-weight:700;color:var(--text-main)">${r.bc}</td>
+    <td style="padding:8px 14px;color:var(--text-main);font-size:12px">${r.am}</td>
+    <td style="padding:8px 10px;text-align:center;font-weight:700">${pc(r.gN1)}</td>
+    ${crit(r.gN2!=null&&r.gN1!=null?pc(r.gN1):'—',(r.gN1!=null&&r.gN2!=null)?(r.gN1-r.gN2):null,r.flags.c1,'đ%','down')}
+    ${crit(r.gAvg7!=null?('TB '+pc(r.gAvg7)):'—',(r.gN1!=null&&r.gAvg7!=null)?(r.gN1-r.gAvg7):null,r.flags.c2,'đ%','down')}
+    ${crit(pc(r.ftN1),(r.ftN1!=null&&r.ftN2!=null)?(r.ftN1-r.ftN2):null,r.flags.c3,'đ%','up')}
+    ${crit(pc(r.fsN1),(r.fsN1!=null&&r.fsN2!=null)?(r.fsN1-r.fsN2):null,r.flags.c4,'đ%','up')}
+    ${crit(r.agN.toLocaleString('vi-VN')+' đơn',null,r.flags.c5)}
+    ${crit(r.nsN1!=null?Math.round(r.nsN1)+' đơn':'—',(r.nsN1!=null&&r.nsN2!=null)?(r.nsN1-r.nsN2):null,r.flags.c6,'','down')}
+    <td style="padding:8px 10px;text-align:center"><span style="background:#FEE2E2;color:#B91C1C;font-weight:800;border-radius:20px;padding:2px 10px;font-size:13px">${r.n}</span></td></tr>`;
+  });
+  t+=`</tbody></table></div></div>`;
+  h+=t;
+  el.innerHTML=h;
+ }catch(e){el.innerHTML='<div class="page-header"><div class="page-title">🚨 Bưu Cục làm kém bất thường</div></div><div class="analysis-box">Lỗi: '+(e&&e.message||e)+'</div>';console.error('BC bất thường:',e);}
+}
 async function buildCodCheckPage(){
  const el=document.getElementById('p42'); if(!el) return;
  const trv=v=>((+v||0)/1e6).toLocaleString('vi-VN',{minimumFractionDigits:1,maximumFractionDigits:1})+' tr';
@@ -4647,6 +4741,8 @@ async function init(){
  buildCodCheckPage().catch(e=>console.warn("COD:",e&&e.message||e));
  // p43 — Tổng Quan Target (so số thật với mục tiêu Sếp)
  buildTargetPage().catch(e=>console.warn('Target:',e&&e.message||e));
+ // p44 — Bưu Cục làm kém bất thường (cần _D/_FD + _agingRows)
+ buildBatThuongPage().catch(e=>console.warn('BC bất thường:',e&&e.message||e));
  // p16 — Báo Cáo Vận Hành Ngày
  const p16el=document.getElementById('p16');
  if(R['GTC ca 1,2 theo AM']){
