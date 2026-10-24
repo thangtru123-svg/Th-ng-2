@@ -526,6 +526,26 @@ async function _filter2T(id,name,gid,csv){
     if(cfg.mode==='am'){ amSet=await _ensureClusterAM(); if(!amSet||!amSet.size) return csv; }
     const rows=parseCSV(csv);
     if(rows.length<2) return csv;
+    // Sheet FD theo AM/BC: 2 khối ĐỘC LẬP (NGÀY cột 0-6 | TUẦN cột 7+, AM/BC khác thứ tự).
+    // Lọc kiểu cũ (xoá cả dòng theo cột 0) sẽ xoá nhầm header/dữ liệu khối tuần → p4 lỗi.
+    // Fix: lọc riêng từng khối rồi ghép lại theo chỉ số dòng.
+    if(id===SID && /^FD .*theo (AM|Bưu Cục)$/.test(n)){
+     const SP=7, amMode=cfg.mode==='am';
+     const inSet=v=>{ if(amMode){let k=false;(v||'').split(',').forEach(a=>{if(amSet.has(a.trim()))k=true;});return k;} return _2T_PFX.test((v||'').trim()); };
+     const wHdr=amMode?'AM':'Bưu Cục';
+     const dL=[rows[0].slice(0,SP)];   // header khối ngày
+     const wL=[rows[0].slice(SP)];     // row0 meta khối tuần (Calculated Field / Tuần)
+     for(let i=1;i<rows.length;i++){
+      const r=rows[i];
+      if(!/grand total/i.test(r.slice(0,SP).join(' ')) && inSet(r[0])) dL.push(r.slice(0,SP));
+      const wv=(r[SP]||'').trim();
+      if(wv===wHdr) wL.push(r.slice(SP));                                        // header tuần ("AM"/"Bưu Cục" + số tuần)
+      else if(wv && !/grand total/i.test(wv) && inSet(wv)) wL.push(r.slice(SP)); // dữ liệu tuần 2 tỉnh
+     }
+     const mx=Math.max(dL.length,wL.length),res=[];
+     for(let i=0;i<mx;i++){ let d=dL[i]?dL[i].slice(0,SP):[]; while(d.length<SP)d.push(''); res.push(d.concat(wL[i]||[])); }
+     return _rowsToCsv(res);
+    }
     const out=[rows[0]];
     for(let i=1;i<rows.length;i++){
       const r=rows[i];
