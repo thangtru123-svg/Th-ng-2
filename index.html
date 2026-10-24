@@ -1762,9 +1762,11 @@ function buildAgingHTML(rows){
  const recent=rows.filter(r=>last7.includes(r[11]));
  const unstableRows=recent.filter(r=>r[12]&&r[12].includes('bất ổn'));
  const unstableBCSet=new Set(unstableRows.map(r=>r[2]));
+ // AM của 1 dòng aging: ưu tiên cột AM; ô TRỐNG → map theo Cơ cấu AM (BC→AM) để không lọt khỏi bảng Theo AM; #N/A giữ nguyên để loại
+ const _agAM=r=>{const a=(r[10]||'').trim();if(a.startsWith('#'))return a;if(a)return a;const cc=window._CC_BCAM,bc=(r[2]||'').trim();return (cc&&cc[bc]&&cc[bc][0])||'';};
  const byDate={};recent.forEach(r=>{const _am=(r[10]||'').trim();if(_am&&(_am==='#N/A'||_am.startsWith('#')))return;byDate[r[11]]=(byDate[r[11]]||0)+1;});
  // Nhóm ngày aging của ngày mới nhất (r[6]=Số ngày)
- const agingGroups={};rows.filter(r=>r[11]===latest).forEach(r=>{const bc=(r[2]||'').trim(),am=(r[10]||'').trim();const g=_agBLGroup(r);if(bc){if(!agingGroups[bc])agingGroups[bc]={g1:0,g2:0,g3:0,g4:0};agingGroups[bc][g]++;}if(am&&!am.startsWith('#')){const k='am:'+am;if(!agingGroups[k])agingGroups[k]={g1:0,g2:0,g3:0,g4:0};agingGroups[k][g]++;}});
+ const agingGroups={};rows.filter(r=>r[11]===latest).forEach(r=>{const bc=(r[2]||'').trim(),am=_agAM(r);const g=_agBLGroup(r);if(bc){if(!agingGroups[bc])agingGroups[bc]={g1:0,g2:0,g3:0,g4:0};agingGroups[bc][g]++;}if(am&&!am.startsWith('#')){const k='am:'+am;if(!agingGroups[k])agingGroups[k]={g1:0,g2:0,g3:0,g4:0};agingGroups[k][g]++;}});
  const latestTotal=byDate[latest]||0;const prevTotal=byDate[prev]||0;const delta=latestTotal-prevTotal;
  const unstableLatest=unstableRows.filter(r=>r[11]===latest).length;
  const deltaSign=delta>0?'+':'';const deltaIcon=delta<0?'▼':delta>0?'▲':'—';const deltaColor=delta<0?'var(--green)':delta>0?'var(--red)':'var(--text-sub)';
@@ -1816,7 +1818,7 @@ function buildAgingHTML(rows){
  h+=`<div id="aging-tbl-batOn">`;h+=buildTable(unstableArr,'bc','Bưu Cục Bất Ổn — 7 ngày','⚠️',`${unstableArr.length} bưu cục`,'none',unstableAna);h+=`</div>`;
 
  // ─── Bảng AM ───
- const amMap={};recent.forEach(r=>{const am=(r[10]||'').trim(),d=r[11];if(!am||am==='#N/A'||am.startsWith('#'))return;if(!amMap[am])amMap[am]={am};amMap[am][d]=(amMap[am][d]||0)+1;});
+ const amMap={};recent.forEach(r=>{const a0=(r[10]||'').trim();if(a0.startsWith('#'))return;const am=_agAM(r)||'(Chưa gán AM)',d=r[11];if(!amMap[am])amMap[am]={am};amMap[am][d]=(amMap[am][d]||0)+1;});
  const amArr=Object.values(amMap).sort((a,b)=>(b[latest]||0)-(a[latest]||0));
  amArr.forEach(r=>{const g=agingGroups['am:'+(r.am||'')]||{};r.g1=g.g1||0;r.g2=g.g2||0;r.g3=g.g3||0;r.g4=g.g4||0;});
  const amCur=amArr.reduce((s,r)=>s+(r[latest]||0),0);
@@ -2061,7 +2063,8 @@ function buildAgingCaps(){
  const unstableArr=Object.values(unstableMap).sort((a,b)=>(b[latest]||0)-(a[latest]||0));
  const unstableCur=unstableArr.reduce((s,r)=>s+(r[latest]||0),0);
  const unstablePrv=unstableArr.reduce((s,r)=>s+(r[prev]||0),0);
- const amMap={};recent.forEach(r=>{const am=(r[10]||'').trim(),d=r[11];if(!am||am==='#N/A'||am.startsWith('#'))return;if(!amMap[am])amMap[am]={am};amMap[am][d]=(amMap[am][d]||0)+1;});
+ const _agAM=r=>{const a=(r[10]||'').trim();if(a.startsWith('#'))return a;if(a)return a;const cc=window._CC_BCAM,bc=(r[2]||'').trim();return (cc&&cc[bc]&&cc[bc][0])||'';};
+ const amMap={};recent.forEach(r=>{const a0=(r[10]||'').trim();if(a0.startsWith('#'))return;const am=_agAM(r)||'(Chưa gán AM)',d=r[11];if(!amMap[am])amMap[am]={am};amMap[am][d]=(amMap[am][d]||0)+1;});
  const amArr=Object.values(amMap).sort((a,b)=>(b[latest]||0)-(a[latest]||0));
  const amCur=amArr.reduce((s,r)=>s+(r[latest]||0),0),amPrv=amArr.reduce((s,r)=>s+(r[prev]||0),0);
  const d2=delta<0?`▼ giảm ${num(Math.abs(delta))} đơn`:delta>0?`▲ tăng ${num(delta)} đơn`:'Không đổi';
