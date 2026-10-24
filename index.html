@@ -305,6 +305,7 @@ const TG_VH_THREAD   = 5; // topic "Vận hành chung"
 const TG_FD_THREAD   = 8250; // topic "FD - Mục tiêu toàn vùng 8%"
 const TG_PICKUP_THREAD = 7; // topic "Pickup / Luân chuyển"
 const TG_TTS_THREAD   = 3; // topic "TTS - Vận hành"
+const TG_VANDE_THREAD = 1; // topic "Vấn đề chung" (t.me/c/3802272887/1)
 const TG_NSBG_CHAT   = -4931731378; // group "Anh em Bắc Giang" (group thường, không topic)
 
 /* ===== PHÂN QUYỀN (ROLE) =====
@@ -4462,8 +4463,9 @@ async function buildBatThuongPage(){
   const B=rows.filter(r=>r.flags.c3||r.flags.c4).sort((a,b)=>((b.ftN1!=null&&b.ftN2!=null?b.ftN1-b.ftN2:0))-((a.ftN1!=null&&a.ftN2!=null?a.ftN1-a.ftN2:0)));
   const C=rows.filter(r=>r.flags.c5).sort((a,b)=>b.agN-a.agN);
   const Dd=rows.filter(r=>r.flags.c6).sort((a,b)=>((b.nsN2!=null&&b.nsN1!=null?b.nsN2-b.nsN1:0))-((a.nsN2!=null&&a.nsN1!=null?a.nsN2-a.nsN1:0)));
+  window._BTDATA={day:gLatest,prev:gPrev,rows,A,B,C,D:Dd}; // cho nút bắn Telegram
   const kpi=(lbl,val,col)=>`<div style="flex:1;min-width:120px;background:var(--card);border:1px solid var(--border);border-top:3px solid ${col};border-radius:12px;padding:12px 14px;text-align:center"><div style="font-size:11px;font-weight:700;color:var(--text-sub);text-transform:uppercase;letter-spacing:.4px">${lbl}</div><div style="font-size:26px;font-weight:800;color:${col};line-height:1.1;margin-top:3px">${val}</div></div>`;
-  let h=`<div class="page-header"><div class="page-title">🚨 Bưu Cục làm kém bất thường</div><div class="page-meta"><span class="tag tag-orange">📅 N-1 = ${fD(gLatest)} · N-2 = ${fD(gPrev)} · TB 7 ngày</span><button class="tg-inpage-btn" style="background:#16A34A;border-color:#16A34A" onclick="buildBatThuongPage()">🔄 Tải lại</button></div></div>`;
+  let h=`<div class="page-header"><div class="page-title">🚨 Bưu Cục làm kém bất thường</div><div class="page-meta"><span class="tag tag-orange">📅 N-1 = ${fD(gLatest)} · N-2 = ${fD(gPrev)} · TB 7 ngày</span><button class="tg-inpage-btn" style="background:#16A34A;border-color:#16A34A" onclick="buildBatThuongPage()">🔄 Tải lại</button><button class="tg-inpage-btn" onclick="sendBatThuongToTelegram(this)">📤 Bắn TG (từng hạng mục)</button></div></div>`;
   h+=`<div class="analysis-box" style="margin-bottom:16px;font-size:12.5px;line-height:1.8">⚠️ <b>Bưu Cục dính BẤT KỲ 1 tín hiệu là vào danh sách</b> · 1 BC có thể hiện ở nhiều hạng mục (mỗi hạng mục 1 vấn đề). Ô tô đỏ = tiêu chí đang phạm.</div>`;
   h+=`<div style="display:flex;gap:11px;flex-wrap:wrap;margin-bottom:18px">
    ${kpi('BC bất thường',rows.length,'var(--red)')}
@@ -4490,6 +4492,61 @@ async function buildBatThuongPage(){
    Dd.map((r,i)=>rowPre(r,i)+ncell(r.nsN1,false,' đơn')+ncell(r.nsN2,false,' đơn')+dcell((r.nsN1!=null&&r.nsN2!=null)?(r.nsN1-r.nsN2):null,r.flags.c6,' đơn')+'</tr>').join(''));
   el.innerHTML=h;
  }catch(e){el.innerHTML='<div class="page-header"><div class="page-title">🚨 Bưu Cục làm kém bất thường</div></div><div class="analysis-box">Lỗi: '+(e&&e.message||e)+'</div>';console.error('BC bất thường:',e);}
+}
+/* ── Soạn 5 tin (tổng quan + 4 hạng mục) cho room Vấn đề chung ── */
+function _btCaptions(){
+ const T=window._BTDATA; if(!T)return null;
+ const esc=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+ const dd=iso=>{const p=(iso||'').split('-');return p.length===3?`${p[2]}/${p[1]}/${p[0]}`:iso;};
+ const day=dd(T.day);
+ const n=v=>v==null?'—':v.toFixed(1).replace('.',',');
+ const shortBC=b=>esc((b||'').replace(/^\([^)]*\)\s*/,''));
+ const msgs=[];
+ // ── Tổng quan ──
+ const hot=(T.rows||[]).slice(0,3).map(r=>shortBC(r.bc)+` (${r.n} tc)`).join(', ');
+ let ov=`🚨 <b>BƯU CỤC LÀM KÉM BẤT THƯỜNG — Ngày ${day}</b>\n`;
+ ov+=`Tổng: <b>${T.rows.length}</b> Bưu Cục có dấu hiệu bất thường (so N-1 vs N-2, có ngưỡng cảnh báo).\n\n`;
+ ov+=`• ① Tỉ lệ GTC giảm: <b>${T.A.length}</b> BC\n• ② Tỉ lệ trả tăng: <b>${T.B.length}</b> BC\n• ③ Aging &gt; 50 đơn: <b>${T.C.length}</b> BC\n• ④ Năng suất giảm: <b>${T.D.length}</b> BC\n`;
+ if(hot)ov+=`\n🔥 Điểm nóng (nhiều tiêu chí nhất): ${hot}\n`;
+ ov+=`\nChi tiết từng hạng mục ở các tin dưới ⬇️`;
+ msgs.push(ov);
+ // ── ① GTC giảm ──
+ let m1=`📉 <b>① TỈ LỆ GTC GIẢM BẤT THƯỜNG — Ngày ${day}</b> (${T.A.length} Bưu Cục)\n`;
+ if(!T.A.length)m1+=`✅ Không có Bưu Cục nào.`;
+ else{ T.A.forEach(a=>{const p=[];if(a.flags.c1)p.push(`▼${n(Math.abs(a.gN1-a.gN2))}đ% vs N-2`);if(a.flags.c2)p.push(`▼${n(Math.abs(a.gN1-a.gAvg7))}đ% vs TB7`);m1+=`\n• ${esc(a.bc)} — ${esc(a.am)}: GTC <b>${n(a.gN1)}%</b> · ${p.join(' · ')}`;});
+  const w=T.A[0];m1+=`\n\n→ <b>Nhận định:</b> Nặng nhất ${esc(w.bc)} (GTC ${n(w.gN1)}%). Ưu tiên soát chia tuyến/nhân sự; BC giảm cả so N-2 lẫn nền 7 ngày là sa sút rõ.`; }
+ msgs.push(m1);
+ // ── ② Tỉ lệ trả tăng ──
+ let m2=`↩️ <b>② TỈ LỆ TRẢ (FD) TĂNG BẤT THƯỜNG — Ngày ${day}</b> (${T.B.length} Bưu Cục)\n`;
+ if(!T.B.length)m2+=`✅ Không có Bưu Cục nào.`;
+ else{ T.B.forEach(b=>{const p=[];if(b.flags.c3)p.push(`FD Total <b>${n(b.ftN1)}%</b> (▲${n(Math.abs(b.ftN1-b.ftN2))}đ%)`);if(b.flags.c4)p.push(`FD TTS <b>${n(b.fsN1)}%</b> (▲${n(Math.abs(b.fsN1-b.fsN2))}đ%)`);m2+=`\n• ${esc(b.bc)} — ${esc(b.am)}: ${p.join(' · ')}`;});
+  const w=T.B[0];m2+=`\n\n→ <b>Nhận định:</b> Tăng trả mạnh nhất ${esc(w.bc)}. Rà soát nguyên nhân hoàn (sai địa chỉ / khách từ chối / giao ép cuối ngày).`; }
+ msgs.push(m2);
+ // ── ③ Aging > 50 ──
+ let m3=`⏳ <b>③ AGING &gt; 5 NGÀY QUÁ 50 ĐƠN — Ngày ${day}</b> (${T.C.length} Bưu Cục)\n`;
+ if(!T.C.length)m3+=`✅ Không có Bưu Cục nào vượt 50 đơn aging.`;
+ else{ T.C.forEach(c=>{m3+=`\n• ${esc(c.bc)} — ${esc(c.am)}: <b>${fmt(c.agN)} đơn</b>`;});
+  const w=T.C[0];m3+=`\n\n→ <b>Nhận định:</b> Tồn cao nhất ${esc(w.bc)} (${fmt(w.agN)} đơn) — cần dồn lực xử lý ngay, tránh tồn kéo dài.`; }
+ msgs.push(m3);
+ // ── ④ Năng suất giảm ──
+ let m4=`👷 <b>④ NĂNG SUẤT NV GIẢM BẤT THƯỜNG — Ngày ${day}</b> (${T.D.length} Bưu Cục)\n`;
+ if(!T.D.length)m4+=`✅ Không có Bưu Cục nào.`;
+ else{ T.D.forEach(d=>{const drop=Math.round(d.nsN1-d.nsN2);m4+=`\n• ${esc(d.bc)} — ${esc(d.am)}: NS <b>${Math.round(d.nsN1)} đơn</b> (▼${Math.abs(drop)}, từ ${Math.round(d.nsN2)})`;});
+  const w=T.D[0];m4+=`\n\n→ <b>Nhận định:</b> Tụt sâu nhất ${esc(w.bc)} (▼${Math.abs(Math.round(w.nsN1-w.nsN2))} đơn). Kiểm tra NV nghỉ/thiếu người hoặc sản lượng dồn đột biến.`; }
+ msgs.push(m4);
+ return msgs;
+}
+async function sendBatThuongToTelegram(btn){
+ const _t=btn?btn.textContent:''; if(btn){btn.disabled=true;btn.textContent='⏳ Đang bắn...';}
+ try{
+  if(!window._BTDATA)await buildBatThuongPage();
+  const msgs=_btCaptions();
+  if(!msgs){alert('Chưa có dữ liệu — mở trang và chờ tải xong.');return;}
+  let okAll=true,err='';
+  for(const m of msgs){ const res=await _tgSend(TG_AGING_CHAT,TG_VANDE_THREAD,m); if(!res||!res.ok){okAll=false;err=(res&&res.description)||'?';} await new Promise(r=>setTimeout(r,500)); }
+  alert(okAll?'✅ Đã bắn 5 tin (tổng quan + 4 hạng mục) vào room Vấn đề chung.':'Có tin lỗi: '+err);
+ }catch(e){alert('Lỗi bắn TG: '+e.message);}
+ finally{ if(btn){btn.disabled=false;btn.textContent=_t||'📤 Bắn TG (từng hạng mục)';} }
 }
 async function buildCodCheckPage(){
  const el=document.getElementById('p42'); if(!el) return;
