@@ -4521,7 +4521,7 @@ function _btCaptions(){
  // ── ① GTC giảm ──
  let m1=`📉 <b>① TỈ LỆ GTC GIẢM BẤT THƯỜNG — Ngày ${day}</b> (${T.A.length} Bưu Cục)\n`;
  if(!T.A.length)m1+=`✅ Không có Bưu Cục nào.`;
- else{ T.A.forEach(a=>{const p=[];if(a.flags.c1)p.push(`▼${n(Math.abs(a.gN1-a.gN2))}đ% vs N-2`);if(a.flags.c2)p.push(`▼${n(Math.abs(a.gN1-a.gAvg7))}đ% vs TB7`);m1+=`\n• ${esc(a.bc)} — ${esc(a.am)}: GTC <b>${n(a.gN1)}%</b> · ${p.join(' · ')}`;});
+ else{ T.A.forEach(a=>{const p=[];if(a.flags.c1)p.push(`▼${n(Math.abs(a.gN1-a.gN2))}đ% vs N-2`);if(a.flags.c2)p.push(`▼${n(Math.abs(a.gN1-a.gAvg7))}đ% vs TB 7 ngày gần nhất`);m1+=`\n• ${esc(a.bc)} — ${esc(a.am)}: GTC <b>${n(a.gN1)}%</b> · ${p.join(' · ')}`;});
   const w=T.A[0];m1+=`\n\n→ <b>Nhận định:</b> Nặng nhất ${esc(w.bc)} (GTC ${n(w.gN1)}%). Ưu tiên soát chia tuyến/nhân sự; BC giảm cả so N-2 lẫn nền 7 ngày là sa sút rõ.`; }
  msgs.push(m1);
  // ── ② Tỉ lệ trả tăng ──
