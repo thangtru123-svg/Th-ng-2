@@ -4430,44 +4430,44 @@ async function buildBatThuongPage(){
   // ---- render ----
   const pc=v=>v==null?'—':v.toFixed(1).replace('.',',')+'%';
   const fD=iso=>{if(!iso)return'—';const p=iso.split('-');return p.length===3?`${p[2]}/${p[1]}`:iso;};
-  // ô tiêu chí: giá trị chính + delta nhỏ, tô đỏ khi phạm
-  const crit=(main,delta,tripped,unit,arrowDir)=>{const bg=tripped?'background:#FEF2F2;':'';const col=tripped?'#B91C1C':'var(--text-main)';let sub='';if(delta!=null){const ar=arrowDir==='down'?(delta<0?'▼':'▲'):(delta>0?'▲':'▼');sub=`<div style="font-size:10px;font-weight:700;color:${tripped?'#B91C1C':'var(--text-sub)'}">${ar} ${Math.abs(delta).toFixed(1).replace('.',',')}${unit||''}</div>`;}return `<td style="${bg}padding:8px 10px;text-align:center;font-weight:${tripped?800:600};color:${col}">${main}${sub}</td>`;};
-  const nTrip={c1:0,c2:0,c3:0,c4:0,c5:0,c6:0};rows.forEach(r=>Object.keys(nTrip).forEach(k=>{if(r.flags[k])nTrip[k]++;}));
-  const kpi=(lbl,val,col)=>`<div style="flex:1;min-width:130px;background:var(--card);border:1px solid var(--border);border-top:3px solid ${col};border-radius:12px;padding:12px 14px;text-align:center"><div style="font-size:11px;font-weight:700;color:var(--text-sub);text-transform:uppercase;letter-spacing:.4px">${lbl}</div><div style="font-size:26px;font-weight:800;color:${col};line-height:1.1;margin-top:3px">${val}</div></div>`;
+  // ô giá trị % (tô đỏ nếu tripped); ô delta (▲/▼ + độ lớn); ô số nguyên
+  const pcell=(v,tr)=>`<td style="${tr?'background:#FEF2F2;':''}padding:8px 12px;text-align:center;font-weight:${tr?800:600};color:${tr?'#B91C1C':'var(--text-main)'}">${v==null?'—':v.toFixed(1).replace('.',',')+'%'}</td>`;
+  const dcell=(d,tr,suf)=>d==null?'<td style="padding:8px 12px;text-align:center;color:var(--text-sub)">—</td>':`<td style="${tr?'background:#FEF2F2;':''}padding:8px 12px;text-align:center;font-weight:${tr?800:700};color:${tr?'#B91C1C':'var(--text-sub)'}">${d<0?'▼':'▲'} ${Math.abs(d).toFixed(1).replace('.',',')}${suf||' đ%'}</td>`;
+  const ncell=(v,tr,unit)=>`<td style="${tr?'background:#FEF2F2;':''}padding:8px 12px;text-align:center;font-weight:${tr?800:600};color:${tr?'#B91C1C':'var(--text-main)'}">${v==null?'—':(Math.round(v).toLocaleString('vi-VN')+(unit||''))}</td>`;
+  const TH=(t,sub)=>`<th style="padding:8px 12px;text-align:center;font-weight:700;font-size:11px;color:var(--text-sub);white-space:nowrap">${t}${sub?`<div style="font-size:9px;font-weight:600;opacity:.8">${sub}</div>`:''}</th>`;
+  const rowPre=(r,i)=>`<tr style="background:${i%2?'#FAFAFA':'#FFF'};border-bottom:1px solid var(--border)"><td style="padding:8px 10px;text-align:center;font-weight:700;color:${i<3?'var(--red)':'var(--text-sub)'}">${i+1}</td><td style="padding:8px 14px;font-weight:700;color:var(--text-main);white-space:nowrap">${r.bc}</td><td style="padding:8px 14px;color:var(--text-main);font-size:12px;white-space:nowrap">${r.am}</td>`;
+  const card=(icon,title,count,headCols,body)=>`<div class="card"><div class="card-header"><div class="card-title"><div class="card-icon">${icon}</div>${title}</div><div class="card-info"><span style="background:${count>0?'#FEE2E2':'#DCFCE7'};color:${count>0?'#B91C1C':'#15803D'};font-weight:800;border-radius:20px;padding:2px 12px">${count} bưu cục</span></div></div>${count>0?`<div class="table-wrap" style="overflow-x:auto"><table style="border-collapse:collapse;font-size:13px;white-space:nowrap"><thead><tr style="background:#F8F9FA;border-bottom:2px solid var(--border)"><th style="padding:8px 10px;text-align:center;font-size:11px;color:var(--text-sub);width:32px">#</th><th style="padding:8px 14px;text-align:left;font-size:11px;color:var(--text-sub)">Bưu Cục</th><th style="padding:8px 14px;text-align:left;font-size:11px;color:var(--text-sub)">AM</th>${headCols}</tr></thead><tbody>${body}</tbody></table></div>`:'<div style="padding:14px 18px;color:#15803D;font-size:13px">✅ Không có Bưu Cục nào ở hạng mục này.</div>'}</div>`;
+  // ── nhóm theo hạng mục ──
+  const A=rows.filter(r=>r.flags.c1||r.flags.c2).sort((a,b)=>((b.gN2!=null&&b.gN1!=null?b.gN2-b.gN1:0)+(b.gAvg7!=null&&b.gN1!=null?b.gAvg7-b.gN1:0))-((a.gN2!=null&&a.gN1!=null?a.gN2-a.gN1:0)+(a.gAvg7!=null&&a.gN1!=null?a.gAvg7-a.gN1:0)));
+  const B=rows.filter(r=>r.flags.c3||r.flags.c4).sort((a,b)=>((b.ftN1!=null&&b.ftN2!=null?b.ftN1-b.ftN2:0))-((a.ftN1!=null&&a.ftN2!=null?a.ftN1-a.ftN2:0)));
+  const C=rows.filter(r=>r.flags.c5).sort((a,b)=>b.agN-a.agN);
+  const Dd=rows.filter(r=>r.flags.c6).sort((a,b)=>((b.nsN2!=null&&b.nsN1!=null?b.nsN2-b.nsN1:0))-((a.nsN2!=null&&a.nsN1!=null?a.nsN2-a.nsN1:0)));
+  const kpi=(lbl,val,col)=>`<div style="flex:1;min-width:120px;background:var(--card);border:1px solid var(--border);border-top:3px solid ${col};border-radius:12px;padding:12px 14px;text-align:center"><div style="font-size:11px;font-weight:700;color:var(--text-sub);text-transform:uppercase;letter-spacing:.4px">${lbl}</div><div style="font-size:26px;font-weight:800;color:${col};line-height:1.1;margin-top:3px">${val}</div></div>`;
   let h=`<div class="page-header"><div class="page-title">🚨 Bưu Cục làm kém bất thường</div><div class="page-meta"><span class="tag tag-orange">📅 N-1 = ${fD(gLatest)} · N-2 = ${fD(gPrev)} · TB 7 ngày</span><button class="tg-inpage-btn" style="background:#16A34A;border-color:#16A34A" onclick="buildBatThuongPage()">🔄 Tải lại</button></div></div>`;
-  h+=`<div class="analysis-box" style="margin-bottom:16px;font-size:12.5px;line-height:1.9">⚠️ <b>Bưu Cục dính BẤT KỲ 1 trong 6 tín hiệu dưới đây là vào danh sách</b> (ô tô đỏ = tiêu chí đang phạm):<br>
-  <b>1. %GTC ↓ vs N-2 &gt; 5 điểm %</b> · <b>2. %GTC ↓ vs TB7 ≥ 5 điểm %</b> · <b>3. FD Total ↑ vs N-2 ≥ 2 điểm %</b> · <b>4. FD TTS ↑ vs N-2 ≥ 2 điểm %</b> · <b>5. Aging &gt;5 ngày &gt; 50 đơn</b> · <b>6. NS TB/NV ↓ vs N-2 &gt; 5 đơn</b></div>`;
+  h+=`<div class="analysis-box" style="margin-bottom:16px;font-size:12.5px;line-height:1.8">⚠️ <b>Bưu Cục dính BẤT KỲ 1 tín hiệu là vào danh sách</b> · 1 BC có thể hiện ở nhiều hạng mục (mỗi hạng mục 1 vấn đề). Ô tô đỏ = tiêu chí đang phạm.</div>`;
   h+=`<div style="display:flex;gap:11px;flex-wrap:wrap;margin-bottom:18px">
    ${kpi('BC bất thường',rows.length,'var(--red)')}
-   ${kpi('GTC ↓ N-2',nTrip.c1,'#DC2626')}${kpi('GTC ↓ TB7',nTrip.c2,'#DC2626')}
-   ${kpi('FD Total ↑',nTrip.c3,'#EA580C')}${kpi('FD TTS ↑',nTrip.c4,'#EA580C')}
-   ${kpi('Aging >50',nTrip.c5,'#B91C1C')}${kpi('NS ↓ N-2',nTrip.c6,'#9333EA')}</div>`;
+   ${kpi('① GTC giảm',A.length,'#DC2626')}
+   ${kpi('② Tỉ lệ trả tăng',B.length,'#EA580C')}
+   ${kpi('③ Aging > 50',C.length,'#B91C1C')}
+   ${kpi('④ Năng suất giảm',Dd.length,'#9333EA')}</div>`;
   if(!rows.length){h+='<div class="analysis-box">🎉 Không có Bưu Cục nào làm kém bất thường ở ngày N-1.</div>';el.innerHTML=h;return;}
-  const th=(t,sub)=>`<th style="padding:9px 10px;text-align:center;font-weight:700;font-size:11px;color:var(--text-sub);white-space:nowrap">${t}${sub?`<div style="font-size:9px;font-weight:600;opacity:.8">${sub}</div>`:''}</th>`;
-  let t=`<div class="card"><div class="card-header"><div class="card-title"><div class="card-icon">📋</div>Danh sách Bưu Cục bất thường</div><div class="card-info">${rows.length} bưu cục · sắp xếp theo số tiêu chí phạm</div></div>
-   <div class="table-wrap" style="overflow-x:auto"><table style="border-collapse:collapse;font-size:13px;white-space:nowrap"><thead><tr style="background:#F8F9FA;border-bottom:2px solid var(--border)">
-   <th style="padding:9px 10px;text-align:center;font-weight:700;font-size:11px;color:var(--text-sub);width:34px">#</th>
-   <th style="padding:9px 14px;text-align:left;font-weight:700;font-size:11px;color:var(--text-sub)">Bưu Cục</th>
-   <th style="padding:9px 14px;text-align:left;font-weight:700;font-size:11px;color:var(--text-sub)">AM</th>
-   ${th('%GTC N-1')}${th('GTC ↓ N-2','>5đ%')}${th('GTC ↓ TB7','≥5đ%')}${th('FD Total','↑N-2 ≥2đ%')}${th('FD TTS','↑N-2 ≥2đ%')}${th('Aging','>50 đơn')}${th('NS N-1','↓N-2 >5')}
-   <th style="padding:9px 10px;text-align:center;font-weight:700;font-size:11px;color:var(--text-sub)">Cờ</th></tr></thead><tbody>`;
-  rows.forEach((r,i)=>{
-   const bg=i%2?'#FAFAFA':'#FFF';
-   t+=`<tr style="background:${bg};border-bottom:1px solid var(--border)">
-    <td style="padding:8px 10px;text-align:center;font-weight:700;color:${i<3?'var(--red)':'var(--text-sub)'}">${i+1}</td>
-    <td style="padding:8px 14px;font-weight:700;color:var(--text-main)">${r.bc}</td>
-    <td style="padding:8px 14px;color:var(--text-main);font-size:12px">${r.am}</td>
-    <td style="padding:8px 10px;text-align:center;font-weight:700">${pc(r.gN1)}</td>
-    ${crit(r.gN2!=null&&r.gN1!=null?pc(r.gN1):'—',(r.gN1!=null&&r.gN2!=null)?(r.gN1-r.gN2):null,r.flags.c1,'đ%','down')}
-    ${crit(r.gAvg7!=null?('TB '+pc(r.gAvg7)):'—',(r.gN1!=null&&r.gAvg7!=null)?(r.gN1-r.gAvg7):null,r.flags.c2,'đ%','down')}
-    ${crit(pc(r.ftN1),(r.ftN1!=null&&r.ftN2!=null)?(r.ftN1-r.ftN2):null,r.flags.c3,'đ%','up')}
-    ${crit(pc(r.fsN1),(r.fsN1!=null&&r.fsN2!=null)?(r.fsN1-r.fsN2):null,r.flags.c4,'đ%','up')}
-    ${crit(r.agN.toLocaleString('vi-VN')+' đơn',null,r.flags.c5)}
-    ${crit(r.nsN1!=null?Math.round(r.nsN1)+' đơn':'—',(r.nsN1!=null&&r.nsN2!=null)?(r.nsN1-r.nsN2):null,r.flags.c6,'','down')}
-    <td style="padding:8px 10px;text-align:center"><span style="background:#FEE2E2;color:#B91C1C;font-weight:800;border-radius:20px;padding:2px 10px;font-size:13px">${r.n}</span></td></tr>`;
-  });
-  t+=`</tbody></table></div></div>`;
-  h+=t;
+  // ① GTC giảm
+  h+=card('📉','① Tỉ lệ GTC giảm bất thường',A.length,
+   TH('%GTC N-1')+TH('Giảm vs N-2','> 5 đ%')+TH('So TB 7 ngày','≥ 5 đ%'),
+   A.map((r,i)=>rowPre(r,i)+pcell(r.gN1,false)+dcell((r.gN1!=null&&r.gN2!=null)?(r.gN1-r.gN2):null,r.flags.c1)+dcell((r.gN1!=null&&r.gAvg7!=null)?(r.gN1-r.gAvg7):null,r.flags.c2)+'</tr>').join(''));
+  // ② Tỉ lệ trả tăng
+  h+=card('↩️','② Tỉ lệ trả (FD) tăng bất thường',B.length,
+   TH('FD Total N-1')+TH('Tăng vs N-2','≥ 2 đ%')+TH('FD TTS N-1')+TH('Tăng vs N-2','≥ 2 đ%'),
+   B.map((r,i)=>rowPre(r,i)+pcell(r.ftN1,r.flags.c3)+dcell((r.ftN1!=null&&r.ftN2!=null)?(r.ftN1-r.ftN2):null,r.flags.c3)+pcell(r.fsN1,r.flags.c4)+dcell((r.fsN1!=null&&r.fsN2!=null)?(r.fsN1-r.fsN2):null,r.flags.c4)+'</tr>').join(''));
+  // ③ Aging > 50
+  h+=card('⏳','③ Aging > 5 ngày quá 50 đơn',C.length,
+   TH('Đơn Aging > 5 ngày','> 50 đơn'),
+   C.map((r,i)=>rowPre(r,i)+ncell(r.agN,true,' đơn')+'</tr>').join(''));
+  // ④ Năng suất giảm
+  h+=card('👷','④ Năng suất NV giảm bất thường',Dd.length,
+   TH('NS N-1')+TH('NS N-2')+TH('Giảm','> 5 đơn'),
+   Dd.map((r,i)=>rowPre(r,i)+ncell(r.nsN1,false,' đơn')+ncell(r.nsN2,false,' đơn')+dcell((r.nsN1!=null&&r.nsN2!=null)?(r.nsN1-r.nsN2):null,r.flags.c6,' đơn')+'</tr>').join(''));
   el.innerHTML=h;
  }catch(e){el.innerHTML='<div class="page-header"><div class="page-title">🚨 Bưu Cục làm kém bất thường</div></div><div class="analysis-box">Lỗi: '+(e&&e.message||e)+'</div>';console.error('BC bất thường:',e);}
 }
