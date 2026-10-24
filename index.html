@@ -2714,6 +2714,12 @@ async function sendAllToTelegram(){
    await new Promise(r=>setTimeout(r,600));
   }
   {
+   // Bưu Cục làm kém bất thường — 5 tin (tổng quan + 4 hạng mục) vào room Vấn đề chung
+   if(btn)btn.innerHTML='⏳ Đang gửi: Bưu Cục bất thường...';
+   try{ if(!window._BTDATA)await buildBatThuongPage(); const _bm=_btCaptions(); if(_bm){ for(const _m of _bm){ const res=await _tgSend(TG_AGING_CHAT,TG_VANDE_THREAD,_m); if(!res||!res.ok)console.warn('BC bất thường TG lỗi:',res&&res.description); await new Promise(r=>setTimeout(r,500)); } } }catch(_e){console.warn('BC bất thường TG lỗi:',_e&&_e.message);}
+   await new Promise(r=>setTimeout(r,600));
+  }
+  {
    const p16b=document.getElementById('p16-card-b');
    if(p16b&&p16b.innerHTML.trim()){
     if(btn)btn.innerHTML='⏳ Đang gửi: Báo Cáo GTC TTS...';
