@@ -305,7 +305,7 @@ const TG_VH_THREAD   = 5; // topic "Vận hành chung"
 const TG_FD_THREAD   = 8250; // topic "FD - Mục tiêu toàn vùng 8%"
 const TG_PICKUP_THREAD = 7; // topic "Pickup / Luân chuyển"
 const TG_TTS_THREAD   = 3; // topic "TTS - Vận hành"
-const TG_VANDE_THREAD = 1; // topic "Vấn đề chung" (t.me/c/3802272887/1)
+const TG_VANDE_THREAD = null; // topic "Vấn đề chung" = General topic → gửi KHÔNG kèm thread (thread 1 báo "not found")
 const TG_NSBG_CHAT   = -4931731378; // group "Anh em Bắc Giang" (group thường, không topic)
 
 /* ===== PHÂN QUYỀN (ROLE) =====
@@ -1994,9 +1994,11 @@ async function _tgSend(chatId,threadId,text){
  if(!window._canSend||!window._canSend()){_roleToast('⛔ Bạn không có quyền bắn báo cáo Telegram');throw new Error('NO_PERMISSION_SEND');}
  // Retry khi Telegram trả 429 (Too Many Requests / flood limit) theo retry_after
  for(let attempt=0;attempt<4;attempt++){
+  const _body={chat_id:chatId,text,parse_mode:'HTML',disable_web_page_preview:true};
+  if(threadId)_body.message_thread_id=threadId; // topic General (Vấn đề chung) → KHÔNG gắn thread (thread 1 báo "not found")
   const r=await fetch(`https://api.telegram.org/bot${TG_TOKEN}/sendMessage`,{
    method:'POST',headers:{'Content-Type':'application/json'},
-   body:JSON.stringify({chat_id:chatId,message_thread_id:threadId,text,parse_mode:'HTML',disable_web_page_preview:true}),
+   body:JSON.stringify(_body),
    signal:AbortSignal.timeout(30000)
   });
   const j=await r.json().catch(()=>({ok:false,description:'parse lỗi'}));
