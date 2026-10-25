@@ -4752,13 +4752,14 @@ async function init(){
   'GTC ca 1,2 theo AM','LTC - AM','GTC ca 1,2 TTS theo AM'
  ];
  const R={};
- await Promise.all(sheetNames.map(async n=>{try{R[n]=await fetchSheet(n);}catch(e){R[n]=null;console.warn('Lỗi sheet',n,e.message);}}));
- // BC → danh sách AM theo sheet "Cơ cấu AM" (1 BC có thể nhiều AM)
+ // BC → danh sách AM theo sheet "Cơ cấu AM" — NẠP TRƯỚC khi fetch các sheet, để bộ lọc 2 tỉnh (_ensureClusterAM) có sẵn tập AM (1 BC có thể nhiều AM)
  try{
   const _cc=parseCSV(await(await fetch(`https://docs.google.com/spreadsheets/d/${AGING_SHEET_ID}/gviz/tq?tqx=out:csv&sheet=`+encodeURIComponent('Cơ cấu AM'))).text());
   const _m={};_cc.slice(1).forEach(r=>{const bc=(r[1]||'').trim(),am=(r[3]||'').trim();if(bc&&am){(_m[bc]=_m[bc]||[]);if(!_m[bc].includes(am))_m[bc].push(am);}});
   window._CC_BCAM=_m;
  }catch(e){console.warn('Cơ cấu AM:',e&&e.message);}
+ await _ensureClusterAM(); // dựng tập AM 2 tỉnh trước, tránh fetch sheet khi tập còn rỗng
+ await Promise.all(sheetNames.map(async n=>{try{R[n]=await fetchSheet(n);}catch(e){R[n]=null;console.warn('Lỗi sheet',n,e.message);}}));
  // Danh sách BC bất ổn (sheet "Bưu Cục Bất Ổn - AM báo cáo", gid 1831793685, cột E) → Set tên BC
  try{
   const _bo=parseCSV(await(await fetch(`https://docs.google.com/spreadsheets/d/${AGING_SHEET_ID}/gviz/tq?tqx=out:csv&gid=1831793685`)).text());
