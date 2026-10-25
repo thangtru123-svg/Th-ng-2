@@ -535,7 +535,7 @@ async function _filter2T(id,name,gid,csv){
     // Sheet FD theo AM/BC: 2 khối ĐỘC LẬP (NGÀY cột 0-6 | TUẦN cột 7+, AM/BC khác thứ tự).
     // Lọc kiểu cũ (xoá cả dòng theo cột 0) sẽ xoá nhầm header/dữ liệu khối tuần → p4 lỗi.
     // Fix: lọc riêng từng khối rồi ghép lại theo chỉ số dòng.
-    if(id===SID && /^FD .*theo (AM|Bưu Cục)$/.test(n)){
+    if(id===SID && /^FD .*theo (AM|Bưu Cục)$/.test(name)){
      const SP=7, amMode=cfg.mode==='am';
      const inSet=v=>{ if(amMode){let k=false;(v||'').split(',').forEach(a=>{if(amSet.has(a.trim()))k=true;});return k;} return _2T_PFX.test((v||'').trim()); };
      const wHdr=amMode?'AM':'Bưu Cục';
