@@ -464,23 +464,31 @@ const _2T_PFX=/^\((QNI|LSO)\)/;                 // mã BC thuộc 2 tỉnh (QNI=
 let _clusterAM=null,_clusterAMp=null;
 // đọc CSV thô KHÔNG qua bộ lọc (tránh đệ quy khi dựng danh sách AM cụm)
 async function _rawSheetCsv(id,name,gid){
+  // Proxy (/api/sheet) trước; nếu LỖI BẤT KỲ (403/500/network…) → fallback đọc trực tiếp bằng token user.
+  // (Trước đây 403 bị throw → _ensureClusterAM rỗng → TẮT lọc 2 tỉnh, xổ hết tỉnh.)
   if(_proxyOk!==false){ try{ const c=await _sheetViaProxy(id,name,gid); _proxyOk=true; return c; }
-    catch(e){ if(_proxyOk===true) throw e; if(e&&e._status&&e._status!==500) throw e; _proxyOk=false; } }
+    catch(e){ _proxyOk=false; console.warn('[proxy] lỗi, chuyển đọc trực tiếp:',e&&e.message); } }
   return await _sheetDirectCsv(id,name,gid);
 }
 // Tập AM thuộc cụm 2 tỉnh = AM quản lý ≥1 BC (QNI|LSO) theo sheet "GTC Total theo Bưu Cục"
 async function _ensureClusterAM(){
-  if(_clusterAM) return _clusterAM;
+  if(_clusterAM && _clusterAM.size) return _clusterAM; // chỉ dùng cache khi CÓ dữ liệu (tránh cache rỗng → tắt lọc cả phiên)
   if(_clusterAMp) return _clusterAMp;
   _clusterAMp=(async()=>{
     const set=new Set();
-    try{
+    // Nguồn 1: Cơ cấu AM đã nạp (window._CC_BCAM) — BC tiền tố 2 tỉnh → AM
+    const cc=window._CC_BCAM;
+    if(cc){ Object.keys(cc).forEach(bc=>{ if(_2T_PFX.test(bc)) (cc[bc]||[]).forEach(a=>{const t=(a||'').trim(); if(t) set.add(t);}); }); }
+    // Nguồn 2 (nếu CCAM chưa sẵn): đọc GTC Total theo Bưu Cục
+    if(!set.size){ try{
       const rows=parseCSV(await _rawSheetCsv(SID,'GTC Total theo Bưu Cục',null));
       rows.slice(1).forEach(r=>{ const am=(r[0]||'').trim(), bc=(r[1]||'');
         if(_2T_PFX.test(bc) && am && !/grand total/i.test(am))
           am.split(',').forEach(a=>{const t=a.trim(); if(t) set.add(t);}); });
-    }catch(e){ console.warn('[2T] clusterAM',e&&e.message); }
-    _clusterAM=set; return set;
+    }catch(e){ console.warn('[2T] clusterAM',e&&e.message); } }
+    if(set.size) _clusterAM=set; // chỉ cache khi có
+    _clusterAMp=null;            // cho phép thử lại lần sau nếu lần này rỗng
+    return set;
   })();
   return _clusterAMp;
 }
