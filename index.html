@@ -471,26 +471,23 @@ async function _rawSheetCsv(id,name,gid){
   return await _sheetDirectCsv(id,name,gid);
 }
 // Tập AM thuộc cụm 2 tỉnh = AM quản lý ≥1 BC (QNI|LSO) theo sheet "GTC Total theo Bưu Cục"
+// Dựng tập AM 2 tỉnh thẳng từ _CC_BCAM (đồng bộ, không chờ) — BC tiền tố 2 tỉnh → AM
+function _clusterAMfromCC(){
+  const set=new Set(), cc=window._CC_BCAM;
+  if(cc) Object.keys(cc).forEach(bc=>{ if(_2T_PFX.test(bc)) (cc[bc]||[]).forEach(a=>{const t=(a||'').trim(); if(t) set.add(t);}); });
+  return set;
+}
 async function _ensureClusterAM(){
-  if(_clusterAM && _clusterAM.size) return _clusterAM; // chỉ dùng cache khi CÓ dữ liệu (tránh cache rỗng → tắt lọc cả phiên)
-  if(_clusterAMp) return _clusterAMp;
-  _clusterAMp=(async()=>{
-    const set=new Set();
-    // Nguồn 1: Cơ cấu AM đã nạp (window._CC_BCAM) — BC tiền tố 2 tỉnh → AM
-    const cc=window._CC_BCAM;
-    if(cc){ Object.keys(cc).forEach(bc=>{ if(_2T_PFX.test(bc)) (cc[bc]||[]).forEach(a=>{const t=(a||'').trim(); if(t) set.add(t);}); }); }
-    // Nguồn 2 (nếu CCAM chưa sẵn): đọc GTC Total theo Bưu Cục
-    if(!set.size){ try{
-      const rows=parseCSV(await _rawSheetCsv(SID,'GTC Total theo Bưu Cục',null));
-      rows.slice(1).forEach(r=>{ const am=(r[0]||'').trim(), bc=(r[1]||'');
-        if(_2T_PFX.test(bc) && am && !/grand total/i.test(am))
-          am.split(',').forEach(a=>{const t=a.trim(); if(t) set.add(t);}); });
-    }catch(e){ console.warn('[2T] clusterAM',e&&e.message); } }
-    if(set.size) _clusterAM=set; // chỉ cache khi có
-    _clusterAMp=null;            // cho phép thử lại lần sau nếu lần này rỗng
-    return set;
-  })();
-  return _clusterAMp;
+  if(_clusterAM && _clusterAM.size) return _clusterAM; // cache khi CÓ dữ liệu
+  let set=_clusterAMfromCC();  // Nguồn 1: Cơ cấu AM (đồng bộ)
+  if(!set.size){ try{        // Nguồn 2 (nếu CCAM chưa sẵn): đọc GTC Total theo Bưu Cục
+    const rows=parseCSV(await _rawSheetCsv(SID,'GTC Total theo Bưu Cục',null));
+    rows.slice(1).forEach(r=>{ const am=(r[0]||'').trim(), bc=(r[1]||'');
+      if(_2T_PFX.test(bc) && am && !/grand total/i.test(am))
+        am.split(',').forEach(a=>{const t=a.trim(); if(t) set.add(t);}); });
+  }catch(e){ console.warn('[2T] clusterAM',e&&e.message); } }
+  if(set.size) _clusterAM=set; // chỉ cache khi có
+  return set;
 }
 // Cấu hình lọc theo sheet → {mode:'bc',col} | {mode:'am',col} | null(bỏ qua)
 function _2TConfig(id,name,gid){
@@ -532,7 +529,7 @@ async function _filter2T(id,name,gid,csv){
     const cfg=_2TConfig(id,name,gid);
     if(!cfg) return csv;
     let amSet=null;
-    if(cfg.mode==='am'){ amSet=await _ensureClusterAM(); if(!amSet||!amSet.size) return csv; }
+    if(cfg.mode==='am'){ amSet=await _ensureClusterAM(); if(!amSet||!amSet.size) amSet=_clusterAMfromCC(); if(!amSet||!amSet.size) return csv; }
     const rows=parseCSV(csv);
     if(rows.length<2) return csv;
     // Sheet FD theo AM/BC: 2 khối ĐỘC LẬP (NGÀY cột 0-6 | TUẦN cột 7+, AM/BC khác thứ tự).
