@@ -4526,13 +4526,13 @@ function _btCaptions(){
  // ── ① GTC giảm ──
  let m1=`📉 <b>① TỈ LỆ GTC GIẢM BẤT THƯỜNG — Ngày ${day}</b> (${T.A.length} Bưu Cục)\n`;
  if(!T.A.length)m1+=`✅ Không có Bưu Cục nào.`;
- else{ T.A.forEach(a=>{const p=[];if(a.flags.c1)p.push(`▼${n(Math.abs(a.gN1-a.gN2))}đ% vs N-2`);if(a.flags.c2)p.push(`▼${n(Math.abs(a.gN1-a.gAvg7))}đ% vs TB 7 ngày gần nhất`);m1+=`\n• ${esc(a.bc)} — ${esc(a.am)}: GTC <b>${n(a.gN1)}%</b> · ${p.join(' · ')}`;});
+ else{ T.A.forEach(a=>{const p=[];if(a.flags.c1)p.push(`<b>Giảm</b> ${n(Math.abs(a.gN1-a.gN2))}% vs N-2`);if(a.flags.c2)p.push(`<b>Giảm</b> ${n(Math.abs(a.gN1-a.gAvg7))}% vs TB 7 ngày gần nhất`);m1+=`\n• ${esc(a.bc)} — ${esc(a.am)}: GTC <b>${n(a.gN1)}%</b> · ${p.join(' · ')}`;});
   const w=T.A[0];m1+=`\n\n→ <b>Nhận định:</b> Nặng nhất ${esc(w.bc)} (GTC ${n(w.gN1)}%). Ưu tiên soát chia tuyến/nhân sự; BC giảm cả so N-2 lẫn nền 7 ngày là sa sút rõ.`; }
  msgs.push(m1);
  // ── ② Tỉ lệ trả tăng ──
  let m2=`↩️ <b>② TỈ LỆ TRẢ (FD) TĂNG BẤT THƯỜNG — Ngày ${day}</b> (${T.B.length} Bưu Cục)\n`;
  if(!T.B.length)m2+=`✅ Không có Bưu Cục nào.`;
- else{ T.B.forEach(b=>{const p=[];if(b.flags.c3)p.push(`FD Total <b>${n(b.ftN1)}%</b> (▲${n(Math.abs(b.ftN1-b.ftN2))}đ%)`);if(b.flags.c4)p.push(`FD TTS <b>${n(b.fsN1)}%</b> (▲${n(Math.abs(b.fsN1-b.fsN2))}đ%)`);m2+=`\n• ${esc(b.bc)} — ${esc(b.am)}: ${p.join(' · ')}`;});
+ else{ T.B.forEach(b=>{const p=[];if(b.flags.c3)p.push(`FD Total <b>${n(b.ftN1)}%</b> (<b>Tăng</b> ${n(Math.abs(b.ftN1-b.ftN2))}%)`);if(b.flags.c4)p.push(`FD TTS <b>${n(b.fsN1)}%</b> (<b>Tăng</b> ${n(Math.abs(b.fsN1-b.fsN2))}%)`);m2+=`\n• ${esc(b.bc)} — ${esc(b.am)}: ${p.join(' · ')}`;});
   const w=T.B[0];m2+=`\n\n→ <b>Nhận định:</b> Tăng trả mạnh nhất ${esc(w.bc)}. Rà soát nguyên nhân hoàn (sai địa chỉ / khách từ chối / giao ép cuối ngày).`; }
  msgs.push(m2);
  // ── ③ Aging > 50 ──
@@ -4544,8 +4544,8 @@ function _btCaptions(){
  // ── ④ Năng suất giảm ──
  let m4=`👷 <b>④ NĂNG SUẤT NV GIẢM BẤT THƯỜNG — Ngày ${day}</b> (${T.D.length} Bưu Cục)\n`;
  if(!T.D.length)m4+=`✅ Không có Bưu Cục nào.`;
- else{ T.D.forEach(d=>{const drop=Math.round(d.nsN1-d.nsN2);m4+=`\n• ${esc(d.bc)} — ${esc(d.am)}: NS <b>${Math.round(d.nsN1)} đơn</b> (▼${Math.abs(drop)}, từ ${Math.round(d.nsN2)})`;});
-  const w=T.D[0];m4+=`\n\n→ <b>Nhận định:</b> Tụt sâu nhất ${esc(w.bc)} (▼${Math.abs(Math.round(w.nsN1-w.nsN2))} đơn). Kiểm tra NV nghỉ/thiếu người hoặc sản lượng dồn đột biến.`; }
+ else{ T.D.forEach(d=>{const drop=Math.round(d.nsN1-d.nsN2);m4+=`\n• ${esc(d.bc)} — ${esc(d.am)}: NS <b>${Math.round(d.nsN1)} đơn</b> (<b>Giảm</b> ${Math.abs(drop)}, từ ${Math.round(d.nsN2)})`;});
+  const w=T.D[0];m4+=`\n\n→ <b>Nhận định:</b> Tụt sâu nhất ${esc(w.bc)} (<b>Giảm</b> ${Math.abs(Math.round(w.nsN1-w.nsN2))} đơn). Kiểm tra NV nghỉ/thiếu người hoặc sản lượng dồn đột biến.`; }
  msgs.push(m4);
  return msgs;
 }
