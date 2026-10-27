@@ -2343,7 +2343,13 @@ async function _fdSendWeekOverview(){
  const pt=parsed.Total;if(!pt||!pt.weeks.length)return;
  const latestWk=pt.weeks.reduce((a,b)=>+b>+a?b:a);
  const isGrand=n=>n.toLowerCase().includes('grand total');
- const grandOf=l=>{const p=parsed[l];if(!p)return null;const g=p.data.find(r=>isGrand(r.name));return g?(g.wData[latestWk]??null):null;};
+ // Dòng "Grand Total" của sheet là 6 tỉnh & bị bộ lọc 2 tỉnh xoá → tự tính toàn vùng (2 tỉnh)
+ // = weighted Σ(%FD tuần × Vol)/ΣVol, trọng số Vol lấy ở ngày mới nhất của khối ngày (fallback: trung bình).
+ const _allDates=[...new Set((fd.totalBC||[]).slice(1).map(r=>isoD(r[1])).filter(Boolean))].sort();
+ const _latestD=_allDates[_allDates.length-1];
+ const _dvolOf=sheet=>{const res={};(sheet||[]).slice(1).forEach(r=>{if(isoD(r[1])!==_latestD)return;const n=(r[0]||'').trim();if(!n||isGrand(n))return;res[n]=parsePct(r[2]);});return res;};
+ const _dailyOf={Total:fd.totalBC,SME:fd.smeBC,TTS:fd.ttsBC,Shopee:fd.shopeeBC};
+ const grandOf=l=>{const p=parsed[l];if(!p)return null;const dv=_dvolOf(_dailyOf[l]);let sv=0,sf=0;p.data.filter(r=>!isGrand(r.name)).forEach(r=>{const w=r.wData[latestWk];if(w==null)return;const vol=dv[r.name]||0;sv+=vol;sf+=w*vol;});if(sv>0)return sf/sv;const vals=p.data.filter(r=>!isGrand(r.name)).map(r=>r.wData[latestWk]).filter(v=>v!=null);return vals.length?vals.reduce((a,b)=>a+b,0)/vals.length:null;};
  const P=x=>x==null?'—':x.toFixed(2)+'%';
  let over=0,tot=0,overBO=0,overOD=0;
  pt.data.filter(r=>!isGrand(r.name)).forEach(r=>{const v=r.wData[latestWk];if(v==null)return;tot++;const bo=isB(r.name);const t=(bo?FD_TARGET.unstable:FD_TARGET.stable).Total;if(v>t){over++;bo?overBO++:overOD++;}});
