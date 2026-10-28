@@ -4640,7 +4640,7 @@ async function buildBatOnVungPage(){
   const pct=v=>v==null?'—':v.toFixed(1).replace('.',',')+'%';
   const cellP=(v,bad)=>`<td style="padding:7px 11px;text-align:center;font-weight:${bad?800:600};color:${bad?'#B91C1C':'var(--text-main)'};${bad?'background:#FEF2F2;':''}white-space:nowrap">${pct(v)}</td>`;
   const cellN=(v,bad)=>`<td style="padding:7px 11px;text-align:center;font-weight:${bad?800:600};color:${bad?'#B91C1C':'var(--text-main)'};${bad?'background:#FEF2F2;':''}white-space:nowrap">${v==null?'—':(Math.round(v).toLocaleString('vi-VN')+' đơn')}</td>`;
-  const TH=(t,sub)=>`<th style="padding:8px 11px;text-align:center;font-weight:700;font-size:11px;color:var(--text-sub);white-space:nowrap">${t}${sub?`<div style="font-size:9px;font-weight:600;opacity:.8">${sub}</div>`:''}</th>`;
+  const TH=(t,sub)=>`<th style="padding:8px 11px;text-align:center;font-weight:800;font-size:11.5px;color:#FFFFFF;white-space:nowrap">${t}${sub?`<div style="font-size:9px;font-weight:600;color:#DBE4F3;margin-top:1px">${sub}</div>`:''}</th>`;
   const kpi=(lbl,val,col)=>`<div style="flex:1;min-width:140px;background:var(--card);border:1px solid var(--border);border-top:3px solid ${col};border-radius:12px;padding:12px 14px;text-align:center"><div style="font-size:11px;font-weight:700;color:var(--text-sub);text-transform:uppercase;letter-spacing:.4px">${lbl}</div><div style="font-size:26px;font-weight:800;color:${col};line-height:1.1;margin-top:3px">${val}</div></div>`;
 
   let h=`<div class="page-header"><div class="page-title">⚠️ Bưu Cục Bất Ổn (Vùng)</div><div class="page-meta"><span class="tag tag-orange">📅 N-1 = ${fD(gLatest)} · Aging snapshot ${fD(agLatest)}</span><span class="tag" style="background:#FEE2E2;color:#B91C1C;font-weight:700">Tiêu chí Vùng: %GTC Total &lt; ${BATON_VUNG_NGUONG}%</span><button class="tg-inpage-btn" style="background:#16A34A;border-color:#16A34A" onclick="buildBatOnVungPage()">🔄 Tải lại</button><button class="tg-inpage-btn" onclick="sendBatOnVungToTelegram(this)">📤 Bắn TG (đồng loạt)</button></div></div>`;
@@ -4671,9 +4671,9 @@ async function buildBatOnVungPage(){
 
   h+=`<div class="card" id="batonvung-card"><div class="card-header"><div class="card-title"><div class="card-icon">⚠️</div>Danh sách Bưu Cục Bất Ổn — Ngày ${fD(gLatest)}</div><div class="card-info"><span style="background:#FEE2E2;color:#B91C1C;font-weight:800;border-radius:20px;padding:2px 12px">${rows.length} bưu cục</span></div></div>
    <div class="table-wrap" style="overflow-x:auto;display:inline-block;max-width:100%"><table style="border-collapse:collapse;font-size:13px;white-space:nowrap"><thead><tr style="background:#1F3864;color:#fff">
-   <th style="padding:8px 10px;text-align:center;font-size:11px;width:32px">#</th>
-   <th style="padding:8px 13px;text-align:left;font-size:11px">AM</th>
-   <th style="padding:8px 13px;text-align:left;font-size:11px">Bưu Cục</th>
+   <th style="padding:8px 10px;text-align:center;font-size:11.5px;font-weight:800;color:#FFFFFF;width:32px">#</th>
+   <th style="padding:8px 13px;text-align:left;font-size:11.5px;font-weight:800;color:#FFFFFF">AM</th>
+   <th style="padding:8px 13px;text-align:left;font-size:11.5px;font-weight:800;color:#FFFFFF">Bưu Cục</th>
    ${TH('%GTC Total','N-1 · &lt;60%')}${TH('%GTC TTS','N-1')}${TH('Aging &gt;5N','snapshot')}${TH('Aging &gt;8N','Nhóm BL')}${TH('ODR','N-1 · ≥96%')}${TH('OPR','N-1 · ≥80%')}${TH('FD Total','N-1 · ≤8%')}${TH('FD TTS','N-1 · ≤6,5%')}
    </tr></thead><tbody>${body}</tbody></table></div>`;
 
