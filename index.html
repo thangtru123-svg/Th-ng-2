@@ -2477,6 +2477,9 @@ async function sendAllToTelegram(){
  const num=n=>n.toLocaleString('vi-VN');
  const fD=d=>{if(!d)return'';const p=d.split('-');return p.length===3?`${p[2]}/${p[1]}/${p[0]}`:d;};
  const trimCap=s=>s.length>1020?s.slice(0,1017)+'...':s;
+ // ── Theo dõi bước trượt để báo rõ (không nuốt lỗi âm thầm) ──
+ const _tgFails=[];
+ const _tgFail=name=>{ if(name&&!_tgFails.includes(name))_tgFails.push(name); };
 
  async function navTo(pid){
   const el=document.getElementById(pid);
@@ -2506,6 +2509,7 @@ async function sendAllToTelegram(){
    }
   }
   console.warn(`[${label}] BỎ QUA sau 3 lần thử`);
+  _tgFail(label);
  }
 
  /* ── Caption: P16 Vận Hành Ngày ── */
@@ -2699,35 +2703,45 @@ async function sendAllToTelegram(){
    if(btn)btn.innerHTML='⏳ Đang gửi: Báo Cáo Vận Hành Ngày...';
    const p16a=document.getElementById('p16-card-a');
    if(p16a){
-    const cl=p16a.cloneNode(true);
-    cl.querySelectorAll('.table-wrap>div').forEach(e=>e.remove());
-    cl.querySelectorAll('thead,th').forEach(el=>{el.style.position='';el.style.top='';el.style.zIndex='';});
-    const tmp=document.createElement('div');
-    tmp.id='tg-p16-a';
-    tmp.style.cssText='position:fixed;top:-9999px;left:0;z-index:-1;width:1100px;padding:0';
-    tmp.appendChild(cl);
-    document.body.appendChild(tmp);
-    await new Promise(r=>setTimeout(r,300));
-    try{
-     const img=await _captureEl('tg-p16-a');
-     const res=await _tgSendPhoto(TG_AGING_CHAT,TG_VH_THREAD,img,capP16());
-     if(!res.ok)throw new Error('P16 AM loi: '+(res.description||JSON.stringify(res)));
-    }catch(_e){console.warn('TG bước lỗi:',_e&&_e.message);}finally{tmp.remove();}
+    let _okA=false;
+    for(let att=1;att<=3&&!_okA;att++){
+     const cl=p16a.cloneNode(true);
+     cl.querySelectorAll('.table-wrap>div').forEach(e=>e.remove());
+     cl.querySelectorAll('thead,th').forEach(el=>{el.style.position='';el.style.top='';el.style.zIndex='';});
+     const tmp=document.createElement('div');
+     tmp.id='tg-p16-a';
+     tmp.style.cssText='position:fixed;top:-9999px;left:0;z-index:-1;width:1100px;padding:0';
+     tmp.appendChild(cl);
+     document.body.appendChild(tmp);
+     await new Promise(r=>setTimeout(r,att>1?700:300));
+     try{
+      const img=await _captureEl('tg-p16-a');
+      if(!img||!img.size)throw new Error('ảnh rỗng (chưa render kịp)');
+      const res=await _tgSendPhoto(TG_AGING_CHAT,TG_VH_THREAD,img,capP16());
+      if(!res||!res.ok){const ra=res&&res.parameters&&res.parameters.retry_after;throw new Error('P16 AM lỗi: '+((res&&res.description)||JSON.stringify(res))+(ra?` (retry_after ${ra})`:''));}
+      _okA=true;
+     }catch(_e){
+      console.warn(`[① Báo Cáo Vận Hành Ngày] lần ${att}/3:`,_e&&_e.message);
+      const m=/retry_after (\d+)/.exec((_e&&_e.message)||'');
+      await new Promise(r=>setTimeout(r,m?(+m[1]*1000+500):1000*att));
+     }finally{tmp.remove();}
+    }
+    if(!_okA)_tgFail('① Báo Cáo Vận Hành Ngày');
     await new Promise(r=>setTimeout(r,600));
    }else{
-    await sendPhoto('Van Hanh Ngay','p16-card-a',TG_AGING_CHAT,TG_VH_THREAD,capP16());
+    await sendPhoto('① Báo Cáo Vận Hành Ngày','p16-card-a',TG_AGING_CHAT,TG_VH_THREAD,capP16());
    }
   }
   {
    // Tổng Quan Target (text) — so số thật với mục tiêu Sếp
    if(btn)btn.innerHTML='⏳ Đang gửi: Tổng Quan Target...';
-   try{ if(!window._TGTDATA)await buildTargetPage(); if(window._TGTDATA){const res=await _tgSend(TG_AGING_CHAT,TG_VH_THREAD,_tgtCaption());if(!res||!res.ok)console.warn('Target TG loi:',res&&res.description);} }catch(_e){console.warn('Target TG lỗi:',_e&&_e.message);}
+   try{ if(!window._TGTDATA)await buildTargetPage(); if(window._TGTDATA){const res=await _tgSend(TG_AGING_CHAT,TG_VH_THREAD,_tgtCaption());if(!res||!res.ok){console.warn('Target TG loi:',res&&res.description);_tgFail('② Tổng quan Target');}}else{_tgFail('② Tổng quan Target');} }catch(_e){console.warn('Target TG lỗi:',_e&&_e.message);_tgFail('② Tổng quan Target');}
    await new Promise(r=>setTimeout(r,600));
   }
   {
    // Bưu Cục làm kém bất thường — 5 tin (tổng quan + 4 hạng mục) vào room Vấn đề chung
    if(btn)btn.innerHTML='⏳ Đang gửi: Bưu Cục bất thường...';
-   try{ if(!window._BTDATA)await buildBatThuongPage(); const _bm=_btCaptions(); if(_bm){ for(const _m of _bm){ const res=await _tgSend(TG_AGING_CHAT,TG_VANDE_THREAD,_m); if(!res||!res.ok)console.warn('BC bất thường TG lỗi:',res&&res.description); await new Promise(r=>setTimeout(r,500)); } } }catch(_e){console.warn('BC bất thường TG lỗi:',_e&&_e.message);}
+   try{ if(!window._BTDATA)await buildBatThuongPage(); const _bm=_btCaptions(); if(_bm){ let _btBad=false; for(const _m of _bm){ const res=await _tgSend(TG_AGING_CHAT,TG_VANDE_THREAD,_m); if(!res||!res.ok){console.warn('BC bất thường TG lỗi:',res&&res.description);_btBad=true;} await new Promise(r=>setTimeout(r,500)); } if(_btBad)_tgFail('③ Bưu Cục làm kém bất thường'); }else{_tgFail('③ Bưu Cục làm kém bất thường');} }catch(_e){console.warn('BC bất thường TG lỗi:',_e&&_e.message);_tgFail('③ Bưu Cục làm kém bất thường');}
    await new Promise(r=>setTimeout(r,600));
   }
   {
@@ -2748,7 +2762,7 @@ async function sendAllToTelegram(){
      const cap=`🎯 <b>BÁO CÁO TỶ LỆ GTC TTS</b>`;
      const res=await _tgSendPhoto(TG_AGING_CHAT,TG_VH_THREAD,img,cap);
      if(!res.ok)throw new Error('P16 B loi: '+(res.description||JSON.stringify(res)));
-    }catch(_e){console.warn('TG bước lỗi:',_e&&_e.message);}finally{tmp.remove();}
+    }catch(_e){console.warn('TG bước lỗi:',_e&&_e.message);_tgFail('④ Báo Cáo GTC TTS');}finally{tmp.remove();}
     await new Promise(r=>setTimeout(r,600));
    }
   }
@@ -2775,7 +2789,7 @@ async function sendAllToTelegram(){
      const img=await _captureEl('tg-p1-bc');
      const res=await _tgSendPhoto(TG_AGING_CHAT,TG_VH_THREAD,img,capGTCBc());
      if(!res.ok)throw new Error('P1 BC loi: '+(res.description||JSON.stringify(res)));
-    }catch(_e){console.warn('TG bước lỗi:',_e&&_e.message);}finally{tmp.remove();}
+    }catch(_e){console.warn('TG bước lỗi:',_e&&_e.message);_tgFail('⑤ GTC Total theo Bưu Cục');}finally{tmp.remove();}
     await new Promise(r=>setTimeout(r,600));
    }else{
     await sendPhoto('GTC Total Theo BC','p1_bcCard',TG_AGING_CHAT,TG_VH_THREAD,capGTCBc());
@@ -2785,7 +2799,7 @@ async function sendAllToTelegram(){
   /* --- P3: Tỉ Lệ Trả Ngày → FD thread (format MỚI: Tổng quan + AM + Bất Ổn + Ổn Định + phân tích) --- */
   await navTo('p3');
   if(btn)btn.innerHTML='⏳ Đang gửi: Tỉ Lệ Trả (Tổng quan + nhóm)...';
-  try{ await _fdSendAll(); }catch(e){ console.warn('[TG FD] lỗi (bỏ qua, chạy tiếp):',e&&e.message); }
+  try{ await _fdSendAll(); }catch(e){ console.warn('[TG FD] lỗi (bỏ qua, chạy tiếp):',e&&e.message);_tgFail('Tỉ lệ trả (FD) — thread FD'); }
 
   /* --- P6: OPR TTS → Pickup/Luân chuyển thread --- */
   await navTo('p6');
@@ -2803,7 +2817,7 @@ async function sendAllToTelegram(){
   /* --- P27: Rớt LC theo ngày → Pickup thread (dùng chung hàm bắn cá nhân) --- */
   if(btn)btn.innerHTML='⏳ Đang gửi: Rớt LC...';
   await navTo('p27');
-  try{ await sendRotLCToTelegram(true); }catch(e){ console.warn('[Rớt LC] lỗi:',e&&e.message); }
+  try{ await sendRotLCToTelegram(true); }catch(e){ console.warn('[Rớt LC] lỗi:',e&&e.message);_tgFail('Rớt LC — thread Pickup'); }
 
   /* --- P19: GTC TTS Ca 1,2 theo BC → TTS - Vận hành thread --- */
   await navTo('p19');
@@ -2826,7 +2840,7 @@ async function sendAllToTelegram(){
      const img=await _captureEl('tg-'+eid);
      const res=await _tgSendPhoto(TG_AGING_CHAT,TG_TTS_THREAD,img,cap);
      if(!res.ok)throw new Error(`[${eid}] TG lỗi: ${res.description||JSON.stringify(res)}`);
-    }catch(_e){console.warn('TG bước lỗi:',_e&&_e.message);}finally{tmp.remove();}
+    }catch(_e){console.warn('TG bước lỗi:',_e&&_e.message);_tgFail('GTC TTS Ca 1,2 ('+cap.replace(/<[^>]+>/g,'').slice(0,24)+')');}finally{tmp.remove();}
     await new Promise(r=>setTimeout(r,700));
    }
   }
@@ -2861,7 +2875,17 @@ async function sendAllToTelegram(){
 
   /* P23 (khu vực Bắc Giang) & P34 (Báo cáo Bưu Cục → BOT) đã BỎ bắn Telegram theo yêu cầu */
 
-  if(btn){btn.innerHTML='✅ Đã gửi xong!';setTimeout(()=>{btn.innerHTML='<span id="tgSidebarIcon">📤</span> Bắn dữ liệu lên Telegram';btn.disabled=false;},3000);}
+  // ── Tổng kết: nếu có bước trượt → báo rõ (nút + nhắn riêng "Task Thắng"), KHÔNG nuốt lỗi âm thầm ──
+  window._TG_LAST_FAILS=_tgFails.slice();
+  if(_tgFails.length){
+   console.error('[Bắn tất cả] CÁC MỤC TRƯỢT:',_tgFails);
+   const _fd=new Date().toLocaleString('vi-VN');
+   const _warn=`⚠️ <b>BẮN TELEGRAM — THIẾU ${_tgFails.length} MỤC</b>\n${_fd}\n\n`+_tgFails.map(x=>'• '+x).join('\n')+`\n\n→ Vào Dashboard bấm lại "Bắn dữ liệu lên Telegram" hoặc bắn bù từng mục đang thiếu.`;
+   try{ await _tgSend(TG_TASK_CHAT,undefined,_warn); }catch(_){}
+   if(btn){btn.innerHTML=`⚠️ Thiếu ${_tgFails.length} mục (đã nhắn Task Thắng)`;setTimeout(()=>{btn.innerHTML='<span id="tgSidebarIcon">📤</span> Bắn dữ liệu lên Telegram';btn.disabled=false;},8000);}
+  }else{
+   if(btn){btn.innerHTML='✅ Đã gửi xong!';setTimeout(()=>{btn.innerHTML='<span id="tgSidebarIcon">📤</span> Bắn dữ liệu lên Telegram';btn.disabled=false;},3000);}
+  }
  }catch(e){
   console.error('sendAllToTelegram error:',e);
   if(btn){btn.innerHTML='❌ '+e.message;setTimeout(()=>{btn.innerHTML='<span id="tgSidebarIcon">📤</span> Bắn dữ liệu lên Telegram';btn.disabled=false;},6000);}
