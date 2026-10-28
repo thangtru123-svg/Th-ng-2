@@ -222,6 +222,7 @@ tr.tot td{background:#FFF0EB!important;font-weight:800!important;border-top:2px 
  <button class="nav-item active" onclick="show('p0',this)"><span class="icon">📊</span>Dashboard Tổng Quan</button>
  <button class="nav-item" onclick="show('p43',this)" style="background:linear-gradient(135deg,rgba(22,101,52,0.16),rgba(34,197,94,0.1));border:1px solid rgba(22,101,52,0.35);font-weight:700"><span class="icon">🎯</span>Tổng Quan Target</button>
  <button class="nav-item" onclick="show('p44',this)" style="background:linear-gradient(135deg,rgba(220,38,38,0.2),rgba(241,93,41,0.1));border:1px solid rgba(220,38,38,0.4);font-weight:700"><span class="icon">🚨</span>Bưu Cục làm kém bất thường</button>
+ <button class="nav-item" onclick="show('p45',this)" style="background:linear-gradient(135deg,rgba(185,28,28,0.24),rgba(241,93,41,0.12));border:1px solid rgba(185,28,28,0.45);font-weight:700"><span class="icon">⚠️</span>Bưu Cục Bất Ổn (Vùng)</button>
  <button class="nav-item" onclick="show('p27',this)" style="background:linear-gradient(135deg,rgba(220,38,38,0.16),rgba(241,93,41,0.08));border:1px solid rgba(220,38,38,0.32);font-weight:700"><span class="icon">📉</span>Rớt LC theo ngày</button>
  <button class="nav-item" onclick="show('p30',this)" style="background:linear-gradient(135deg,rgba(220,38,38,0.16),rgba(241,93,41,0.08));border:1px solid rgba(220,38,38,0.32);font-weight:700"><span class="icon">🔒</span>Khoá ID vi phạm</button>
  <button class="nav-item" onclick="show('p32',this)" style="background:linear-gradient(135deg,rgba(37,99,235,0.14),rgba(59,130,246,0.08));border:1px solid rgba(37,99,235,0.3);font-weight:700"><span class="icon">📑</span>Báo Cáo Tồn / LC / 48H</button>
@@ -265,6 +266,7 @@ tr.tot td{background:#FFF0EB!important;font-weight:800!important;border-top:2px 
  <div class="page active" id="p0"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
 <div class="page" id="p43"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
 <div class="page" id="p44"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
+<div class="page" id="p45"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
  <div class="page" id="p1"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
  <div class="page" id="p2"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
  <div class="page" id="p3"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
@@ -306,6 +308,8 @@ const TG_FD_THREAD   = 8250; // topic "FD - Mục tiêu toàn vùng 8%"
 const TG_PICKUP_THREAD = 7; // topic "Pickup / Luân chuyển"
 const TG_TTS_THREAD   = 3; // topic "TTS - Vận hành"
 const TG_VANDE_THREAD = null; // topic "Vấn đề chung" = General topic → gửi KHÔNG kèm thread (thread 1 báo "not found")
+const TG_BATON_VUNG_CHAT = -1003237202833; // room "Bưu Cục Bất Ổn 2026"
+const TG_BATON_VUNG_THREAD = 5175;          // topic https://t.me/c/3237202833/5175 (p45 BC bất ổn Vùng)
 const TG_NSBG_CHAT   = -4931731378; // group "Anh em Bắc Giang" (group thường, không topic)
 
 /* ===== PHÂN QUYỀN (ROLE) =====
@@ -4591,6 +4595,142 @@ async function sendBatThuongToTelegram(btn){
  }catch(e){alert('Lỗi bắn TG: '+e.message);}
  finally{ if(btn){btn.disabled=false;btn.textContent=_t||'📤 Bắn TG (từng hạng mục)';} }
 }
+
+/* ===== p45 — BƯU CỤC BẤT ỔN (VÙNG TỰ SET: %GTC Total N-1 < 60%) ===== */
+const BATON_VUNG_NGUONG=60; // mục tiêu Vùng: BC có %GTC Total N-1 < 60% là bất ổn
+async function buildBatOnVungPage(){
+ const el=document.getElementById('p45'); if(!el)return;
+ try{
+  const dt=s=>(String(s==null?'':s).match(/\d{4}-\d{2}-\d{2}/)||[''])[0];
+  const P=v=>{const n=parseFloat(String(v==null?'':v).replace(/,/g,''));return isNaN(n)?null:n;};
+  // map bc -> {date -> value}; mul=100 để đổi fraction→%
+  const mkMap=(rows,bi,di,vi,mul)=>{const m={};(rows||[]).slice(1).forEach(r=>{const bc=(r[bi]||'').trim();if(!bc||/grand total/i.test(bc))return;const d=dt(r[di]);if(!d)return;const v=P(r[vi]);if(v==null)return;(m[bc]=m[bc]||{})[d]=v*(mul||1);});return m;};
+  const latestOf=m=>{const s=new Set();Object.values(m).forEach(o=>Object.keys(o).forEach(d=>s.add(d)));return [...s].sort().pop();};
+  const valOn=(m,bc,anchor)=>{const o=m[bc];if(!o)return null;if(o[anchor]!=null)return o[anchor];const ds=Object.keys(o).sort();return ds.length?o[ds[ds.length-1]]:null;};
+
+  const gtcT  =mkMap(window._D&&window._D.gtcTotalBC,1,2,5,100); // %GTC Total (col %GTC=5, fraction)
+  const gtcTts=mkMap(window._D&&window._D.gtcTTSBC ,1,2,5,100); // %GTC TTS
+  const odr   =mkMap(window._D&&window._D.odrBC    ,1,2,4,100); // ODR %Ontime (col4)
+  const opr   =mkMap(window._D&&window._D.oprBC    ,1,2,4,100); // OPR %Ontime (col4)
+  const fdT   =mkMap(window._FD&&window._FD.totalBC,0,1,3,100); // FD Total (BC0 Ngày1 %FD3)
+  const fdTts =mkMap(window._FD&&window._FD.ttsBC  ,0,1,3,100); // FD TTS
+  const gLatest=latestOf(gtcT);
+
+  // Aging: >5N = mọi đơn snapshot mới nhất; >8N = Nhóm BL ≠ g1 (_lowAgGe8)
+  const ag=window._agingRows||[];
+  const agD=[...new Set(ag.map(r=>dt(r[11])).filter(Boolean))].sort();const agLatest=agD[agD.length-1];
+  const ag5={},ag8={};
+  ag.forEach(r=>{if(dt(r[11])!==agLatest)return;const bc=(r[2]||'').trim();if(!bc)return;ag5[bc]=(ag5[bc]||0)+1;if(typeof _lowAgGe8==='function'&&_lowAgGe8(r))ag8[bc]=(ag8[bc]||0)+1;});
+
+  const cc=window._CC_BCAM||{};
+  const rows=[];
+  Object.keys(gtcT).forEach(bc=>{
+   const gt=gtcT[bc]&&gtcT[bc][gLatest];
+   if(gt==null||gt>=BATON_VUNG_NGUONG)return; // chỉ BC %GTC Total N-1 < 60%
+   rows.push({bc, am:(cc[bc]&&cc[bc].join(', '))||'—', gt,
+    gtts:valOn(gtcTts,bc,gLatest), ag5:ag5[bc]||0, ag8:ag8[bc]||0,
+    odr:valOn(odr,bc,gLatest), opr:valOn(opr,bc,gLatest),
+    fdt:valOn(fdT,bc,gLatest), fdtts:valOn(fdTts,bc,gLatest)});
+  });
+  rows.sort((a,b)=>a.gt-b.gt); // tệ nhất lên đầu
+  window._BATONVUNG={day:gLatest,agDay:agLatest,rows};
+
+  // ── render ──
+  const fD=iso=>{if(!iso)return'—';const p=(iso||'').split('-');return p.length===3?`${p[2]}/${p[1]}`:iso;};
+  const pct=v=>v==null?'—':v.toFixed(1).replace('.',',')+'%';
+  const cellP=(v,bad)=>`<td style="padding:7px 11px;text-align:center;font-weight:${bad?800:600};color:${bad?'#B91C1C':'var(--text-main)'};${bad?'background:#FEF2F2;':''}white-space:nowrap">${pct(v)}</td>`;
+  const cellN=(v,bad)=>`<td style="padding:7px 11px;text-align:center;font-weight:${bad?800:600};color:${bad?'#B91C1C':'var(--text-main)'};${bad?'background:#FEF2F2;':''}white-space:nowrap">${v==null?'—':(Math.round(v).toLocaleString('vi-VN')+' đơn')}</td>`;
+  const TH=(t,sub)=>`<th style="padding:8px 11px;text-align:center;font-weight:700;font-size:11px;color:var(--text-sub);white-space:nowrap">${t}${sub?`<div style="font-size:9px;font-weight:600;opacity:.8">${sub}</div>`:''}</th>`;
+  const kpi=(lbl,val,col)=>`<div style="flex:1;min-width:140px;background:var(--card);border:1px solid var(--border);border-top:3px solid ${col};border-radius:12px;padding:12px 14px;text-align:center"><div style="font-size:11px;font-weight:700;color:var(--text-sub);text-transform:uppercase;letter-spacing:.4px">${lbl}</div><div style="font-size:26px;font-weight:800;color:${col};line-height:1.1;margin-top:3px">${val}</div></div>`;
+
+  let h=`<div class="page-header"><div class="page-title">⚠️ Bưu Cục Bất Ổn (Vùng)</div><div class="page-meta"><span class="tag tag-orange">📅 N-1 = ${fD(gLatest)} · Aging snapshot ${fD(agLatest)}</span><span class="tag" style="background:#FEE2E2;color:#B91C1C;font-weight:700">Tiêu chí Vùng: %GTC Total &lt; ${BATON_VUNG_NGUONG}%</span><button class="tg-inpage-btn" style="background:#16A34A;border-color:#16A34A" onclick="buildBatOnVungPage()">🔄 Tải lại</button><button class="tg-inpage-btn" onclick="sendBatOnVungToTelegram(this)">📤 Bắn TG (đồng loạt)</button></div></div>`;
+
+  if(!rows.length){h+='<div class="analysis-box">🎉 Không có Bưu Cục nào có %GTC Total N-1 &lt; '+BATON_VUNG_NGUONG+'% — Vùng ổn định ở ngày '+fD(gLatest)+'.</div>';el.innerHTML=h;return;}
+
+  const avgGt=rows.reduce((s,r)=>s+r.gt,0)/rows.length;
+  const sumAg5=rows.reduce((s,r)=>s+r.ag5,0),sumAg8=rows.reduce((s,r)=>s+r.ag8,0);
+  const worst=rows[0];
+  h+=`<div style="display:flex;gap:11px;flex-wrap:wrap;margin-bottom:16px">
+   ${kpi('BC bất ổn',rows.length,'var(--red)')}
+   ${kpi('%GTC TB nhóm',pct(avgGt),'#EA580C')}
+   ${kpi('Σ Aging &gt;5N',sumAg5.toLocaleString('vi-VN'),'#B91C1C')}
+   ${kpi('Σ Aging &gt;8N',sumAg8.toLocaleString('vi-VN'),'#9333EA')}</div>`;
+
+  const body=rows.map((r,i)=>{
+   const dgt=r.gt<50; // GTC Total <50 = tô đậm đỏ
+   return `<tr style="background:${i%2?'#FAFAFA':'#FFF'};border-bottom:1px solid var(--border)">`
+    +`<td style="padding:7px 10px;text-align:center;font-weight:700;color:${i<3?'var(--red)':'var(--text-sub)'}">${i+1}</td>`
+    +`<td style="padding:7px 13px;color:var(--text-main);font-size:12px;white-space:nowrap">${r.am}</td>`
+    +`<td style="padding:7px 13px;font-weight:700;color:var(--text-main);white-space:nowrap">${r.bc}</td>`
+    +cellP(r.gt,true)+cellP(r.gtts,r.gtts!=null&&r.gtts<BATON_VUNG_NGUONG)
+    +cellN(r.ag5,r.ag5>50)+cellN(r.ag8,r.ag8>0)
+    +cellP(r.odr,r.odr!=null&&r.odr<96)+cellP(r.opr,r.opr!=null&&r.opr<80)
+    +cellP(r.fdt,r.fdt!=null&&r.fdt>8)+cellP(r.fdtts,r.fdtts!=null&&r.fdtts>6.5)
+    +`</tr>`;
+  }).join('');
+
+  h+=`<div class="card" id="batonvung-card"><div class="card-header"><div class="card-title"><div class="card-icon">⚠️</div>Danh sách Bưu Cục Bất Ổn — Ngày ${fD(gLatest)}</div><div class="card-info"><span style="background:#FEE2E2;color:#B91C1C;font-weight:800;border-radius:20px;padding:2px 12px">${rows.length} bưu cục</span></div></div>
+   <div class="table-wrap" style="overflow-x:auto;display:inline-block;max-width:100%"><table style="border-collapse:collapse;font-size:13px;white-space:nowrap"><thead><tr style="background:#1F3864;color:#fff">
+   <th style="padding:8px 10px;text-align:center;font-size:11px;width:32px">#</th>
+   <th style="padding:8px 13px;text-align:left;font-size:11px">AM</th>
+   <th style="padding:8px 13px;text-align:left;font-size:11px">Bưu Cục</th>
+   ${TH('%GTC Total','N-1 · &lt;60%')}${TH('%GTC TTS','N-1')}${TH('Aging &gt;5N','snapshot')}${TH('Aging &gt;8N','Nhóm BL')}${TH('ODR','N-1 · ≥96%')}${TH('OPR','N-1 · ≥80%')}${TH('FD Total','N-1 · ≤8%')}${TH('FD TTS','N-1 · ≤6,5%')}
+   </tr></thead><tbody>${body}</tbody></table></div>`;
+
+  // nhận định (mỗi ý 1 dòng)
+  let an=`🔴 Tổng <b>${rows.length}</b> Bưu Cục có %GTC Total N-1 &lt; ${BATON_VUNG_NGUONG}% (ngày ${fD(gLatest)}).`;
+  an+=`<br>%GTC Total trung bình nhóm bất ổn: <b>${pct(avgGt)}</b>.`;
+  an+=`<br>Tổng tồn Aging của nhóm: <b>${sumAg5.toLocaleString('vi-VN')} đơn</b> (&gt;5N) · trong đó <b>${sumAg8.toLocaleString('vi-VN')} đơn</b> đã &gt;8 ngày.`;
+  an+=`<br>🔴 Tệ nhất: <b>${worst.bc}</b> — ${worst.am} (%GTC Total <b>${pct(worst.gt)}</b>).`;
+  const worstAg=[...rows].sort((a,b)=>b.ag5-a.ag5)[0];
+  if(worstAg&&worstAg.ag5>0)an+=`<br>🧯 Tồn Aging cao nhất: <b>${worstAg.bc}</b> (${worstAg.ag5.toLocaleString('vi-VN')} đơn &gt;5N).`;
+  h+=`<div class="analysis-box" style="margin-top:14px;line-height:1.9">${an}</div></div>`;
+
+  el.innerHTML=h;
+ }catch(e){el.innerHTML='<div class="page-header"><div class="page-title">⚠️ Bưu Cục Bất Ổn (Vùng)</div></div><div class="analysis-box">Lỗi: '+(e&&e.message||e)+'</div>';console.error('BC bất ổn Vùng:',e);}
+}
+/* Caption cho ảnh bắn TG */
+function _batOnVungCap(){
+ const T=window._BATONVUNG; if(!T)return'⚠️ <b>BƯU CỤC BẤT ỔN — VÙNG</b>';
+ const dd=iso=>{const p=(iso||'').split('-');return p.length===3?`${p[2]}/${p[1]}/${p[0]}`:iso;};
+ const pct=v=>v==null?'—':v.toFixed(1).replace('.',',')+'%';
+ const rows=T.rows||[];
+ const avg=rows.length?rows.reduce((s,r)=>s+r.gt,0)/rows.length:null;
+ const sAg5=rows.reduce((s,r)=>s+r.ag5,0),sAg8=rows.reduce((s,r)=>s+r.ag8,0);
+ let c=`⚠️ <b>BƯU CỤC BẤT ỔN — VÙNG (GTC Total &lt; ${BATON_VUNG_NGUONG}%) — Ngày ${dd(T.day)}</b>\n`;
+ c+=`Tổng <b>${rows.length}</b> Bưu Cục dính ngưỡng · %GTC Total TB <b>${pct(avg)}</b>.\n`;
+ c+=`Tồn Aging nhóm: <b>${sAg5.toLocaleString('vi-VN')}</b> đơn &gt;5N (trong đó <b>${sAg8.toLocaleString('vi-VN')}</b> đơn &gt;8N).\n\n`;
+ c+=`📝 Top 5 tệ nhất (%GTC Total):\n`+rows.slice(0,5).map((r,i)=>`${i+1}. ${r.bc} — ${r.am}: ${pct(r.gt)}`).join('\n');
+ return c.length>1020?c.slice(0,1017)+'...':c;
+}
+async function sendBatOnVungToTelegram(btn){
+ const _t=btn?btn.textContent:''; if(btn){btn.disabled=true;btn.textContent='⏳ Đang bắn...';}
+ try{
+  if(!window._BATONVUNG)await buildBatOnVungPage();
+  const T=window._BATONVUNG;
+  if(!T||!T.rows||!T.rows.length){alert('Không có Bưu Cục bất ổn (hoặc chưa tải xong dữ liệu).');return;}
+  const card=document.getElementById('batonvung-card');
+  if(!card){alert('Chưa có bảng — mở trang và chờ tải xong.');return;}
+  const cl=card.cloneNode(true);
+  cl.querySelectorAll('thead,th').forEach(e=>{e.style.position='';e.style.top='';e.style.zIndex='';});
+  cl.querySelectorAll('.tg-inpage-btn').forEach(e=>e.remove());
+  const tmp=document.createElement('div');tmp.id='tg-batonvung';tmp.style.cssText='position:fixed;top:-9999px;left:0;z-index:-1;width:1500px;padding:0;background:#fff';
+  tmp.appendChild(cl);document.body.appendChild(tmp);
+  await new Promise(r=>setTimeout(r,400));
+  let ok=false,err='';
+  try{
+   const img=await _captureEl('tg-batonvung');
+   if(!img||!img.size)throw new Error('ảnh rỗng');
+   let res=await _tgSendPhoto(TG_BATON_VUNG_CHAT,TG_BATON_VUNG_THREAD,img,_batOnVungCap());
+   if(!res||!res.ok){ // ảnh quá rộng → gửi dạng document
+    res=await _tgSendDoc(TG_BATON_VUNG_CHAT,TG_BATON_VUNG_THREAD,img,_batOnVungCap());
+   }
+   ok=res&&res.ok; err=(res&&res.description)||'';
+  }finally{tmp.remove();}
+  alert(ok?'✅ Đã bắn danh sách Bưu Cục Bất Ổn (Vùng) lên room.':'Bắn lỗi: '+err);
+ }catch(e){alert('Lỗi bắn TG: '+e.message);}
+ finally{ if(btn){btn.disabled=false;btn.textContent=_t||'📤 Bắn TG (đồng loạt)';} }
+}
 async function buildCodCheckPage(){
  const el=document.getElementById('p42'); if(!el) return;
  const trv=v=>((+v||0)/1e6).toLocaleString('vi-VN',{minimumFractionDigits:1,maximumFractionDigits:1})+' tr';
@@ -4864,6 +5004,8 @@ async function init(){
  buildTargetPage().catch(e=>console.warn('Target:',e&&e.message||e));
  // p44 — Bưu Cục làm kém bất thường (cần _D/_FD + _agingRows)
  buildBatThuongPage().catch(e=>console.warn('BC bất thường:',e&&e.message||e));
+ // p45 — Bưu Cục Bất Ổn (Vùng tự set %GTC Total<60%) (cần _D/_FD + _agingRows + _CC_BCAM)
+ buildBatOnVungPage().catch(e=>console.warn('BC bất ổn Vùng:',e&&e.message||e));
  // p16 — Báo Cáo Vận Hành Ngày
  const p16el=document.getElementById('p16');
  if(R['GTC ca 1,2 theo AM']){
