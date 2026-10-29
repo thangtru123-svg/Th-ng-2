@@ -2879,6 +2879,31 @@ async function sendAllToTelegram(){
 
   /* P23 (khu vực Bắc Giang) & P34 (Báo cáo Bưu Cục → BOT) đã BỎ bắn Telegram theo yêu cầu */
 
+  /* --- P45: Bưu Cục Bất Ổn (Vùng) → room "Bưu Cục Bất Ổn 2026" (thread 5175) --- */
+  try{
+   if(btn)btn.innerHTML='⏳ Đang gửi: Bưu Cục Bất Ổn (Vùng)...';
+   await navTo('p45');
+   await new Promise(r=>setTimeout(r,500));
+   if(!window._BATONVUNG)await buildBatOnVungPage();
+   const _bvT=window._BATONVUNG, _bvCard=document.getElementById('batonvung-card');
+   if(_bvT&&_bvT.rows&&_bvT.rows.length&&_bvCard){
+    const _bvCl=_bvCard.cloneNode(true);
+    _bvCl.querySelectorAll('thead,th').forEach(e=>{e.style.position='';e.style.top='';e.style.zIndex='';});
+    _bvCl.querySelectorAll('.tg-inpage-btn').forEach(e=>e.remove());
+    const _bvTmp=document.createElement('div');_bvTmp.id='tg-batonvung';_bvTmp.style.cssText='position:fixed;top:-9999px;left:0;z-index:-1;width:1500px;padding:0;background:#fff';
+    _bvTmp.appendChild(_bvCl);document.body.appendChild(_bvTmp);
+    await new Promise(r=>setTimeout(r,400));
+    try{
+     const _bvImg=await _captureEl('tg-batonvung');
+     if(!_bvImg||!_bvImg.size)throw new Error('ảnh rỗng (chưa render kịp)');
+     let _bvRes=await _tgSendPhoto(TG_BATON_VUNG_CHAT,TG_BATON_VUNG_THREAD,_bvImg,_batOnVungCap());
+     if(!_bvRes||!_bvRes.ok)_bvRes=await _tgSendDoc(TG_BATON_VUNG_CHAT,TG_BATON_VUNG_THREAD,_bvImg,_batOnVungCap());
+     if(!_bvRes||!_bvRes.ok)throw new Error((_bvRes&&_bvRes.description)||'TG lỗi');
+    }finally{_bvTmp.remove();}
+   }
+  }catch(_e){console.warn('TG p45 lỗi:',_e&&_e.message);_tgFail('Bưu Cục Bất Ổn (Vùng)');}
+  await new Promise(r=>setTimeout(r,700));
+
   // ── Tổng kết: nếu có bước trượt → báo rõ (nút + nhắn riêng "Task Thắng"), KHÔNG nuốt lỗi âm thầm ──
   window._TG_LAST_FAILS=_tgFails.slice();
   if(_tgFails.length){
