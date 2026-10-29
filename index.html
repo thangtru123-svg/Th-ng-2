@@ -1037,6 +1037,9 @@ function renderFDDay(){
  addBCSearch(document.getElementById('fdDayBatOnTable'));
  addBCSearch(document.getElementById('fdDayOnDinhTable'));
 }
+// Mốc bôi đỏ %FD theo từng nhóm khách (đại nhân chốt 29/10): > mốc = đỏ
+const _FD_RED_THR={'Total':10,'SME':9,'TTS':4.5,'TTS COD':5,'Shopee':8};
+function _fdRedThr(label){return _FD_RED_THR[label]!=null?_FD_RED_THR[label]:15;}
 function buildFDDayTable(sheetArr,labels,dates,nameLabel,gtcMap,amMap,nameFilter){
  if(!dates||!dates.length)return'<p style="padding:16px;color:var(--text-sub)">Chọn khoảng ngày hợp lệ</p>';
  const _amOf=n=>amMap?(amMap[(n||'').trim()]||'—'):'';
@@ -1092,8 +1095,8 @@ function buildFDDayTable(sheetArr,labels,dates,nameLabel,gtcMap,amMap,nameFilter
   h+=`<tr${isG?' class="tot"':''}><td style="${cs}text-align:center;color:var(--text-sub);font-size:11px;position:sticky;left:0;background:${isG?'#F8F9FA':'#fff'};z-index:2">${isG?'':i+1}</td><td style="${cs}font-weight:${isG?800:600};position:sticky;left:32px;background:${isG?'#F8F9FA':'#fff'};z-index:2;min-width:125px;max-width:175px;word-break:break-word">${name.split(',').map(s=>s.trim()).join('<br>')}</td>${amMap?`<td style="${cs}font-size:12px;color:var(--text-sub);word-break:break-word">${_amOf(name)}</td>`:''}`;
   dates.forEach((d,di)=>{
    const bg=DC[di%DC.length];
-   labels.forEach((_,si)=>{
-    const cell=dData[di]?.[si]?.[name];const fd=cell?.fd??null;const red=fd!==null&&fd>=15;
+   labels.forEach((l,si)=>{
+    const cell=dData[di]?.[si]?.[name];const fd=cell?.fd??null;const red=fd!==null&&fd>_fdRedThr(l);
     h+=`<td style="${cs}text-align:center;border-left:${si===0?'3px solid #D1D5DB':'1px solid #E5E7EB'};background:${red?'#FEE2E2':bg};color:${red?'#DC2626':'inherit'};font-weight:${red?700:'inherit'}">${fd!==null?fd.toFixed(2)+'%':'—'}</td>`;
     if(si===0&&hasGTC){
      const soTra=calcSoTra(name,d,fd);
@@ -1107,13 +1110,13 @@ function buildFDDayTable(sheetArr,labels,dates,nameLabel,gtcMap,amMap,nameFilter
  h+=`<tr class="tot"><td style="${cs}position:sticky;left:0;background:#F8F9FA;z-index:2"></td><td style="${cs}font-weight:800;position:sticky;left:32px;background:#F8F9FA;z-index:2">Grand Total</td>${amMap?`<td style="${cs}background:#F8F9FA"></td>`:''}`;
  dates.forEach((d,di)=>{
   const bg=DC[di%DC.length];
-  labels.forEach((_,si)=>{
+  labels.forEach((l,si)=>{
    const dayData=dData[di]?.[si]||{};
    const vals=Object.entries(dayData).filter(([n])=>!isGrand(n)&&(!nameFilter||nameFilter(n))).map(([,v])=>v);
    const sumVol=vals.reduce((s,v)=>s+(v.vol||0),0);
    const sumFdVol=vals.reduce((s,v)=>s+(v.fd||0)*(v.vol||0),0);
    const gtFd=sumVol>0?sumFdVol/sumVol:null;
-   const red=gtFd!==null&&gtFd>=15;
+   const red=gtFd!==null&&gtFd>_fdRedThr(l);
    h+=`<td style="${cs}text-align:center;border-left:${si===0?'3px solid #D1D5DB':'1px solid #E5E7EB'};background:${red?'#FEE2E2':bg};color:${red?'#DC2626':'inherit'};font-weight:${red?800:600}">${gtFd!==null?gtFd.toFixed(2)+'%':'—'}</td>`;
    if(si===0&&hasGTC){
     // Tổng số đơn trả = sum từng AM
@@ -1301,8 +1304,8 @@ function buildFDWeekTable(sheetArr,labels,isBC,selWeeks,nameFilter){
   h+=`<tr${isG?' class="tot"':''}><td style="${cs}text-align:center;color:var(--text-sub);font-size:11px">${isG?'':i+1}</td><td style="${cs}font-weight:${isG?800:600};white-space:nowrap">${name}</td>`;
   selWeeks.forEach((w,wi)=>{
    const bg=WC[wi%WC.length];
-   labels.forEach((_,si)=>{
-    const fd=wMap[si]?.[name]?.[w]??null;const red=fd!==null&&fd>=15;
+   labels.forEach((l,si)=>{
+    const fd=wMap[si]?.[name]?.[w]??null;const red=fd!==null&&fd>_fdRedThr(l);
     h+=`<td style="${cs}text-align:center;border-left:${si===0?'3px solid #D1D5DB':'1px solid #E5E7EB'};background:${red?'#FEE2E2':bg};color:${red?'#DC2626':'inherit'};font-weight:${red?700:'inherit'}">${fd!==null?fd.toFixed(1)+'%':'—'}</td>`;
    });
   });
