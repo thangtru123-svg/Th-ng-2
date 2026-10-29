@@ -1193,9 +1193,9 @@ function renderFDByAM(){
   const t=(bo?FD_TARGET.unstable:FD_TARGET.stable)[type];const d=v.fd-t;const pass=d<=0.0001;
   const bg=pass?'#DCFCE7':'#FEE2E2',col=pass?'#15803D':'#DC2626';
   return `<td style="${cs}text-align:center;background:${bg};color:${col};font-weight:700">${v.fd.toFixed(2)}%<div style="font-size:9.5px;font-weight:700;margin-top:1px">${d>0?'▲ +':'▼ '}${Math.abs(d).toFixed(1)}% ${pass?'đạt':'vượt'} MT ${t}%</div></td>`;};
- // FD TTS COD — chưa có target riêng, chỉ hiển thị %FD (tham chiếu mốc TTS 6,5%)
+ // FD TTS COD — target Sếp < 5% (đỏ nếu vượt), không chấm đạt/vượt từng BC như Total/SME/TTS
  const codCell=(v,bold)=>{ if(v==null||v.fd==null)return `<td style="${cs}text-align:center;color:var(--text-sub)">—</td>`;
-  const red=v.fd>6.5;return `<td style="${cs}text-align:center;background:${red?'#FEF2F2':'#F0F9FF'};color:${red?'#DC2626':'#0369A1'};font-weight:${bold?800:700}">${v.fd.toFixed(2)}%</td>`;};
+  const red=v.fd>5;return `<td style="${cs}text-align:center;background:${red?'#FEF2F2':'#F0F9FF'};color:${red?'#DC2626':'#0369A1'};font-weight:${bold?800:700}">${v.fd.toFixed(2)}%</td>`;};
  let H='';
  amList.forEach((a,ai)=>{
   const bcs=[...new Set(amBCs[a])].filter(b=>types.some(t=>bc[t][b]));
@@ -4404,7 +4404,7 @@ async function buildTargetPage(){
    const gtc=_tgtRate(D.gtcTotalAM,2,5);
    const odr=_tgtRate(D.odrAM,2,4);
    const opr=_tgtRate(D.oprAM,2,4);
-   const fdT=_tgtFD(FD.totalAM),fdS=_tgtFD(FD.smeAM),fdTt=_tgtFD(FD.ttsAM);
+   const fdT=_tgtFD(FD.totalAM),fdS=_tgtFD(FD.smeAM),fdTt=_tgtFD(FD.ttsAM),fdCod=_tgtFD(FD.codAM);
    // mỗi chỉ tiêu: {label, target, thucDat, dat(bool), fails:[{am,val}], fmtVal}
    const rows=[];
    const ge=(v,t)=>v>=t, gt=(v,t)=>v>t, lt=(v,t)=>v<t, le=(v,t)=>v<=t;
@@ -4413,8 +4413,9 @@ async function buildTargetPage(){
     rows.push({label,target:tgt,op,val:m.vung,dat:pass,fails,unit,day:m.day});};
    addRate('gtc','GTC %',gtc,70,ge,'%');
    addRate('fdT','FD Total %',fdT,7,le,'%');
-   addRate('fdS','FD SME %',fdS,8,lt,'%');
-   addRate('fdTt','FD TTS %',fdTt,5,lt,'%');
+   addRate('fdS','FD SME %',fdS,9,lt,'%');
+   addRate('fdTt','FD TTS %',fdTt,4.5,lt,'%');
+   addRate('fdCod','FD TTS COD %',fdCod,5,lt,'%');
    addRate('odr','ODR %',odr,94,gt,'%');
    addRate('opr','OPR %',opr,80,gt,'%');
    addRate('ns','Năng suất GTC (đơn/NV/ngày)',ns,70,gt,'đơn');
@@ -4711,7 +4712,7 @@ async function buildBatOnVungPage(){
     +cellP(r.gt,true)+cellP(r.gtts,r.gtts!=null&&r.gtts<BATON_VUNG_NGUONG)
     +cellN(r.ag5,r.ag5>50)+cellN(r.ag8,r.ag8>0)
     +cellP(r.odr,r.odr!=null&&r.odr<96)+cellP(r.opr,r.opr!=null&&r.opr<80)
-    +cellP(r.fdt,r.fdt!=null&&r.fdt>8)+cellP(r.fdtts,r.fdtts!=null&&r.fdtts>6.5)+cellP(r.fdcod,r.fdcod!=null&&r.fdcod>6.5)
+    +cellP(r.fdt,r.fdt!=null&&r.fdt>8)+cellP(r.fdtts,r.fdtts!=null&&r.fdtts>6.5)+cellP(r.fdcod,r.fdcod!=null&&r.fdcod>5)
     +`</tr>`;
   }).join('');
 
@@ -4720,7 +4721,7 @@ async function buildBatOnVungPage(){
    <th style="padding:8px 10px;text-align:center;font-size:11.5px;font-weight:800;color:#FFFFFF;width:32px">#</th>
    <th style="padding:8px 13px;text-align:left;font-size:11.5px;font-weight:800;color:#FFFFFF">AM</th>
    <th style="padding:8px 13px;text-align:left;font-size:11.5px;font-weight:800;color:#FFFFFF">Bưu Cục</th>
-   ${TH('%GTC Total','N-1 · &lt;60%')}${TH('%GTC TTS','N-1')}${TH('Aging &gt;5N','snapshot')}${TH('Aging &gt;8N','Nhóm BL')}${TH('ODR','N-1 · ≥96%')}${TH('OPR','N-1 · ≥80%')}${TH('FD Total','N-1 · ≤8%')}${TH('FD TTS','N-1 · ≤6,5%')}${TH('FD TTS COD','N-1 · ≤6,5%')}
+   ${TH('%GTC Total','N-1 · &lt;60%')}${TH('%GTC TTS','N-1')}${TH('Aging &gt;5N','snapshot')}${TH('Aging &gt;8N','Nhóm BL')}${TH('ODR','N-1 · ≥96%')}${TH('OPR','N-1 · ≥80%')}${TH('FD Total','N-1 · ≤8%')}${TH('FD TTS','N-1 · ≤6,5%')}${TH('FD TTS COD','N-1 · <5%')}
    </tr></thead><tbody>${body}</tbody></table></div>`;
 
   // nhận định (mỗi ý 1 dòng)
