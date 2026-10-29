@@ -310,6 +310,8 @@ const TG_TTS_THREAD   = 3; // topic "TTS - Vận hành"
 const TG_VANDE_THREAD = null; // topic "Vấn đề chung" = General topic → gửi KHÔNG kèm thread (thread 1 báo "not found")
 const TG_BATON_VUNG_CHAT = -1003237202833; // room "Bưu Cục Bất Ổn 2026"
 const TG_BATON_VUNG_THREAD = 5175;          // topic https://t.me/c/3237202833/5175 (p45 BC bất ổn Vùng)
+const TG_KD_CHAT   = -1003802272887; // nhóm "XBG - MỤC TIÊU phải đạt: GTC 70%"
+const TG_KD_THREAD = 6;              // topic https://t.me/c/3802272887/6 (Kinh doanh - Doanh thu theo AM)
 const TG_NSBG_CHAT   = -4931731378; // group "Anh em Bắc Giang" (group thường, không topic)
 
 /* ===== PHÂN QUYỀN (ROLE) =====
@@ -2903,6 +2905,17 @@ async function sendAllToTelegram(){
    }
   }catch(_e){console.warn('TG p45 lỗi:',_e&&_e.message);_tgFail('Bưu Cục Bất Ổn (Vùng)');}
   await new Promise(r=>setTimeout(r,700));
+
+  /* --- KD: 3 bảng "Doanh thu theo AM" (ngày/tuần/tháng) + phân tích → topic Kinh doanh --- */
+  try{
+   if(btn)btn.innerHTML='⏳ Đang gửi: Doanh thu theo AM...';
+   await navTo('p22');
+   await new Promise(r=>setTimeout(r,500));
+   if(!document.getElementById('kd-am-day'))await buildKinhDoanhPage();
+   const _kdR=await _kdBlastCore();
+   if(!_kdR||!_kdR.ok)_tgFail('Doanh thu theo AM (KD)');
+  }catch(_e){console.warn('TG KD lỗi:',_e&&_e.message);_tgFail('Doanh thu theo AM (KD)');}
+  await new Promise(r=>setTimeout(r,600));
 
   // ── Tổng kết: nếu có bước trượt → báo rõ (nút + nhắn riêng "Task Thắng"), KHÔNG nuốt lỗi âm thầm ──
   window._TG_LAST_FAILS=_tgFails.slice();
@@ -6199,7 +6212,8 @@ async function buildKinhDoanhPage(){
   const dayExtra=nm=>{const cur=(dg(nm,lastDayIso)&&dg(nm,lastDayIso).rev)||0, base=(dg(nm,prevWkDay)&&dg(nm,prevWkDay).rev)||0;
    if(base>0&&lowBase(nm,base))return `<span style="color:var(--text-sub);font-weight:600" title="Nền ${shortDD(prevWkDay)} = ${vnd(base)}đ thấp bất thường (dưới 20% bình quân 7 ngày) → % không đáng tin">⚠️ nền thấp</span>`;
    return arw(dPct(cur,base));};
-  const amDayTbl=`<div class="table-wrap"><table><thead>${amHead(amLast7,iso=>shortDD(iso),'DT '+shortDD(lastDayIso)+'<br>vs '+shortDD(prevWkDay))}</thead><tbody>${amBody(amLast7,dg,dayExtra)}${amTotR(amLast7,dg,arw(dPct(sumR(dg,lastDayIso),sumR(dg,prevWkDay))))}</tbody></table></div>`;
+  const amDayDisp=amLast7.slice().reverse(); // ngày mới nhất lên đầu (trái → phải: mới → cũ)
+  const amDayTbl=`<div class="table-wrap"><table><thead>${amHead(amDayDisp,iso=>shortDD(iso),'DT '+shortDD(lastDayIso)+'<br>vs '+shortDD(prevWkDay))}</thead><tbody>${amBody(amDayDisp,dg,dayExtra)}${amTotR(amDayDisp,dg,arw(dPct(sumR(dg,lastDayIso),sumR(dg,prevWkDay))))}</tbody></table></div>`;
   const latestWk=amLast4W[amLast4W.length-1], prevSeqWk=amLast4W[amLast4W.length-2], wPrevMonth=latestWk-4;
   const minusN=(iso,n)=>{const d=new Date(iso);d.setDate(d.getDate()-n);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');};
   const wkDays=[...new Set(aRec.filter(r=>activeAM.has(r.am)&&r.week===latestWk&&r.iso).map(r=>r.iso))].sort();
@@ -6219,11 +6233,51 @@ async function buildKinhDoanhPage(){
   const wkNote=`<div class="analysis-box"><b>📅 Tuần ${latestWk} (cùng kỳ — đến ${wkThru})</b> — Tổng doanh thu Vùng: <b>${vnd(regWkLast)} đ</b><br>Tăng/giảm: ${arw(dPct(regWkLast,regWkSeq))} so với tuần ${prevSeqWk} cùng kỳ (N-1)<br>So sánh theo AM với tuần ${prevSeqWk} (cùng kỳ):${wkBW?`<br>🟢 Tốt nhất <b>${wkBW.best.n}</b> (${arw(wkBW.best.d)})<br>🔴 Tệ nhất <b>${wkBW.worst.n}</b> (${arw(wkBW.worst.d)})`:'<br>không đủ dữ liệu so sánh'}</div>`;
   const moBW=bw(amNames,nm=>dPct(mg(nm,lastM)&&mg(nm,lastM).rev, amPrevSP[nm]&&amPrevSP[nm].rev));
   const moNote=`<div class="analysis-box"><b>📆 Tháng ${lastM} (đến ${maxLabel})</b> — Tổng doanh thu Vùng: <b>${vnd(moTotCur.rev)} đ</b><br>Tăng/giảm: ${arw(dPct(moTotCur.rev,moTotSp.rev))} so với cùng kỳ Tháng ${prevM} (${vnd(moTotSp.rev)} đ)<br>So sánh cùng kỳ Tháng ${prevM} theo AM:${moBW?`<br>🟢 Tốt nhất <b>${moBW.best.n}</b> (${arw(moBW.best.d)})<br>🔴 Tệ nhất <b>${moBW.worst.n}</b> (${arw(moBW.worst.d)})`:'<br>không đủ dữ liệu so sánh'}</div>`;
-  el.innerHTML=`<div class="page-header"><div class="page-title">Kinh Doanh XBG</div><div class="page-meta"><span class="tag tag-orange">💼 Doanh thu · Nguồn: sheet "Kinh doanh Vùng -AM"</span><span>Đơn vị: đồng (đầy đủ) · W${weeks[0]}–W${lastW} · số liệu đến ${maxLabel}</span></div></div>
+  el.innerHTML=`<div class="page-header"><div class="page-title">Kinh Doanh XBG</div><div class="page-meta"><span class="tag tag-orange">💼 Doanh thu · Nguồn: sheet "Kinh doanh Vùng -AM"</span><span>Đơn vị: đồng (đầy đủ) · W${weeks[0]}–W${lastW} · số liệu đến ${maxLabel}</span><button class="tg-inpage-btn" onclick="sendKDtoTelegram(this)">📤 Bắn DT theo AM (TG)</button></div></div>
    <div class="card"><div class="card-header"><div class="card-title"><div class="card-icon">📈</div>A. Tổng quan doanh thu</div><div class="card-info">KPI tháng/tuần · so sánh</div></div>${kpi}${mTbl}${ovNote}</div>
    <div class="card"><div class="card-header"><div class="card-title"><div class="card-icon">👥</div>B. Chi tiết theo nhóm khách hàng</div><div class="card-info">A · BCD · EF · G (KH mới) · so sánh tuần/tháng</div></div>${gTbl}${gwTbl}<div style="font-weight:800;margin:14px 10px 2px;color:var(--orange-dark);font-size:15px">🆕 Phân tích tỉ lệ bán mới — nhóm G</div>${ngMonth}${ngWeek}${ngDay}${ngNote}</div>
-   <div class="card"><div class="card-header"><div class="card-title"><div class="card-icon">🧑‍💼</div>C. Doanh thu theo AM (còn đang làm việc)</div><div class="card-info">${amNames.length} AM active · Ngày → Tuần → Tháng</div></div><div style="font-weight:800;margin:12px 10px 4px;color:var(--orange-dark);font-size:15px">① Theo ngày — 7 ngày gần nhất</div>${amDayTbl}${dayNote}<div style="font-weight:800;margin:16px 10px 4px;color:var(--orange-dark);font-size:15px">② Theo tuần — 4 tuần gần nhất</div>${amWkTbl}${wkNote}<div style="font-weight:800;margin:16px 10px 4px;color:var(--orange-dark);font-size:15px">③ Theo tháng — đầy đủ</div>${amMoTbl}${moNote}</div>`;
+   <div class="card"><div class="card-header"><div class="card-title"><div class="card-icon">🧑‍💼</div>C. Doanh thu theo AM (còn đang làm việc)</div><div class="card-info">${amNames.length} AM active · Ngày → Tuần → Tháng</div></div><div style="font-weight:800;margin:12px 10px 4px;color:var(--orange-dark);font-size:15px">① Theo ngày — 7 ngày gần nhất</div><div id="kd-am-day">${amDayTbl}</div><div id="kd-note-day">${dayNote}</div><div style="font-weight:800;margin:16px 10px 4px;color:var(--orange-dark);font-size:15px">② Theo tuần — 4 tuần gần nhất</div><div id="kd-am-wk">${amWkTbl}</div><div id="kd-note-wk">${wkNote}</div><div style="font-weight:800;margin:16px 10px 4px;color:var(--orange-dark);font-size:15px">③ Theo tháng — đầy đủ</div><div id="kd-am-mo">${amMoTbl}</div><div id="kd-note-mo">${moNote}</div></div>`;
  }catch(e){ el.innerHTML=`<div class="card"><p style="color:var(--red);padding:16px">Lỗi tải Kinh Doanh XBG: ${e.message}</p></div>`; }
+}
+/* ===== Bắn 3 bảng "C. Doanh thu theo AM" (ngày/tuần/tháng) + PHÂN TÍCH → topic KD ===== */
+async function _kdBlastCore(){
+ if(!document.getElementById('kd-am-day')){ try{await buildKinhDoanhPage();}catch(_){} }
+ const parts=[
+  ['kd-am-day','kd-note-day','📅 <b>DOANH THU THEO AM — THEO NGÀY</b> (mới → cũ)'],
+  ['kd-am-wk','kd-note-wk','📅 <b>DOANH THU THEO AM — THEO TUẦN</b>'],
+  ['kd-am-mo','kd-note-mo','📆 <b>DOANH THU THEO AM — THEO THÁNG</b>']
+ ];
+ let ok=true, err='';
+ for(const [tid,nid,title] of parts){
+  const src=document.getElementById(tid);
+  if(!src){ok=false;err='thiếu '+tid;continue;}
+  const noteEl=document.getElementById(nid);
+  let cap=title;
+  if(noteEl){ const nt=(noteEl.innerText||'').trim(); if(nt) cap=title+'\n'+nt; } // kèm PHÂN TÍCH
+  if(cap.length>1020) cap=cap.slice(0,1017)+'...';
+  const cl=src.cloneNode(true);
+  cl.querySelectorAll('*').forEach(e=>{ if(e.style){ if(e.style.position==='sticky')e.style.position='static'; e.style.left='';e.style.top='';e.style.zIndex=''; } });
+  cl.querySelectorAll('.table-wrap').forEach(e=>{e.style.overflow='visible';e.style.maxWidth='none';});
+  const tmp=document.createElement('div');tmp.id='tg-'+tid;tmp.style.cssText='position:fixed;top:-9999px;left:0;z-index:-1;padding:12px;background:#fff;display:inline-block';
+  tmp.appendChild(cl);document.body.appendChild(tmp);
+  await new Promise(r=>setTimeout(r,380));
+  try{
+   const img=await _captureEl('tg-'+tid);
+   if(!img||!img.size)throw new Error('ảnh rỗng');
+   let res=await _tgSendPhoto(TG_KD_CHAT,TG_KD_THREAD,img,cap);
+   if(!res||!res.ok) res=await _tgSendDoc(TG_KD_CHAT,TG_KD_THREAD,img,cap);
+   if(!res||!res.ok){ok=false;err=(res&&res.description)||'TG lỗi';}
+  }catch(e){ok=false;err=e.message;}
+  finally{tmp.remove();}
+  await new Promise(r=>setTimeout(r,800));
+ }
+ return {ok,err};
+}
+async function sendKDtoTelegram(btn){
+ const _t=btn?btn.textContent:''; if(btn){btn.disabled=true;btn.textContent='⏳ Đang bắn...';}
+ try{ const r=await _kdBlastCore(); alert(r.ok?'✅ Đã bắn 3 bảng Doanh thu theo AM (kèm phân tích) lên Telegram.':'Có lỗi khi bắn: '+r.err); }
+ catch(e){ alert('Lỗi bắn KD: '+e.message); }
+ finally{ if(btn){btn.disabled=false;btn.textContent=_t||'📤 Bắn DT theo AM (TG)';} }
 }
 /* ===== DASHBOARD 27: RỚT LC THEO NGÀY (p27) ===== */
 /* Nguồn: "Data rớt LC các ngày" (SHEET_ROTLC). Mỗi dòng = 1 đơn rớt LC.
