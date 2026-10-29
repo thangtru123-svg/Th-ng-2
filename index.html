@@ -1007,14 +1007,14 @@ function renderFDDay(){
  const dTo=document.getElementById('fdDay_dTo')?.value||allD[0];
  const lo=dFrom<=dTo?dFrom:dTo,hi=dFrom<=dTo?dTo:dFrom;
  const dates=allD.filter(d=>d>=lo&&d<=hi);
- document.getElementById('fdDayAMTable').innerHTML=buildFDDayTable([fd.totalAM,fd.smeAM,fd.ttsAM,fd.shopeeAM],['Total','SME','TTS','Shopee'],dates,'AM',window._GTC_MAP_AM);
+ document.getElementById('fdDayAMTable').innerHTML=buildFDDayTable([fd.totalAM,fd.smeAM,fd.ttsAM,fd.codAM,fd.shopeeAM],['Total','SME','TTS','TTS COD','Shopee'],dates,'AM',window._GTC_MAP_AM);
  const bcAM={};const _cm=window._CC_BCAM||{};Object.keys(_cm).forEach(bc=>bcAM[bc]=(_cm[bc]||[]).join(', '));
- document.getElementById('fdDayBCTable').innerHTML=buildFDDayTable([fd.totalBC,fd.smeBC,fd.ttsBC,fd.shopeeBC],['Total','SME','TTS','Shopee'],dates,'Bưu Cục',window._GTC_MAP_BC,bcAM);
+ document.getElementById('fdDayBCTable').innerHTML=buildFDDayTable([fd.totalBC,fd.smeBC,fd.ttsBC,fd.codBC,fd.shopeeBC],['Total','SME','TTS','TTS COD','Shopee'],dates,'Bưu Cục',window._GTC_MAP_BC,bcAM);
  // ===== Nhóm BC bất ổn / ổn định (theo sheet cột E) + Tổng quan =====
  const baton=window._BC_BATON||new Set();
  const _isBaton=n=>baton.has((n||'').trim());
- document.getElementById('fdDayBatOnTable').innerHTML=buildFDDayTable([fd.totalBC,fd.smeBC,fd.ttsBC,fd.shopeeBC],['Total','SME','TTS','Shopee'],dates,'Bưu Cục',window._GTC_MAP_BC,bcAM,n=>_isBaton(n));
- document.getElementById('fdDayOnDinhTable').innerHTML=buildFDDayTable([fd.totalBC,fd.smeBC,fd.ttsBC,fd.shopeeBC],['Total','SME','TTS','Shopee'],dates,'Bưu Cục',window._GTC_MAP_BC,bcAM,n=>!_isBaton(n));
+ document.getElementById('fdDayBatOnTable').innerHTML=buildFDDayTable([fd.totalBC,fd.smeBC,fd.ttsBC,fd.codBC,fd.shopeeBC],['Total','SME','TTS','TTS COD','Shopee'],dates,'Bưu Cục',window._GTC_MAP_BC,bcAM,n=>_isBaton(n));
+ document.getElementById('fdDayOnDinhTable').innerHTML=buildFDDayTable([fd.totalBC,fd.smeBC,fd.ttsBC,fd.codBC,fd.shopeeBC],['Total','SME','TTS','TTS COD','Shopee'],dates,'Bưu Cục',window._GTC_MAP_BC,bcAM,n=>!_isBaton(n));
  // Tổng quan: toàn Vùng (Total/SME/TTS/Shopee) + nhóm ổn định/bất ổn (Total + Δ so N-1). Mốc = ngày "Đến ngày" (hi).
  (function(){
   const latest=hi, prevD=allD.find(d=>d<hi);
@@ -1022,13 +1022,13 @@ function renderFDDay(){
   const _grp=(sheet,dISO,pred)=>{const d=_gd(sheet,dISO);let sv=0,sf=0,cnt=0;Object.entries(d).forEach(([n,v])=>{if(pred&&!pred(n))return;if(v.vol==null)return;sv+=v.vol;sf+=(v.fd||0)*v.vol;cnt++;});return{fd:sv>0?sf/sv:null,n:cnt};};
   const P=x=>x==null?'—':x.toFixed(2)+'%';
   const dlt=(now,prev)=>{if(now==null||prev==null)return '<span style="color:var(--text-sub);font-size:12px">— chưa có N-1</span>';const d=now-prev;if(Math.abs(d)<0.005)return '<span style="color:var(--text-sub);font-size:12px">▬ không đổi so N-1</span>';const up=d>0;return `<span style="color:${up?'var(--red)':'var(--green)'};font-weight:700;font-size:12px">${up?'▲ tăng':'▼ giảm'} ${Math.abs(d).toFixed(2)} điểm % so N-1</span>`;};
-  const vT=_grp(fd.totalBC,latest,null),vS=_grp(fd.smeBC,latest,null),vTs=_grp(fd.ttsBC,latest,null),vSh=_grp(fd.shopeeBC,latest,null);
+  const vT=_grp(fd.totalBC,latest,null),vS=_grp(fd.smeBC,latest,null),vTs=_grp(fd.ttsBC,latest,null),vCod=_grp(fd.codBC,latest,null),vSh=_grp(fd.shopeeBC,latest,null);
   const odN=_grp(fd.totalBC,latest,n=>!_isBaton(n)),odP=prevD?_grp(fd.totalBC,prevD,n=>!_isBaton(n)):{fd:null};
   const boN=_grp(fd.totalBC,latest,_isBaton),boP=prevD?_grp(fd.totalBC,prevD,_isBaton):{fd:null};
   const cardBig=(lbl,val,col)=>`<div style="flex:1;min-width:150px;background:var(--card);border:1px solid var(--border);border-top:3px solid ${col};border-radius:12px;padding:14px 16px;box-shadow:var(--shadow-sm)"><div style="font-size:11px;font-weight:700;color:var(--text-sub);text-transform:uppercase;letter-spacing:.5px">${lbl}</div><div style="font-size:28px;font-weight:800;color:${col};line-height:1.1;margin-top:4px">${val}</div></div>`;
   const cardGrp=(icon,lbl,g,gp,col)=>`<div style="flex:1;min-width:230px;background:var(--card);border:1px solid var(--border);border-left:4px solid ${col};border-radius:12px;padding:14px 16px;box-shadow:var(--shadow-sm)"><div style="font-size:13px;font-weight:800;color:${col}">${icon} ${lbl}</div><div style="font-size:30px;font-weight:800;color:var(--text-main);line-height:1.1;margin:4px 0 3px">${P(g.fd)}</div><div>${dlt(g.fd,gp.fd)}</div><div style="font-size:11px;color:var(--text-sub);margin-top:3px">${g.n} Bưu Cục · Tỉ lệ trả Total</div></div>`;
   let h=`<div class="s" style="margin:2px 0 12px">Mốc: <b>${shortDDow(latest)}</b>${prevD?` · so với N-1 (${shortDDow(prevD)})`:''} · %trả gộp weighted theo %Vol</div>`;
-  h+=`<div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:14px"><div style="flex:2;min-width:320px"><div style="font-size:12px;font-weight:700;color:var(--text-sub);margin-bottom:7px">TOÀN VÙNG — theo nhóm khách</div><div style="display:flex;gap:10px;flex-wrap:wrap">${cardBig('Tỉ lệ trả Total',P(vT.fd),'#DC2626')}${cardBig('SME',P(vS.fd),'#6B7280')}${cardBig('TTS',P(vTs.fd),'#D97706')}${cardBig('Shopee',P(vSh.fd),'#7C3AED')}</div></div></div>`;
+  h+=`<div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:14px"><div style="flex:2;min-width:320px"><div style="font-size:12px;font-weight:700;color:var(--text-sub);margin-bottom:7px">TOÀN VÙNG — theo nhóm khách</div><div style="display:flex;gap:10px;flex-wrap:wrap">${cardBig('Tỉ lệ trả Total',P(vT.fd),'#DC2626')}${cardBig('SME',P(vS.fd),'#6B7280')}${cardBig('TTS',P(vTs.fd),'#D97706')}${cardBig('TTS COD',P(vCod.fd),'#0EA5E9')}${cardBig('Shopee',P(vSh.fd),'#7C3AED')}</div></div></div>`;
   h+=`<div style="display:flex;gap:12px;flex-wrap:wrap">${cardGrp('✅','Nhóm Bưu Cục Ổn Định',odN,odP,'#16A34A')}${cardGrp('⚠️','Nhóm Bưu Cục Bất Ổn',boN,boP,'#DC2626')}</div>`;
   document.getElementById('fdOverview').innerHTML=h;
  })();
@@ -1131,7 +1131,7 @@ function buildFDDayTable(sheetArr,labels,dates,nameLabel,gtcMap,amMap,nameFilter
   const worstAM=(di,si)=>{const dd=dData[di]?.[si]||{};let wn=null,wf=-1;Object.entries(dd).filter(([n])=>!isGrand(n)).forEach(([n,v])=>{if(v.fd!=null&&v.fd>wf){wf=v.fd;wn=n;}});return wn?{name:wn,fd:wf}:null;};
   // AM cải thiện nhiều nhất: giảm nhiều nhất từ ngày 1→0
   const bestAM=(si)=>{const dd0=dData[0]?.[si]||{},dd1=dData[1]?.[si]||{};let bn=null,bd=0;Object.entries(dd0).filter(([n])=>!isGrand(n)).forEach(([n,v])=>{if(dd1[n]&&v.fd!=null&&dd1[n].fd!=null){const imp=dd1[n].fd-v.fd;if(imp>bd){bd=imp;bn=n;}}});return bn?{name:bn,improved:bd}:null;};
-  const grpLabels=[{l:'Total',si:0},{l:'SME',si:1},{l:'TTS',si:2},{l:'Shopee',si:3}];
+  const grpLabels=[{l:'Total',si:0},{l:'SME',si:1},{l:'TTS',si:2},{l:'TTS COD',si:3},{l:'Shopee',si:4}];
   const boxes=grpLabels.map(g=>{const gt0=computeGT(0,g.si),gt1=computeGT(1,g.si);const w=worstAM(0,g.si);const b=bestAM(g.si);return{l:g.l,gt0,gt1,w,b};}).filter(b=>b.gt0!==null&&b.gt1!==null);
   if(boxes.length){
    h+=`<div class="analysis-box"><div style="font-size:13px;font-weight:700;margin-bottom:10px">📊 So sánh ${shortD(dates[1])} → ${shortD(dates[0])}</div><div style="display:flex;flex-wrap:wrap;gap:10px">`;
@@ -1178,8 +1178,8 @@ function renderFDByAM(){
  const allD=[...new Set(fd.totalAM.slice(1).map(r=>isoD(r[1])).filter(d=>d))].sort((a,b)=>b.localeCompare(a));
  const dSel=document.getElementById('fdAmbc_d')?.value||allD[0];
  const getD=sheet=>{const m={};(sheet||[]).slice(1).forEach(r=>{if(isoD(r[1])!==dSel)return;const n=(r[0]||'').trim();if(!n||n.toLowerCase().includes('grand total'))return;m[n]={vol:parsePct(r[2]),fd:parsePct(r[3])};});return m;};
- const bc={Total:getD(fd.totalBC),SME:getD(fd.smeBC),TTS:getD(fd.ttsBC),Shopee:getD(fd.shopeeBC)};
- const am={Total:getD(fd.totalAM),SME:getD(fd.smeAM),TTS:getD(fd.ttsAM),Shopee:getD(fd.shopeeAM)};
+ const bc={Total:getD(fd.totalBC),SME:getD(fd.smeBC),TTS:getD(fd.ttsBC),COD:getD(fd.codBC),Shopee:getD(fd.shopeeBC)};
+ const am={Total:getD(fd.totalAM),SME:getD(fd.smeAM),TTS:getD(fd.ttsAM),COD:getD(fd.codAM),Shopee:getD(fd.shopeeAM)};
  const cc=window._CC_BCAM||{};const baton=window._BC_BATON||new Set();const isBaton=n=>baton.has((n||'').trim());
  const amBCs={};Object.keys(cc).forEach(b=>{(cc[b]||[]).forEach(a=>{(amBCs[a]=amBCs[a]||[]).push(b);});});
  const types=['Total','SME','TTS','Shopee'];
@@ -1193,6 +1193,9 @@ function renderFDByAM(){
   const t=(bo?FD_TARGET.unstable:FD_TARGET.stable)[type];const d=v.fd-t;const pass=d<=0.0001;
   const bg=pass?'#DCFCE7':'#FEE2E2',col=pass?'#15803D':'#DC2626';
   return `<td style="${cs}text-align:center;background:${bg};color:${col};font-weight:700">${v.fd.toFixed(2)}%<div style="font-size:9.5px;font-weight:700;margin-top:1px">${d>0?'▲ +':'▼ '}${Math.abs(d).toFixed(1)}% ${pass?'đạt':'vượt'} MT ${t}%</div></td>`;};
+ // FD TTS COD — chưa có target riêng, chỉ hiển thị %FD (tham chiếu mốc TTS 6,5%)
+ const codCell=(v,bold)=>{ if(v==null||v.fd==null)return `<td style="${cs}text-align:center;color:var(--text-sub)">—</td>`;
+  const red=v.fd>6.5;return `<td style="${cs}text-align:center;background:${red?'#FEF2F2':'#F0F9FF'};color:${red?'#DC2626':'#0369A1'};font-weight:${bold?800:700}">${v.fd.toFixed(2)}%</td>`;};
  let H='';
  amList.forEach((a,ai)=>{
   const bcs=[...new Set(amBCs[a])].filter(b=>types.some(t=>bc[t][b]));
@@ -1214,19 +1217,20 @@ function renderFDByAM(){
     <th style="${cs}text-align:center;background:#FEEDE4">FD Total</th>
     <th style="${cs}text-align:center;background:#FEEDE4">FD SME</th>
     <th style="${cs}text-align:center;background:#FEEDE4">FD TTS</th>
+    <th style="${cs}text-align:center;background:#E0F2FE">FD TTS COD</th>
     <th style="${cs}text-align:center;background:#FEEDE4">FD Shopee</th></tr></thead><tbody>`;
   bcs.forEach((b,bi)=>{const bo=isBaton(b);
    H+=`<tr><td style="${cs}text-align:center;color:var(--text-sub)">${bi+1}</td>
     <td style="${cs}font-weight:600;white-space:nowrap">${b}</td>
     <td style="${cs}text-align:center">${bo?'<span style="background:#FEE2E2;color:#DC2626;border:1px solid #FECACA;border-radius:4px;font-size:10px;font-weight:700;padding:1px 6px">⚠ bất ổn</span>':'<span style="background:#DCFCE7;color:#15803D;border:1px solid #BBF7D0;border-radius:4px;font-size:10px;font-weight:700;padding:1px 6px">ổn định</span>'}</td>
-    ${cell(bc.Total[b],'Total',bo)}${cell(bc.SME[b],'SME',bo)}${cell(bc.TTS[b],'TTS',bo)}${cell(bc.Shopee[b],'Shopee',bo)}</tr>`;
+    ${cell(bc.Total[b],'Total',bo)}${cell(bc.SME[b],'SME',bo)}${cell(bc.TTS[b],'TTS',bo)}${codCell(bc.COD[b])}${cell(bc.Shopee[b],'Shopee',bo)}</tr>`;
   });
   // dòng Total AM (dùng target ổn định làm mốc tham chiếu — không tô, chỉ in đậm)
-  const tot={};types.forEach(t=>tot[t]=amAgg(t));
+  const tot={};types.forEach(t=>tot[t]=amAgg(t));const totCod=amAgg('COD');
   const totCell=(v,type)=>{ if(!v||v.fd==null)return `<td style="${cs}text-align:center">—</td>`;
    const t=FD_TARGET.stable[type];const d=v.fd-t;const col=d>0.0001?'#DC2626':'#15803D';
    return `<td style="${cs}text-align:center;font-weight:800">${v.fd.toFixed(2)}%<div style="font-size:9.5px;font-weight:700;color:${col}">${d>0?'▲ +':'▼ '}${Math.abs(d).toFixed(1)}% vs MT ${t}%</div></td>`;};
-  H+=`<tr class="tot"><td style="${cs}"></td><td style="${cs}font-weight:800">TỔNG ${a}</td><td style="${cs}"></td>${totCell(tot.Total,'Total')}${totCell(tot.SME,'SME')}${totCell(tot.TTS,'TTS')}${totCell(tot.Shopee,'Shopee')}</tr>`;
+  H+=`<tr class="tot"><td style="${cs}"></td><td style="${cs}font-weight:800">TỔNG ${a}</td><td style="${cs}"></td>${totCell(tot.Total,'Total')}${totCell(tot.SME,'SME')}${totCell(tot.TTS,'TTS')}${codCell(totCod,true)}${totCell(tot.Shopee,'Shopee')}</tr>`;
   H+=`</tbody></table></div></div>`;
  });
  if(!H)H='<p style="padding:16px;color:var(--text-sub)">Không có dữ liệu cho ngày này.</p>';
@@ -1275,6 +1279,7 @@ function buildFDWeekTable(sheetArr,labels,isBC,selWeeks,nameFilter){
  // Δ vs target (chỉ bảng Bưu Cục — target theo BC ổn định/bất ổn)
  const _baton=window._BC_BATON||new Set();const _isBt=n=>_baton.has((n||'').trim());
  const addTgt=isBC&&typeof FD_TARGET!=='undefined';
+ const TGTLABELS=['Total','SME','TTS','Shopee']; // COD chưa có target → không hiện cột Δ
  const dCell=(fd,type,bo,name)=>{ if(fd==null)return `<td style="${cs}text-align:center;color:var(--text-sub);border-left:1px solid #E5E7EB;background:#FFFDF5">—</td>`;
   const t=_fdBCTgt(name,type,bo);const d=fd-t;const over=d>0.0001;
   return `<td title="MT riêng BC: ${t}%" style="${cs}text-align:center;border-left:1px solid #E5E7EB;background:${over?'#FEE2E2':'#DCFCE7'};color:${over?'#DC2626':'#15803D'};font-weight:700">${over?'+':''}${d.toFixed(1)}%</td>`;};
@@ -1286,10 +1291,10 @@ function buildFDWeekTable(sheetArr,labels,isBC,selWeeks,nameFilter){
  let h=`<div class="table-wrap" style="overflow-x:auto"><table><thead style="position:sticky;top:0;z-index:4">`;
  h+=`<tr><th rowspan="2" style="${cs}width:32px;text-align:center;background:#FEEDE4">STT</th><th rowspan="2" style="${cs}width:200px;background:#FEEDE4">${hLabel}</th>`;
  selWeeks.forEach((w,wi)=>{const bg=WC[wi%WC.length];h+=`<th colspan="${labels.length}" style="${cs}text-align:center;border-left:3px solid #D1D5DB;background:${bg}"><strong>Tuần ${w}</strong></th>`;});
- if(addTgt)h+=`<th colspan="4" style="${cs}text-align:center;border-left:3px solid #C00000;background:#FDE7E7"><strong>Δ so Target riêng BC (Tuần ${latestWk})</strong></th>`;
+ if(addTgt)h+=`<th colspan="${TGTLABELS.length}" style="${cs}text-align:center;border-left:3px solid #C00000;background:#FDE7E7"><strong>Δ so Target riêng BC (Tuần ${latestWk})</strong></th>`;
  h+='</tr><tr>';
  selWeeks.forEach((w,wi)=>{const bg=WC[wi%WC.length];labels.forEach(l=>{h+=`<th style="${cs}text-align:center;border-left:1px solid #E5E7EB;background:${bg}">%FD<br><small style="font-weight:400;font-size:10px">${l}</small></th>`;});});
- if(addTgt)labels.forEach((l,li)=>{h+=`<th style="${cs}text-align:center;border-left:${li===0?'3px solid #C00000':'1px solid #E5E7EB'};background:#FDE7E7">Δ<br><small style="font-weight:400;font-size:10px">${l}</small></th>`;});
+ if(addTgt)TGTLABELS.forEach((l,li)=>{h+=`<th style="${cs}text-align:center;border-left:${li===0?'3px solid #C00000':'1px solid #E5E7EB'};background:#FDE7E7">Δ<br><small style="font-weight:400;font-size:10px">${l}</small></th>`;});
  h+='</tr></thead><tbody>';
  names.forEach((name,i)=>{
   const isG=isGrand(name);
@@ -1301,7 +1306,7 @@ function buildFDWeekTable(sheetArr,labels,isBC,selWeeks,nameFilter){
     h+=`<td style="${cs}text-align:center;border-left:${si===0?'3px solid #D1D5DB':'1px solid #E5E7EB'};background:${red?'#FEE2E2':bg};color:${red?'#DC2626':'inherit'};font-weight:${red?700:'inherit'}">${fd!==null?fd.toFixed(1)+'%':'—'}</td>`;
    });
   });
-  if(addTgt){ if(isG){h+=`<td colspan="4" style="${cs}background:#FDE7E7"></td>`;} else {const bo=_isBt(name);labels.forEach((l)=>{const fd=wMap[labels.indexOf(l)]?.[name]?.[latestWk]??null;h+=dCell(fd,l,bo,name);});} }
+  if(addTgt){ if(isG){h+=`<td colspan="${TGTLABELS.length}" style="${cs}background:#FDE7E7"></td>`;} else {const bo=_isBt(name);TGTLABELS.forEach((l)=>{const fd=wMap[labels.indexOf(l)]?.[name]?.[latestWk]??null;h+=dCell(fd,l,bo,name);});} }
   h+='</tr>';
  });
  h+='</tbody></table></div>';
@@ -1332,9 +1337,9 @@ function renderFDWeek(){
  const fi=weeks.indexOf(wFrom),ti=weeks.indexOf(wTo);
  const lo=Math.min(fi,ti),hi=Math.max(fi,ti);
  const selWeeks=weeks.slice(lo,hi+1);
- const bcSheets=[fd.totalBC,fd.smeBC,fd.ttsBC,fd.shopeeBC];const L=['Total','SME','TTS','Shopee'];
+ const bcSheets=[fd.totalBC,fd.smeBC,fd.ttsBC,fd.codBC,fd.shopeeBC];const L=['Total','SME','TTS','TTS COD','Shopee'];
  const baton=window._BC_BATON||new Set();const _isB=n=>baton.has((n||'').trim());
- document.getElementById('fdWkAMTable').innerHTML=buildFDWeekTable([fd.totalAM,fd.smeAM,fd.ttsAM,fd.shopeeAM],L,false,selWeeks);
+ document.getElementById('fdWkAMTable').innerHTML=buildFDWeekTable([fd.totalAM,fd.smeAM,fd.ttsAM,fd.codAM,fd.shopeeAM],L,false,selWeeks);
  const _bo=document.getElementById('fdWkBatOnTable');if(_bo){_bo.innerHTML=buildFDWeekTable(bcSheets,L,true,selWeeks,n=>_isB(n));addBCSearch(_bo);}
  const _od=document.getElementById('fdWkOnDinhTable');if(_od){_od.innerHTML=buildFDWeekTable(bcSheets,L,true,selWeeks,n=>!_isB(n));addBCSearch(_od);}
  document.getElementById('fdWkBCTable').innerHTML=buildFDWeekTable(bcSheets,L,true,selWeeks);
@@ -1569,6 +1574,7 @@ function renderChartFD(dates,fdMap){
    mkDs('Total','total','#F15D29','rgba(241,93,41,0.06)'),
    mkDs('SME','sme','#3B82F6'),
    mkDs('TTS','tts','#16A34A'),
+   mkDs('TTS COD','cod','#0EA5E9'),
    mkDs('Shopee','shopee','#8B5CF6')
   ]},
   options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
@@ -1588,7 +1594,7 @@ function renderChartFD(dates,fdMap){
  const trend5=()=>{const r=dates.slice(-5).map(d=>tot[d]).filter(v=>v!=null);if(r.length<3)return null;return(r[r.length-2]+r[r.length-1])/2-(r[0]+r[1])/2;};
  const t=trend5();
  let ana=`📅 <strong>Ngày ${shortD(latest)}:</strong> Total <strong style="color:${lv>=15?'var(--red)':lv>=10?'var(--yellow)':'var(--green)'}">${lv?.toFixed(2)}%</strong>`;
- [['sme','SME'],['tts','TTS'],['shopee','Shopee']].forEach(([k,l])=>{const v=fdMap[k][latest];if(v!=null)ana+=` · ${l} <strong style="color:${v>=15?'var(--red)':v>=10?'var(--yellow)':'var(--green)'}">${v.toFixed(2)}%</strong>`;});
+ [['sme','SME'],['tts','TTS'],['cod','TTS COD'],['shopee','Shopee']].forEach(([k,l])=>{const v=fdMap[k]&&fdMap[k][latest];if(v!=null)ana+=` · ${l} <strong style="color:${v>=15?'var(--red)':v>=10?'var(--yellow)':'var(--green)'}">${v.toFixed(2)}%</strong>`;});
  if(pv!=null){const diff=+(lv-pv).toFixed(2);ana+=`. So với ${shortD(prev)}: <span style="color:${diff>0?'var(--red)':'var(--green)'};font-weight:700">${diff>0?'▲ +':'▼ '}${diff}%</span>`;}
  if(t!=null){const tc=t>0?'var(--red)':'var(--green)';ana+=`. Xu hướng 5 ngày: <span style="color:${tc};font-weight:600">${t>0?'▲ Tăng':'▼ Giảm'} (${t>0?'+':''}${t.toFixed(2)}%)</span>`;}
  anaEl.innerHTML=ana+'.';
@@ -1714,8 +1720,9 @@ function buildOverviewPage(){
  const fdTotal=_calcFdGT(window._FD?.totalAM);
  const fdSME=_calcFdGT(window._FD?.smeAM);
  const fdTTS=_calcFdGT(window._FD?.ttsAM);
+ const fdCOD=_calcFdGT(window._FD?.codAM);
  const fdShopee=_calcFdGT(window._FD?.shopeeAM);
- const fdDates=[...new Set([...Object.keys(fdTotal),...Object.keys(fdSME),...Object.keys(fdTTS),...Object.keys(fdShopee)])].sort((a,b)=>a.localeCompare(b)).slice(-15);
+ const fdDates=[...new Set([...Object.keys(fdTotal),...Object.keys(fdSME),...Object.keys(fdTTS),...Object.keys(fdCOD),...Object.keys(fdShopee)])].sort((a,b)=>a.localeCompare(b)).slice(-15);
  // Ontime aggregate
  function getOntimeGT(rows){const bd={};(rows||[]).slice(1).forEach(r=>{if((r[0]||'').toLowerCase().includes('grand total')||!(r[0]||'').trim()||r.length<5)return;const d=isoD(r[1]);if(!d)return;if(!bd[d])bd[d]={vol:0,cnt:0};bd[d].vol+=Math.round(parseFloat(r[2])||0);bd[d].cnt+=Math.round(parseFloat(r[4])||0);});return bd;}
  window._ovOdrByDate=getOntimeGT(window._D.odrAM);
@@ -1760,7 +1767,7 @@ function buildOverviewPage(){
  </div>`;
  // Gom phần vẽ 4 chart thành 1 hàm tái dùng — Chart.js kẹt bề rộng nếu vẽ lúc trang p0 đang ẩn (display:none),
  // và resize() KHÔNG hồi được → phải vẽ lại (destroy+create) mỗi khi p0 hiện ra (xem hook trong show()).
- window._renderOverviewCharts=()=>{renderChartGTC(gtcDates,gtcByDate);renderChartFD(fdDates,{total:fdTotal,sme:fdSME,tts:fdTTS,shopee:fdShopee});renderChartAging();renderChartOntime();};
+ window._renderOverviewCharts=()=>{renderChartGTC(gtcDates,gtcByDate);renderChartFD(fdDates,{total:fdTotal,sme:fdSME,tts:fdTTS,cod:fdCOD,shopee:fdShopee});renderChartAging();renderChartOntime();};
  setTimeout(()=>window._renderOverviewCharts(),50);
 }
 
@@ -2302,11 +2309,11 @@ async function _fdSendAll(){
  const grp=(sheet,dd,pred)=>{const o=_gd(sheet,dd);let sv=0,sf=0,c=0;Object.entries(o).forEach(([n,v])=>{if(pred&&!pred(n))return;sv+=v.vol||0;sf+=(v.fd||0)*(v.vol||0);c++;});return{fd:sv?sf/sv:null,n:c};};
  const P=x=>x==null?'—':x.toFixed(2)+'%';
  const dtxt=(now,prv)=>{if(now==null||prv==null)return '';const d=now-prv;if(Math.abs(d)<0.005)return ' (không đổi so N-1)';return ` (${d>0?'▲ tăng':'▼ giảm'} ${Math.abs(d).toFixed(2)} điểm % so N-1)`;};
- const vT=grp(fd.totalBC,latest,null),vS=grp(fd.smeBC,latest,null),vTs=grp(fd.ttsBC,latest,null),vSh=grp(fd.shopeeBC,latest,null);
+ const vT=grp(fd.totalBC,latest,null),vS=grp(fd.smeBC,latest,null),vTs=grp(fd.ttsBC,latest,null),vCod=grp(fd.codBC,latest,null),vSh=grp(fd.shopeeBC,latest,null);
  const odN=grp(fd.totalBC,latest,n=>!_isB(n)),odP=grp(fd.totalBC,prev,n=>!_isB(n));
  const boN=grp(fd.totalBC,latest,_isB),boP=grp(fd.totalBC,prev,_isB);
  let capOv=`📊 <b>TỔNG QUAN TỈ LỆ TRẢ TOÀN VÙNG — ${fD(latest)}</b>\n`;
- capOv+=`Toàn Vùng: Total <b>${P(vT.fd)}</b>`+(vS.fd!=null?` · SME ${P(vS.fd)}`:'')+` · TTS ${P(vTs.fd)} · Shopee ${P(vSh.fd)}\n`;
+ capOv+=`Toàn Vùng: Total <b>${P(vT.fd)}</b>`+(vS.fd!=null?` · SME ${P(vS.fd)}`:'')+` · TTS ${P(vTs.fd)}`+(vCod.fd!=null?` · TTS COD ${P(vCod.fd)}`:'')+` · Shopee ${P(vSh.fd)}\n`;
  capOv+=`✅ Nhóm ổn định (${odN.n} BC): <b>${P(odN.fd)}</b>${dtxt(odN.fd,odP.fd)}\n`;
  capOv+=`⚠️ Nhóm bất ổn (${boN.n} BC): <b>${P(boN.fd)}</b>${dtxt(boN.fd,boP.fd)}\n\n📝 <b>Nhận định:</b>\n`;
  if(boN.fd!=null&&odN.fd!=null){const gap=boN.fd-odN.fd,ratio=odN.fd>0?boN.fd/odN.fd:0;capOv+=`• Nhóm bất ổn cao hơn ổn định ${gap.toFixed(2)} điểm %${ratio>=1.3?` (gấp ~${ratio.toFixed(1)} lần)`:''}.\n`;}
@@ -2431,11 +2438,11 @@ async function sendTLTToTelegram(){
   const grp=(sheet,dd,pred)=>{const o=_gd(sheet,dd);let sv=0,sf=0,c=0;Object.entries(o).forEach(([n,v])=>{if(pred&&!pred(n))return;sv+=v.vol||0;sf+=(v.fd||0)*(v.vol||0);c++;});return{fd:sv?sf/sv:null,n:c};};
   const P=x=>x==null?'—':x.toFixed(2)+'%';
   const dtxt=(now,prv)=>{if(now==null||prv==null)return '';const d=now-prv;if(Math.abs(d)<0.005)return ' (không đổi so N-1)';return ` (${d>0?'▲ tăng':'▼ giảm'} ${Math.abs(d).toFixed(2)} điểm % so N-1)`;};
-  const vT=grp(fd.totalBC,latest,null),vS=grp(fd.smeBC,latest,null),vTs=grp(fd.ttsBC,latest,null),vSh=grp(fd.shopeeBC,latest,null);
+  const vT=grp(fd.totalBC,latest,null),vS=grp(fd.smeBC,latest,null),vTs=grp(fd.ttsBC,latest,null),vCod=grp(fd.codBC,latest,null),vSh=grp(fd.shopeeBC,latest,null);
   const odN=grp(fd.totalBC,latest,n=>!_isB(n)),odP=grp(fd.totalBC,prev,n=>!_isB(n));
   const boN=grp(fd.totalBC,latest,_isB),boP=grp(fd.totalBC,prev,_isB);
   let capOv=`📊 <b>TỔNG QUAN TỈ LỆ TRẢ TOÀN VÙNG — ${fD(latest)}</b>\n`;
-  capOv+=`Toàn Vùng: Total <b>${P(vT.fd)}</b>`+(vS.fd!=null?` · SME ${P(vS.fd)}`:'')+` · TTS ${P(vTs.fd)} · Shopee ${P(vSh.fd)}\n`;
+  capOv+=`Toàn Vùng: Total <b>${P(vT.fd)}</b>`+(vS.fd!=null?` · SME ${P(vS.fd)}`:'')+` · TTS ${P(vTs.fd)}`+(vCod.fd!=null?` · TTS COD ${P(vCod.fd)}`:'')+` · Shopee ${P(vSh.fd)}\n`;
   capOv+=`✅ Nhóm ổn định (${odN.n} BC): <b>${P(odN.fd)}</b>${dtxt(odN.fd,odP.fd)}\n`;
   capOv+=`⚠️ Nhóm bất ổn (${boN.n} BC): <b>${P(boN.fd)}</b>${dtxt(boN.fd,boP.fd)}\n\n📝 <b>Nhận định:</b>\n`;
   if(boN.fd!=null&&odN.fd!=null){const gap=boN.fd-odN.fd,ratio=odN.fd>0?boN.fd/odN.fd:0;capOv+=`• Nhóm bất ổn cao hơn ổn định ${gap.toFixed(2)} điểm %${ratio>=1.3?` (gấp ~${ratio.toFixed(1)} lần)`:''}.\n`;}
@@ -4652,6 +4659,7 @@ async function buildBatOnVungPage(){
   const opr   =mkMap(window._D&&window._D.oprBC    ,1,2,4,100); // OPR %Ontime (col4)
   const fdT   =mkMap(window._FD&&window._FD.totalBC,0,1,3,100); // FD Total (BC0 Ngày1 %FD3)
   const fdTts =mkMap(window._FD&&window._FD.ttsBC  ,0,1,3,100); // FD TTS
+  const fdCod =mkMap(window._FD&&window._FD.codBC  ,0,1,3,100); // FD TTS có COD
   const gLatest=latestOf(gtcT);
 
   // Aging: >5N = mọi đơn snapshot mới nhất; >8N = Nhóm BL ≠ g1 (_lowAgGe8)
@@ -4668,7 +4676,7 @@ async function buildBatOnVungPage(){
    rows.push({bc, am:(cc[bc]&&cc[bc].join(', '))||'—', gt,
     gtts:valOn(gtcTts,bc,gLatest), ag5:ag5[bc]||0, ag8:ag8[bc]||0,
     odr:valOn(odr,bc,gLatest), opr:valOn(opr,bc,gLatest),
-    fdt:valOn(fdT,bc,gLatest), fdtts:valOn(fdTts,bc,gLatest)});
+    fdt:valOn(fdT,bc,gLatest), fdtts:valOn(fdTts,bc,gLatest), fdcod:valOn(fdCod,bc,gLatest)});
   });
   rows.sort((a,b)=>a.gt-b.gt); // tệ nhất lên đầu
   window._BATONVUNG={day:gLatest,agDay:agLatest,rows};
@@ -4703,7 +4711,7 @@ async function buildBatOnVungPage(){
     +cellP(r.gt,true)+cellP(r.gtts,r.gtts!=null&&r.gtts<BATON_VUNG_NGUONG)
     +cellN(r.ag5,r.ag5>50)+cellN(r.ag8,r.ag8>0)
     +cellP(r.odr,r.odr!=null&&r.odr<96)+cellP(r.opr,r.opr!=null&&r.opr<80)
-    +cellP(r.fdt,r.fdt!=null&&r.fdt>8)+cellP(r.fdtts,r.fdtts!=null&&r.fdtts>6.5)
+    +cellP(r.fdt,r.fdt!=null&&r.fdt>8)+cellP(r.fdtts,r.fdtts!=null&&r.fdtts>6.5)+cellP(r.fdcod,r.fdcod!=null&&r.fdcod>6.5)
     +`</tr>`;
   }).join('');
 
@@ -4712,7 +4720,7 @@ async function buildBatOnVungPage(){
    <th style="padding:8px 10px;text-align:center;font-size:11.5px;font-weight:800;color:#FFFFFF;width:32px">#</th>
    <th style="padding:8px 13px;text-align:left;font-size:11.5px;font-weight:800;color:#FFFFFF">AM</th>
    <th style="padding:8px 13px;text-align:left;font-size:11.5px;font-weight:800;color:#FFFFFF">Bưu Cục</th>
-   ${TH('%GTC Total','N-1 · &lt;60%')}${TH('%GTC TTS','N-1')}${TH('Aging &gt;5N','snapshot')}${TH('Aging &gt;8N','Nhóm BL')}${TH('ODR','N-1 · ≥96%')}${TH('OPR','N-1 · ≥80%')}${TH('FD Total','N-1 · ≤8%')}${TH('FD TTS','N-1 · ≤6,5%')}
+   ${TH('%GTC Total','N-1 · &lt;60%')}${TH('%GTC TTS','N-1')}${TH('Aging &gt;5N','snapshot')}${TH('Aging &gt;8N','Nhóm BL')}${TH('ODR','N-1 · ≥96%')}${TH('OPR','N-1 · ≥80%')}${TH('FD Total','N-1 · ≤8%')}${TH('FD TTS','N-1 · ≤6,5%')}${TH('FD TTS COD','N-1 · ≤6,5%')}
    </tr></thead><tbody>${body}</tbody></table></div>`;
 
   // nhận định (mỗi ý 1 dòng)
@@ -4950,8 +4958,8 @@ async function init(){
  const sheetNames=[
   'GTC Total theo AM','GTC Total theo Bưu Cục',
   'GTC TTS theo AM','GTC TTS theo Bưu Cục',
-  'FD Total theo AM','FD SME theo AM','FD TTS theo AM','FD Shopee theo AM',
-  'FD Total theo Bưu Cục','FD SME theo Bưu Cục','FD TTS theo Bưu Cục','FD Shopee theo Bưu Cục',
+  'FD Total theo AM','FD SME theo AM','FD TTS theo AM','FD TTS có COD theo AM','FD Shopee theo AM',
+  'FD Total theo Bưu Cục','FD SME theo Bưu Cục','FD TTS theo Bưu Cục','FD TTS có COD theo Bưu Cục','FD Shopee theo Bưu Cục',
   'ODR TTS - AM','ODR TTS - Bưu Cục',
   'OPR TTS - AM','OPR TTS - Bưu Cục',
   'GTC ca 1,2 theo AM','LTC - AM','GTC ca 1,2 TTS theo AM'
@@ -4994,9 +5002,9 @@ async function init(){
  // p3 — FD Ngày
  window._FD={
   totalAM:R['FD Total theo AM'],smeAM:R['FD SME theo AM'],
-  ttsAM:R['FD TTS theo AM'],shopeeAM:R['FD Shopee theo AM'],
+  ttsAM:R['FD TTS theo AM'],codAM:R['FD TTS có COD theo AM'],shopeeAM:R['FD Shopee theo AM'],
   totalBC:R['FD Total theo Bưu Cục'],smeBC:R['FD SME theo Bưu Cục'],
-  ttsBC:R['FD TTS theo Bưu Cục'],shopeeBC:R['FD Shopee theo Bưu Cục']
+  ttsBC:R['FD TTS theo Bưu Cục'],codBC:R['FD TTS có COD theo Bưu Cục'],shopeeBC:R['FD Shopee theo Bưu Cục']
  };
  // GTC nGTC maps: AM sheet(col0=AM,col1=Ngày,col5=nGTC), BC sheet(col0=AM,col1=BC,col2=Ngày,col6=nGTC)
  window._GTC_MAP_AM=buildGTCMap(R['GTC Total theo AM'],0,1,5);
