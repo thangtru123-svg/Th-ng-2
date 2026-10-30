@@ -5,6 +5,7 @@ const CLIENT_ID = process.env.GOOGLE_OAUTH_CLIENT_ID;
 const CLIENT_SECRET = process.env.GOOGLE_OAUTH_CLIENT_SECRET;
 const REFRESH_TOKEN = process.env.GOOGLE_REFRESH_TOKEN;
 const SID = '1Ec4qUpehq5ruroCTmw20cRDzkQiGmj9GLpS5f18UFE8';
+const VOL_ID = '1BsqjKaWRHSq8RaiQ0AD-cGBU3jsF-fu0fEwqHmt6gu4'; // chứa sheet Luong_NVBC (lương từng NV theo ngày)
 const NDAYS = 45;      // số ngày lịch sử
 const NV_DAYS = 12;    // số ngày gần nhất còn giữ chi tiết Năng suất NV (giữ payload gọn)
 
@@ -19,12 +20,16 @@ async function ownerToken() {
   _owner = { token: j.access_token, exp: now + (j.expires_in || 3600) * 1000 };
   return _owner.token;
 }
-async function getSheet(tok, name) {
-  const r = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${SID}/values/${encodeURIComponent(name)}?majorDimension=ROWS`, { headers: { Authorization: 'Bearer ' + tok } });
+async function getSheet(tok, name, sid, opts) {
+  const id = sid || SID;
+  const r = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${id}/values/${encodeURIComponent(name)}?majorDimension=ROWS` + (opts || ''), { headers: { Authorization: 'Bearer ' + tok } });
   if (!r.ok) throw new Error('sheet ' + name + ' ' + r.status);
   const j = await r.json();
   return j.values || [];
 }
+// Luong_NVBC: cột ngày "26-10-29" (yy-mm-dd) → "2026-10-29"; cột O (idx 14) = Tổng lương
+const lgDate = s => { const m = /^(\d{2})-(\d{2})-(\d{2})$/.exec(String(s || '').trim()); if (m) return '20' + m[1] + '-' + m[2] + '-' + m[3]; const m2 = /(\d{4}-\d{2}-\d{2})/.exec(String(s || '')); return m2 ? m2[1] : null; };
+const codeOf = s => { const m = /^\s*(\d+)/.exec(String(s || '')); return m ? m[1] : ''; };
 const dstr = s => { const m = /(\d{4}-\d{2}-\d{2})/.exec(s || ''); return m ? m[1] : null; };
 const f = x => { const v = parseFloat(String(x == null ? '' : x).replace(',', '.')); return isNaN(v) ? 0 : v; };
 const i = x => { const v = parseInt(String(x == null ? '' : x).replace(/[^0-9\-]/g, '')); return isNaN(v) ? 0 : v; };
@@ -42,7 +47,7 @@ export default async function handler(req, res) {
     res.setHeader('Cache-Control', 'public, s-maxage=1800, stale-while-revalidate=86400');
     if (_cache.data && now - _cache.t < 20 * 60 * 1000) { res.setHeader('x-cache', 'hit'); res.status(200).json(_cache.data); return; }
     const tok = await ownerToken();
-    const [gAM, gBC, fTA, fTB, fSA, fSB, fTtA, fTtB, fShA, fShB, nsNV, gTtsA, gTtsB, odrA, odrB, oprA, oprB] = await Promise.all([
+    const [gAM, gBC, fTA, fTB, fSA, fSB, fTtA, fTtB, fShA, fShB, nsNV, gTtsA, gTtsB, odrA, odrB, oprA, oprB, luongRows] = await Promise.all([
       getSheet(tok, 'GTC Total theo AM'), getSheet(tok, 'GTC Total theo Bưu Cục'),
       getSheet(tok, 'FD Total theo AM'), getSheet(tok, 'FD Total theo Bưu Cục'),
       getSheet(tok, 'FD SME theo AM'), getSheet(tok, 'FD SME theo Bưu Cục'),
@@ -51,8 +56,17 @@ export default async function handler(req, res) {
       getSheet(tok, 'Năng suất NV'),
       getSheet(tok, 'GTC TTS theo AM'), getSheet(tok, 'GTC TTS theo Bưu Cục'),
       getSheet(tok, 'ODR TTS - AM'), getSheet(tok, 'ODR TTS - Bưu Cục'),
-      getSheet(tok, 'OPR TTS - AM'), getSheet(tok, 'OPR TTS - Bưu Cục')
+      getSheet(tok, 'OPR TTS - AM'), getSheet(tok, 'OPR TTS - Bưu Cục'),
+      getSheet(tok, 'Luong_NVBC', VOL_ID, '&valueRenderOption=UNFORMATTED_VALUE&dateTimeRenderOption=FORMATTED_STRING').catch(() => [])
     ]);
+    // Lương từng NV theo ngày: key "yyyy-mm-dd|mã" → đồng (cột O = idx 14)
+    const luongIdx = {};
+    for (let k = 1; k < luongRows.length; k++) {
+      const r = luongRows[k]; if (!r) continue;
+      const cd = codeOf(r[0]), d = lgDate(r[5]); if (!cd || !d) continue;
+      const raw = r[14]; const num = typeof raw === 'number' ? raw : parseFloat(String(raw == null ? '' : raw).replace(/\./g, '').replace(',', '.'));
+      if (!isNaN(num)) luongIdx[d + '|' + cd] = Math.round(num);
+    }
 
     // ===== accumulators: gộp SỐ GỐC trên tập ngày (ds=Set) → tính % ở cuối =====
     // GTC AM/BC (cũng dùng cho GTC TTS): cộng vol, gánCount(=%gán×vol), ngtc
@@ -66,7 +80,7 @@ export default async function handler(req, res) {
     // ODR/OPR AM/BC: weighted Σ(%ot×vol)/Σvol
     const accOt = (rows, ds, bcMode) => { const m = {}; const dcol = bcMode ? 2 : 1, vcol = bcMode ? 3 : 2, ocol = bcMode ? 4 : 3; for (let k = 1; k < rows.length; k++) { const r = rows[k]; const key = bcMode ? r[1] : r[0]; if (!key || key === 'Grand Total') continue; if (!ds.has(dstr(r[dcol]))) continue; const vol = i(r[vcol]); const o = m[key] || (m[key] = { num: 0, vol: 0 }); o.num += f(r[ocol]) * vol; o.vol += vol; } return m; };
     // Năng suất NV theo BC: cộng gán, gtc từng NV qua các ngày
-    const accNs = (rows, ds) => { const m = {}; for (let k = 1; k < rows.length; k++) { const r = rows[k]; const bc = r[0]; if (!bc) continue; if (!ds.has(dstr(r[2]))) continue; const nv = String(r[1] || '').replace(/^\d+_/, '').trim(); const mb = m[bc] || (m[bc] = {}); const e = mb[nv] || (mb[nv] = { nv, gan: 0, gtc: 0 }); e.gan += i(r[3]); e.gtc += i(r[4]); } return m; };
+    const accNs = (rows, ds) => { const m = {}; for (let k = 1; k < rows.length; k++) { const r = rows[k]; const bc = r[0]; if (!bc) continue; if (!ds.has(dstr(r[2]))) continue; const nv = String(r[1] || '').replace(/^\d+_/, '').trim(); const cd = codeOf(r[1]); const mb = m[bc] || (m[bc] = {}); const e = mb[nv] || (mb[nv] = { nv, code: cd, gan: 0, gtc: 0 }); e.gan += i(r[3]); e.gtc += i(r[4]); } return m; };
 
     const pctGan = o => o.vol > 0 ? r1(o.ganCnt / o.vol * 100) : 0;
     const pctGtc = o => o.vol > 0 ? r1(o.ngtc / o.vol * 100) : 0;
@@ -81,7 +95,7 @@ export default async function handler(req, res) {
       const FA = { total: accFd(fTA, ds), sme: accFd(fSA, ds), tts: accFd(fTtA, ds), shopee: accFd(fShA, ds) };
       const FB = { total: accFd(fTB, ds), sme: accFd(fSB, ds), tts: accFd(fTtB, ds), shopee: accFd(fShB, ds) };
       const vungFD = {}; for (const cat of ['total', 'sme', 'tts', 'shopee']) { let num = 0, den = 0; for (const a in FA[cat]) { num += FA[cat][a].num; den += FA[cat][a].vw; } vungFD[cat] = den > 0 ? r1(num / den * 100) : null; }
-      const nvByBC = {}; if (includeNV) { const raw = accNs(nsNV, ds); for (const bc in raw) { nvByBC[bc] = Object.values(raw[bc]).map(e => ({ nv: e.nv, gan: e.gan, gtc: e.gtc, pct: e.gan > 0 ? r1(e.gtc / e.gan * 100) : 0 })).sort((a, b) => b.gan - a.gan); } }
+      const nvByBC = {}; if (includeNV) { const raw = accNs(nsNV, ds); const dList = [...ds]; const luongOf = cd => { if (!cd) return null; let s = null; for (const dd of dList) { const v = luongIdx[dd + '|' + cd]; if (v != null) s = (s || 0) + v; } return s; }; for (const bc in raw) { nvByBC[bc] = Object.values(raw[bc]).map(e => ({ nv: e.nv, gan: e.gan, gtc: e.gtc, pct: e.gan > 0 ? r1(e.gtc / e.gan * 100) : 0, luong: luongOf(e.code) })).sort((a, b) => b.gan - a.gan); } }
       const ttsAMm = accGTC(gTtsA, ds, false), ttsBCm = accGTC(gTtsB, ds, true);
       const odrAMm = accOt(odrA, ds, false), odrBCm = accOt(odrB, ds, true);
       const oprAMm = accOt(oprA, ds, false), oprBCm = accOt(oprB, ds, true);
