@@ -44,8 +44,9 @@ export default async function handler(req, res) {
   try {
     if (!REFRESH_TOKEN) { res.status(500).json({ ok: false, error: 'Chưa cấu hình GOOGLE_REFRESH_TOKEN' }); return; }
     const now = Date.now();
+    const qFrom = (req.query && req.query.from) || null, qTo = (req.query && req.query.to) || null; // chọn khoảng A→B
     res.setHeader('Cache-Control', 'public, s-maxage=1800, stale-while-revalidate=86400');
-    if (_cache.data && now - _cache.t < 20 * 60 * 1000) { res.setHeader('x-cache', 'hit'); res.status(200).json(_cache.data); return; }
+    if (!qFrom && _cache.data && now - _cache.t < 20 * 60 * 1000) { res.setHeader('x-cache', 'hit'); res.status(200).json(_cache.data); return; }
     const tok = await ownerToken();
     const [gAM, gBC, fTA, fTB, fSA, fSB, fTtA, fTtB, fShA, fShB, nsNV, gTtsA, gTtsB, odrA, odrB, oprA, oprB, luongRows] = await Promise.all([
       getSheet(tok, 'GTC Total theo AM'), getSheet(tok, 'GTC Total theo Bưu Cục'),
@@ -134,6 +135,18 @@ export default async function handler(req, res) {
       return { vung, am };
     }
 
+    // ===== chọn KHOẢNG A→B (nếu có ?from=&to=) → gộp SỐ GỐC các ngày trong khoảng, trả 1 object (như 1 "ngày") =====
+    if (qFrom && qTo) {
+      const allDS = new Set(); for (let k = 1; k < gBC.length; k++) { const d = dstr(gBC[k][2]); if (d) allDS.add(d); }
+      const lo = qFrom <= qTo ? qFrom : qTo, hi = qFrom <= qTo ? qTo : qFrom;
+      const ds = new Set([...allDS].filter(d => d >= lo && d <= hi));
+      const o = buildAgg(ds, true);
+      const nD = ds.size;
+      const lbl = 'Từ ' + lo.split('-').reverse().join('/') + ' đến ' + hi.split('-').reverse().join('/') + ' · ' + nD + ' ngày';
+      res.setHeader('x-cache', 'range');
+      res.status(200).json({ range: true, from: lo, to: hi, nDays: nD, day: lo, label: lbl, vung: o.vung, am: o.am });
+      return;
+    }
     // ===== 45 ngày mới nhất (từ GTC Total theo Bưu Cục, cột Ngày = col2) =====
     const daySet = new Set(); for (let k = 1; k < gBC.length; k++) { const d = dstr(gBC[k][2]); if (d) daySet.add(d); }
     const days = [...daySet].sort().reverse().slice(0, NDAYS);

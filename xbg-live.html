@@ -250,7 +250,8 @@ tr.amchild td:first-child{padding-left:16px;font-size:12.5px}
         <button id="n1ModeWeek" onclick="n1SetMode('week')" style="border:none;background:transparent;color:var(--sub);font-weight:800;font-size:13px;padding:8px 14px">Tuần</button>
       </div>
       <span class="mut" id="n1SelLbl" style="font-size:12px">📅 Chọn ngày:</span>
-      <select id="n1DaySel" onchange="n1PickDay(this.value)" style="flex:1;min-width:140px;background:var(--card2);color:var(--txt);border:1px solid var(--line);border-radius:10px;padding:8px 12px;font-size:14px;font-weight:700"></select>
+      <select id="n1DaySel" onchange="n1DayChange()" style="flex:1;min-width:120px;background:var(--card2);color:var(--txt);border:1px solid var(--line);border-radius:10px;padding:8px 12px;font-size:14px;font-weight:700"></select>
+      <span id="n1DaySelToWrap" style="display:none;align-items:center;gap:6px;flex:1;min-width:120px"><span class="mut" style="font-size:12px;flex-shrink:0">→ đến</span><select id="n1DaySel2" onchange="n1DayChange()" style="flex:1;min-width:110px;background:var(--card2);color:var(--txt);border:1px solid var(--line);border-radius:10px;padding:8px 12px;font-size:14px;font-weight:700"></select></span>
     </div>
 
     <div class="subpage" data-sub="N-ov">
@@ -616,13 +617,18 @@ function n1Ingest(d){
 }
 function n1PopulateDates(){
   var sel=document.getElementById('n1DaySel'); if(!sel||!_N1ALL)return;
+  var sel2=document.getElementById('n1DaySel2'), toWrap=document.getElementById('n1DaySelToWrap');
   if(_n1mode==='week'){
     sel.innerHTML=(_N1ALL.weeks||[]).map(function(w,idx){ return '<option value="'+w.key+'">'+w.label+(idx===0?' (mới nhất)':'')+'</option>'; }).join('');
+    if(toWrap)toWrap.style.display='none'; // tuần: không có ô "đến"
   } else {
-    sel.innerHTML=_N1ALL.days.map(function(d,idx){ return '<option value="'+d+'">'+d.split('-').reverse().join('/')+(idx===0?' (N-1)':'')+'</option>'; }).join('');
+    var opts=_N1ALL.days.map(function(d,idx){ return '<option value="'+d+'">'+d.split('-').reverse().join('/')+(idx===0?' (N-1)':'')+'</option>'; }).join('');
+    sel.innerHTML=opts;
+    if(sel2){ sel2.innerHTML=opts; sel2.value=_n1cur; } // mặc định "đến" = "từ" → 1 ngày
+    if(toWrap)toWrap.style.display='flex';
   }
   sel.value=_n1cur;
-  var lbl=document.getElementById('n1SelLbl'); if(lbl)lbl.textContent=_n1mode==='week'?'📅 Chọn tuần:':'📅 Chọn ngày:';
+  var lbl=document.getElementById('n1SelLbl'); if(lbl)lbl.textContent=_n1mode==='week'?'📅 Chọn tuần:':'📅 Từ ngày:';
 }
 function n1SetMode(mode){
   if(mode===_n1mode || !_N1ALL)return;
@@ -639,7 +645,28 @@ function n1PickDay(key){
   var src=_n1mode==='week'?_N1ALL.wdata:_N1ALL.data;
   if(!_N1ALL||!src||!src[key])return;
   _n1cur=key; renderN1(src[key]);
+  n1ReapplySearch();
+}
+function n1ReapplySearch(){
   ['n1GtcBody','n1FdBody','n1TtsBody','n1OntimeBody'].forEach(function(id){ var inp=document.querySelector('input.search[oninput*="'+id+'"]'); if(inp&&inp.value) n1Filter(id, inp.value); });
+}
+// Đổi ô ngày: nếu "đến" khác "từ" (chế độ Ngày) → gộp khoảng A→B; còn lại → 1 ngày
+function n1DayChange(){
+  if(_n1mode==='week'){ n1PickDay(document.getElementById('n1DaySel').value); return; }
+  var a=document.getElementById('n1DaySel').value, b=(document.getElementById('n1DaySel2')||{}).value;
+  if(!b || a===b){ n1PickDay(a); return; }
+  n1PickRange(a,b);
+}
+var _n1rangeSeq=0;
+async function n1PickRange(a,b){
+  var lo=a<b?a:b, hi=a<b?b:a; var seq=++_n1rangeSeq;
+  var dl=document.getElementById('n1Day'); if(dl)dl.textContent='đang gộp khoảng…';
+  try{
+    var d=await fetch('/api/n1?from='+lo+'&to='+hi+'&t='+Date.now(),{cache:'no-store'}).then(function(r){return r.json();});
+    if(seq!==_n1rangeSeq)return; // bỏ kết quả cũ nếu người dùng đã đổi tiếp
+    if(d&&d.vung){ _n1cur=lo; renderN1({day:lo,label:d.label,vung:d.vung,am:d.am||[]}); n1ReapplySearch(); }
+    else if(dl)dl.textContent='Không có dữ liệu khoảng';
+  }catch(e){ if(seq===_n1rangeSeq&&dl)dl.textContent='Lỗi tải khoảng'; }
 }
 function n1Filter(bodyId, q){
   var tb=document.getElementById(bodyId); if(!tb)return;
