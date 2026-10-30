@@ -142,7 +142,7 @@ export default async function handler(req, res) {
       const ds = weekMap[mk]; const mon = new Date(mk + 'T00:00:00Z'); const sun = new Date(mon); sun.setUTCDate(sun.getUTCDate() + 6);
       const label = 'Tuần ' + isoWeekNum(mk) + ' (' + fmtDM(mon) + '–' + fmtDM(sun) + ')';
       weeks.push({ key: mk, label, nDays: ds.length });
-      const o = buildAgg(new Set(ds), false); o.day = mk; o.label = label + (ds.length < 7 ? ' · ' + ds.length + ' ngày' : ''); wdata[mk] = o;
+      const o = buildAgg(new Set(ds), true); o.day = mk; o.label = label + (ds.length < 7 ? ' · ' + ds.length + ' ngày' : ''); wdata[mk] = o; // includeNV=true: Tuần cũng xổ năng suất NV + lương (gán/GTC/lương cộng theo tuần)
     });
 
     const d0 = days[0] ? data[days[0]] : { vung: {}, am: [] };
