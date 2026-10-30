@@ -455,7 +455,7 @@ function nvTable(nvs, bcCanGiao){
   if(!nvs||!nvs.length) return '<div class="mut" style="padding:6px">Chưa có nhân viên hoạt động</div>';
   var h='<div class="nvwrap"><table><thead><tr><th>Nhân viên</th><th>Gán giao/lấy</th><th>GTC</th><th>%GTC</th></tr></thead><tbody>';
   var sumGan=0;
-  nvs.forEach(function(n,i){ sumGan+=(+n.ganGiao||0); h+='<tr><td><span style="color:var(--sub)">'+(i+1)+'.</span> '+n.nv+'</td><td>'+vn(n.ganGiao)+' / '+vn(n.ganLay)+'</td><td>'+vn(n.gtc)+'</td><td class="pct '+cls(n.pct)+'">'+pstr(n.pct)+'</td></tr>'; });
+  nvs.forEach(function(n,i){ sumGan+=(+n.ganGiao||0); h+='<tr><td><span style="color:var(--sub)">'+(i+1)+'.</span> '+(n.id?'<span class="mut">'+n.id+'</span> - ':'')+n.nv+'</td><td>'+vn(n.ganGiao)+' / '+vn(n.ganLay)+'</td><td>'+vn(n.gtc)+'</td><td class="pct '+cls(n.pct)+'">'+pstr(n.pct)+'</td></tr>'; });
   // Tồn chưa gán = Cần giao BC − tổng đơn gán giao các NV
   if(bcCanGiao!=null){ var ton=Math.max(0,(+bcCanGiao||0)-sumGan);
     h+='<tr class="nvton" style="font-weight:700;border-top:1px solid var(--line)"><td>Tồn chưa gán</td><td style="color:var(--orange)">'+vn(ton)+'</td><td class="mut">—</td><td class="mut">—</td></tr>'; }
@@ -689,7 +689,7 @@ function nvTableN1(nvs,bcVol){
   if(!nvs||!nvs.length) return '<div class="mut" style="padding:6px">Không có dữ liệu nhân viên</div>';
   var h='<div class="nvwrap"><table><thead><tr><th>Nhân viên</th><th>Đơn gán</th><th>GTC</th><th>%GTC</th><th>Lương</th></tr></thead><tbody>';
   var sumGan=0;
-  nvs.forEach(function(n,i){ sumGan+=(+n.gan||0); h+='<tr><td><span style="color:var(--sub)">'+(i+1)+'.</span> '+n.nv+(n.code?' <span class="mut" style="font-size:11px">#'+n.code+'</span>':'')+'</td><td>'+vn(n.gan)+'</td><td>'+vn(n.gtc)+'</td><td class="pct '+cls(n.pct)+'">'+nS(n.pct)+'</td><td>'+(n.luong==null?'<span class="mut">—</span>':vn(n.luong))+'</td></tr>'; });
+  nvs.forEach(function(n,i){ sumGan+=(+n.gan||0); h+='<tr><td><span style="color:var(--sub)">'+(i+1)+'.</span> '+(n.code?'<span class="mut">'+n.code+'</span> - ':'')+n.nv+'</td><td>'+vn(n.gan)+'</td><td>'+vn(n.gtc)+'</td><td class="pct '+cls(n.pct)+'">'+nS(n.pct)+'</td><td>'+(n.luong==null?'<span class="mut">—</span>':vn(n.luong))+'</td></tr>'; });
   // Tồn chưa gán = Vol BC − tổng đơn gán các NV (NV + Tồn = Vol)
   if(bcVol!=null){ var ton=Math.max(0,(+bcVol||0)-sumGan);
     h+='<tr class="nvton" style="font-weight:700;border-top:1px solid var(--line)"><td>Tồn chưa gán</td><td style="color:var(--orange)">'+vn(ton)+'</td><td class="mut">—</td><td class="mut">—</td><td class="mut">—</td></tr>'; }

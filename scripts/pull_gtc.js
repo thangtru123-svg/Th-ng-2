@@ -68,7 +68,7 @@ async function proc(h) {
   const seen = {}; let carry = 0; const nvM = {}; const hangM = {}; // hangM: chuyến treo qua ngày chưa kết thúc (ON_TRIP, tạo trước hôm nay)
   const codFail = []; // đơn giao thất bại có COD >= 1tr (cần đối soát tiền hàng)
   const okOrders = new Set(); // mã đơn ĐÃ giao thành công (isSucceeded) ở bất kỳ chuyến nào → loại khỏi codFail
-  const nvOf = (name) => nvM[name] || (nvM[name] = { nv: name || '(không rõ)', ganGiao: 0, ganLay: 0, gtc: 0 });
+  const nvOf = (name, id) => { const e = nvM[name] || (nvM[name] = { nv: name || '(không rõ)', id: id || '', ganGiao: 0, ganLay: 0, gtc: 0 }); if (id && !e.id) e.id = id; return e; };
   const fmtCd = (cd) => { const s = String(cd); return s.length === 8 ? `${s.slice(6, 8)}/${s.slice(4, 6)}` : String(cd); };
   for (const st of ['FINISHED', 'ON_TRIP']) {
     for (let pg = 1; pg <= 50; pg++) {
@@ -78,7 +78,7 @@ async function proc(h) {
         const c = x.tripCode, cd = x.createDateIndex, ed = x.endDateIndex;
         if (cd === TODAY) {
           seen[c] = { dc: x.deliverCount || 0, ended: ed === TODAY, driver: x.driverName || '', driverId: String(x.driverId || '') };
-          const nv = nvOf(x.driverName || '');
+          const nv = nvOf(x.driverName || '', String(x.driverId || ''));
           nv.ganGiao += x.deliverCount || 0; nv.ganLay += x.pickCount || 0;
         }
         if (cd === YD && ed === TODAY) carry++;
@@ -107,10 +107,10 @@ async function proc(h) {
       });
       if (a.length < 100) break;
     }
-    gtc += g; nvOf(v.driver).gtc += g;
+    gtc += g; nvOf(v.driver, v.driverId).gtc += g;
   }
   const nv = Object.values(nvM).filter(n => n.ganGiao > 0 || n.ganLay > 0 || n.gtc > 0)
-    .map(n => ({ nv: n.nv, ganGiao: n.ganGiao, ganLay: n.ganLay, gtc: n.gtc, pct: n.ganGiao > 0 ? Math.round(n.gtc / n.ganGiao * 1000) / 10 : 0 }))
+    .map(n => ({ nv: n.nv, id: n.id, ganGiao: n.ganGiao, ganLay: n.ganLay, gtc: n.gtc, pct: n.ganGiao > 0 ? Math.round(n.gtc / n.ganGiao * 1000) / 10 : 0 }))
     .sort((a, b) => b.ganGiao - a.ganGiao);
   const hangTrips = Object.values(hangM).sort((a, b) => a.cd - b.cd).map(t => ({ nv: t.nv, ngay: t.ngay }));
   return { name: h.name, am: h.am, tinh: h.tinh, chuaGan, daGan, gtc, nTripToday, nChuaXong, carry, canGiaoSnap, wPick, wDeliver, wReturn, oPick, oReturn, dGiao5, dGiao8, dTra48, nv, hangTrips, codFail, okOrders: [...okOrders] };
