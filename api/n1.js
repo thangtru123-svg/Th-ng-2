@@ -95,7 +95,7 @@ export default async function handler(req, res) {
       const FA = { total: accFd(fTA, ds), sme: accFd(fSA, ds), tts: accFd(fTtA, ds), shopee: accFd(fShA, ds) };
       const FB = { total: accFd(fTB, ds), sme: accFd(fSB, ds), tts: accFd(fTtB, ds), shopee: accFd(fShB, ds) };
       const vungFD = {}; for (const cat of ['total', 'sme', 'tts', 'shopee']) { let num = 0, den = 0; for (const a in FA[cat]) { num += FA[cat][a].num; den += FA[cat][a].vw; } vungFD[cat] = den > 0 ? r1(num / den * 100) : null; }
-      const nvByBC = {}; if (includeNV) { const raw = accNs(nsNV, ds); const dList = [...ds]; const luongOf = cd => { if (!cd) return null; let s = null; for (const dd of dList) { const v = luongIdx[dd + '|' + cd]; if (v != null) s = (s || 0) + v; } return s; }; for (const bc in raw) { nvByBC[bc] = Object.values(raw[bc]).map(e => ({ nv: e.nv, gan: e.gan, gtc: e.gtc, pct: e.gan > 0 ? r1(e.gtc / e.gan * 100) : 0, luong: luongOf(e.code) })).sort((a, b) => b.gan - a.gan); } }
+      const nvByBC = {}; if (includeNV) { const raw = accNs(nsNV, ds); const dList = [...ds]; const luongOf = cd => { if (!cd) return null; let s = null; for (const dd of dList) { const v = luongIdx[dd + '|' + cd]; if (v != null) s = (s || 0) + v; } return s; }; for (const bc in raw) { nvByBC[bc] = Object.values(raw[bc]).map(e => ({ nv: e.nv, code: e.code, gan: e.gan, gtc: e.gtc, pct: e.gan > 0 ? r1(e.gtc / e.gan * 100) : 0, luong: luongOf(e.code) })).sort((a, b) => b.gan - a.gan); } }
       const ttsAMm = accGTC(gTtsA, ds, false), ttsBCm = accGTC(gTtsB, ds, true);
       const odrAMm = accOt(odrA, ds, false), odrBCm = accOt(odrB, ds, true);
       const oprAMm = accOt(oprA, ds, false), oprBCm = accOt(oprB, ds, true);
