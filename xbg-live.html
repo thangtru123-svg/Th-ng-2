@@ -276,6 +276,11 @@ tr.amchild td:first-child{padding-left:16px;font-size:12.5px}
         <div class="ovcell"><span class="c">ODR TTS (giao đúng giờ)</span><b id="n1Odr">—</b></div>
         <div class="ovcell"><span class="c">OPR TTS (lấy đúng giờ)</span><b id="n1Opr">—</b></div>
       </div>
+      <div class="sect" style="margin-top:14px">💰 Thu nhập nhân viên · toàn Vùng <span class="mut" style="font-weight:400;font-size:11px">(chỉ NV có GTC ≥ 1 đơn)</span></div>
+      <div class="ovgrid">
+        <div class="ovcell"><span class="c">Thu nhập toàn bộ NV</span><b id="n1IncSum" style="color:var(--green)">—</b></div>
+        <div class="ovcell"><span class="c">TB 1 NV thu nhập</span><b id="n1IncAvg" style="color:var(--green)">—</b></div>
+      </div>
     </div>
     </div><!-- /N-ov -->
 
@@ -718,6 +723,9 @@ function renderN1(d){
   document.getElementById('n1GtcTts').textContent=nS(v.gtcTts);
   var setOt=function(id,x,ok,mid){ var el=document.getElementById(id); el.textContent=nS(x); el.style.color=x==null?'var(--sub)':(x>=ok?'var(--green)':(x>=mid?'var(--orange)':'var(--red)')); };
   setOt('n1Odr',v.odrTts,96,90); setOt('n1Opr',v.oprTts,80,70);
+  // Thu nhập NV toàn Vùng (chỉ NV có GTC ≥ 1 đơn)
+  document.getElementById('n1IncSum').textContent = v.incomeSum!=null ? vn(v.incomeSum)+' đ' : '—';
+  document.getElementById('n1IncAvg').innerHTML = (v.incomeAvg!=null ? vn(v.incomeAvg)+' đ' : '—') + (v.incomeNV ? ' <span class="mut" style="font-weight:400;font-size:11px">· '+vn(v.incomeNV)+' NV</span>' : '');
 
   var byPctAsc=function(a,b){return (a.pct||0)-(b.pct||0);}; // %GTC thấp (tệ) lên đầu
   var byFdDesc=function(a,b){return (b.fdTotal==null?-1:b.fdTotal)-(a.fdTotal==null?-1:a.fdTotal);}; // Tỉ lệ trả cao (tệ) lên đầu

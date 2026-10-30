@@ -124,7 +124,13 @@ export default async function handler(req, res) {
         am.push({ am: name, vol: g.vol, gan: pctGan(g), pct: pctGtc(g), ngtc: g.ngtc, fdTotal: fdOf('total'), fdSme: fdOf('sme'), fdTts: fdOf('tts'), fdShopee: fdOf('shopee'), ttsVol: tA ? tA.vol : null, ttsGan: tA ? pctGan(tA) : null, ttsPct: tA ? pctGtc(tA) : null, ttsNgtc: tA ? tA.ngtc : null, odr: otOf(odrAMm[name], odrBCm), opr: otOf(oprAMm[name], oprBCm), bc: bcs });
       });
       am.sort((a, b) => b.vol - a.vol);
-      const vung = { vol: vVol, gan: vVol > 0 ? r1(vGan / vVol * 100) : 0, pct: vVol > 0 ? r1(vNgtc / vVol * 100) : 0, ngtc: vNgtc, fdTotal: vungFD.total, fdSme: vungFD.sme, fdTts: vungFD.tts, fdShopee: vungFD.shopee, gtcTts: vGtcTts, odrTts: vOdr, oprTts: vOpr };
+      // Thu nhập NV toàn Vùng: gộp GTC theo MÃ NV trên ds (tránh double khi NV ở 2 BC), CHỈ NV có GTC ≥ 1 đơn; lương = Σ ngày trong ds
+      const incCode = {};
+      for (let k = 1; k < nsNV.length; k++) { const r = nsNV[k]; if (!r || !ds.has(dstr(r[2]))) continue; const cd = codeOf(r[1]); if (!cd) continue; (incCode[cd] = incCode[cd] || { gtc: 0 }).gtc += i(r[4]); }
+      let incomeSum = 0, incomeNV = 0;
+      for (const cd in incCode) { if (incCode[cd].gtc < 1) continue; let lg = null; for (const dd of ds) { const v = luongIdx[dd + '|' + cd]; if (v != null) lg = (lg || 0) + v; } if (lg != null) { incomeSum += lg; incomeNV++; } }
+      const incomeAvg = incomeNV > 0 ? Math.round(incomeSum / incomeNV) : null;
+      const vung = { vol: vVol, gan: vVol > 0 ? r1(vGan / vVol * 100) : 0, pct: vVol > 0 ? r1(vNgtc / vVol * 100) : 0, ngtc: vNgtc, fdTotal: vungFD.total, fdSme: vungFD.sme, fdTts: vungFD.tts, fdShopee: vungFD.shopee, gtcTts: vGtcTts, odrTts: vOdr, oprTts: vOpr, incomeSum, incomeNV, incomeAvg };
       return { vung, am };
     }
 
