@@ -208,6 +208,74 @@ async function pool(items, n, fn) {
     orders: ttsOrders
   };
 
+  // ===== BÁO CÁO VẬN HÀNH 2 BƯU CỤC (Đông Kinh + Bình Gia) — realtime chi tiết =====
+  // Báo cáo 1 (cần giao Total + TTS) + Báo cáo 2 realtime (48h chưa gán, LC giao/trả>36h, hàng trả Shop>48h).
+  // Aging>5N (total+TTS) và %GTC N-1 lấy riêng từ Sheet qua /api/bc-report-sheet (Action không đọc được Google).
+  const BC_REPORT_HUBS = [
+    { id: '21995000', name: '(LSO) Đông Kinh', dinhBien: 12 },
+    { id: '21301000', name: '(LSO) Bình Gia', dinhBien: 7 }
+  ];
+  const _MOI = HOUR >= 14 ? new Set(['0_6', '6_12']) : new Set(['0_6']); // đơn mới: sáng(<14h)=0-6h · chiều(≥14h)=0-6h+6-12h
+  const _GE48 = new Set(['48_72', '72_96', '96_120', '120_192', '192']);
+  const _GE36 = new Set(['36_48', '48_72', '72_96', '96_120', '120_192', '192']);
+  const _sumBk = (inv, set) => { let s = 0; (inv || []).forEach(x => { if (set.has(x.duration)) s += x.total_order || 0; }); return s; };
+  const STATES3 = ['DAILY_TRIP_NONE', 'DAILY_TRIP_COMPLETED', 'DAILY_TRIP_IN_PROGRESS'];
+  async function bcReportFor(cfg) {
+    const id = cfg.id;
+    // get-general-info × 3 trạng thái chuyến: chưa gán (NONE) + đơn mới (Σ3) + hàng trả Shop>48h (RETURN Σ3)
+    let chuaGan = 0, donMoi = 0, returnShop48 = 0;
+    for (const st of STATES3) {
+      const gi = await api('/api/core/oss/v1/report/get-general-info', { hub_ids: [id], view_mode: 'CLIENT', order_type: st });
+      const infos = (((gi.data || [])[0] || {}).general_infos) || [];
+      infos.forEach(g => {
+        if (g.order_type === 'DELIVER' || g.order_type === 'DELIVER_PRIORITY') {
+          donMoi += _sumBk(g.order_inventories, _MOI);
+          if (st === 'DAILY_TRIP_NONE') chuaGan += g.total_order || 0;
+        } else if (g.order_type === 'RETURN') returnShop48 += _sumBk(g.order_inventories, _GE48);
+      });
+    }
+    // get-detail-by-status × 3: 48h chưa gán (total+TTS) + TTS inventory (TTS = nhóm TIKTOK SHOP, code |TTS|)
+    let cg48 = 0, cg48tts = 0, ttsChuaGan = 0, ttsDonMoi = 0, ttsTot = 0;
+    for (const st of STATES3) {
+      const j = await api('/api/core/oss/v1/report/get-detail-by-status', { hub_id: id, order_type: st, view_mode: 'CLIENT', status: ['DELIVER'] });
+      const dt = (((j.data || {}).detail_backlog_types || [])[0] || {}).details || [];
+      dt.forEach(d => {
+        const isT = /\|TTS\|/.test(d.code);
+        if (isT) { ttsTot += d.total_order || 0; ttsDonMoi += _sumBk(d.order_inventories, _MOI); }
+        if (st === 'DAILY_TRIP_NONE') { cg48 += _sumBk(d.order_inventories, _GE48); if (isT) { cg48tts += _sumBk(d.order_inventories, _GE48); ttsChuaGan += d.total_order || 0; } }
+      });
+    }
+    // get-backlog-transport-info × 3 packing_type (đã/chưa/không cần đóng kiện): LC giao/trả >36h
+    let lcGiao36 = 0, lcTra36 = 0;
+    for (const pt of ['NOT_PACKED', 'PACKED', 'NO_NEED_TO_PACK']) {
+      const j = await api('/api/core/oss/v1/report/get-backlog-transport-info', { hub_ids: [id], packing_type: pt });
+      const infos = (((j.data || [])[0] || {}).general_infos) || [];
+      infos.forEach(g => { const s = _sumBk(g.order_inventories, _GE36); if (g.order_type === 'TRANSPORT_DELIVERY') lcGiao36 += s; else if (g.order_type === 'TRANSPORT_RETURN') lcTra36 += s; });
+    }
+    // đã gán + NV thực đi phát (distinct driver của chuyến giao tạo hôm nay)
+    let daGan = 0; const drv = new Set();
+    for (let pg = 1; pg <= 40; pg++) {
+      const j = await api('/api/lastmile/trip/get-trip-list-by-hub', { hub_id: id, status: 'FINISHED', is_ready: 0, offset: (pg - 1) * 100, limit: 100, reverse: 1, page: pg, size: 100 });
+      const a = j.data || []; if (!a.length) break;
+      a.forEach(x => { if (x.createDateIndex === TODAY) { daGan += x.deliverCount || 0; if ((x.deliverCount || 0) > 0 && x.driverName) drv.add(x.driverName); } });
+      if (a.length < 100) break;
+    }
+    const canGiao = daGan + chuaGan;
+    const ttsDaGan = Math.max(0, ttsTot - ttsChuaGan);
+    return {
+      name: cfg.name, hubId: id, dinhBien: cfg.dinhBien,
+      canGiao, daGan, chuaGan, pctGan: canGiao ? Math.round(daGan / canGiao * 1000) / 10 : 0,
+      donMoi, donTon: Math.max(0, canGiao - donMoi), nvPhat: drv.size,
+      tts: { canGiao: ttsTot, daGan: ttsDaGan, chuaGan: ttsChuaGan, pctGan: ttsTot ? Math.round(ttsDaGan / ttsTot * 1000) / 10 : 0, donMoi: ttsDonMoi, donTon: Math.max(0, ttsTot - ttsDonMoi) },
+      bc2: { cg48, cg48tts, lcGiao36, lcTra36, returnShop48 }
+    };
+  }
+  try {
+    const rep = [];
+    for (const cfg of BC_REPORT_HUBS) { try { rep.push(await bcReportFor(cfg)); } catch (e) { rep.push({ name: cfg.name, hubId: cfg.id, dinhBien: cfg.dinhBien, err: String((e && e.message) || e) }); } }
+    out.bcReport = { generatedAt: out.updatedAt, hourVN: HOUR, moiMode: HOUR >= 14 ? '0-12h' : '0-6h', hubs: rep };
+  } catch (e) { out.bcReport = { err: String((e && e.message) || e) }; }
+
   fs.writeFileSync(path.join(ROOT, 'gtc_live.json'), JSON.stringify(out));
   console.log(`[pull] OK hubsOk=${hubs.length} err=${errN} GTC=${vung.gtc} daGan=${vung.daGan} canGiao=${vung.canGiao} COD soDon=${out.cod.vung.soDon} tongCod=${codTong} TTS<50k soDon=${out.ttsCod.soDon}`);
 
