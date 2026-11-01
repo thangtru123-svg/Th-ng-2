@@ -110,7 +110,10 @@ async function proc(h) {
         if (wantTts) {
           const _cod = it.collectAmount || 0; const _oc = String(it.orderCode || '');
           if (_oc.startsWith('VNGH') && _cod > 0 && _cod < 50000) {
-            const _st = it.isSucceeded === true ? 'Giao thành công' : (it.isSucceeded === false ? 'Giao thất bại' : 'Đang giao');
+            // Giao thành công = isSucceeded true; Giao thất bại = false VÀ CÓ failCode (lý do lỗi);
+            // Đang giao = chưa giao xong (isSucceeded false mà failCode rỗng, hoặc null/undefined)
+            const _st = it.isSucceeded === true ? 'Giao thành công'
+              : ((it.isSucceeded === false && it.failCode) ? 'Giao thất bại' : 'Đang giao');
             ttsCod.push({ ma: _oc, cod: _cod, st: _st, nv: v.driver, idnv: v.driverId });
           }
         }
