@@ -2049,13 +2049,13 @@ async function _tgSendPhoto(chatId,threadId,blob,caption){
  }
  return {ok:false,description:'429 retry exhausted'};
 }
-async function _tgSendDoc(chatId,threadId,blob,caption){
+async function _tgSendDoc(chatId,threadId,blob,caption,filename){
  if(!window._canSend||!window._canSend()){_roleToast('⛔ Bạn không có quyền bắn báo cáo Telegram');throw new Error('NO_PERMISSION_SEND');}
- // Dùng sendDocument khi ảnh quá rộng (PHOTO_INVALID_DIMENSIONS)
+ // Dùng sendDocument khi ảnh quá rộng (PHOTO_INVALID_DIMENSIONS) hoặc gửi file (xlsx...)
  const form=new FormData();
  form.append('chat_id',chatId);
  if(threadId!=null&&threadId!=='')form.append('message_thread_id',threadId);
- form.append('document',blob,'dashboard.png');
+ form.append('document',blob,filename||'dashboard.png');
  if(caption){form.append('caption',caption);form.append('parse_mode','HTML');}
  const r=await fetch(`https://api.telegram.org/bot${TG_TOKEN}/sendDocument`,{method:'POST',body:form,signal:AbortSignal.timeout(45000)});
  return r.json();
@@ -4390,6 +4390,44 @@ function _ttsCSV(){ // xuất file .xlsx thật (cột tách sẵn, COD là số
  s.onload=build;s.onerror=()=>alert('Không tải được thư viện xuất Excel — kiểm tra mạng rồi thử lại.');
  document.head.appendChild(s);
 }
+async function _ttsXlsxBytes(){ // trả Uint8Array file .xlsx danh sách đơn (dùng cho tải + bắn TG)
+ if(!window.XLSX){await new Promise((res,rej)=>{const s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';s.onload=res;s.onerror=()=>rej(new Error('XLSX load lỗi'));setTimeout(()=>rej(new Error('XLSX timeout')),12000);document.head.appendChild(s);});}
+ const T=window._TTSDATA,X=window.XLSX;
+ const aoa=[['AM','Bưu Cục','Mã Đơn','COD (đ)','Trạng thái'],...T.orders.map(o=>[o.am,o.bc,o.ma,(+o.cod||0),o.st])];
+ const ws=X.utils.aoa_to_sheet(aoa);ws['!cols']=[{wch:22},{wch:20},{wch:20},{wch:12},{wch:16}];
+ const wb=X.utils.book_new();X.utils.book_append_sheet(wb,ws,'TTS COD duoi 50k');
+ return new Uint8Array(X.write(wb,{type:'array',bookType:'xlsx'}));
+}
+async function sendTtsCodToTelegram(btn){ // bắn 2 bảng AM/BC + tổng quan + lưu ý OE + file danh sách → topic TTS (thread 3)
+ const T=window._TTSDATA;
+ if(!T||!T.orders||!T.orders.length){alert('Chưa có dữ liệu TTS COD — chờ quét xong rồi bắn.');return;}
+ const _ld=btn?btn.textContent:''; if(btn){btn.disabled=true;btn.textContent='⏳ Đang bắn...';}
+ const dv=v=>(+v||0).toLocaleString('vi-VN')+' đ';
+ try{
+  const orders=T.orders, n=orders.length, tcod=orders.reduce((s,o)=>s+o.cod,0);
+  const tc=orders.filter(o=>o.st==='Giao thành công').length, tb=orders.filter(o=>o.st==='Giao thất bại').length, dg=orders.filter(o=>o.st==='Đang giao').length;
+  const byT={};orders.forEach(o=>{byT[o.tinh]=(byT[o.tinh]||0)+1;});
+  const tinhStr=Object.entries(byT).sort((a,b)=>b[1]-a[1]).map(([k,v])=>k+' '+fmt(v)).join(' · ');
+  let cap='📦 <b>ĐƠN TTS COD < 50.000đ — LẠNG SƠN + QUẢNG NINH</b>\n';
+  cap+='🕒 Realtime · Tổng <b>'+fmt(n)+' đơn</b> (mã VNGH, COD 0–50k) · Tổng COD <b>'+dv(tcod)+'</b>\n';
+  cap+='✅ Giao thành công: <b>'+fmt(tc)+'</b> · ❌ Giao thất bại: <b>'+fmt(tb)+'</b> · 🚚 Đang giao: <b>'+fmt(dg)+'</b>\n';
+  cap+='📍 Theo tỉnh: '+tinhStr+'\n\n👤 <b>Tổng quan theo AM</b> (bảng dưới)';
+  const panes=['tinh','am','bc'];
+  const orig=panes.map(x=>{const p=document.getElementById('ttsPane_'+x);return p?p.style.display:'';});
+  const show=k=>panes.forEach(x=>{const p=document.getElementById('ttsPane_'+x);if(p)p.style.display=(x===k?'block':'none');});
+  show('am');await new Promise(r=>setTimeout(r,300));
+  const imgAM=await _captureEl('ttsPane_am',2);
+  show('bc');await new Promise(r=>setTimeout(r,300));
+  const imgBC=await _captureEl('ttsPane_bc',2);
+  panes.forEach((x,i)=>{const p=document.getElementById('ttsPane_'+x);if(p)p.style.display=orig[i];});
+  const r1=await _tgSendPhoto(TG_AGING_CHAT,TG_TTS_THREAD,imgAM,cap); if(!r1||!r1.ok)await _tgSendDoc(TG_AGING_CHAT,TG_TTS_THREAD,imgAM,cap,'tts_theo_am.png');
+  const r2=await _tgSendPhoto(TG_AGING_CHAT,TG_TTS_THREAD,imgBC,'🏪 <b>Tổng quan theo Bưu Cục</b>'); if(!r2||!r2.ok)await _tgSendDoc(TG_AGING_CHAT,TG_TTS_THREAD,imgBC,'🏪 Tổng quan theo Bưu Cục','tts_theo_bc.png');
+  const oe='📌 <b>LƯU Ý</b>\nCác AM/Bưu Cục <b>tự mua đơn</b> thì nhập mã đơn mua vào link:\nhttps://docs.google.com/spreadsheets/d/1M_CBDvkfponNeETPSoX9dgQZ72tXJjMGyiAND8E9GTA/edit?gid=0#gid=0\nđể làm việc với OE, tránh nhân viên bị phạt do khiếu nại.';
+  await _tgSend(TG_AGING_CHAT,TG_TTS_THREAD,oe);
+  try{ const bytes=await _ttsXlsxBytes(); const blob=new Blob([bytes],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}); const fn='don_tts_cod_duoi_50k_'+(new Date().toISOString().slice(0,10))+'.xlsx'; await _tgSendDoc(TG_AGING_CHAT,TG_TTS_THREAD,blob,'📄 Danh sách đầy đủ '+fmt(n)+' đơn TTS COD<50k',fn); }catch(e){console.warn('TTS xlsx TG:',e&&e.message);}
+  if(btn){btn.textContent='✅ Đã bắn';setTimeout(()=>{btn.disabled=false;btn.textContent=_ld;},2500);}
+ }catch(e){ if(btn){btn.disabled=false;btn.textContent=_ld;} alert('Lỗi bắn Telegram: '+(e&&e.message||e)); }
+}
 /* ===== p43 — Tổng Quan Target (so số thật đạt với mục tiêu Sếp) ===== */
 const _TGT_ISO=s=>{const m=(''+s).match(/(\d{4})-(\d{2})-(\d{2})/);return m?m[0]:'';};
 const _TGT_latest=(rows,dc)=>{const ds=[...new Set((rows||[]).slice(1).map(r=>_TGT_ISO(r[dc])).filter(Boolean))];return ds.sort().pop()||'';};
@@ -4897,14 +4935,14 @@ async function buildTtsCodPage(){
    const trS='style="text-align:right;padding:6px 10px;font-size:12.5px;border-bottom:1px solid var(--border);white-space:nowrap"';
    const aggTable=(arr,label)=>{
     let tot={soDon:0,tongCod:0,tc:0,tb:0,dg:0};arr.forEach(x=>{tot.soDon+=x.soDon;tot.tongCod+=x.tongCod;tot.tc+=x.tc;tot.tb+=x.tb;tot.dg+=x.dg;});
-    let h=`<div class="table-wrap" style="overflow-x:auto"><table style="border-collapse:collapse;min-width:640px"><thead><tr><th ${TH} style="text-align:left">${label}</th><th ${TH} style="text-align:center">SỐ ĐƠN</th><th ${TH} style="text-align:center">Giao thành công</th><th ${TH} style="text-align:center">Giao thất bại</th><th ${TH} style="text-align:center">Đang giao</th><th ${TH} style="text-align:right">TỔNG COD</th></tr></thead><tbody>`;
-    arr.forEach(x=>{h+=`<tr><td ${tlS} style="font-weight:600">${x.key}</td><td ${tcS} style="font-weight:700">${fmt(x.soDon)}</td><td ${tcS} style="color:#15803D">${fmt(x.tc)}</td><td ${tcS} style="color:#DC2626;font-weight:700">${fmt(x.tb)}</td><td ${tcS} style="color:#D97706">${fmt(x.dg)}</td><td ${trS} style="font-weight:700">${dv(x.tongCod)}</td></tr>`;});
-    h+=`<tr style="background:#FFF7ED;font-weight:800"><td ${tlS}>Tổng</td><td ${tcS}>${fmt(tot.soDon)}</td><td ${tcS} style="color:#15803D">${fmt(tot.tc)}</td><td ${tcS} style="color:#DC2626">${fmt(tot.tb)}</td><td ${tcS} style="color:#D97706">${fmt(tot.dg)}</td><td ${trS}>${dv(tot.tongCod)}</td></tr>`;
+    let h=`<div class="table-wrap" style="overflow-x:auto"><table style="border-collapse:collapse;min-width:680px"><thead><tr><th ${TH} style="text-align:center;width:40px">STT</th><th ${TH} style="text-align:left">${label}</th><th ${TH} style="text-align:center">SỐ ĐƠN</th><th ${TH} style="text-align:center">Giao thành công</th><th ${TH} style="text-align:center">Giao thất bại</th><th ${TH} style="text-align:center">Đang giao</th><th ${TH} style="text-align:right">TỔNG COD</th></tr></thead><tbody>`;
+    arr.forEach((x,i)=>{h+=`<tr><td ${tcS} style="color:var(--text-sub)">${i+1}</td><td ${tlS} style="font-weight:600">${x.key}</td><td ${tcS} style="font-weight:700">${fmt(x.soDon)}</td><td ${tcS} style="color:#15803D">${fmt(x.tc)}</td><td ${tcS} style="color:#DC2626;font-weight:700">${fmt(x.tb)}</td><td ${tcS} style="color:#D97706">${fmt(x.dg)}</td><td ${trS} style="font-weight:700">${dv(x.tongCod)}</td></tr>`;});
+    h+=`<tr style="background:#FFF7ED;font-weight:800"><td ${tcS}></td><td ${tlS}>Tổng</td><td ${tcS}>${fmt(tot.soDon)}</td><td ${tcS} style="color:#15803D">${fmt(tot.tc)}</td><td ${tcS} style="color:#DC2626">${fmt(tot.tb)}</td><td ${tcS} style="color:#D97706">${fmt(tot.dg)}</td><td ${trS}>${dv(tot.tongCod)}</td></tr>`;
     return h+'</tbody></table></div>';
    };
    const CAP=800;
    const orderRows=orders.slice(0,CAP).map(o=>`<tr><td ${tlS} style="color:var(--text-sub);font-size:12px">${o.am}</td><td ${tlS}>${o.bc}</td><td ${tlS} style="font-family:monospace;font-weight:600">${o.ma}</td><td ${trS} style="font-weight:700">${dv(o.cod)}</td><td ${tlS}>${o.nv||'—'}</td><td ${tcS} style="color:${stColor(o.st)};font-weight:700">${o.st}</td></tr>`).join('');
-   el.innerHTML=`<div class="page-header"><div class="page-title">📦 Đơn TTS COD &lt; 50k</div><div class="page-meta"><span style="color:var(--text-sub);font-size:13px">Đơn <b>TTS</b> (mã VNGH) có <b>COD dưới 50.000đ</b> — mọi trạng thái · chỉ Lạng Sơn + Quảng Ninh.</span><span style="background:#ECFDF5;color:#166534;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:700">🕒 Quét: ${updStr} · ${T.hubsOk||''} BC</span><button class="tg-inpage-btn" style="background:#16A34A;border-color:#16A34A" onclick="window._ttsRender&&window._ttsRender()">🔄 Tải lại</button></div></div>
+   el.innerHTML=`<div class="page-header"><div class="page-title">📦 Đơn TTS COD &lt; 50k</div><div class="page-meta"><span style="color:var(--text-sub);font-size:13px">Đơn <b>TTS</b> (mã VNGH) có <b>COD dưới 50.000đ</b> — mọi trạng thái · chỉ Lạng Sơn + Quảng Ninh.</span><span style="background:#ECFDF5;color:#166534;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:700">🕒 Quét: ${updStr} · ${T.hubsOk||''} BC</span><button class="tg-inpage-btn" style="background:#16A34A;border-color:#16A34A" onclick="window._ttsRender&&window._ttsRender()">🔄 Tải lại</button><button class="tg-inpage-btn" onclick="sendTtsCodToTelegram(this)">📤 Bắn TG</button></div></div>
     <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px">${kpi('📦 Tổng đơn TTS COD&lt;50k',fmt(orders.length),'Mã VNGH · COD 0–50k','var(--text-main)')}${kpi('💳 Tổng COD',dv(tongCod),trv(tongCod),'var(--orange-dark)')}${kpi('❌ Giao thất bại',fmt(tb),orders.length?(tb/orders.length*100).toFixed(1)+'% tổng':'','#DC2626')}${kpi('✅ Thành công / 🚚 Đang giao',fmt(tc)+' / '+fmt(dg),'Giao thành công / Đang giao','#15803D')}</div>
     <div style="display:flex;gap:8px;margin-bottom:12px"><button id="ttsTab_tinh" onclick="_ttsTab('tinh')" style="padding:7px 16px;border:none;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer;background:var(--orange);color:#fff">Theo Tỉnh</button><button id="ttsTab_am" onclick="_ttsTab('am')" style="padding:7px 16px;border:none;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer;background:#F3F4F6;color:var(--text-main)">Theo AM</button><button id="ttsTab_bc" onclick="_ttsTab('bc')" style="padding:7px 16px;border:none;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer;background:#F3F4F6;color:var(--text-main)">Theo Bưu cục</button></div>
     <div class="card" style="margin-bottom:18px"><div id="ttsPane_tinh" style="display:block">${aggTable(byTinh,'TỈNH')}</div><div id="ttsPane_am" style="display:none">${aggTable(byAM,'AM')}</div><div id="ttsPane_bc" style="display:none">${aggTable(byBC,'BƯU CỤC')}</div></div>
