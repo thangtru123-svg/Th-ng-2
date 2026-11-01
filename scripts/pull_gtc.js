@@ -67,6 +67,8 @@ async function proc(h) {
   // --- chuyến tạo hôm nay: đã gán + GTC + theo nhân viên (tài xế) ---
   const seen = {}; let carry = 0; const nvM = {}; const hangM = {}; // hangM: chuyến treo qua ngày chưa kết thúc (ON_TRIP, tạo trước hôm nay)
   const codFail = []; // đơn giao thất bại có COD >= 1tr (cần đối soát tiền hàng)
+  const ttsCod = []; // đơn TTS (mã VNGH) có COD < 50k, mọi trạng thái — chỉ gom ở 2 tỉnh LSO+QNI
+  const wantTts = (h.tinh === 'Lạng Sơn' || h.tinh === 'Quảng Ninh');
   const okOrders = new Set(); // mã đơn ĐÃ giao thành công (isSucceeded) ở bất kỳ chuyến nào → loại khỏi codFail
   const nvOf = (name, id) => { const e = nvM[name] || (nvM[name] = { nv: name || '(không rõ)', id: id || '', ganGiao: 0, ganLay: 0, gtc: 0 }); if (id && !e.id) e.id = id; return e; };
   const fmtCd = (cd) => { const s = String(cd); return s.length === 8 ? `${s.slice(6, 8)}/${s.slice(4, 6)}` : String(cd); };
@@ -104,6 +106,14 @@ async function proc(h) {
         else if (it.isSucceeded === false && (it.collectAmount || 0) >= 1000000) {
           codFail.push({ ma: it.orderCode, cod: it.collectAmount, nv: v.driver, idnv: v.driverId, note: it.failNote || '' });
         }
+        // TTS COD < 50k (mã VNGH) — mọi trạng thái, chỉ 2 tỉnh
+        if (wantTts) {
+          const _cod = it.collectAmount || 0; const _oc = String(it.orderCode || '');
+          if (_oc.startsWith('VNGH') && _cod > 0 && _cod < 50000) {
+            const _st = it.isSucceeded === true ? 'Giao thành công' : (it.isSucceeded === false ? 'Giao thất bại' : 'Đang giao');
+            ttsCod.push({ ma: _oc, cod: _cod, st: _st, nv: v.driver, idnv: v.driverId });
+          }
+        }
       });
       if (a.length < 100) break;
     }
@@ -113,7 +123,7 @@ async function proc(h) {
     .map(n => ({ nv: n.nv, id: n.id, ganGiao: n.ganGiao, ganLay: n.ganLay, gtc: n.gtc, pct: n.ganGiao > 0 ? Math.round(n.gtc / n.ganGiao * 1000) / 10 : 0 }))
     .sort((a, b) => b.ganGiao - a.ganGiao);
   const hangTrips = Object.values(hangM).sort((a, b) => a.cd - b.cd).map(t => ({ nv: t.nv, ngay: t.ngay }));
-  return { name: h.name, am: h.am, tinh: h.tinh, chuaGan, daGan, gtc, nTripToday, nChuaXong, carry, canGiaoSnap, wPick, wDeliver, wReturn, oPick, oReturn, dGiao5, dGiao8, dTra48, nv, hangTrips, codFail, okOrders: [...okOrders] };
+  return { name: h.name, am: h.am, tinh: h.tinh, chuaGan, daGan, gtc, nTripToday, nChuaXong, carry, canGiaoSnap, wPick, wDeliver, wReturn, oPick, oReturn, dGiao5, dGiao8, dTra48, nv, hangTrips, codFail, ttsCod, okOrders: [...okOrders] };
 }
 
 // ----- pool song song -----
@@ -180,8 +190,23 @@ async function pool(items, n, fn) {
     orders: codOrders
   };
 
+  // ===== Đơn TTS (mã VNGH) có COD < 50k — LSO+QNI, mọi trạng thái (dedup theo mã, ưu tiên: thành công > đang giao > thất bại) =====
+  const _stPri = { 'Giao thành công': 3, 'Đang giao': 2, 'Giao thất bại': 1 };
+  const ttsMap = new Map();
+  for (const h of hubs) (h.ttsCod || []).forEach(o => {
+    const ex = ttsMap.get(o.ma);
+    if (!ex || (_stPri[o.st] || 0) > (_stPri[ex.st] || 0)) ttsMap.set(o.ma, { ma: o.ma, cod: o.cod, st: o.st, nv: o.nv, idnv: o.idnv, bc: h.name, tinh: h.tinh });
+  });
+  const ttsOrders = [...ttsMap.values()].sort((a, b) => b.cod - a.cod);
+  const ttsStCount = {}; ttsOrders.forEach(o => { ttsStCount[o.st] = (ttsStCount[o.st] || 0) + 1; });
+  out.ttsCod = {
+    nguong: 50000, hubsOk: hubs.length,
+    soDon: ttsOrders.length, tongCod: ttsOrders.reduce((s, o) => s + o.cod, 0), byStatus: ttsStCount,
+    orders: ttsOrders
+  };
+
   fs.writeFileSync(path.join(ROOT, 'gtc_live.json'), JSON.stringify(out));
-  console.log(`[pull] OK hubsOk=${hubs.length} err=${errN} GTC=${vung.gtc} daGan=${vung.daGan} canGiao=${vung.canGiao} COD soDon=${out.cod.vung.soDon} tongCod=${codTong}`);
+  console.log(`[pull] OK hubsOk=${hubs.length} err=${errN} GTC=${vung.gtc} daGan=${vung.daGan} canGiao=${vung.canGiao} COD soDon=${out.cod.vung.soDon} tongCod=${codTong} TTS<50k soDon=${out.ttsCod.soDon}`);
 
   // nối lịch sử (giữ 14 ngày gần nhất) để so cùng giờ hôm qua
   const hp = path.join(ROOT, 'gtc_history.json');

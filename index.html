@@ -230,6 +230,7 @@ tr.tot td{background:#FFF0EB!important;font-weight:800!important;border-top:2px 
  <button class="nav-item" onclick="show('p38',this)" style="background:linear-gradient(135deg,rgba(220,38,38,0.16),rgba(241,93,41,0.08));border:1px solid rgba(220,38,38,0.32);font-weight:700"><span class="icon">🔁</span>Tổng quan truy thu XBG</button>
  <button class="nav-item" onclick="show('p41',this)" style="background:linear-gradient(135deg,rgba(22,101,52,0.16),rgba(34,197,94,0.1));border:1px solid rgba(22,101,52,0.35);font-weight:700"><span class="icon">🚚</span>Báo cáo GTC realtime trong ngày</button>
  <button class="nav-item" onclick="show('p42',this)" style="background:linear-gradient(135deg,rgba(220,38,38,0.16),rgba(241,93,41,0.08));border:1px solid rgba(220,38,38,0.32);font-weight:700"><span class="icon">💰</span>Check COD giá trị cao</button>
+ <button class="nav-item" onclick="show('p47',this)" style="background:linear-gradient(135deg,rgba(37,99,235,0.14),rgba(59,130,246,0.08));border:1px solid rgba(37,99,235,0.3);font-weight:700"><span class="icon">📦</span>Đơn TTS COD &lt; 50k</button>
  <div class="nav-section">GTC</div>
  <button class="nav-item" onclick="show('p1',this)"><span class="icon">📦</span>Tổng quan GTC Total</button>
  <button class="nav-item" onclick="show('p2',this)"><span class="icon">🎯</span>Tổng quan GTC TTS</button>
@@ -269,6 +270,7 @@ tr.tot td{background:#FFF0EB!important;font-weight:800!important;border-top:2px 
 <div class="page" id="p44"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
 <div class="page" id="p45"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
 <div class="page" id="p46"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
+<div class="page" id="p47"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
  <div class="page" id="p1"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
  <div class="page" id="p2"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
  <div class="page" id="p3"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
@@ -4366,6 +4368,19 @@ function _codCSV(){
  const csv='﻿'+[head,...rows].map(r=>r.map(x=>/[",;\n]/.test(String(x))?'"'+String(x).replace(/"/g,'""')+'"':x).join(',')).join('\n');
  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));a.download='check_cod_'+(new Date().toISOString().slice(0,10))+'.csv';a.click();
 }
+/* ===== p47 — Đơn TTS COD < 50k: chuyển tab + xuất CSV ===== */
+function _ttsTab(k){
+ ['tinh','am','bc'].forEach(x=>{const t=document.getElementById('ttsTab_'+x),p=document.getElementById('ttsPane_'+x);
+  if(t){t.style.background=(x===k?'var(--orange)':'#F3F4F6');t.style.color=(x===k?'#fff':'var(--text-main)');}
+  if(p)p.style.display=(x===k?'block':'none');});
+}
+function _ttsCSV(){
+ const T=window._TTSDATA; if(!T)return;
+ const head=['AM','Bưu Cục','Mã Đơn','COD (đ)','Trạng thái'];
+ const rows=T.orders.map(o=>[o.am,o.bc,o.ma,o.cod,o.st]);
+ const csv='﻿'+[head,...rows].map(r=>r.map(x=>/[",;\n]/.test(String(x))?'"'+String(x).replace(/"/g,'""')+'"':x).join(',')).join('\n');
+ const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));a.download='don_tts_cod_duoi_50k_'+(new Date().toISOString().slice(0,10))+'.csv';a.click();
+}
 /* ===== p43 — Tổng Quan Target (so số thật đạt với mục tiêu Sếp) ===== */
 const _TGT_ISO=s=>{const m=(''+s).match(/(\d{4})-(\d{2})-(\d{2})/);return m?m[0]:'';};
 const _TGT_latest=(rows,dc)=>{const ds=[...new Set((rows||[]).slice(1).map(r=>_TGT_ISO(r[dc])).filter(Boolean))];return ds.sort().pop()||'';};
@@ -4846,6 +4861,51 @@ async function buildCodCheckPage(){
  if(window._codTimer)clearInterval(window._codTimer);
  window._codTimer=setInterval(render,30*60*1000); // tự cập nhật 30 phút
 }
+/* ===== p47 — Đơn TTS COD < 50k (realtime, nguồn gtc_live.json.ttsCod) ===== */
+async function buildTtsCodPage(){
+ const el=document.getElementById('p47'); if(!el)return;
+ const dv=v=>(+v||0).toLocaleString('vi-VN')+' đ';
+ const trv=v=>((+v||0)/1e6).toLocaleString('vi-VN',{minimumFractionDigits:1,maximumFractionDigits:1})+' tr';
+ const stColor=s=>s==='Giao thành công'?'#15803D':(s==='Giao thất bại'?'#DC2626':'#D97706');
+ const render=async()=>{
+  try{
+   const r=await fetch('gtc_live.json?t='+Date.now()); if(!r.ok)throw new Error('HTTP '+r.status);
+   const d=await r.json(); const T=d.ttsCod;
+   if(!T||!T.orders){ el.innerHTML='<div class="page-header"><div class="page-title">📦 Đơn TTS COD &lt; 50k</div></div><div class="analysis-box">Chưa có dữ liệu TTS COD trong gtc_live.json — chờ lần quét tới (mỗi 30 phút) hoặc bấm "Cập nhật dữ liệu".</div>'; return; }
+   const cc=window._CC_BCAM||{};
+   const amOf=bc=>{const a=cc[bc];return (a&&a.length)?a.join(', '):'—';};
+   const orders=T.orders.map(o=>({ma:o.ma,cod:o.cod,st:o.st,nv:o.nv,idnv:o.idnv,bc:o.bc,tinh:o.tinh,am:amOf(o.bc)}));
+   window._TTSDATA={...T,orders};
+   const upd=new Date(d.updatedAt); const updStr=isNaN(upd)?'—':upd.toLocaleString('vi-VN',{hour:'2-digit',minute:'2-digit',day:'2-digit',month:'2-digit'});
+   const agg=(keyFn)=>{const m={};orders.forEach(o=>{const k=keyFn(o);const g=m[k]||(m[k]={key:k,soDon:0,tongCod:0,tc:0,tb:0,dg:0});g.soDon++;g.tongCod+=o.cod;if(o.st==='Giao thành công')g.tc++;else if(o.st==='Giao thất bại')g.tb++;else g.dg++;});return Object.values(m).sort((a,b)=>b.soDon-a.soDon);};
+   const byTinh=agg(o=>o.tinh),byAM=agg(o=>o.am),byBC=agg(o=>o.bc);
+   const tc=orders.filter(o=>o.st==='Giao thành công').length,tb=orders.filter(o=>o.st==='Giao thất bại').length,dg=orders.filter(o=>o.st==='Đang giao').length;
+   const tongCod=orders.reduce((s,o)=>s+o.cod,0);
+   const kpi=(t,v,s,c)=>`<div style="flex:1;min-width:150px;background:#fff;border:1px solid var(--border);border-radius:14px;padding:13px 16px;box-shadow:var(--shadow-sm)"><div style="font-size:12px;color:var(--text-sub);font-weight:600">${t}</div><div style="font-size:22px;font-weight:800;color:${c||'var(--text-main)'};margin-top:2px">${v}</div><div style="font-size:11.5px;color:var(--text-sub);margin-top:1px">${s}</div></div>`;
+   const TH='style="background:#1F3864;color:#fff;padding:7px 11px;font-size:12px;font-weight:700;white-space:nowrap"';
+   const tcS='style="text-align:center;padding:6px 10px;font-size:12.5px;border-bottom:1px solid var(--border);white-space:nowrap"';
+   const tlS='style="text-align:left;padding:6px 10px;font-size:12.5px;border-bottom:1px solid var(--border);white-space:nowrap"';
+   const trS='style="text-align:right;padding:6px 10px;font-size:12.5px;border-bottom:1px solid var(--border);white-space:nowrap"';
+   const aggTable=(arr,label)=>{
+    let tot={soDon:0,tongCod:0,tc:0,tb:0,dg:0};arr.forEach(x=>{tot.soDon+=x.soDon;tot.tongCod+=x.tongCod;tot.tc+=x.tc;tot.tb+=x.tb;tot.dg+=x.dg;});
+    let h=`<div class="table-wrap" style="overflow-x:auto"><table style="border-collapse:collapse;min-width:640px"><thead><tr><th ${TH} style="text-align:left">${label}</th><th ${TH} style="text-align:center">SỐ ĐƠN</th><th ${TH} style="text-align:center">Giao thành công</th><th ${TH} style="text-align:center">Giao thất bại</th><th ${TH} style="text-align:center">Đang giao</th><th ${TH} style="text-align:right">TỔNG COD</th></tr></thead><tbody>`;
+    arr.forEach(x=>{h+=`<tr><td ${tlS} style="font-weight:600">${x.key}</td><td ${tcS} style="font-weight:700">${fmt(x.soDon)}</td><td ${tcS} style="color:#15803D">${fmt(x.tc)}</td><td ${tcS} style="color:#DC2626;font-weight:700">${fmt(x.tb)}</td><td ${tcS} style="color:#D97706">${fmt(x.dg)}</td><td ${trS} style="font-weight:700">${dv(x.tongCod)}</td></tr>`;});
+    h+=`<tr style="background:#FFF7ED;font-weight:800"><td ${tlS}>Tổng</td><td ${tcS}>${fmt(tot.soDon)}</td><td ${tcS} style="color:#15803D">${fmt(tot.tc)}</td><td ${tcS} style="color:#DC2626">${fmt(tot.tb)}</td><td ${tcS} style="color:#D97706">${fmt(tot.dg)}</td><td ${trS}>${dv(tot.tongCod)}</td></tr>`;
+    return h+'</tbody></table></div>';
+   };
+   const CAP=800;
+   const orderRows=orders.slice(0,CAP).map(o=>`<tr><td ${tlS} style="color:var(--text-sub);font-size:12px">${o.am}</td><td ${tlS}>${o.bc}</td><td ${tlS} style="font-family:monospace;font-weight:600">${o.ma}</td><td ${trS} style="font-weight:700">${dv(o.cod)}</td><td ${tlS}>${o.nv||'—'}</td><td ${tcS} style="color:${stColor(o.st)};font-weight:700">${o.st}</td></tr>`).join('');
+   el.innerHTML=`<div class="page-header"><div class="page-title">📦 Đơn TTS COD &lt; 50k</div><div class="page-meta"><span style="color:var(--text-sub);font-size:13px">Đơn <b>TTS</b> (mã VNGH) có <b>COD dưới 50.000đ</b> — mọi trạng thái · chỉ Lạng Sơn + Quảng Ninh.</span><span style="background:#ECFDF5;color:#166534;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:700">🕒 Quét: ${updStr} · ${T.hubsOk||''} BC</span><button class="tg-inpage-btn" style="background:#16A34A;border-color:#16A34A" onclick="window._ttsRender&&window._ttsRender()">🔄 Tải lại</button></div></div>
+    <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px">${kpi('📦 Tổng đơn TTS COD&lt;50k',fmt(orders.length),'Mã VNGH · COD 0–50k','var(--text-main)')}${kpi('💳 Tổng COD',dv(tongCod),trv(tongCod),'var(--orange-dark)')}${kpi('❌ Giao thất bại',fmt(tb),orders.length?(tb/orders.length*100).toFixed(1)+'% tổng':'','#DC2626')}${kpi('✅ Thành công / 🚚 Đang giao',fmt(tc)+' / '+fmt(dg),'Giao thành công / Đang giao','#15803D')}</div>
+    <div style="display:flex;gap:8px;margin-bottom:12px"><button id="ttsTab_tinh" onclick="_ttsTab('tinh')" style="padding:7px 16px;border:none;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer;background:var(--orange);color:#fff">Theo Tỉnh</button><button id="ttsTab_am" onclick="_ttsTab('am')" style="padding:7px 16px;border:none;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer;background:#F3F4F6;color:var(--text-main)">Theo AM</button><button id="ttsTab_bc" onclick="_ttsTab('bc')" style="padding:7px 16px;border:none;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer;background:#F3F4F6;color:var(--text-main)">Theo Bưu cục</button></div>
+    <div class="card" style="margin-bottom:18px"><div id="ttsPane_tinh" style="display:block">${aggTable(byTinh,'TỈNH')}</div><div id="ttsPane_am" style="display:none">${aggTable(byAM,'AM')}</div><div id="ttsPane_bc" style="display:none">${aggTable(byBC,'BƯU CỤC')}</div></div>
+    <div class="card"><div class="card-header"><div class="card-title"><div class="card-icon">📋</div>Danh sách đơn — sắp theo COD giảm dần (${fmt(orders.length)} đơn)</div><button class="tg-inpage-btn" style="background:var(--orange);border-color:var(--orange)" onclick="_ttsCSV()">⬇️ Tải danh sách (CSV)</button></div><div class="table-wrap" style="overflow:auto;max-height:620px"><table style="border-collapse:collapse;min-width:760px"><thead style="position:sticky;top:0;z-index:2"><tr><th ${TH} style="text-align:left">AM</th><th ${TH} style="text-align:left">BƯU CỤC</th><th ${TH} style="text-align:left">MÃ ĐƠN</th><th ${TH} style="text-align:right">COD</th><th ${TH} style="text-align:left">NV GIAO</th><th ${TH} style="text-align:center">TRẠNG THÁI</th></tr></thead><tbody>${orderRows}</tbody></table></div>${orders.length>CAP?`<div style="padding:9px 12px;color:var(--text-sub);font-size:12px">Hiển thị ${CAP}/${fmt(orders.length)} đơn — bấm <b>Tải danh sách (CSV)</b> để xem đủ.</div>`:''}</div>`;
+  }catch(e){ el.innerHTML='<div class="page-header"><div class="page-title">📦 Đơn TTS COD &lt; 50k</div></div><div class="analysis-box">Lỗi tải dữ liệu: '+(e&&e.message||e)+'</div>'; }
+ };
+ window._ttsRender=render; await render();
+ if(window._ttsTimer)clearInterval(window._ttsTimer);
+ window._ttsTimer=setInterval(render,30*60*1000);
+}
 async function buildGTCRealtimePage(){
  const el=document.getElementById('p41');
  el.innerHTML='<div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải GTC realtime…</div></div>';
@@ -5150,6 +5210,8 @@ async function init(){
  buildGTCRealtimePage().catch(e=>console.warn('GTC realtime:',e&&e.message||e));
  // p42 — Check COD giá trị cao (đọc gtc_live.json.cod, tự cập nhật 30')
  buildCodCheckPage().catch(e=>console.warn("COD:",e&&e.message||e));
+ // p47 — Đơn TTS COD < 50k (realtime từ gtc_live.json.ttsCod, AM theo _CC_BCAM)
+ buildTtsCodPage().catch(e=>console.warn("TTS COD:",e&&e.message||e));
  // p46 — Thu nhập NV (sheet Luong_NVBC, cần _CC_BCAM để map AM)
  buildThuNhapPage().catch(e=>console.warn('Thu nhập NV:',e&&e.message||e));
  // p43 — Tổng Quan Target (so số thật với mục tiêu Sếp)
