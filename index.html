@@ -4411,7 +4411,7 @@ async function sendTtsCodToTelegram(btn){ // bắn 2 bảng AM/BC + tổng quan 
   let cap='📦 <b>ĐƠN TTS COD DƯỚI 50.000đ — LẠNG SƠN + QUẢNG NINH</b>\n';
   cap+='🕒 Realtime · Tổng <b>'+fmt(n)+' đơn</b> (mã VNGH, COD 0–50k) · Tổng COD <b>'+dv(tcod)+'</b>\n';
   cap+='✅ Giao thành công: <b>'+fmt(tc)+'</b> · ❌ Giao thất bại: <b>'+fmt(tb)+'</b> · 🚚 Đang giao: <b>'+fmt(dg)+'</b>\n';
-  cap+='📍 Theo tỉnh: '+tinhStr+'\n\n👤 <b>Tổng quan theo AM</b> (bảng dưới)';
+  cap+='📍 Theo tỉnh: '+tinhStr;
   const panes=['tinh','am','bc'];
   const orig=panes.map(x=>{const p=document.getElementById('ttsPane_'+x);return p?p.style.display:'';});
   const show=k=>panes.forEach(x=>{const p=document.getElementById('ttsPane_'+x);if(p)p.style.display=(x===k?'block':'none');});
