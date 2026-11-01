@@ -349,12 +349,13 @@ tr.amchild td:first-child{padding-left:16px;font-size:12.5px}
   </div>
 
   <div id="tabBcrep" class="hidden">
-    <div class="card">
-      <div class="lbl">📋 Báo cáo vận hành <b>(LSO) Đông Kinh</b> · <b>(LSO) Bình Gia</b></div>
-      <div class="mut" id="bcrepMeta" style="margin-top:4px">Đang tải…</div>
-      <button id="bcrepTgBtn" onclick="sendBcrepTG(this)" style="margin-top:10px;width:100%;padding:11px;border:none;border-radius:11px;background:linear-gradient(180deg,#29a3e0,#1e8fcc);color:#fff;font-weight:800;font-size:14px">📤 Bắn báo cáo lên Telegram (@thangquada)</button>
+    <div class="subtabs" id="bcrepSubtabs">
+      <div class="subtab on" id="bcSubBtn1" onclick="bcSub('1')">① Cần giao</div>
+      <div class="subtab" id="bcSubBtn2" onclick="bcSub('2')">② Tồn đọng</div>
     </div>
-    <div id="bcrepBody"></div>
+    <div class="mut" id="bcrepMeta" style="margin:0 2px 10px">Đang tải…</div>
+    <div id="bcrepBody1"></div>
+    <div id="bcrepBody2" class="hidden"></div>
   </div>
 
   <div style="height:60px"></div>
@@ -592,72 +593,110 @@ document.getElementById('refresh').onclick=async function(){
 
 // ===== Tab + Ngày N-1 =====
 var _n1loaded=false, _scanning=false;
-// ===== Báo cáo 2 Bưu Cục (Đông Kinh · Bình Gia) =====
-var _BCREP=null, _BCSHEET=null, _bcSheetTried=false;
+// ===== Báo cáo 2 Bưu Cục (Đông Kinh · Bình Gia) — 2 sub-tab, bắn khác giờ =====
+var _BCREP=null, _BCSHEET=null, _bcSheetTried=false, _bcSub='1';
 var _BC_TG_TOKEN='7471088067:AAGje2KrjUTzlkIiU05h1bm21IUkB0J2J0s', _BC_GK=1747498029; // DM @thangquada
 var _BCNAMES=['(LSO) Đông Kinh','(LSO) Bình Gia'];
+function bcSub(which){ _bcSub=which; var one=which==='1';
+  document.getElementById('bcSubBtn1').classList.toggle('on',one);
+  document.getElementById('bcSubBtn2').classList.toggle('on',!one);
+  document.getElementById('bcrepBody1').classList.toggle('hidden',!one);
+  document.getElementById('bcrepBody2').classList.toggle('hidden',one);
+  try{window.scrollTo(0,0);}catch(e){}
+}
+// Bảng cần giao (màu cố định sáng để chụp ảnh đẹp dù app nền tối)
+function _bcAppTbl(hubs,S,isTts){
+  var TH='style="background:#1F3864;color:#fff;padding:6px 9px;font-size:11.5px;font-weight:700;white-space:nowrap;text-align:center;border:1px solid #cfd6e4"';
+  var THL='style="background:#1F3864;color:#fff;padding:6px 9px;font-size:11.5px;font-weight:700;white-space:nowrap;text-align:left;border:1px solid #cfd6e4"';
+  var tc='style="text-align:center;padding:6px 9px;font-size:12px;color:#111;border:1px solid #e3e8f0;white-space:nowrap"';
+  var tl='style="text-align:left;padding:6px 9px;font-size:12px;color:#111;font-weight:700;border:1px solid #e3e8f0;white-space:nowrap"';
+  var sum={canGiao:0,donMoi:0,donTon:0,daGan:0,chuaGan:0};
+  var head='<tr><th '+THL+'>Tên Bưu Cục</th><th '+TH+'>%GTC N-1</th><th '+TH+'>Tổng đơn ngày N</th><th '+TH+'>Đơn mới ngày N</th><th '+TH+'>Đơn tồn N-1</th><th '+TH+'>Tổng gán</th><th '+TH+'>%Gán</th><th '+TH+'>Chưa gán</th>'+(isTts?'':'<th '+TH+'>NVPTTT/Định biên</th>')+'</tr>';
+  var body='';
+  hubs.forEach(function(h){ var o=isTts?h.tts:h; var s=S(h.name); var g=isTts?s.gtcN1Tts:s.gtcN1;
+    sum.canGiao+=o.canGiao||0;sum.donMoi+=o.donMoi||0;sum.donTon+=o.donTon||0;sum.daGan+=o.daGan||0;sum.chuaGan+=o.chuaGan||0;
+    body+='<tr><td '+tl+'>'+h.name+'</td><td '+tc+' style="color:#111;background:#FFF7ED;font-weight:700">'+(g==null?'—':pstr(g))+'</td><td '+tc+' style="color:#111;font-weight:700">'+vn(o.canGiao)+'</td><td '+tc+'>'+vn(o.donMoi)+'</td><td '+tc+'>'+vn(o.donTon)+'</td><td '+tc+'>'+vn(o.daGan)+'</td><td '+tc+' style="font-weight:700;color:'+((o.pctGan||0)>=95?'#15803D':'#DC2626')+'">'+(o.pctGan==null?'—':pstr(o.pctGan))+'</td><td '+tc+' style="color:#DC2626;font-weight:700">'+vn(o.chuaGan)+'</td>'+(isTts?'':'<td '+tc+' style="color:#111;font-weight:700">'+h.nvPhat+'NVPTTT/'+h.dinhBien+'NVPTTT</td>')+'</tr>';
+  });
+  var pg=sum.canGiao?Math.round(sum.daGan/sum.canGiao*1000)/10:null;
+  body+='<tr style="background:#FFF7ED;font-weight:800"><td '+tl+'>Grand Total</td><td '+tc+'>—</td><td '+tc+'>'+vn(sum.canGiao)+'</td><td '+tc+'>'+vn(sum.donMoi)+'</td><td '+tc+'>'+vn(sum.donTon)+'</td><td '+tc+'>'+vn(sum.daGan)+'</td><td '+tc+'>'+(pg==null?'—':pstr(pg))+'</td><td '+tc+'>'+vn(sum.chuaGan)+'</td>'+(isTts?'':'<td '+tc+'></td>')+'</tr>';
+  return '<div style="overflow-x:auto;-webkit-overflow-scrolling:touch"><table style="border-collapse:collapse;min-width:'+(isTts?660:760)+'px;background:#fff">'+'<thead>'+head+'</thead><tbody>'+body+'</tbody></table></div>';
+}
+function _bcAppSummed(byName,S,H){
+  var a5=0,a5t=0,c48=0,c48t=0,lcg=0,lct=0,rs=0;
+  _BCNAMES.forEach(function(nm){var h=byName[nm];if(!h)return;var s=S(nm),b=h.bc2;a5+=(+s.aging5||0);a5t+=(+s.aging5Tts||0);c48+=(+b.cg48||0);c48t+=(+b.cg48tts||0);lcg+=(+b.lcGiao36||0);lct+=(+b.lcTra36||0);rs+=(+b.returnShop48||0);});
+  return 'AM Thắng báo cáo mốc '+H+'h\n'+
+   '• Aging toàn bộ các đơn hàng &gt; 5 ngày: <b>'+vn(a5)+' đơn</b>\n'+
+   '• Aging TTS &gt; 5 ngày: <b>'+vn(a5t)+' đơn</b>\n'+
+   '• 48h chưa gán toàn bộ đơn hàng: <b>'+vn(c48)+' đơn</b>\n'+
+   '• 48h TTS chưa gán: <b>'+vn(c48t)+' đơn</b>\n'+
+   '• LC giao &gt; 36h: <b>'+vn(lcg)+' đơn</b>\n'+
+   '• LC trả &gt; 36h: <b>'+vn(lct)+' đơn</b>\n'+
+   '• Hàng trả Shop &gt; 48h: <b>'+vn(rs)+' đơn</b>';
+}
 async function renderBcrep(){
-  var meta=document.getElementById('bcrepMeta'), body=document.getElementById('bcrepBody'); if(!meta||!body)return;
-  if(!_BCREP||!_BCREP.hubs||!_BCREP.hubs.length||_BCREP.err){ meta.textContent='Chưa có dữ liệu — bấm "🔴 Trực tiếp" rồi Cập nhật dữ liệu (hoặc chờ quét 30 phút).'; body.innerHTML=''; return; }
+  var meta=document.getElementById('bcrepMeta'), b1=document.getElementById('bcrepBody1'), b2=document.getElementById('bcrepBody2'); if(!meta||!b1||!b2)return;
+  if(!_BCREP||!_BCREP.hubs||!_BCREP.hubs.length||_BCREP.err){ meta.textContent='Chưa có dữ liệu — bấm "🔴 Trực tiếp" rồi Cập nhật dữ liệu (hoặc chờ quét 30 phút).'; b1.innerHTML=''; b2.innerHTML=''; return; }
   if(!_bcSheetTried){ _bcSheetTried=true; try{ var j=await fetch('/api/bc-report-sheet?t='+Date.now()).then(function(r){return r.json();}); if(j&&j.ok)_BCSHEET=j.bc; }catch(e){} }
   var S=function(n){return (_BCSHEET&&_BCSHEET[n])||{};};
   var H=_BCREP.hourVN!=null?_BCREP.hourVN:new Date().getHours();
-  meta.innerHTML='🕒 Mốc '+(H<14?'sáng (~10h)':'chiều (~15h)')+' · đơn mới '+(_BCREP.moiMode==='0-12h'?'0-6h + 6-12h':'0-6h')+(_BCSHEET?'':' · <span style="color:#ff5d6c">chưa lấy được %GTC N-1 / Aging</span>');
+  meta.innerHTML='🕒 Mốc '+(H<14?'sáng (~10h)':'chiều (~15h)')+' · đơn mới '+(_BCREP.moiMode==='0-12h'?'0-6h+6-12h':'0-6h')+(_BCSHEET?'':' · <span style="color:#ff5d6c">chưa lấy %GTC N-1/Aging</span>');
   var byName={}; _BCREP.hubs.forEach(function(h){byName[h.name]=h;});
-  var pd=function(v){return v==null?'—':pstr(v);};
-  function grid(o,gtcN1){ return '<div class="ovgrid">'+
-    '<div class="ovcell"><span class="c">%GTC N-1</span><b style="color:var(--orange)">'+pd(gtcN1)+'</b></div>'+
-    '<div class="ovcell"><span class="c">Cần giao</span><b>'+vn(o.canGiao)+'</b></div>'+
-    '<div class="ovcell"><span class="c">Đơn mới N</span><b>'+vn(o.donMoi)+'</b></div>'+
-    '<div class="ovcell"><span class="c">Tồn N-1</span><b>'+vn(o.donTon)+'</b></div>'+
-    '<div class="ovcell"><span class="c">Đã gán</span><b>'+vn(o.daGan)+'</b></div>'+
-    '<div class="ovcell"><span class="c">%Gán</span><b style="color:'+((o.pctGan||0)>=95?'var(--green)':'#ff5d6c')+'">'+pd(o.pctGan)+'</b></div>'+
-    '<div class="ovcell"><span class="c">Chưa gán</span><b style="color:#ff5d6c">'+vn(o.chuaGan)+'</b></div></div>'; }
+  var hubs=_BCNAMES.map(function(n){return byName[n];}).filter(Boolean);
+  // --- Sub-tab ① Cần giao: 2 bảng + nút bắn ảnh ---
+  b1.innerHTML='<div class="card"><div class="sect">📋 Báo cáo 1 — Các đơn cần phải giao</div>'+
+    '<div id="bcCap1" style="background:#fff;border-radius:8px;padding:8px;margin-top:8px">'+
+      '<div style="font-weight:800;color:#C2410C;font-size:13px;margin:2px 0 6px">① Total các đơn cần phải giao</div>'+_bcAppTbl(hubs,S,false)+
+      '<div style="font-weight:800;color:#C2410C;font-size:13px;margin:12px 0 6px">② Total các đơn TTS cần phải giao</div>'+_bcAppTbl(hubs,S,true)+
+    '</div>'+
+    '<button onclick="sendBcrep1TG(this)" style="margin-top:12px;width:100%;padding:11px;border:none;border-radius:11px;background:linear-gradient(180deg,#29a3e0,#1e8fcc);color:#fff;font-weight:800;font-size:14px">📤 Bắn Báo cáo 1 (bảng → @thangquada)</button></div>';
+  // --- Sub-tab ② Tồn đọng: từng BC + preview gộp + nút bắn gộp ---
   function kv(l,v){ return '<div class="kv"><span>'+l+'</span><span class="v" style="'+((+v||0)>0?'color:#ff5d6c':'')+'">'+vn(v)+' đơn</span></div>'; }
-  var html='';
-  _BCNAMES.forEach(function(nm){ var h=byName[nm]; if(!h)return; var s=S(nm), b=h.bc2;
-    html+='<div class="card">'+
-      '<div class="sect">📍 '+h.name+' · <span style="color:var(--orange)">'+h.nvPhat+'NVPTTT/'+h.dinhBien+'NVPTTT</span></div>'+
-      '<div class="lbl" style="margin-top:8px">① Cần giao — Total</div>'+grid(h,s.gtcN1)+
-      '<div class="lbl" style="margin-top:12px">② Cần giao — TTS</div>'+grid(h.tts,s.gtcN1Tts)+
-      '<div class="lbl" style="margin-top:12px">③ Tồn đọng</div>'+
+  var h2='';
+  hubs.forEach(function(h){ var s=S(h.name),b=h.bc2;
+    h2+='<div class="card"><div class="sect">📍 '+h.name+' — mốc '+H+'h</div>'+
       kv('Aging toàn bộ > 5 ngày',s.aging5||0)+kv('Aging TTS > 5 ngày',s.aging5Tts||0)+
       kv('48h chưa gán toàn bộ',b.cg48)+kv('48h TTS chưa gán',b.cg48tts)+
-      kv('LC giao > 36h',b.lcGiao36)+kv('LC trả > 36h',b.lcTra36)+kv('Hàng trả Shop > 48h',b.returnShop48)+
-    '</div>';
+      kv('LC giao > 36h',b.lcGiao36)+kv('LC trả > 36h',b.lcTra36)+kv('Hàng trả Shop > 48h',b.returnShop48)+'</div>';
   });
-  body.innerHTML=html;
+  var summed=_bcAppSummed(byName,S,H);
+  h2+='<div class="card" style="border:1px dashed var(--orange)"><div class="lbl" style="color:var(--orange)">📤 Nội dung sẽ bắn (gộp 2 BC)</div><div style="font-size:13px;line-height:1.7;margin-top:6px">'+summed.replace(/\n/g,'<br>')+'</div>'+
+    '<button onclick="sendBcrep2TG(this)" style="margin-top:12px;width:100%;padding:11px;border:none;border-radius:11px;background:linear-gradient(180deg,#29a3e0,#1e8fcc);color:#fff;font-weight:800;font-size:14px">📤 Bắn Báo cáo 2 (gộp → @thangquada)</button></div>';
+  b2.innerHTML=h2;
+  bcSub(_bcSub);
 }
 async function _bcTgSend(text){ return fetch('https://api.telegram.org/bot'+_BC_TG_TOKEN+'/sendMessage',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({chat_id:_BC_GK,text:text,parse_mode:'HTML'})}).then(function(r){return r.json();}); }
-async function sendBcrepTG(btn){
-  if(!_BCREP||!_BCREP.hubs){alert('Chưa có dữ liệu — mở tab và chờ tải.');return;}
-  if(!confirm('Bắn báo cáo 2 Bưu Cục (Đông Kinh · Bình Gia) lên Telegram @thangquada?'))return;
+async function _bcCapture(srcId,width){
+  if(!window.html2canvas){ await new Promise(function(res,rej){var s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';s.onload=res;s.onerror=function(){rej(new Error('html2canvas lỗi'));};setTimeout(function(){rej(new Error('html2canvas timeout'));},12000);document.head.appendChild(s);}); }
+  var src=document.getElementById(srcId); if(!src)throw new Error('không thấy bảng');
+  var cl=src.cloneNode(true); cl.querySelectorAll('div').forEach(function(e){e.style.overflow='visible';});
+  var tmp=document.createElement('div'); tmp.style.cssText='position:fixed;top:-9999px;left:0;z-index:-1;width:'+width+'px;background:#fff;padding:10px';
+  tmp.appendChild(cl); document.body.appendChild(tmp);
+  await new Promise(function(r){setTimeout(r,250);});
+  try{ var cv=await html2canvas(tmp,{scale:2,useCORS:true,backgroundColor:'#ffffff',logging:false,width:width,windowWidth:width}); return await new Promise(function(res){cv.toBlob(res,'image/png',0.95);}); }
+  finally{ tmp.remove(); }
+}
+async function _bcTgSendPhoto(blob,caption){ var fd=new FormData(); fd.append('chat_id',_BC_GK); fd.append('caption',caption); fd.append('parse_mode','HTML'); fd.append('photo',blob,'baocao1.png'); return fetch('https://api.telegram.org/bot'+_BC_TG_TOKEN+'/sendPhoto',{method:'POST',body:fd}).then(function(r){return r.json();}); }
+async function sendBcrep1TG(btn){
+  if(!_BCREP||!_BCREP.hubs){alert('Chưa có dữ liệu.');return;}
+  if(!confirm('Bắn Báo cáo 1 (bảng cần giao) lên Telegram @thangquada?'))return;
+  var H=_BCREP.hourVN!=null?_BCREP.hourVN:new Date().getHours();
+  var ot=btn.textContent; btn.disabled=true; btn.textContent='⏳ Đang chụp & bắn…';
+  try{ var blob=await _bcCapture('bcCap1',800); if(!blob)throw new Error('không chụp được bảng');
+    var r=await _bcTgSendPhoto(blob,'📋 <b>BÁO CÁO 1 — CÁC ĐƠN CẦN PHẢI GIAO</b> — mốc '+H+'h\n(LSO) Đông Kinh · (LSO) Bình Gia');
+    alert((r&&r.ok)?'Đã bắn Báo cáo 1 (bảng) ✓':'Gửi có thể lỗi: '+JSON.stringify(r).slice(0,120));
+  }catch(e){ alert('Lỗi bắn TG: '+(e&&e.message||e)); }
+  finally{ btn.disabled=false; btn.textContent=ot; }
+}
+async function sendBcrep2TG(btn){
+  if(!_BCREP||!_BCREP.hubs){alert('Chưa có dữ liệu.');return;}
+  if(!confirm('Bắn Báo cáo 2 (gộp 2 BC) lên Telegram @thangquada?'))return;
   if(!_bcSheetTried){ try{var j=await fetch('/api/bc-report-sheet?t='+Date.now()).then(function(r){return r.json();}); if(j&&j.ok)_BCSHEET=j.bc;}catch(e){} _bcSheetTried=true; }
   var S=function(n){return (_BCSHEET&&_BCSHEET[n])||{};};
   var H=_BCREP.hourVN!=null?_BCREP.hourVN:new Date().getHours();
+  var byName={}; _BCREP.hubs.forEach(function(h){byName[h.name]=h;});
   var ot=btn.textContent; btn.disabled=true; btn.textContent='⏳ Đang bắn…';
-  try{
-    var byName={}; _BCREP.hubs.forEach(function(h){byName[h.name]=h;});
-    var t1='📋 <b>BÁO CÁO VẬN HÀNH 2 BƯU CỤC</b> — mốc '+H+'h';
-    _BCNAMES.forEach(function(nm){var h=byName[nm];if(!h)return;var s=S(nm);
-      t1+='\n\n📍 <b>'+h.name+'</b> ('+h.nvPhat+'NVPTTT/'+h.dinhBien+'NVPTTT)\n'+
-        '• Total: cần giao <b>'+vn(h.canGiao)+'</b> · mới '+vn(h.donMoi)+' · tồn '+vn(h.donTon)+' · gán '+vn(h.daGan)+' ('+pstr(h.pctGan)+') · chưa gán '+vn(h.chuaGan)+' · %GTC N-1 '+(s.gtcN1==null?'—':pstr(s.gtcN1))+'\n'+
-        '• TTS: cần giao <b>'+vn(h.tts.canGiao)+'</b> · mới '+vn(h.tts.donMoi)+' · tồn '+vn(h.tts.donTon)+' · gán '+vn(h.tts.daGan)+' ('+pstr(h.tts.pctGan)+') · chưa gán '+vn(h.tts.chuaGan)+' · %GTC N-1 '+(s.gtcN1Tts==null?'—':pstr(s.gtcN1Tts));
-    });
-    var ok=0,tot=1+_BCNAMES.length; var r1=await _bcTgSend(t1); if(r1&&r1.ok)ok++;
-    for(var i=0;i<_BCNAMES.length;i++){ var h=byName[_BCNAMES[i]]; if(!h){continue;} var s=S(_BCNAMES[i]),b=h.bc2;
-      var t2='📍 <b>'+h.name+'</b> — mốc '+H+'h\n'+
-       '• Aging toàn bộ các đơn hàng &gt; 5 ngày: <b>'+vn(s.aging5||0)+' đơn</b>\n'+
-       '• Aging TTS &gt; 5 ngày: <b>'+vn(s.aging5Tts||0)+' đơn</b>\n'+
-       '• 48h chưa gán toàn bộ đơn hàng: <b>'+vn(b.cg48)+' đơn</b>\n'+
-       '• 48h TTS chưa gán: <b>'+vn(b.cg48tts)+' đơn</b>\n'+
-       '• LC giao &gt; 36h: <b>'+vn(b.lcGiao36)+' đơn</b>\n'+
-       '• LC trả &gt; 36h: <b>'+vn(b.lcTra36)+' đơn</b>\n'+
-       '• Hàng trả Shop &gt; 48h: <b>'+vn(b.returnShop48)+' đơn</b>';
-      var rr=await _bcTgSend(t2); if(rr&&rr.ok)ok++;
-    }
-    alert('Đã bắn '+ok+'/'+tot+' tin lên @thangquada ✓');
-  }catch(e){ alert('Lỗi bắn TG: '+(e&&e.message||e)); }
+  try{ var r=await _bcTgSend(_bcAppSummed(byName,S,H)); alert((r&&r.ok)?'Đã bắn Báo cáo 2 (gộp "AM Thắng báo cáo") ✓':'Gửi có thể lỗi: '+JSON.stringify(r).slice(0,120)); }
+  catch(e){ alert('Lỗi bắn TG: '+(e&&e.message||e)); }
   finally{ btn.disabled=false; btn.textContent=ot; }
 }
 function setTab(which){
