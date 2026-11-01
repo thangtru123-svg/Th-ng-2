@@ -4408,7 +4408,7 @@ async function sendTtsCodToTelegram(btn){ // bắn 2 bảng AM/BC + tổng quan 
   const tc=orders.filter(o=>o.st==='Giao thành công').length, tb=orders.filter(o=>o.st==='Giao thất bại').length, dg=orders.filter(o=>o.st==='Đang giao').length;
   const byT={};orders.forEach(o=>{byT[o.tinh]=(byT[o.tinh]||0)+1;});
   const tinhStr=Object.entries(byT).sort((a,b)=>b[1]-a[1]).map(([k,v])=>k+' '+fmt(v)).join(' · ');
-  let cap='📦 <b>ĐƠN TTS COD < 50.000đ — LẠNG SƠN + QUẢNG NINH</b>\n';
+  let cap='📦 <b>ĐƠN TTS COD DƯỚI 50.000đ — LẠNG SƠN + QUẢNG NINH</b>\n';
   cap+='🕒 Realtime · Tổng <b>'+fmt(n)+' đơn</b> (mã VNGH, COD 0–50k) · Tổng COD <b>'+dv(tcod)+'</b>\n';
   cap+='✅ Giao thành công: <b>'+fmt(tc)+'</b> · ❌ Giao thất bại: <b>'+fmt(tb)+'</b> · 🚚 Đang giao: <b>'+fmt(dg)+'</b>\n';
   cap+='📍 Theo tỉnh: '+tinhStr+'\n\n👤 <b>Tổng quan theo AM</b> (bảng dưới)';
@@ -4424,7 +4424,7 @@ async function sendTtsCodToTelegram(btn){ // bắn 2 bảng AM/BC + tổng quan 
   const r2=await _tgSendPhoto(TG_AGING_CHAT,TG_TTS_THREAD,imgBC,'🏪 <b>Tổng quan theo Bưu Cục</b>'); if(!r2||!r2.ok)await _tgSendDoc(TG_AGING_CHAT,TG_TTS_THREAD,imgBC,'🏪 Tổng quan theo Bưu Cục','tts_theo_bc.png');
   const oe='📌 <b>LƯU Ý</b>\nCác AM/Bưu Cục <b>tự mua đơn</b> thì nhập mã đơn mua vào link:\nhttps://docs.google.com/spreadsheets/d/1M_CBDvkfponNeETPSoX9dgQZ72tXJjMGyiAND8E9GTA/edit?gid=0#gid=0\nđể làm việc với OE, tránh nhân viên bị phạt do khiếu nại.';
   await _tgSend(TG_AGING_CHAT,TG_TTS_THREAD,oe);
-  try{ const bytes=await _ttsXlsxBytes(); const blob=new Blob([bytes],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}); const fn='don_tts_cod_duoi_50k_'+(new Date().toISOString().slice(0,10))+'.xlsx'; await _tgSendDoc(TG_AGING_CHAT,TG_TTS_THREAD,blob,'📄 Danh sách đầy đủ '+fmt(n)+' đơn TTS COD<50k',fn); }catch(e){console.warn('TTS xlsx TG:',e&&e.message);}
+  try{ const bytes=await _ttsXlsxBytes(); const blob=new Blob([bytes],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}); const fn='don_tts_cod_duoi_50k_'+(new Date().toISOString().slice(0,10))+'.xlsx'; await _tgSendDoc(TG_AGING_CHAT,TG_TTS_THREAD,blob,'📄 Danh sách đầy đủ '+fmt(n)+' đơn TTS COD dưới 50k',fn); }catch(e){console.warn('TTS xlsx TG:',e&&e.message);}
   if(btn){btn.textContent='✅ Đã bắn';setTimeout(()=>{btn.disabled=false;btn.textContent=_ld;},2500);}
  }catch(e){ if(btn){btn.disabled=false;btn.textContent=_ld;} alert('Lỗi bắn Telegram: '+(e&&e.message||e)); }
 }
