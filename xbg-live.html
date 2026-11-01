@@ -606,21 +606,21 @@ function bcSub(which){ _bcSub=which; var one=which==='1';
 }
 // Bảng cần giao (màu cố định sáng để chụp ảnh đẹp dù app nền tối)
 function _bcAppTbl(hubs,S,isTts,gt){
-  var TH='style="background:#1F3864;color:#fff;padding:6px 9px;font-size:11.5px;font-weight:700;white-space:nowrap;text-align:center;border:1px solid #cfd6e4"';
-  var THL='style="background:#1F3864;color:#fff;padding:6px 9px;font-size:11.5px;font-weight:700;white-space:nowrap;text-align:left;border:1px solid #cfd6e4"';
-  var tc='style="text-align:center;padding:6px 9px;font-size:12px;color:#111;border:1px solid #e3e8f0;white-space:nowrap"';
-  var tl='style="text-align:left;padding:6px 9px;font-size:12px;color:#111;font-weight:700;border:1px solid #e3e8f0;white-space:nowrap"';
+  var TH='style="background:#1F3864;color:#fff;padding:6px 7px;font-size:11px;font-weight:700;white-space:normal;line-height:1.25;text-align:center;border:1px solid #cfd6e4;width:66px"';
+  var THL='style="background:#1F3864;color:#fff;padding:6px 8px;font-size:11px;font-weight:700;white-space:normal;line-height:1.25;text-align:left;border:1px solid #cfd6e4;width:108px"';
+  var tc='style="text-align:center;padding:6px 7px;font-size:12px;color:#111;border:1px solid #e3e8f0;white-space:nowrap"';
+  var tl='style="text-align:left;padding:6px 8px;font-size:11.5px;color:#111;font-weight:700;border:1px solid #e3e8f0;white-space:nowrap"';
   var sum={canGiao:0,donMoi:0,donTon:0,daGan:0,chuaGan:0};
   var head='<tr><th '+THL+'>Tên Bưu Cục</th><th '+TH+'>%GTC N-1</th><th '+TH+'>Tổng đơn ngày N</th><th '+TH+'>Đơn mới ngày N</th><th '+TH+'>Đơn tồn N-1</th><th '+TH+'>Tổng gán</th><th '+TH+'>%Gán</th><th '+TH+'>Chưa gán</th>'+(isTts?'':'<th '+TH+'>NVPTTT/Định biên</th>')+'</tr>';
   var body='';
   hubs.forEach(function(h){ var o=isTts?h.tts:h; var s=S(h.name); var g=isTts?s.gtcN1Tts:s.gtcN1;
     sum.canGiao+=o.canGiao||0;sum.donMoi+=o.donMoi||0;sum.donTon+=o.donTon||0;sum.daGan+=o.daGan||0;sum.chuaGan+=o.chuaGan||0;
-    body+='<tr><td '+tl+'>'+h.name+'</td><td '+tc+' style="color:#111;background:#FFF7ED;font-weight:700">'+(g==null?'—':pstr(g))+'</td><td '+tc+' style="color:#111;font-weight:700">'+vn(o.canGiao)+'</td><td '+tc+'>'+vn(o.donMoi)+'</td><td '+tc+'>'+vn(o.donTon)+'</td><td '+tc+'>'+vn(o.daGan)+'</td><td '+tc+' style="font-weight:700;color:'+((o.pctGan||0)>=95?'#15803D':'#DC2626')+'">'+(o.pctGan==null?'—':pstr(o.pctGan))+'</td><td '+tc+' style="color:#DC2626;font-weight:700">'+vn(o.chuaGan)+'</td>'+(isTts?'':'<td '+tc+' style="color:#111;font-weight:700">'+h.nvPhat+'NVPTTT/'+h.dinhBien+'NVPTTT</td>')+'</tr>';
+    body+='<tr><td '+tl+'>'+h.name+'</td><td '+tc+' style="color:#111;background:#FFF7ED;font-weight:700">'+(g==null?'—':pstr(g))+'</td><td '+tc+' style="color:#111;font-weight:700">'+vn(o.canGiao)+'</td><td '+tc+'>'+vn(o.donMoi)+'</td><td '+tc+'>'+vn(o.donTon)+'</td><td '+tc+'>'+vn(o.daGan)+'</td><td '+tc+' style="font-weight:700;color:'+((o.pctGan||0)>=95?'#15803D':'#DC2626')+'">'+(o.pctGan==null?'—':pstr(o.pctGan))+'</td><td '+tc+' style="color:#DC2626;font-weight:700">'+vn(o.chuaGan)+'</td>'+(isTts?'':'<td '+tc+' style="color:#111;font-weight:700;white-space:normal;line-height:1.25;width:70px">'+h.nvPhat+'NVPTTT/'+h.dinhBien+'NVPTTT</td>')+'</tr>';
   });
   var pg=sum.canGiao?Math.round(sum.daGan/sum.canGiao*1000)/10:null;
   var gtp=gt?(isTts?gt.gtcN1Tts:gt.gtcN1):null;
   body+='<tr style="background:#FFF7ED;font-weight:800"><td '+tl+'>Grand Total</td><td '+tc+' style="color:#111;background:#FDEBD0;font-weight:700">'+(gtp==null?'—':pstr(gtp))+'</td><td '+tc+'>'+vn(sum.canGiao)+'</td><td '+tc+'>'+vn(sum.donMoi)+'</td><td '+tc+'>'+vn(sum.donTon)+'</td><td '+tc+'>'+vn(sum.daGan)+'</td><td '+tc+'>'+(pg==null?'—':pstr(pg))+'</td><td '+tc+'>'+vn(sum.chuaGan)+'</td>'+(isTts?'':'<td '+tc+'></td>')+'</tr>';
-  return '<div style="overflow-x:auto;-webkit-overflow-scrolling:touch"><table style="border-collapse:collapse;min-width:'+(isTts?660:760)+'px;background:#fff">'+'<thead>'+head+'</thead><tbody>'+body+'</tbody></table></div>';
+  return '<div style="overflow-x:auto;-webkit-overflow-scrolling:touch"><table style="border-collapse:collapse;min-width:'+(isTts?560:680)+'px;background:#fff">'+'<thead>'+head+'</thead><tbody>'+body+'</tbody></table></div>';
 }
 function _bcAppSummed(byName,S,H){
   var a5=0,a5t=0,c48=0,c48t=0,lcg=0,lct=0,rs=0;
@@ -666,14 +666,16 @@ async function renderBcrep(){
   bcSub(_bcSub);
 }
 async function _bcTgSend(text){ return fetch('https://api.telegram.org/bot'+_BC_TG_TOKEN+'/sendMessage',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({chat_id:_BC_GK,text:text,parse_mode:'HTML'})}).then(function(r){return r.json();}); }
-async function _bcCapture(srcId,width){
+async function _bcCapture(srcId){
   if(!window.html2canvas){ await new Promise(function(res,rej){var s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';s.onload=res;s.onerror=function(){rej(new Error('html2canvas lỗi'));};setTimeout(function(){rej(new Error('html2canvas timeout'));},12000);document.head.appendChild(s);}); }
   var src=document.getElementById(srcId); if(!src)throw new Error('không thấy bảng');
-  var cl=src.cloneNode(true); cl.querySelectorAll('div').forEach(function(e){e.style.overflow='visible';});
-  var tmp=document.createElement('div'); tmp.style.cssText='position:fixed;top:-9999px;left:0;z-index:-1;width:'+width+'px;background:#fff;padding:10px';
+  var cl=src.cloneNode(true); cl.querySelectorAll('div').forEach(function(e){e.style.overflow='visible';}); cl.querySelectorAll('table').forEach(function(t){t.style.minWidth='0';});
+  // container inline-block để tự co đúng bề rộng bảng (không cắt cột)
+  var tmp=document.createElement('div'); tmp.style.cssText='position:fixed;top:-9999px;left:0;z-index:-1;display:inline-block;background:#fff;padding:12px';
   tmp.appendChild(cl); document.body.appendChild(tmp);
   await new Promise(function(r){setTimeout(r,250);});
-  try{ var cv=await html2canvas(tmp,{scale:2,useCORS:true,backgroundColor:'#ffffff',logging:false,width:width,windowWidth:width}); return await new Promise(function(res){cv.toBlob(res,'image/png',0.95);}); }
+  var w=Math.min(1400,Math.max(tmp.scrollWidth,340));
+  try{ var cv=await html2canvas(tmp,{scale:2,useCORS:true,backgroundColor:'#ffffff',logging:false,width:w,windowWidth:w}); return await new Promise(function(res){cv.toBlob(res,'image/png',0.95);}); }
   finally{ tmp.remove(); }
 }
 async function _bcTgSendPhoto(blob,caption){ var fd=new FormData(); fd.append('chat_id',_BC_GK); fd.append('caption',caption); fd.append('parse_mode','HTML'); fd.append('photo',blob,'baocao1.png'); return fetch('https://api.telegram.org/bot'+_BC_TG_TOKEN+'/sendPhoto',{method:'POST',body:fd}).then(function(r){return r.json();}); }
@@ -682,7 +684,7 @@ async function sendBcrep1TG(btn){
   if(!confirm('Bắn Báo cáo 1 (bảng cần giao) lên Telegram @thangquada?'))return;
   var H=_BCREP.hourVN!=null?_BCREP.hourVN:new Date().getHours();
   var ot=btn.textContent; btn.disabled=true; btn.textContent='⏳ Đang chụp & bắn…';
-  try{ var blob=await _bcCapture('bcCap1',800); if(!blob)throw new Error('không chụp được bảng');
+  try{ var blob=await _bcCapture('bcCap1'); if(!blob)throw new Error('không chụp được bảng');
     var r=await _bcTgSendPhoto(blob,'📋 <b>BÁO CÁO 1 — CÁC ĐƠN CẦN PHẢI GIAO</b> — mốc '+H+'h\n(LSO) Đông Kinh · (LSO) Bình Gia');
     alert((r&&r.ok)?'Đã bắn Báo cáo 1 (bảng) ✓':'Gửi có thể lỗi: '+JSON.stringify(r).slice(0,120));
   }catch(e){ alert('Lỗi bắn TG: '+(e&&e.message||e)); }

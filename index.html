@@ -4978,21 +4978,21 @@ function _bcHubs(rep){ const by={}; (rep.hubs||[]).forEach(h=>by[h.name]=h); ret
 function _bcMetaChip(rep,H){ const moc=H<14?'sáng (mốc ~10h)':'chiều (mốc ~15h)'; return `<span style="background:#ECFDF5;color:#166534;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:700">🕒 Mốc ${moc} · đơn mới ${rep.moiMode==='0-12h'?'0-6h+6-12h':'0-6h'}</span>`; }
 // bảng cần giao (Total có NVPTTT | TTS không NVPTTT)
 function _bcTbl(hubs,S,isTts,gt){
- const TH='style="background:#1F3864;color:#fff;padding:7px 10px;font-size:12px;font-weight:700;white-space:nowrap;text-align:center"';
- const THL='style="background:#1F3864;color:#fff;padding:7px 10px;font-size:12px;font-weight:700;white-space:nowrap;text-align:left"';
- const tc='style="text-align:center;padding:7px 10px;font-size:13px;border-bottom:1px solid var(--border);white-space:nowrap"';
- const tl='style="text-align:left;padding:7px 10px;font-size:13px;border-bottom:1px solid var(--border);white-space:nowrap;font-weight:700"';
+ const TH='style="background:#1F3864;color:#fff;padding:7px 8px;font-size:12px;font-weight:700;white-space:normal;line-height:1.25;text-align:center;width:72px;border:1px solid #cfd6e4"';
+ const THL='style="background:#1F3864;color:#fff;padding:7px 9px;font-size:12px;font-weight:700;white-space:normal;line-height:1.25;text-align:left;width:120px;border:1px solid #cfd6e4"';
+ const tc='style="text-align:center;padding:7px 9px;font-size:13px;border:1px solid var(--border);white-space:nowrap"';
+ const tl='style="text-align:left;padding:7px 9px;font-size:13px;border:1px solid var(--border);white-space:nowrap;font-weight:700"';
  let sum={canGiao:0,donMoi:0,donTon:0,daGan:0,chuaGan:0};
  let head=`<tr><th ${THL}>Tên Bưu Cục</th><th ${TH}>%GTC Ngày N-1</th><th ${TH}>Tổng đơn ngày N</th><th ${TH}>Tổng đơn mới ngày N</th><th ${TH}>Đơn tồn ngày N-1</th><th ${TH}>Tổng gán</th><th ${TH}>%Gán</th><th ${TH}>Tổng chưa gán</th>${isTts?'':'<th '+TH+'>SL NVPTTT / Định biên</th>'}</tr>`;
  let body='';
  hubs.forEach(h=>{ const o=isTts?h.tts:h; const s=S(h.name); const gtcN1=isTts?s.gtcN1Tts:s.gtcN1;
   sum.canGiao+=o.canGiao||0;sum.donMoi+=o.donMoi||0;sum.donTon+=o.donTon||0;sum.daGan+=o.daGan||0;sum.chuaGan+=o.chuaGan||0;
-  body+=`<tr><td ${tl}>${h.name}</td><td ${tc} style="background:#FFF7ED;font-weight:700">${_bcPct(gtcN1)}</td><td ${tc} style="font-weight:700">${_bcN(o.canGiao)}</td><td ${tc}>${_bcN(o.donMoi)}</td><td ${tc}>${_bcN(o.donTon)}</td><td ${tc}>${_bcN(o.daGan)}</td><td ${tc} style="font-weight:700;color:${(o.pctGan||0)>=95?'#15803D':'#DC2626'}">${_bcPct(o.pctGan)}</td><td ${tc} style="color:#DC2626;font-weight:700">${_bcN(o.chuaGan)}</td>${isTts?'':`<td ${tc} style="font-weight:700">${h.nvPhat}NVPTTT/${h.dinhBien}NVPTTT</td>`}</tr>`;
+  body+=`<tr><td ${tl}>${h.name}</td><td ${tc} style="background:#FFF7ED;font-weight:700">${_bcPct(gtcN1)}</td><td ${tc} style="font-weight:700">${_bcN(o.canGiao)}</td><td ${tc}>${_bcN(o.donMoi)}</td><td ${tc}>${_bcN(o.donTon)}</td><td ${tc}>${_bcN(o.daGan)}</td><td ${tc} style="font-weight:700;color:${(o.pctGan||0)>=95?'#15803D':'#DC2626'}">${_bcPct(o.pctGan)}</td><td ${tc} style="color:#DC2626;font-weight:700">${_bcN(o.chuaGan)}</td>${isTts?'':`<td ${tc} style="font-weight:700;white-space:normal;line-height:1.25;width:74px">${h.nvPhat}NVPTTT/${h.dinhBien}NVPTTT</td>`}</tr>`;
  });
  const pg=sum.canGiao?Math.round(sum.daGan/sum.canGiao*1000)/10:null;
  const gtPctN1=gt?(isTts?gt.gtcN1Tts:gt.gtcN1):null;
  body+=`<tr style="background:#FFF7ED;font-weight:800"><td ${tl}>Grand Total</td><td ${tc} style="background:#FDEBD0">${_bcPct(gtPctN1)}</td><td ${tc}>${_bcN(sum.canGiao)}</td><td ${tc}>${_bcN(sum.donMoi)}</td><td ${tc}>${_bcN(sum.donTon)}</td><td ${tc}>${_bcN(sum.daGan)}</td><td ${tc}>${_bcPct(pg)}</td><td ${tc}>${_bcN(sum.chuaGan)}</td>${isTts?'':`<td ${tc}></td>`}</tr>`;
- return `<div class="table-wrap" style="overflow-x:auto"><table style="border-collapse:collapse;min-width:${isTts?720:820}px"><thead>${head}</thead><tbody>${body}</tbody></table></div>`;
+ return `<div class="table-wrap" style="overflow-x:auto"><table style="border-collapse:collapse;min-width:${isTts?560:680}px"><thead>${head}</thead><tbody>${body}</tbody></table></div>`;
 }
 // ===== BÁO CÁO 1 — p48 (2 bảng cần giao, bắn thành ẢNH) =====
 async function buildBcRep1Page(){
