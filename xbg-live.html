@@ -126,6 +126,7 @@ tr.amchild td:first-child{padding-left:16px;font-size:12.5px}
     <div class="subtab" onclick="setSub('L','ambc',this)">👤 Theo AM / BC</div>
     <div class="subtab" onclick="setSub('L','hang',this)">🧳 Chuyến treo</div>
     <div class="subtab" onclick="setSub('L','cod',this)">💰 Check COD</div>
+    <div class="subtab" onclick="setSub('L','tts',this)">📦 TTS COD &lt;50k</div>
   </div>
 
   <div class="subpage" data-sub="L-ov">
@@ -233,6 +234,35 @@ tr.amchild td:first-child{padding-left:16px;font-size:12.5px}
     <table><thead><tr><th style="width:26px;text-align:center">#</th><th>Mã đơn / NV</th><th>COD</th></tr></thead><tbody id="codOrderBody"></tbody></table>
   </div>
   </div><!-- /L-cod -->
+
+  <div class="subpage hidden" data-sub="L-tts">
+  <div class="card">
+    <div class="lbl">📦 Đơn TTS (mã VNGH) có COD dưới 50.000đ · Lạng Sơn + Quảng Ninh</div>
+    <div class="row" style="margin-top:8px">
+      <div class="chip"><span class="c">📦 Tổng đơn</span><b id="ttsSoDon" style="color:var(--orange)">—</b></div>
+      <div class="chip"><span class="c">💳 Tổng COD</span><b id="ttsTong">—</b></div>
+    </div>
+    <div class="row" style="margin-top:6px">
+      <div class="chip"><span class="c">✅ Thành công</span><b id="ttsTC" style="color:var(--green)">—</b></div>
+      <div class="chip"><span class="c">🚚 Đang giao</span><b id="ttsDG">—</b></div>
+      <div class="chip"><span class="c">❌ Thất bại</span><b id="ttsTB" style="color:#ff5d6c">—</b></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="subtabs" style="margin-bottom:10px">
+      <div class="subtab on" id="ttsSegTinh" onclick="ttsSeg('tinh')">Theo Tỉnh</div>
+      <div class="subtab" id="ttsSegAm" onclick="ttsSeg('am')">Theo AM</div>
+      <div class="subtab" id="ttsSegBc" onclick="ttsSeg('bc')">Theo Bưu cục</div>
+    </div>
+    <input class="search" id="ttsSearch" placeholder="🔍 Tìm AM hoặc Bưu Cục…" oninput="ttsFilter(this.value)">
+    <div class="scrollbox"><table><thead><tr><th style="width:24px;text-align:center">#</th><th id="ttsAggHead">Tỉnh</th><th style="text-align:center">Đơn</th><th style="text-align:center">✅</th><th style="text-align:center">🚚</th><th style="text-align:center">❌</th><th style="text-align:right">COD</th></tr></thead><tbody id="ttsAggBody"></tbody></table></div>
+  </div>
+  <div class="card">
+    <div class="sect">📋 Danh sách đơn · COD cao → thấp</div>
+    <div class="mut" style="margin-bottom:6px" id="ttsOrderNote">—</div>
+    <div class="scrollbox"><table><thead><tr><th style="width:24px;text-align:center">#</th><th>Mã đơn / NV · BC</th><th style="text-align:center">TT</th><th style="text-align:right">COD</th></tr></thead><tbody id="ttsOrderBody"></tbody></table></div>
+  </div>
+  </div><!-- /L-tts -->
   </div><!-- /tabLive -->
 
   <div id="tabN1" class="hidden">
@@ -364,6 +394,7 @@ async function load(){
 }
 function render(d){
   try{ renderCOD(d.cod); }catch(e){}
+  try{ renderTTS(d.ttsCod, d.bc); }catch(e){}
   var v=d.vung;
   var p = pct(v.gtc, v.daGan);
   document.getElementById('pctBig').innerHTML = pstr(p).replace('%','')+'<span>%</span>';
@@ -596,6 +627,47 @@ function codOrders(){
   var show=list.slice(0,80);
   document.getElementById('codOrderBody').innerHTML=show.map(function(o,i){return '<tr><td style="text-align:center;color:var(--sub)">'+(i+1)+'</td><td><b>'+o.ma+'</b><div class="mut" style="font-size:11px">'+(o.nv||'')+' · '+o.bc+'</div></td><td style="text-align:right;color:#ff5d6c;font-weight:700">'+vn(o.cod)+' đ</td></tr>';}).join('')||'<tr><td colspan="3" class="mut" style="text-align:center;padding:10px">Không có đơn khớp</td></tr>';
   document.getElementById('codOrderNote').textContent=(qq?'Lọc "'+_codQ.trim()+'": ':'')+'Hiển thị '+Math.min(80,list.length)+'/'+vn(list.length)+' đơn (COD cao nhất)';
+}
+// ===== Đơn TTS COD < 50k (realtime) =====
+var _TTS=null, _ttsSeg='tinh', _ttsQ='';
+var _ttsTrv=function(x){return (x/1e6).toLocaleString('vi-VN',{minimumFractionDigits:1,maximumFractionDigits:1})+' tr';};
+var _ttsStAbbr={'Giao thành công':'✅','Đang giao':'🚚','Giao thất bại':'❌'};
+function renderTTS(tc, bcArr){
+  var box=document.getElementById('ttsSoDon'); if(!box)return;
+  if(!tc||!tc.orders||!tc.orders.length){ box.textContent='—'; var nt=document.getElementById('ttsOrderNote'); if(nt)nt.textContent='Chưa có dữ liệu — chờ lần quét tới.'; _TTS=null; return; }
+  // map Bưu Cục -> AM lấy từ d.bc (đồng nhất với các tab khác của app)
+  var bcAm={}; (bcArr||[]).forEach(function(b){ bcAm[b.bc]=b.am; });
+  var agg={tinh:{},am:{},bc:{}};
+  function add(dim,key,o){ var m=agg[dim]; var g=m[key]||(m[key]={key:key,soDon:0,tongCod:0,tc:0,dg:0,tb:0}); g.soDon++; g.tongCod+=(o.cod||0); if(o.st==='Giao thành công')g.tc++; else if(o.st==='Đang giao')g.dg++; else g.tb++; }
+  tc.orders.forEach(function(o){ var am=bcAm[o.bc]||'(chưa có AM)'; add('tinh',o.tinh||'(?)',o); add('am',am,o); add('bc',o.bc||'(?)',o); });
+  function srt(obj){ return Object.values(obj).sort(function(a,b){return b.soDon-a.soDon;}); }
+  _TTS={ raw:tc, bcAm:bcAm, byTinh:srt(agg.tinh), byAM:srt(agg.am), byBC:srt(agg.bc), orders:tc.orders };
+  var st=tc.byStatus||{};
+  document.getElementById('ttsSoDon').textContent=vn(tc.soDon||tc.orders.length);
+  document.getElementById('ttsTong').textContent=_ttsTrv(tc.tongCod||0);
+  document.getElementById('ttsTC').textContent=vn(st['Giao thành công']||0);
+  document.getElementById('ttsDG').textContent=vn(st['Đang giao']||0);
+  document.getElementById('ttsTB').textContent=vn(st['Giao thất bại']||0);
+  ttsSeg(_ttsSeg); ttsOrders();
+}
+function ttsFilter(q){ _ttsQ=q||''; ttsSeg(_ttsSeg); ttsOrders(); }
+function ttsSeg(k){
+  _ttsSeg=k;
+  ['tinh','am','bc'].forEach(function(x){var e=document.getElementById('ttsSeg'+x.charAt(0).toUpperCase()+x.slice(1));if(e)e.className='subtab'+(x===k?' on':'');});
+  var hd=document.getElementById('ttsAggHead'); if(hd)hd.textContent=(k==='tinh'?'Tỉnh':(k==='am'?'AM':'Bưu cục'));
+  if(!_TTS)return;
+  var arr=(k==='tinh'?_TTS.byTinh:(k==='am'?_TTS.byAM:_TTS.byBC))||[];
+  var qq=_deac(_ttsQ.trim()); if(qq) arr=arr.filter(function(x){return _deac(x.key).indexOf(qq)>=0;});
+  document.getElementById('ttsAggBody').innerHTML=arr.map(function(x,i){return '<tr><td style="text-align:center;color:var(--sub)">'+(i+1)+'</td><td>'+x.key+'</td><td style="text-align:center;font-weight:700">'+vn(x.soDon)+'</td><td style="text-align:center;color:var(--green)">'+vn(x.tc)+'</td><td style="text-align:center">'+vn(x.dg)+'</td><td style="text-align:center;color:#ff5d6c">'+vn(x.tb)+'</td><td style="text-align:right;font-weight:600">'+_ttsTrv(x.tongCod)+'</td></tr>';}).join('')||'<tr><td colspan="7" class="mut" style="text-align:center;padding:10px">Không có kết quả</td></tr>';
+}
+function ttsOrders(){
+  if(!_TTS||!_TTS.orders)return;
+  var qq=_deac(_ttsQ.trim()), bcAm=_TTS.bcAm||{};
+  var list=_TTS.orders;
+  if(qq) list=list.filter(function(o){return _deac((bcAm[o.bc]||'')+' '+(o.bc||'')+' '+(o.nv||'')+' '+(o.ma||'')).indexOf(qq)>=0;});
+  var show=list.slice(0,100);
+  document.getElementById('ttsOrderBody').innerHTML=show.map(function(o,i){ var ab=_ttsStAbbr[o.st]||'•'; return '<tr><td style="text-align:center;color:var(--sub)">'+(i+1)+'</td><td><b>'+o.ma+'</b><div class="mut" style="font-size:11px">'+(o.nv||'')+' · '+(o.bc||'')+'</div></td><td style="text-align:center">'+ab+'</td><td style="text-align:right;font-weight:700">'+vn(o.cod)+' đ</td></tr>';}).join('')||'<tr><td colspan="4" class="mut" style="text-align:center;padding:10px">Không có đơn khớp</td></tr>';
+  document.getElementById('ttsOrderNote').textContent=(qq?'Lọc "'+_ttsQ.trim()+'": ':'')+'Hiển thị '+Math.min(100,list.length)+'/'+vn(list.length)+' đơn (COD cao → thấp)';
 }
 function setSub(g,key,btn){
   var bar=document.getElementById(g==='L'?'subtabsLive':'subtabsN1');
