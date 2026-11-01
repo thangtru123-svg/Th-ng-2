@@ -4374,12 +4374,21 @@ function _ttsTab(k){
   if(t){t.style.background=(x===k?'var(--orange)':'#F3F4F6');t.style.color=(x===k?'#fff':'var(--text-main)');}
   if(p)p.style.display=(x===k?'block':'none');});
 }
-function _ttsCSV(){
+function _ttsCSV(){ // xuất file .xlsx thật (cột tách sẵn, COD là số)
  const T=window._TTSDATA; if(!T)return;
- const head=['AM','Bưu Cục','Mã Đơn','COD (đ)','Trạng thái'];
- const rows=T.orders.map(o=>[o.am,o.bc,o.ma,o.cod,o.st]);
- const csv='﻿'+[head,...rows].map(r=>r.map(x=>/[",;\n]/.test(String(x))?'"'+String(x).replace(/"/g,'""')+'"':x).join(',')).join('\n');
- const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));a.download='don_tts_cod_duoi_50k_'+(new Date().toISOString().slice(0,10))+'.csv';a.click();
+ const build=()=>{try{
+   const XLSX=window.XLSX;
+   const aoa=[['AM','Bưu Cục','Mã Đơn','COD (đ)','Trạng thái'],...T.orders.map(o=>[o.am,o.bc,o.ma,(+o.cod||0),o.st])];
+   const ws=XLSX.utils.aoa_to_sheet(aoa);
+   ws['!cols']=[{wch:22},{wch:20},{wch:20},{wch:12},{wch:16}];
+   const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'TTS COD duoi 50k');
+   XLSX.writeFile(wb,'don_tts_cod_duoi_50k_'+(new Date().toISOString().slice(0,10))+'.xlsx');
+ }catch(e){alert('Lỗi xuất Excel: '+(e&&e.message||e));}};
+ if(window.XLSX){build();return;}
+ const s=document.createElement('script');
+ s.src='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+ s.onload=build;s.onerror=()=>alert('Không tải được thư viện xuất Excel — kiểm tra mạng rồi thử lại.');
+ document.head.appendChild(s);
 }
 /* ===== p43 — Tổng Quan Target (so số thật đạt với mục tiêu Sếp) ===== */
 const _TGT_ISO=s=>{const m=(''+s).match(/(\d{4})-(\d{2})-(\d{2})/);return m?m[0]:'';};
@@ -4899,7 +4908,7 @@ async function buildTtsCodPage(){
     <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px">${kpi('📦 Tổng đơn TTS COD&lt;50k',fmt(orders.length),'Mã VNGH · COD 0–50k','var(--text-main)')}${kpi('💳 Tổng COD',dv(tongCod),trv(tongCod),'var(--orange-dark)')}${kpi('❌ Giao thất bại',fmt(tb),orders.length?(tb/orders.length*100).toFixed(1)+'% tổng':'','#DC2626')}${kpi('✅ Thành công / 🚚 Đang giao',fmt(tc)+' / '+fmt(dg),'Giao thành công / Đang giao','#15803D')}</div>
     <div style="display:flex;gap:8px;margin-bottom:12px"><button id="ttsTab_tinh" onclick="_ttsTab('tinh')" style="padding:7px 16px;border:none;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer;background:var(--orange);color:#fff">Theo Tỉnh</button><button id="ttsTab_am" onclick="_ttsTab('am')" style="padding:7px 16px;border:none;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer;background:#F3F4F6;color:var(--text-main)">Theo AM</button><button id="ttsTab_bc" onclick="_ttsTab('bc')" style="padding:7px 16px;border:none;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer;background:#F3F4F6;color:var(--text-main)">Theo Bưu cục</button></div>
     <div class="card" style="margin-bottom:18px"><div id="ttsPane_tinh" style="display:block">${aggTable(byTinh,'TỈNH')}</div><div id="ttsPane_am" style="display:none">${aggTable(byAM,'AM')}</div><div id="ttsPane_bc" style="display:none">${aggTable(byBC,'BƯU CỤC')}</div></div>
-    <div class="card"><div class="card-header"><div class="card-title"><div class="card-icon">📋</div>Danh sách đơn — sắp theo COD giảm dần (${fmt(orders.length)} đơn)</div><button class="tg-inpage-btn" style="background:var(--orange);border-color:var(--orange)" onclick="_ttsCSV()">⬇️ Tải danh sách (CSV)</button></div><div class="table-wrap" style="overflow:auto;max-height:620px"><table style="border-collapse:collapse;min-width:760px"><thead style="position:sticky;top:0;z-index:2"><tr><th ${TH} style="text-align:left">AM</th><th ${TH} style="text-align:left">BƯU CỤC</th><th ${TH} style="text-align:left">MÃ ĐƠN</th><th ${TH} style="text-align:right">COD</th><th ${TH} style="text-align:left">NV GIAO</th><th ${TH} style="text-align:center">TRẠNG THÁI</th></tr></thead><tbody>${orderRows}</tbody></table></div>${orders.length>CAP?`<div style="padding:9px 12px;color:var(--text-sub);font-size:12px">Hiển thị ${CAP}/${fmt(orders.length)} đơn — bấm <b>Tải danh sách (CSV)</b> để xem đủ.</div>`:''}</div>`;
+    <div class="card"><div class="card-header"><div class="card-title"><div class="card-icon">📋</div>Danh sách đơn — sắp theo COD giảm dần (${fmt(orders.length)} đơn)</div><button class="tg-inpage-btn" style="background:var(--orange);border-color:var(--orange)" onclick="_ttsCSV()">⬇️ Tải danh sách (Excel)</button></div><div class="table-wrap" style="overflow:auto;max-height:620px"><table style="border-collapse:collapse;min-width:760px"><thead style="position:sticky;top:0;z-index:2"><tr><th ${TH} style="text-align:left">AM</th><th ${TH} style="text-align:left">BƯU CỤC</th><th ${TH} style="text-align:left">MÃ ĐƠN</th><th ${TH} style="text-align:right">COD</th><th ${TH} style="text-align:left">NV GIAO</th><th ${TH} style="text-align:center">TRẠNG THÁI</th></tr></thead><tbody>${orderRows}</tbody></table></div>${orders.length>CAP?`<div style="padding:9px 12px;color:var(--text-sub);font-size:12px">Hiển thị ${CAP}/${fmt(orders.length)} đơn — bấm <b>Tải danh sách (CSV)</b> để xem đủ.</div>`:''}</div>`;
   }catch(e){ el.innerHTML='<div class="page-header"><div class="page-title">📦 Đơn TTS COD &lt; 50k</div></div><div class="analysis-box">Lỗi tải dữ liệu: '+(e&&e.message||e)+'</div>'; }
  };
  window._ttsRender=render; await render();
