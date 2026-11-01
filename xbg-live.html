@@ -258,11 +258,6 @@ tr.amchild td:first-child{padding-left:16px;font-size:12.5px}
     <input class="search" id="ttsSearch" placeholder="🔍 Tìm AM hoặc Bưu Cục…" oninput="ttsFilter(this.value)">
     <div class="scrollbox"><table><thead><tr><th style="width:24px;text-align:center">#</th><th id="ttsAggHead">Tỉnh</th><th style="text-align:center">Đơn</th><th style="text-align:center">✅</th><th style="text-align:center">🚚</th><th style="text-align:center">❌</th><th style="text-align:right">COD</th></tr></thead><tbody id="ttsAggBody"></tbody></table></div>
   </div>
-  <div class="card">
-    <div class="sect">📋 Danh sách đơn · COD cao → thấp</div>
-    <div class="mut" style="margin-bottom:6px" id="ttsOrderNote">—</div>
-    <div class="scrollbox"><table><thead><tr><th style="width:24px;text-align:center">#</th><th>Mã đơn / NV · BC</th><th style="text-align:center">TT</th><th style="text-align:right">COD</th></tr></thead><tbody id="ttsOrderBody"></tbody></table></div>
-  </div>
   </div><!-- /L-tts -->
   </div><!-- /tabLive -->
 
@@ -744,6 +739,7 @@ function ttsSeg(k){
 }
 function ttsOrders(){
   if(!_TTS||!_TTS.orders)return;
+  if(!document.getElementById('ttsOrderBody'))return; // bảng danh sách đơn đã bỏ
   var qq=_deac(_ttsQ.trim()), bcAm=_TTS.bcAm||{};
   var list=_TTS.orders;
   if(qq) list=list.filter(function(o){return _deac((bcAm[o.bc]||'')+' '+(o.bc||'')+' '+(o.nv||'')+' '+(o.ma||'')).indexOf(qq)>=0;});
