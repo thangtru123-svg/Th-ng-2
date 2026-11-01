@@ -594,7 +594,7 @@ document.getElementById('refresh').onclick=async function(){
 // ===== Tab + Ngày N-1 =====
 var _n1loaded=false, _scanning=false;
 // ===== Báo cáo 2 Bưu Cục (Đông Kinh · Bình Gia) — 2 sub-tab, bắn khác giờ =====
-var _BCREP=null, _BCSHEET=null, _bcSheetTried=false, _bcSub='1';
+var _BCREP=null, _BCSHEET=null, _BCGT=null, _bcSheetTried=false, _bcSub='1';
 var _BC_TG_TOKEN='7471088067:AAGje2KrjUTzlkIiU05h1bm21IUkB0J2J0s', _BC_GK=1747498029; // DM @thangquada
 var _BCNAMES=['(LSO) Đông Kinh','(LSO) Bình Gia'];
 function bcSub(which){ _bcSub=which; var one=which==='1';
@@ -605,7 +605,7 @@ function bcSub(which){ _bcSub=which; var one=which==='1';
   try{window.scrollTo(0,0);}catch(e){}
 }
 // Bảng cần giao (màu cố định sáng để chụp ảnh đẹp dù app nền tối)
-function _bcAppTbl(hubs,S,isTts){
+function _bcAppTbl(hubs,S,isTts,gt){
   var TH='style="background:#1F3864;color:#fff;padding:6px 9px;font-size:11.5px;font-weight:700;white-space:nowrap;text-align:center;border:1px solid #cfd6e4"';
   var THL='style="background:#1F3864;color:#fff;padding:6px 9px;font-size:11.5px;font-weight:700;white-space:nowrap;text-align:left;border:1px solid #cfd6e4"';
   var tc='style="text-align:center;padding:6px 9px;font-size:12px;color:#111;border:1px solid #e3e8f0;white-space:nowrap"';
@@ -618,7 +618,8 @@ function _bcAppTbl(hubs,S,isTts){
     body+='<tr><td '+tl+'>'+h.name+'</td><td '+tc+' style="color:#111;background:#FFF7ED;font-weight:700">'+(g==null?'—':pstr(g))+'</td><td '+tc+' style="color:#111;font-weight:700">'+vn(o.canGiao)+'</td><td '+tc+'>'+vn(o.donMoi)+'</td><td '+tc+'>'+vn(o.donTon)+'</td><td '+tc+'>'+vn(o.daGan)+'</td><td '+tc+' style="font-weight:700;color:'+((o.pctGan||0)>=95?'#15803D':'#DC2626')+'">'+(o.pctGan==null?'—':pstr(o.pctGan))+'</td><td '+tc+' style="color:#DC2626;font-weight:700">'+vn(o.chuaGan)+'</td>'+(isTts?'':'<td '+tc+' style="color:#111;font-weight:700">'+h.nvPhat+'NVPTTT/'+h.dinhBien+'NVPTTT</td>')+'</tr>';
   });
   var pg=sum.canGiao?Math.round(sum.daGan/sum.canGiao*1000)/10:null;
-  body+='<tr style="background:#FFF7ED;font-weight:800"><td '+tl+'>Grand Total</td><td '+tc+'>—</td><td '+tc+'>'+vn(sum.canGiao)+'</td><td '+tc+'>'+vn(sum.donMoi)+'</td><td '+tc+'>'+vn(sum.donTon)+'</td><td '+tc+'>'+vn(sum.daGan)+'</td><td '+tc+'>'+(pg==null?'—':pstr(pg))+'</td><td '+tc+'>'+vn(sum.chuaGan)+'</td>'+(isTts?'':'<td '+tc+'></td>')+'</tr>';
+  var gtp=gt?(isTts?gt.gtcN1Tts:gt.gtcN1):null;
+  body+='<tr style="background:#FFF7ED;font-weight:800"><td '+tl+'>Grand Total</td><td '+tc+' style="color:#111;background:#FDEBD0;font-weight:700">'+(gtp==null?'—':pstr(gtp))+'</td><td '+tc+'>'+vn(sum.canGiao)+'</td><td '+tc+'>'+vn(sum.donMoi)+'</td><td '+tc+'>'+vn(sum.donTon)+'</td><td '+tc+'>'+vn(sum.daGan)+'</td><td '+tc+'>'+(pg==null?'—':pstr(pg))+'</td><td '+tc+'>'+vn(sum.chuaGan)+'</td>'+(isTts?'':'<td '+tc+'></td>')+'</tr>';
   return '<div style="overflow-x:auto;-webkit-overflow-scrolling:touch"><table style="border-collapse:collapse;min-width:'+(isTts?660:760)+'px;background:#fff">'+'<thead>'+head+'</thead><tbody>'+body+'</tbody></table></div>';
 }
 function _bcAppSummed(byName,S,H){
@@ -636,7 +637,7 @@ function _bcAppSummed(byName,S,H){
 async function renderBcrep(){
   var meta=document.getElementById('bcrepMeta'), b1=document.getElementById('bcrepBody1'), b2=document.getElementById('bcrepBody2'); if(!meta||!b1||!b2)return;
   if(!_BCREP||!_BCREP.hubs||!_BCREP.hubs.length||_BCREP.err){ meta.textContent='Chưa có dữ liệu — bấm "🔴 Trực tiếp" rồi Cập nhật dữ liệu (hoặc chờ quét 30 phút).'; b1.innerHTML=''; b2.innerHTML=''; return; }
-  if(!_bcSheetTried){ _bcSheetTried=true; try{ var j=await fetch('/api/bc-report-sheet?t='+Date.now()).then(function(r){return r.json();}); if(j&&j.ok)_BCSHEET=j.bc; }catch(e){} }
+  if(!_bcSheetTried){ _bcSheetTried=true; try{ var j=await fetch('/api/bc-report-sheet?t='+Date.now()).then(function(r){return r.json();}); if(j&&j.ok){_BCSHEET=j.bc; _BCGT=j.gt||null;} }catch(e){} }
   var S=function(n){return (_BCSHEET&&_BCSHEET[n])||{};};
   var H=_BCREP.hourVN!=null?_BCREP.hourVN:new Date().getHours();
   meta.innerHTML='🕒 Mốc '+(H<14?'sáng (~10h)':'chiều (~15h)')+' · đơn mới '+(_BCREP.moiMode==='0-12h'?'0-6h+6-12h':'0-6h')+(_BCSHEET?'':' · <span style="color:#ff5d6c">chưa lấy %GTC N-1/Aging</span>');
@@ -645,8 +646,8 @@ async function renderBcrep(){
   // --- Sub-tab ① Cần giao: 2 bảng + nút bắn ảnh ---
   b1.innerHTML='<div class="card"><div class="sect">📋 Báo cáo 1 — Các đơn cần phải giao</div>'+
     '<div id="bcCap1" style="background:#fff;border-radius:8px;padding:8px;margin-top:8px">'+
-      '<div style="font-weight:800;color:#C2410C;font-size:13px;margin:2px 0 6px">① Total các đơn cần phải giao</div>'+_bcAppTbl(hubs,S,false)+
-      '<div style="font-weight:800;color:#C2410C;font-size:13px;margin:12px 0 6px">② Total các đơn TTS cần phải giao</div>'+_bcAppTbl(hubs,S,true)+
+      '<div style="font-weight:800;color:#C2410C;font-size:13px;margin:2px 0 6px">① Total các đơn cần phải giao</div>'+_bcAppTbl(hubs,S,false,_BCGT)+
+      '<div style="font-weight:800;color:#C2410C;font-size:13px;margin:12px 0 6px">② Total các đơn TTS cần phải giao</div>'+_bcAppTbl(hubs,S,true,_BCGT)+
     '</div>'+
     '<button onclick="sendBcrep1TG(this)" style="margin-top:12px;width:100%;padding:11px;border:none;border-radius:11px;background:linear-gradient(180deg,#29a3e0,#1e8fcc);color:#fff;font-weight:800;font-size:14px">📤 Bắn Báo cáo 1 (bảng → @thangquada)</button></div>';
   // --- Sub-tab ② Tồn đọng: từng BC + preview gộp + nút bắn gộp ---

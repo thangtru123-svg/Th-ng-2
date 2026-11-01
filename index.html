@@ -4969,15 +4969,15 @@ let _bcCache=null;
 async function _bcLoad(force){
  if(_bcCache&&!force&&(Date.now()-_bcCache.t)<60000)return _bcCache;
  const r=await fetch('gtc_live.json?t='+Date.now()); const d=await r.json();
- let sheet=null,serr=null;
- try{ const r2=await fetch('/api/bc-report-sheet?t='+Date.now()); const j=await r2.json(); if(j&&j.ok)sheet=j.bc; else serr=(j&&j.error)||'lỗi API'; }catch(e){ serr=String(e&&e.message||e); }
+ let sheet=null,serr=null,gt=null;
+ try{ const r2=await fetch('/api/bc-report-sheet?t='+Date.now()); const j=await r2.json(); if(j&&j.ok){sheet=j.bc; gt=j.gt||null;} else serr=(j&&j.error)||'lỗi API'; }catch(e){ serr=String(e&&e.message||e); }
  const rep=d.bcReport; const H=(rep&&rep.hourVN!=null)?rep.hourVN:new Date().getHours();
- _bcCache={t:Date.now(),d,rep,sheet,serr,H}; return _bcCache;
+ _bcCache={t:Date.now(),d,rep,sheet,serr,gt,H}; return _bcCache;
 }
 function _bcHubs(rep){ const by={}; (rep.hubs||[]).forEach(h=>by[h.name]=h); return BCREP_NAMES.map(n=>by[n]).filter(Boolean); }
 function _bcMetaChip(rep,H){ const moc=H<14?'sáng (mốc ~10h)':'chiều (mốc ~15h)'; return `<span style="background:#ECFDF5;color:#166534;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:700">🕒 Mốc ${moc} · đơn mới ${rep.moiMode==='0-12h'?'0-6h+6-12h':'0-6h'}</span>`; }
 // bảng cần giao (Total có NVPTTT | TTS không NVPTTT)
-function _bcTbl(hubs,S,isTts){
+function _bcTbl(hubs,S,isTts,gt){
  const TH='style="background:#1F3864;color:#fff;padding:7px 10px;font-size:12px;font-weight:700;white-space:nowrap;text-align:center"';
  const THL='style="background:#1F3864;color:#fff;padding:7px 10px;font-size:12px;font-weight:700;white-space:nowrap;text-align:left"';
  const tc='style="text-align:center;padding:7px 10px;font-size:13px;border-bottom:1px solid var(--border);white-space:nowrap"';
@@ -4990,7 +4990,8 @@ function _bcTbl(hubs,S,isTts){
   body+=`<tr><td ${tl}>${h.name}</td><td ${tc} style="background:#FFF7ED;font-weight:700">${_bcPct(gtcN1)}</td><td ${tc} style="font-weight:700">${_bcN(o.canGiao)}</td><td ${tc}>${_bcN(o.donMoi)}</td><td ${tc}>${_bcN(o.donTon)}</td><td ${tc}>${_bcN(o.daGan)}</td><td ${tc} style="font-weight:700;color:${(o.pctGan||0)>=95?'#15803D':'#DC2626'}">${_bcPct(o.pctGan)}</td><td ${tc} style="color:#DC2626;font-weight:700">${_bcN(o.chuaGan)}</td>${isTts?'':`<td ${tc} style="font-weight:700">${h.nvPhat}NVPTTT/${h.dinhBien}NVPTTT</td>`}</tr>`;
  });
  const pg=sum.canGiao?Math.round(sum.daGan/sum.canGiao*1000)/10:null;
- body+=`<tr style="background:#FFF7ED;font-weight:800"><td ${tl}>Grand Total</td><td ${tc}>—</td><td ${tc}>${_bcN(sum.canGiao)}</td><td ${tc}>${_bcN(sum.donMoi)}</td><td ${tc}>${_bcN(sum.donTon)}</td><td ${tc}>${_bcN(sum.daGan)}</td><td ${tc}>${_bcPct(pg)}</td><td ${tc}>${_bcN(sum.chuaGan)}</td>${isTts?'':`<td ${tc}></td>`}</tr>`;
+ const gtPctN1=gt?(isTts?gt.gtcN1Tts:gt.gtcN1):null;
+ body+=`<tr style="background:#FFF7ED;font-weight:800"><td ${tl}>Grand Total</td><td ${tc} style="background:#FDEBD0">${_bcPct(gtPctN1)}</td><td ${tc}>${_bcN(sum.canGiao)}</td><td ${tc}>${_bcN(sum.donMoi)}</td><td ${tc}>${_bcN(sum.donTon)}</td><td ${tc}>${_bcN(sum.daGan)}</td><td ${tc}>${_bcPct(pg)}</td><td ${tc}>${_bcN(sum.chuaGan)}</td>${isTts?'':`<td ${tc}></td>`}</tr>`;
  return `<div class="table-wrap" style="overflow-x:auto"><table style="border-collapse:collapse;min-width:${isTts?720:820}px"><thead>${head}</thead><tbody>${body}</tbody></table></div>`;
 }
 // ===== BÁO CÁO 1 — p48 (2 bảng cần giao, bắn thành ẢNH) =====
@@ -4999,7 +5000,7 @@ async function buildBcRep1Page(){
  const render=async()=>{
   el.innerHTML='<div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải Báo cáo 1…</div></div>';
   let C; try{ C=await _bcLoad(true); }catch(e){ el.innerHTML='<div class="page-header"><div class="page-title">📋 Báo Cáo 1 — Cần giao</div></div><div class="analysis-box">Lỗi tải gtc_live.json: '+(e&&e.message||e)+'</div>'; return; }
-  const {rep,sheet,serr,H}=C;
+  const {rep,sheet,serr,gt,H}=C;
   if(!rep||!rep.hubs||!rep.hubs.length||rep.err){ el.innerHTML='<div class="page-header"><div class="page-title">📋 Báo Cáo 1 — Cần giao</div></div><div class="analysis-box">Chưa có dữ liệu bcReport'+(rep&&rep.err?' ('+rep.err+')':'')+' — chờ quét (30 phút) hoặc bấm <b>Cập nhật dữ liệu</b>.</div>'; return; }
   const S=n=>(sheet&&sheet[n])||{}; const hubs=_bcHubs(rep);
   el.innerHTML=`<div class="page-header"><div class="page-title">📋 Báo Cáo 1 — Các đơn cần phải giao</div>
@@ -5007,8 +5008,8 @@ async function buildBcRep1Page(){
    <button class="tg-inpage-btn" style="background:#16A34A;border-color:#16A34A" onclick="window._bcRep1Render&&window._bcRep1Render()">🔄 Tải lại</button>
    <button class="tg-inpage-btn" onclick="sendBcRep1TG(this)">📤 Bắn Báo cáo 1 (bảng → @thangquada)</button>${serr?`<span style="color:#DC2626;font-size:12px">⚠️ Sheet lỗi: ${serr}</span>`:''}</div></div>
    <div id="bcrep1Capture" style="background:#fff;padding:6px 4px">
-    <div style="font-weight:800;font-size:15px;color:var(--orange-dark);margin:6px 2px 7px">① Total các đơn cần phải giao</div>${_bcTbl(hubs,S,false)}
-    <div style="font-weight:800;font-size:15px;color:var(--orange-dark);margin:16px 2px 7px">② Total các đơn TTS cần phải giao</div>${_bcTbl(hubs,S,true)}
+    <div style="font-weight:800;font-size:15px;color:var(--orange-dark);margin:6px 2px 7px">① Total các đơn cần phải giao</div>${_bcTbl(hubs,S,false,gt)}
+    <div style="font-weight:800;font-size:15px;color:var(--orange-dark);margin:16px 2px 7px">② Total các đơn TTS cần phải giao</div>${_bcTbl(hubs,S,true,gt)}
    </div>`;
  };
  window._bcRep1Render=render; await render();
