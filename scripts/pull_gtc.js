@@ -213,7 +213,7 @@ async function pool(items, n, fn) {
   // Aging>5N (total+TTS) và %GTC N-1 lấy riêng từ Sheet qua /api/bc-report-sheet (Action không đọc được Google).
   const BC_REPORT_HUBS = [
     { id: '21995000', name: '(LSO) Đông Kinh', dinhBien: 12 },
-    { id: '21301000', name: '(LSO) Bình Gia', dinhBien: 7 }
+    { id: '21301000', name: '(LSO) Bình Gia', dinhBien: 8 }
   ];
   const _MOI = HOUR >= 14 ? new Set(['0_6', '6_12']) : new Set(['0_6']); // đơn mới: sáng(<14h)=0-6h · chiều(≥14h)=0-6h+6-12h
   const _GE48 = new Set(['48_72', '72_96', '96_120', '120_192', '192']);
