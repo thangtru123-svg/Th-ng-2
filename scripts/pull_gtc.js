@@ -252,21 +252,36 @@ async function pool(items, n, fn) {
       const infos = (((j.data || [])[0] || {}).general_infos) || [];
       infos.forEach(g => { const s = _sumBk(g.order_inventories, _GE36); if (g.order_type === 'TRANSPORT_DELIVERY') lcGiao36 += s; else if (g.order_type === 'TRANSPORT_RETURN') lcTra36 += s; });
     }
-    // đã gán + NV thực đi phát (distinct driver của chuyến giao tạo hôm nay)
-    let daGan = 0; const drv = new Set();
-    for (let pg = 1; pg <= 40; pg++) {
-      const j = await api('/api/lastmile/trip/get-trip-list-by-hub', { hub_id: id, status: 'FINISHED', is_ready: 0, offset: (pg - 1) * 100, limit: 100, reverse: 1, page: pg, size: 100 });
-      const a = j.data || []; if (!a.length) break;
-      a.forEach(x => { if (x.createDateIndex === TODAY) { daGan += x.deliverCount || 0; if ((x.deliverCount || 0) > 0 && x.driverName) drv.add(x.driverName); } });
-      if (a.length < 100) break;
+    // đã gán + NV thực đi phát: chuyến giao TẠO HÔM NAY ở cả FINISHED + ON_TRIP (sáng sớm chuyến còn ON_TRIP — bản cũ chỉ quét FINISHED nên ra 0)
+    let daGan = 0; const drv = new Set(); const tripCodes = [];
+    for (const st of ['FINISHED', 'ON_TRIP']) {
+      for (let pg = 1; pg <= 40; pg++) {
+        const j = await api('/api/lastmile/trip/get-trip-list-by-hub', { hub_id: id, status: st, is_ready: 0, offset: (pg - 1) * 100, limit: 100, reverse: 1, page: pg, size: 100 });
+        const a = j.data || []; if (!a.length) break; let allOld = true;
+        a.forEach(x => {
+          if (x.createDateIndex === TODAY) { const dc = x.deliverCount || 0; daGan += dc; if (dc > 0) { tripCodes.push(x.tripCode); if (x.driverName) drv.add(x.driverName); } }
+          if (x.createDateIndex >= YD || x.endDateIndex >= TODAY) allOld = false;
+        });
+        if (a.length < 100 || (st === 'FINISHED' && allOld)) break;
+      }
+    }
+    // TTS đã gán = đơn mã VNGH trong các chuyến giao hôm nay (kể cả đã giao xong) — dedup theo mã
+    const ttsAssigned = new Set();
+    for (const c of tripCodes) {
+      for (let pg = 1; pg <= 15; pg++) {
+        const j = await api('/api/lastmile/trip/get-trip-items', { trip_code: c, tripCode: c, typeList: ['DELIVER'], offset: (pg - 1) * 100, limit: 100, page: pg, size: 100 });
+        const a = j.data || []; if (!a.length) break;
+        a.forEach(it => { if (String(it.orderCode || '').startsWith('VNGH')) ttsAssigned.add(it.orderCode); });
+        if (a.length < 100) break;
+      }
     }
     const canGiao = daGan + chuaGan;
-    const ttsDaGan = Math.max(0, ttsTot - ttsChuaGan);
+    const ttsDaGan = ttsAssigned.size; const ttsCan = ttsDaGan + ttsChuaGan;
     return {
       name: cfg.name, hubId: id, dinhBien: cfg.dinhBien,
       canGiao, daGan, chuaGan, pctGan: canGiao ? Math.round(daGan / canGiao * 1000) / 10 : 0,
       donMoi, donTon: Math.max(0, canGiao - donMoi), nvPhat: drv.size,
-      tts: { canGiao: ttsTot, daGan: ttsDaGan, chuaGan: ttsChuaGan, pctGan: ttsTot ? Math.round(ttsDaGan / ttsTot * 1000) / 10 : 0, donMoi: ttsDonMoi, donTon: Math.max(0, ttsTot - ttsDonMoi) },
+      tts: { canGiao: ttsCan, daGan: ttsDaGan, chuaGan: ttsChuaGan, pctGan: ttsCan ? Math.round(ttsDaGan / ttsCan * 1000) / 10 : 0, donMoi: ttsDonMoi, donTon: Math.max(0, ttsCan - ttsDonMoi) },
       bc2: { cg48, cg48tts, lcGiao36, lcTra36, returnShop48 }
     };
   }
