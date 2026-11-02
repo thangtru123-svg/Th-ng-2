@@ -221,7 +221,7 @@ async function pool(items, n, fn) {
   const _sumBk = (inv, set) => { let s = 0; (inv || []).forEach(x => { if (set.has(x.duration)) s += x.total_order || 0; }); return s; };
   const STATES3 = ['DAILY_TRIP_NONE', 'DAILY_TRIP_COMPLETED', 'DAILY_TRIP_IN_PROGRESS'];
   // ĐƠN MỚI KHÔNG ĐƯỢC GIẢM TRONG NGÀY: đơn giao xong biến mất khỏi báo cáo tồn đọng GHN → ghi nhớ MÃ đơn mới của mọi lần quét (lưu trong gtc_live.json.bcReport.seen,
-  // reset theo ngày). Từ 09h: gom mã mốc 0-6h (từ 14h thêm 6-12h) Σ3 trạng thái; đơn mới = |hợp các mã đã thấy| (không tụt dù đơn đã giao).
+  // reset theo ngày). Từ 07h (đại nhân chốt 02/11, tránh NV đi giao sớm GTC mất đơn): gom mã mốc 0-6h (từ 14h thêm 6-12h) Σ3 trạng thái; đơn mới = |hợp các mã đã thấy| (không tụt dù đơn đã giao).
   let prevBc = null; try { prevBc = JSON.parse(fs.readFileSync(path.join(ROOT, 'gtc_live.json'), 'utf8')).bcReport || null; } catch (e) { prevBc = null; }
   const TTS_FLOOR_SEED = { 20261102: { '21995000': 79, '21301000': 54 } }; // đơn mới TTS đo thật 09:44 sáng 02/11
   const MOI_FLOOR_SEED = { 20261102: { '21995000': 411, '21301000': 260 } }; // 1 lần: số đơn mới đo thật lúc 09:44 sáng 02/11 (trước khi bắt đầu lưu mã) — xoá được sau ngày 02/11
@@ -256,7 +256,7 @@ async function pool(items, n, fn) {
     // ---- đơn mới lũy kế trong ngày (mã đơn mốc 0-6h, chiều +6-12h) ----
     const seenPrev = (prevBc && prevBc.seen && prevBc.seen.date === TODAY && prevBc.seen.hubs && prevBc.seen.hubs[id]) || [];
     const seen = new Set(seenPrev);
-    if (HOUR >= 9) {
+    if (HOUR >= 7) {
       const buckets = HOUR >= 14 ? ['0_6', '6_12'] : ['0_6'];
       for (const st of STATES3) for (const ty of _stTypes[st]) for (const bk of buckets) {
         const j = await api('/api/core/oss/v1/report/get-detail-by-code', { code: `${id}|${ty}|${bk}`, view_mode: 'CLIENT', order_type: st });
@@ -266,7 +266,7 @@ async function pool(items, n, fn) {
     const prevHub = (prevBc && prevBc.date === TODAY && (prevBc.hubs || []).find(h => h.hubId === id)) || null;
     const floorMoi = Math.max(prevHub && prevHub.donMoi || 0, (MOI_FLOOR_SEED[TODAY] || {})[id] || 0);
     const floorTts = Math.max(prevHub && prevHub.tts && prevHub.tts.donMoi || 0, (TTS_FLOOR_SEED[TODAY] || {})[id] || 0);
-    if (HOUR >= 9) {
+    if (HOUR >= 7) {
       donMoi = Math.max(donMoi, seen.size, floorMoi);
       let tSeen = 0; seen.forEach(c => { if (c.startsWith('VNGH')) tSeen++; });
       ttsDonMoi = Math.max(ttsDonMoi, tSeen, floorTts);
@@ -309,7 +309,7 @@ async function pool(items, n, fn) {
       donMoi, donTon: Math.max(0, canGiao - donMoi), nvPhat: drv.size,
       tts: { canGiao: ttsCan, daGan: ttsDaGan, chuaGan: ttsChuaGan, pctGan: ttsCan ? Math.round(ttsDaGan / ttsCan * 1000) / 10 : 0, donMoi: ttsDonMoi, donTon: Math.max(0, ttsCan - ttsDonMoi) },
       bc2: { cg48, cg48tts, lcGiao36, lcTra36, returnShop48 },
-      _seen: HOUR >= 9 ? [...seen] : []
+      _seen: HOUR >= 7 ? [...seen] : []
     };
   }
   try {
