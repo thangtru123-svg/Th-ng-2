@@ -222,28 +222,30 @@ async function pool(items, n, fn) {
   const STATES3 = ['DAILY_TRIP_NONE', 'DAILY_TRIP_COMPLETED', 'DAILY_TRIP_IN_PROGRESS'];
   async function bcReportFor(cfg) {
     const id = cfg.id;
-    // get-general-info × 3 trạng thái chuyến: chưa gán (NONE) + đơn mới (Σ3) + hàng trả Shop>48h (RETURN Σ3)
+    // get-general-info × 3 trạng thái chuyến (Chưa có chuyến / Đã có chuyến / Đang có chuyến):
+    //  chưa gán = NONE · đơn mới = Giao + Ưu tiên giao mốc 0-6h (chiều +6-12h) Σ3 trạng thái · hàng trả Shop>48h = Trả Σ3.
+    //  ⚠️ Tên loại đổi theo trạng thái: NONE/COMPLETED = DELIVER·DELIVER_PRIORITY·RETURN; IN_PROGRESS = DELIVERING·DELIVERING_PRIORITY·RETURNING → khớp bằng regex.
     let chuaGan = 0, donMoi = 0, returnShop48 = 0;
     for (const st of STATES3) {
       const gi = await api('/api/core/oss/v1/report/get-general-info', { hub_ids: [id], view_mode: 'CLIENT', order_type: st });
       const infos = (((gi.data || [])[0] || {}).general_infos) || [];
       infos.forEach(g => {
-        if (g.order_type === 'DELIVER' || g.order_type === 'DELIVER_PRIORITY') {
+        if (/^DELIVER/.test(g.order_type)) {
           donMoi += _sumBk(g.order_inventories, _MOI);
           if (st === 'DAILY_TRIP_NONE') chuaGan += g.total_order || 0;
-        } else if (g.order_type === 'RETURN') returnShop48 += _sumBk(g.order_inventories, _GE48);
+        } else if (/^RETURN/.test(g.order_type)) returnShop48 += _sumBk(g.order_inventories, _GE48);
       });
     }
-    // get-detail-by-status × 3: 48h chưa gán (total+TTS) + TTS inventory (TTS = nhóm TIKTOK SHOP, code |TTS|)
-    let cg48 = 0, cg48tts = 0, ttsChuaGan = 0, ttsDonMoi = 0, ttsTot = 0;
-    for (const st of STATES3) {
-      const j = await api('/api/core/oss/v1/report/get-detail-by-status', { hub_id: id, order_type: st, view_mode: 'CLIENT', status: ['DELIVER'] });
-      const dt = (((j.data || {}).detail_backlog_types || [])[0] || {}).details || [];
-      dt.forEach(d => {
+    // get-detail-by-status: 48h chưa gán (NONE; total+TTS) + TTS mới (NONE + IN_PROGRESS) — TTS = nhóm TIKTOK SHOP, code |TTS|
+    let cg48 = 0, cg48tts = 0, ttsChuaGan = 0, ttsDonMoi = 0;
+    for (const [st, status] of [['DAILY_TRIP_NONE', ['DELIVER', 'DELIVER_PRIORITY']], ['DAILY_TRIP_IN_PROGRESS', ['DELIVERING', 'DELIVERING_PRIORITY']]]) {
+      const j = await api('/api/core/oss/v1/report/get-detail-by-status', { hub_id: id, order_type: st, view_mode: 'CLIENT', status });
+      const dts = ((j.data || {}).detail_backlog_types) || [];
+      dts.forEach(t => (t.details || []).forEach(d => {
         const isT = /\|TTS\|/.test(d.code);
-        if (isT) { ttsTot += d.total_order || 0; ttsDonMoi += _sumBk(d.order_inventories, _MOI); }
+        if (isT) ttsDonMoi += _sumBk(d.order_inventories, _MOI);
         if (st === 'DAILY_TRIP_NONE') { cg48 += _sumBk(d.order_inventories, _GE48); if (isT) { cg48tts += _sumBk(d.order_inventories, _GE48); ttsChuaGan += d.total_order || 0; } }
-      });
+      }));
     }
     // get-backlog-transport-info × 3 packing_type (đã/chưa/không cần đóng kiện): LC giao/trả >36h
     let lcGiao36 = 0, lcTra36 = 0;
