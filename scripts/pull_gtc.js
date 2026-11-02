@@ -223,6 +223,7 @@ async function pool(items, n, fn) {
   // ĐƠN MỚI KHÔNG ĐƯỢC GIẢM TRONG NGÀY: đơn giao xong biến mất khỏi báo cáo tồn đọng GHN → ghi nhớ MÃ đơn mới của mọi lần quét (lưu trong gtc_live.json.bcReport.seen,
   // reset theo ngày). Từ 09h: gom mã mốc 0-6h (từ 14h thêm 6-12h) Σ3 trạng thái; đơn mới = |hợp các mã đã thấy| (không tụt dù đơn đã giao).
   let prevBc = null; try { prevBc = JSON.parse(fs.readFileSync(path.join(ROOT, 'gtc_live.json'), 'utf8')).bcReport || null; } catch (e) { prevBc = null; }
+  const TTS_FLOOR_SEED = { 20261102: { '21995000': 79, '21301000': 54 } }; // đơn mới TTS đo thật 09:44 sáng 02/11
   const MOI_FLOOR_SEED = { 20261102: { '21995000': 411, '21301000': 260 } }; // 1 lần: số đơn mới đo thật lúc 09:44 sáng 02/11 (trước khi bắt đầu lưu mã) — xoá được sau ngày 02/11
   const _stTypes = { DAILY_TRIP_NONE: ['DELIVER', 'DELIVER_PRIORITY'], DAILY_TRIP_COMPLETED: ['DELIVER', 'DELIVER_PRIORITY'], DAILY_TRIP_IN_PROGRESS: ['DELIVERING', 'DELIVERING_PRIORITY'] };
   async function bcReportFor(cfg) {
@@ -264,7 +265,7 @@ async function pool(items, n, fn) {
     }
     const prevHub = (prevBc && prevBc.date === TODAY && (prevBc.hubs || []).find(h => h.hubId === id)) || null;
     const floorMoi = Math.max(prevHub && prevHub.donMoi || 0, (MOI_FLOOR_SEED[TODAY] || {})[id] || 0);
-    const floorTts = prevHub && prevHub.tts && prevHub.tts.donMoi || 0;
+    const floorTts = Math.max(prevHub && prevHub.tts && prevHub.tts.donMoi || 0, (TTS_FLOOR_SEED[TODAY] || {})[id] || 0);
     if (HOUR >= 9) {
       donMoi = Math.max(donMoi, seen.size, floorMoi);
       let tSeen = 0; seen.forEach(c => { if (c.startsWith('VNGH')) tSeen++; });
