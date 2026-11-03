@@ -7,7 +7,7 @@ const REFRESH_TOKEN = process.env.GOOGLE_REFRESH_TOKEN;
 const SID = '1Ec4qUpehq5ruroCTmw20cRDzkQiGmj9GLpS5f18UFE8';
 const VOL_ID = '1BsqjKaWRHSq8RaiQ0AD-cGBU3jsF-fu0fEwqHmt6gu4'; // chứa sheet Luong_NVBC (lương từng NV theo ngày)
 const NDAYS = 45;      // số ngày lịch sử
-const NV_DAYS = 12;    // số ngày gần nhất còn giữ chi tiết Năng suất NV (giữ payload gọn)
+const NV_DAYS = 45;    // số ngày gần nhất còn giữ chi tiết Năng suất NV + lương (đại nhân chốt 03/11: 45 ngày, khớp NDAYS)
 
 let _owner = { token: null, exp: 0 };
 async function ownerToken() {
