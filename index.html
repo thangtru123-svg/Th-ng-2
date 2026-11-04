@@ -6466,6 +6466,33 @@ async function buildNangSuatPage(){
 }
 
 /* ========== P21: TỈ LỆ NVPTTT NỘP COD ========== */
+/* ===== TARGET DOANH THU THÁNG THEO AM (đại nhân cấp 04/11/2026) =====
+   Giá trị = target GỐC từng AM; báo cáo dùng target×1,05. Dự kiến cuối tháng = DT thực đạt ÷ số ngày thực tế × tổng số ngày trong tháng.
+   Tháng sau: thêm 1 khoá 'YYYY-MM' mới vào KD_TARGET_AM. */
+const KD_TARGET_AM={'2026-11':[['Cao Văn Đức',3930475080],['Nguyễn Phú Hưởng',832766500],['Lê Văn Lâm',364302394],['Vi Văn Trịnh',341185519],['Chu Mạnh Dũng',225734367],['Phạm Đức Thắng',186242428],['Cao Xuân Minh',175632162],['Trần Thu Ba',58607187],['Vũ Hồng Thái',15221920],['Hạ Thị Lan Anh',4167016]]};
+const KD_TARGET_MUL=1.05;
+function kdTargetBlock(aRec,maxIsoA,maxLabelA){
+ const key=maxIsoA?maxIsoA.slice(0,7):''; const cfg=KD_TARGET_AM[key]; if(!cfg)return null;
+ const vnd=v=>Math.round(v||0).toLocaleString('vi-VN');
+ const cs='padding:7px 10px;';
+ const [ty,tm]=key.split('-').map(Number); const dim=new Date(ty,tm,0).getDate(); const Dm=+maxIsoA.slice(8,10);
+ const mtd={}; aRec.forEach(r=>{ if(r.iso&&r.iso.slice(0,7)===key&&r.am) mtd[r.am]=(mtd[r.am]||0)+r.rev; });
+ const R=cfg.map(([nm,base])=>{const tg=base*KD_TARGET_MUL,act=mtd[nm]||0,proj=act/Dm*dim;return{nm,base,tg,act,proj,pAct:tg?act/tg*100:0,pProj:tg?proj/tg*100:0,ok:proj>=tg};});
+ const T=R.reduce((a,r)=>({base:a.base+r.base,tg:a.tg+r.tg,act:a.act+r.act,proj:a.proj+r.proj}),{base:0,tg:0,act:0,proj:0});
+ const pT=T.tg?T.act/T.tg*100:0, pPj=T.tg?T.proj/T.tg*100:0, pTime=Dm/dim*100;
+ const f1=x=>x.toFixed(1).replace('.',',');
+ const mulTxt=String(KD_TARGET_MUL).replace('.',',');
+ const st=ok=>ok?'<span style="color:var(--green);font-weight:800">✅ Hoàn thành</span>':'<span style="color:var(--red);font-weight:800">❌ Không hoàn thành</span>';
+ const pc=(x)=>`<span style="font-weight:700;color:${x>=100?'var(--green)':'var(--red)'}">${f1(x)}%</span>`;
+ const th=(t,ex='')=>`<th style="${cs}text-align:center;${ex}">${t}</th>`;
+ const tbl=`<div class="table-wrap"><table><thead><tr>${th('STT')}${th('AM','text-align:left')}${th('Target gốc T'+tm)}${th('Target ×'+mulTxt)}${th('DT thực đạt (đến '+maxLabelA+')')}${th('Tiến độ (% target)')}${th('DT dự kiến cuối tháng')}${th('% dự kiến / target')}${th('Dự kiến')}</tr></thead><tbody>${R.map((r,i)=>`<tr><td style="${cs}text-align:center;color:var(--text-sub)">${i+1}</td><td style="${cs}font-weight:700;white-space:nowrap">${r.nm}</td><td style="${cs}text-align:center;color:var(--text-sub)">${vnd(r.base)}</td><td style="${cs}text-align:center;font-weight:700">${vnd(r.tg)}</td><td style="${cs}text-align:center">${vnd(r.act)}</td><td style="${cs}text-align:center">${pc(r.pAct)}</td><td style="${cs}text-align:center">${vnd(r.proj)}</td><td style="${cs}text-align:center">${pc(r.pProj)}</td><td style="${cs}text-align:center;white-space:nowrap">${st(r.ok)}</td></tr>`).join('')}<tr class="tot"><td style="${cs}"></td><td style="${cs}">TỔNG ${R.length} AM</td><td style="${cs}text-align:center">${vnd(T.base)}</td><td style="${cs}text-align:center">${vnd(T.tg)}</td><td style="${cs}text-align:center">${vnd(T.act)}</td><td style="${cs}text-align:center">${pc(pT)}</td><td style="${cs}text-align:center">${vnd(T.proj)}</td><td style="${cs}text-align:center">${pc(pPj)}</td><td style="${cs}text-align:center;white-space:nowrap">${st(T.proj>=T.tg)}</td></tr></tbody></table></div>`;
+ const okN=R.filter(r=>r.ok).length;
+ const wk=R.filter(r=>r.act>0).sort((a,b)=>b.pProj-a.pProj); const best=wk[0], worst=wk[wk.length-1];
+ const zero=R.filter(r=>r.act<=0).map(r=>r.nm);
+ const note=`<div class="analysis-box"><b>🎯 Target Tháng ${tm} (đến ${maxLabelA} — ${Dm}/${dim} ngày = ${f1(pTime)}% thời gian)</b><br>Tổng target (×${mulTxt}): <b>${vnd(T.tg)} đ</b> — thực đạt: <b>${vnd(T.act)} đ</b> (${f1(pT)}% target)<br>Dự kiến cuối tháng (= DT thực đạt ÷ ${Dm} ngày × ${dim} ngày): <b>${vnd(T.proj)} đ</b> (${f1(pPj)}% target) → ${T.proj>=T.tg?'<b style="color:var(--green)">dự kiến HOÀN THÀNH</b>':'<b style="color:var(--red)">dự kiến KHÔNG hoàn thành</b>'}<br>Số AM dự kiến hoàn thành: <b>${okN}/${R.length}</b>${best?`<br>🟢 Dự kiến cao nhất <b>${best.nm}</b> (${f1(best.pProj)}% target)<br>🔴 Dự kiến thấp nhất <b>${worst.nm}</b> (${f1(worst.pProj)}% target)`:''}${zero.length?`<br>⚠️ Chưa có doanh thu trong sheet: ${zero.join(', ')}`:''}</div>`;
+ const card=`<div class="card"><div class="card-header"><div class="card-title"><div class="card-icon">🎯</div>D. Target tháng ${tm} theo AM (target gốc ×${mulTxt})</div><div class="card-info">Tiến độ · Dự kiến cuối tháng</div></div><div id="kd-am-tgt">${tbl}</div><div id="kd-note-tgt">${note}</div></div>`;
+ return {card,tbl,note,R,T,Dm,dim};
+}
 async function buildKinhDoanhPage(){
  const el=document.getElementById('p22'); if(!el)return;
  try{
@@ -6583,7 +6610,7 @@ async function buildKinhDoanhPage(){
   el.innerHTML=`<div class="page-header"><div class="page-title">Kinh Doanh XBG</div><div class="page-meta"><span class="tag tag-orange">💼 Doanh thu · Nguồn: sheet "Kinh doanh Vùng -AM"</span><span>Đơn vị: đồng (đầy đủ) · W${weeks[0]}–W${lastW} · số liệu: nhóm KH đến ${maxLabel} · theo AM đến ${maxLabelA}</span><button class="tg-inpage-btn" onclick="sendKDtoTelegram(this)">📤 Bắn DT theo AM (TG)</button></div></div>
    <div class="card"><div class="card-header"><div class="card-title"><div class="card-icon">📈</div>A. Tổng quan doanh thu</div><div class="card-info">KPI tháng/tuần · so sánh</div></div>${kpi}${mTbl}${ovNote}</div>
    <div class="card"><div class="card-header"><div class="card-title"><div class="card-icon">👥</div>B. Chi tiết theo nhóm khách hàng</div><div class="card-info">A · BCD · EF · G (KH mới) · so sánh tuần/tháng</div></div>${gTbl}${gwTbl}<div style="font-weight:800;margin:14px 10px 2px;color:var(--orange-dark);font-size:15px">🆕 Phân tích tỉ lệ bán mới — nhóm G</div>${ngMonth}${ngWeek}${ngDay}${ngNote}</div>
-   <div class="card"><div class="card-header"><div class="card-title"><div class="card-icon">🧑‍💼</div>C. Doanh thu theo AM (còn đang làm việc)</div><div class="card-info">${amNames.length} AM active · Ngày → Tuần → Tháng</div></div><div style="font-weight:800;margin:12px 10px 4px;color:var(--orange-dark);font-size:15px">① Theo ngày — 7 ngày gần nhất</div><div id="kd-am-day">${amDayTbl}</div><div id="kd-note-day">${dayNote}</div><div style="font-weight:800;margin:16px 10px 4px;color:var(--orange-dark);font-size:15px">② Theo tuần — 4 tuần gần nhất</div><div id="kd-am-wk">${amWkTbl}</div><div id="kd-note-wk">${wkNote}</div><div style="font-weight:800;margin:16px 10px 4px;color:var(--orange-dark);font-size:15px">③ Theo tháng — đầy đủ</div><div id="kd-am-mo">${amMoTbl}</div><div id="kd-note-mo">${moNote}</div></div>`;
+   <div class="card"><div class="card-header"><div class="card-title"><div class="card-icon">🧑‍💼</div>C. Doanh thu theo AM (còn đang làm việc)</div><div class="card-info">${amNames.length} AM active · Ngày → Tuần → Tháng</div></div><div style="font-weight:800;margin:12px 10px 4px;color:var(--orange-dark);font-size:15px">① Theo ngày — 7 ngày gần nhất</div><div id="kd-am-day">${amDayTbl}</div><div id="kd-note-day">${dayNote}</div><div style="font-weight:800;margin:16px 10px 4px;color:var(--orange-dark);font-size:15px">② Theo tuần — 4 tuần gần nhất</div><div id="kd-am-wk">${amWkTbl}</div><div id="kd-note-wk">${wkNote}</div><div style="font-weight:800;margin:16px 10px 4px;color:var(--orange-dark);font-size:15px">③ Theo tháng — đầy đủ</div><div id="kd-am-mo">${amMoTbl}</div><div id="kd-note-mo">${moNote}</div></div>${(kdTargetBlock(aRec,maxIsoA,maxLabelA)||{}).card||''}`;
  }catch(e){ el.innerHTML=`<div class="card"><p style="color:var(--red);padding:16px">Lỗi tải Kinh Doanh XBG: ${e.message}</p></div>`; }
 }
 /* ===== Bắn 3 bảng "C. Doanh thu theo AM" (ngày/tuần/tháng) + PHÂN TÍCH → topic KD ===== */
@@ -6592,12 +6619,13 @@ async function _kdBlastCore(){
  const parts=[
   ['kd-am-day','kd-note-day','📅 <b>DOANH THU THEO AM — THEO NGÀY</b> (mới → cũ)'],
   ['kd-am-wk','kd-note-wk','📅 <b>DOANH THU THEO AM — THEO TUẦN</b>'],
-  ['kd-am-mo','kd-note-mo','📆 <b>DOANH THU THEO AM — THEO THÁNG</b>']
+  ['kd-am-mo','kd-note-mo','📆 <b>DOANH THU THEO AM — THEO THÁNG</b>'],
+  ['kd-am-tgt','kd-note-tgt','🎯 <b>TARGET THÁNG THEO AM — TIẾN ĐỘ &amp; DỰ KIẾN HOÀN THÀNH</b>']
  ];
  let ok=true, err='';
  for(const [tid,nid,title] of parts){
   const src=document.getElementById(tid);
-  if(!src){ok=false;err='thiếu '+tid;continue;}
+  if(!src){ if(tid==='kd-am-tgt')continue; ok=false;err='thiếu '+tid;continue;} // bảng Target chỉ có khi tháng đó đã có target
   const noteEl=document.getElementById(nid);
   let cap=title;
   if(noteEl){ const nt=(noteEl.innerText||'').trim(); if(nt) cap=title+'\n'+nt; } // kèm PHÂN TÍCH
@@ -6622,7 +6650,7 @@ async function _kdBlastCore(){
 }
 async function sendKDtoTelegram(btn){
  const _t=btn?btn.textContent:''; if(btn){btn.disabled=true;btn.textContent='⏳ Đang bắn...';}
- try{ const r=await _kdBlastCore(); alert(r.ok?'✅ Đã bắn 3 bảng Doanh thu theo AM (kèm phân tích) lên Telegram.':'Có lỗi khi bắn: '+r.err); }
+ try{ const r=await _kdBlastCore(); alert(r.ok?'✅ Đã bắn các bảng Doanh thu theo AM + Target tháng (kèm phân tích) lên Telegram.':'Có lỗi khi bắn: '+r.err); }
  catch(e){ alert('Lỗi bắn KD: '+e.message); }
  finally{ if(btn){btn.disabled=false;btn.textContent=_t||'📤 Bắn DT theo AM (TG)';} }
 }
