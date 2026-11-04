@@ -221,6 +221,7 @@ tr.tot td{background:#FFF0EB!important;font-weight:800!important;border-top:2px 
  <div class="nav-section">Tổng Quan</div>
  <button class="nav-item active" onclick="show('p0',this)"><span class="icon">📊</span>Dashboard Tổng Quan</button>
  <button class="nav-item" onclick="show('p43',this)" style="background:linear-gradient(135deg,rgba(22,101,52,0.16),rgba(34,197,94,0.1));border:1px solid rgba(22,101,52,0.35);font-weight:700"><span class="icon">🎯</span>Tổng Quan Target</button>
+ <button class="nav-item" onclick="show('p50',this)" style="background:linear-gradient(135deg,rgba(22,101,52,0.16),rgba(34,197,94,0.1));border:1px solid rgba(22,101,52,0.35);font-weight:700"><span class="icon">📉</span>Phân tích kéo vùng</button>
  <button class="nav-item" onclick="show('p44',this)" style="background:linear-gradient(135deg,rgba(220,38,38,0.2),rgba(241,93,41,0.1));border:1px solid rgba(220,38,38,0.4);font-weight:700"><span class="icon">🚨</span>Bưu Cục làm kém bất thường</button>
  <button class="nav-item" onclick="show('p45',this)" style="background:linear-gradient(135deg,rgba(185,28,28,0.24),rgba(241,93,41,0.12));border:1px solid rgba(185,28,28,0.45);font-weight:700"><span class="icon">⚠️</span>Bưu Cục Bất Ổn (Vùng)</button>
  <button class="nav-item" onclick="show('p27',this)" style="background:linear-gradient(135deg,rgba(220,38,38,0.16),rgba(241,93,41,0.08));border:1px solid rgba(220,38,38,0.32);font-weight:700"><span class="icon">📉</span>Rớt LC theo ngày</button>
@@ -275,6 +276,7 @@ tr.tot td{background:#FFF0EB!important;font-weight:800!important;border-top:2px 
 <div class="page" id="p47"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
 <div class="page" id="p48"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
 <div class="page" id="p49"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
+<div class="page" id="p50"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
  <div class="page" id="p1"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
  <div class="page" id="p2"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
  <div class="page" id="p3"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
@@ -2771,6 +2773,12 @@ async function sendAllToTelegram(){
    await new Promise(r=>setTimeout(r,600));
   }
   {
+   // Phân tích kéo vùng (GTC · FD · ODR · OPR) — text, tag AM
+   if(btn)btn.innerHTML='⏳ Đang gửi: Phân tích kéo vùng...';
+   try{ const _kvR=await sendKeoVungToTelegram(true); if(!_kvR||!_kvR.ok)_tgFail('Phân tích kéo vùng (GTC/FD/ODR/OPR)'); }catch(_e){console.warn('Kéo vùng TG lỗi:',_e&&_e.message);_tgFail('Phân tích kéo vùng (GTC/FD/ODR/OPR)');}
+   await new Promise(r=>setTimeout(r,600));
+  }
+  {
    // Bưu Cục làm kém bất thường — 5 tin (tổng quan + 4 hạng mục) vào room Vấn đề chung
    if(btn)btn.innerHTML='⏳ Đang gửi: Bưu Cục bất thường...';
    try{ if(!window._BTDATA)await buildBatThuongPage(); const _bm=_btCaptions(); if(_bm){ let _btBad=false; for(const _m of _bm){ const res=await _tgSend(TG_AGING_CHAT,TG_VANDE_THREAD,_m); if(!res||!res.ok){console.warn('BC bất thường TG lỗi:',res&&res.description);_btBad=true;} await new Promise(r=>setTimeout(r,500)); } if(_btBad)_tgFail('③ Bưu Cục làm kém bất thường'); }else{_tgFail('③ Bưu Cục làm kém bất thường');} }catch(_e){console.warn('BC bất thường TG lỗi:',_e&&_e.message);_tgFail('③ Bưu Cục làm kém bất thường');}
@@ -4585,6 +4593,123 @@ async function sendTargetToTelegram(){
   if(res&&res.ok)alert('✅ Đã bắn Target lên Telegram (Vận hành chung).'); else alert('Lỗi TG: '+((res&&res.description)||JSON.stringify(res)));
  }catch(e){alert('Lỗi gửi Telegram: '+e.message);}
 }
+/* ===== p50 — PHÂN TÍCH KÉO VÙNG (GTC · FD · ODR · OPR) =====
+   Mỗi BC "kéo vùng" = mức thiếu/vượt so với target × tỉ trọng sản lượng của BC trong Vùng:
+     pull = |target − tỉ lệ BC| × SL_BC ÷ ΣSL_Vùng   (GTC/ODR/OPR: cao hơn là tốt · FD: thấp hơn là tốt)
+   Nguồn: window._D (GTC/ODR/OPR theo Bưu Cục) + window._FD (FD theo Bưu Cục), ngày mới nhất trong sheet. */
+const KV_TAGS={'Nguyễn Phú Hưởng':'@NguyenphuHuongz3sz3','Cao Xuân Minh':'@CaoXuanMinh','Chu Mạnh Dũng':'@DUNG_AM','Cao Văn Đức':'@Duc_QN','Hạ Thị Lan Anh':'@mslananh8x','Lê Văn Lâm':'@lailalamday','Phạm Đức Thắng':'@thangquada'}; // AM chưa có tag (Vi Văn Trịnh, Trần Thu Ba) → hiện tên
+const KV_MIN_PULL=0.5; // BC đưa vào danh sách khi kéo vùng ≥ 0,5 điểm % (tối thiểu 3, tối đa 8 BC)
+function _kvSpecs(){
+ const D=window._D||{},FD=window._FD||{};
+ const ISO=s=>(String(s==null?'':s).match(/\d{4}-\d{2}-\d{2}/)||[''])[0];
+ const P=v=>{const n=parseFloat(String(v==null?'':v).replace(/,/g,''));return isNaN(n)?0:n;};
+ const rate=(rows,bcC,dC,volC,numC)=>{ // val = Σnum ÷ Σvol
+  if(!rows||rows.length<2)return null;
+  const ds=[...new Set(rows.slice(1).map(r=>ISO(r[dC])).filter(Boolean))].sort(),day=ds[ds.length-1],m={};
+  rows.slice(1).forEach(r=>{const bc=(r[bcC]||'').trim();if(!bc||/grand total/i.test(bc)||ISO(r[dC])!==day)return;const o=m[bc]||(m[bc]={bc,vol:0,n:0});o.vol+=P(r[volC]);o.n+=P(r[numC]);});
+  return {day,items:Object.values(m).filter(o=>o.vol>0).map(o=>({bc:o.bc,vol:o.vol,val:o.n/o.vol*100}))};
+ };
+ const fd=rows=>{ // BC0 Ngày1 %Vol2 %FD3 (fraction)
+  if(!rows||rows.length<2)return null;
+  const ds=[...new Set(rows.slice(1).map(r=>ISO(r[1])).filter(Boolean))].sort(),day=ds[ds.length-1],m={};
+  rows.slice(1).forEach(r=>{const bc=(r[0]||'').trim();if(!bc||/grand total/i.test(bc)||ISO(r[1])!==day)return;const vol=parsePct(r[2]);if(!(vol>0))return;const o=m[bc]||(m[bc]={bc,vol:0,f:0});o.vol+=vol;o.f+=parsePct(r[3])*vol;});
+  return {day,items:Object.values(m).map(o=>({bc:o.bc,vol:o.vol,val:o.f/o.vol}))};
+ };
+ return [
+  {key:'gtc',grp:'gtc',name:'%GTC',tgt:70,hi:true,strict:false,volLbl:'SL',unit:' đơn',cnt:true,src:rate(D.gtcTotalBC,1,2,3,6)},
+  {key:'fdT',grp:'fd',name:'FD Total',tgt:7,hi:false,strict:false,volLbl:'%Vol',unit:'% tỉ trọng vol',cnt:false,src:fd(FD.totalBC)},
+  {key:'fdS',grp:'fd',name:'FD SME',tgt:9,hi:false,strict:true,volLbl:'%Vol',unit:'% tỉ trọng vol',cnt:false,src:fd(FD.smeBC)},
+  {key:'fdTt',grp:'fd',name:'FD TTS',tgt:4.5,hi:false,strict:true,volLbl:'%Vol',unit:'% tỉ trọng vol',cnt:false,src:fd(FD.ttsBC)},
+  {key:'fdCod',grp:'fd',name:'FD TTS COD',tgt:5,hi:false,strict:true,volLbl:'%Vol',unit:'% tỉ trọng vol',cnt:false,src:fd(FD.codBC)},
+  {key:'odr',grp:'ontime',name:'%ODR',tgt:94,hi:true,strict:true,volLbl:'SL GTC',unit:' đơn',cnt:true,src:rate(D.odrBC,1,2,3,5)},
+  {key:'opr',grp:'ontime',name:'%OPR',tgt:80,hi:true,strict:true,volLbl:'SL LTC',unit:' đơn',cnt:true,src:rate(D.oprBC,1,2,3,5)}
+ ];
+}
+function _kvPass(sp,v){return sp.hi?(sp.strict?v>sp.tgt:v>=sp.tgt):(sp.strict?v<sp.tgt:v<=sp.tgt);}
+function _kvCalc(sp){
+ if(!sp.src||!sp.src.items.length)return null;
+ const it=sp.src.items,tv=it.reduce((a,x)=>a+x.vol,0),vung=it.reduce((a,x)=>a+x.val*x.vol,0)/tv;
+ const all=it.map(x=>{const gap=sp.hi?Math.max(0,sp.tgt-x.val):Math.max(0,x.val-sp.tgt);return Object.assign({},x,{gap,pull:gap*x.vol/tv});}).filter(x=>x.pull>0).sort((a,b)=>b.pull-a.pull);
+ let pick=all.filter(x=>x.pull>=KV_MIN_PULL).slice(0,8); if(pick.length<3)pick=all.slice(0,3);
+ const sum=pick.reduce((a,x)=>a+x.pull,0),y=sp.hi?vung+sum:vung-sum;
+ return {sp,day:sp.src.day,vung,tv,pass:_kvPass(sp,vung),pick,sum,y,yOk:sp.hi?y>=sp.tgt:y<=sp.tgt,nBad:it.filter(x=>!_kvPass(sp,x.val)).length,nAll:it.length};
+}
+const _kvF2=x=>x.toFixed(2).replace('.',',');
+const _kvSh=n=>String(n||'').replace(/^\([A-Z]+\)\s*/,'');
+function _kvAmOf(bc){const a=(window._CC_BCAM||{})[bc]||[];return a;}
+function _kvTag(bc){return _kvAmOf(bc).map(n=>KV_TAGS[n]||n).join(' / ')||'(chưa map AM)';}
+function _kvVolTxt(sp,x){return sp.cnt?fmt(Math.round(x.vol)):_kvF2(x.vol)+'%';}
+// 4 dòng nhận định (mỗi ý 1 dòng) — dùng chung cho web & Telegram
+function _kvLines(c){
+ const sp=c.sp,n=c.pick.length,L=[];
+ if(!n){L.push('✅ Không có Bưu Cục nào kéo vùng đáng kể.');return L;}
+ const op=sp.hi?(sp.strict?'>':'≥'):(sp.strict?'<':'≤');
+ L.push(`• ${n} bưu cục này một mình ${sp.hi?'kéo vùng xuống':'đẩy vùng lên'} ${_kvF2(c.sum)}% ${sp.name.replace('%','')} !!`);
+ if(c.pass)L.push(`• Vùng đã đạt mục tiêu; nếu cả ${n} đạt đúng ${sp.tgt}% thì vùng còn ${sp.hi?'cao':'thấp'} hơn: ${_kvF2(c.y)}%`);
+ else L.push(c.yOk?`• Nếu cả ${n} chỉ cần đạt đúng ${sp.tgt}% thì vùng đạt ${_kvF2(c.y)}% → đã vượt mục tiêu (${op}${sp.tgt}%)`:`• Nếu cả ${n} chỉ cần đạt đúng ${sp.tgt}% thì vùng mới ${sp.hi?'lên':'xuống'} ${_kvF2(c.y)}% → vẫn chưa đạt mục tiêu (${op}${sp.tgt}%)`);
+ const A=c.pick.slice().sort((a,b)=>sp.hi?a.val-b.val:b.val-a.val)[0],B=c.pick.slice().sort((a,b)=>b.vol-a.vol)[0];
+ if(A.bc===B.bc)L.push(`• ${_kvSh(A.bc)} đáng xử lý trước: vừa tỉ lệ ${sp.hi?'thấp':'cao'} nhất (${_kvF2(A.val)}%) vừa sản lượng lớn nhất (${_kvVolTxt(sp,A)}${sp.unit})`);
+ else L.push(`• ${_kvSh(A.bc)} và ${_kvSh(B.bc)} đáng xử lý trước: ${_kvSh(A.bc)} tỉ lệ quá ${sp.hi?'thấp':'cao'} (${_kvF2(A.val)}%), ${_kvSh(B.bc)} sản lượng quá lớn (${_kvVolTxt(sp,B)}${sp.unit})`);
+ return L;
+}
+function _kvHead(c){
+ const sp=c.sp,op=sp.hi?(sp.strict?'>':'≥'):(sp.strict?'<':'≤');
+ if(c.pass)return `✅ ${sp.name} VÙNG ĐẠT ${_kvF2(c.vung)}% (MT ${op}${sp.tgt}%)`;
+ return `${sp.name} ${sp.hi?'THIẾU':'VƯỢT'} ${_kvF2(Math.abs(sp.hi?sp.tgt-c.vung:c.vung-sp.tgt))}% (vùng ${_kvF2(c.vung)}% · MT ${op}${sp.tgt}%)`;
+}
+// Khối text Telegram cho 1 chỉ tiêu
+function _kvTgBlock(c){
+ const sp=c.sp,esc=t=>String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+ let t='<b>'+esc(_kvHead(c))+'</b>\n';
+ if(c.pick.length){
+  t+=`Tính theo mức ${sp.hi?'thiếu':'vượt'} so với ${sp.tgt}% nhân ${sp.cnt?'sản lượng':'tỉ trọng vol'}:\n`;
+  const rows=c.pick.map(x=>[_kvSh(x.bc),_kvF2(x.val)+'%',_kvVolTxt(sp,x),(sp.hi?'−':'+')+_kvF2(x.pull)]);
+  const w=[0,1,2,3].map(i=>Math.max(...rows.map(r=>r[i].length),['Bưu cục',sp.name.replace('%',''),sp.volLbl,sp.hi?'kéo vùng':'đẩy vùng'][i].length));
+  const fm=(r,al)=>r.map((v,i)=>i===0?v.padEnd(w[i]):v.padStart(w[i])).join('  ');
+  t+='<pre>'+esc(fm(['Bưu cục',sp.name.replace('%',''),sp.volLbl,sp.hi?'kéo vùng':'đẩy vùng']))+'\n'+rows.map(r=>esc(fm(r))).join('\n')+'</pre>\n';
+ }
+ t+=_kvLines(c).map(esc).join('\n');
+ if(c.pick.length)t+='\n🔔 '+c.pick.map(x=>esc(_kvSh(x.bc))+': '+esc(_kvTag(x.bc))).join(' · ');
+ return t;
+}
+function _kvGroups(){
+ const cs=_kvSpecs().map(sp=>({sp,c:_kvCalc(sp)})).filter(o=>o.c);
+ const day=cs.length?cs[0].c.day:'';
+ const G={gtc:'📉 <b>PHÂN TÍCH KÉO VÙNG — GTC</b>',fd:'📉 <b>PHÂN TÍCH KÉO VÙNG — FD</b>',ontime:'📉 <b>PHÂN TÍCH KÉO VÙNG — ODR / OPR</b>'};
+ return ['gtc','fd','ontime'].map(g=>{const items=cs.filter(o=>o.sp.grp===g);if(!items.length)return null;
+  const d=items[0].c.day;return {g,text:G[g]+' · ngày '+shortD(d)+'\n\n'+items.map(o=>_kvTgBlock(o.c)).join('\n\n')};}).filter(Boolean);
+}
+async function sendKeoVungToTelegram(silent){
+ let ok=true,err='';
+ try{
+  const gs=_kvGroups(); if(!gs.length)throw new Error('Chưa có dữ liệu GTC/FD/ODR/OPR theo Bưu Cục');
+  for(const g of gs){const res=await _tgSend(TG_AGING_CHAT,TG_VH_THREAD,g.text);if(!res||!res.ok){ok=false;err=(res&&res.description)||'TG lỗi';}await new Promise(r=>setTimeout(r,700));}
+ }catch(e){ok=false;err=e.message;}
+ if(!silent)alert(ok?'✅ Đã bắn Phân tích kéo vùng (GTC · FD · ODR · OPR) lên Telegram (Vận hành chung).':'Lỗi gửi Telegram: '+err);
+ return {ok,err};
+}
+async function buildKeoVungPage(){
+ const el=document.getElementById('p50'); if(!el)return;
+ try{
+  const esc=t=>String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const cs=_kvSpecs().map(sp=>({sp,c:_kvCalc(sp)}));
+  const ok=cs.filter(o=>o.c);
+  if(!ok.length){el.innerHTML='<div class="page-header"><div class="page-title">📉 Phân tích kéo vùng</div></div><div class="analysis-box">Không có dữ liệu GTC/FD/ODR/OPR theo Bưu Cục.</div>';return;}
+  const cell='padding:6px 12px;text-align:center;';
+  const card=(sp,c)=>{
+   if(!c)return `<div class="card"><div class="card-header"><div class="card-title"><div class="card-icon">📉</div>${esc(sp.name)}</div></div><div class="analysis-box">Không có dữ liệu.</div></div>`;
+   const col=c.pass?'var(--green)':'var(--red)';
+   const rows=c.pick.map((x,i)=>`<tr><td style="${cell}color:var(--text-sub)">${i+1}</td><td style="${cell}text-align:left;font-weight:700;white-space:nowrap">${esc(_kvSh(x.bc))}</td><td style="${cell}text-align:left;white-space:nowrap">${esc(_kvAmOf(x.bc).join(' / ')||'—')}</td><td style="${cell}"><span class="pct ${_kvPass(sp,x.val)?'g':'b'}">${_kvF2(x.val)}%</span></td><td style="${cell}">${_kvVolTxt(sp,x)}</td><td style="${cell}font-weight:800;color:var(--red)">${sp.hi?'−':'+'}${_kvF2(x.pull)}</td></tr>`).join('');
+   const tbl=c.pick.length?`<div class="table-wrap"><table style="width:auto;display:inline-table"><thead><tr><th style="${cell}">STT</th><th style="${cell}text-align:left">Bưu Cục</th><th style="${cell}text-align:left">AM</th><th style="${cell}">${esc(sp.name)}</th><th style="${cell}">${esc(sp.volLbl)}</th><th style="${cell}">${sp.hi?'Kéo vùng':'Đẩy vùng'}</th></tr></thead><tbody>${rows}<tr class="tot"><td style="${cell}"></td><td style="${cell}text-align:left" colspan="3">TỔNG ${c.pick.length} BC</td><td style="${cell}">—</td><td style="${cell}font-weight:800;color:var(--red)">${sp.hi?'−':'+'}${_kvF2(c.sum)}</td></tr></tbody></table></div>`:'';
+   const ana=`<div class="analysis-box"><b style="color:${col}">${esc(_kvHead(c))}</b><br>Tính theo mức ${sp.hi?'thiếu':'vượt'} so với ${sp.tgt}% nhân ${sp.cnt?'sản lượng':'tỉ trọng vol'} · ${c.nBad}/${c.nAll} Bưu Cục chưa đạt<br>${_kvLines(c).map(esc).join('<br>')}${c.pick.length?'<br>🔔 '+c.pick.map(x=>esc(_kvSh(x.bc))+': '+esc(_kvTag(x.bc))).join(' · '):''}</div>`;
+   return `<div class="card"><div class="card-header"><div class="card-title"><div class="card-icon">📉</div>${esc(sp.name)} — BC ${sp.hi?'kéo vùng':'đẩy vùng'} (MT ${sp.hi?(sp.strict?'>':'≥'):(sp.strict?'<':'≤')}${sp.tgt}%)</div><div class="card-info">Ngày ${shortD(c.day)}</div></div>${tbl}${ana}</div>`;
+  };
+  el.innerHTML=`<div class="page-header"><div class="page-title">📉 Phân tích kéo vùng — GTC · FD · ODR · OPR</div>
+   <div class="page-meta"><span class="tag tag-orange">📅 Ngày ${shortD(ok[0].c.day)}</span><span>Kéo vùng = |target − tỉ lệ BC| × SL BC ÷ ΣSL Vùng · BC kéo ≥ ${String(KV_MIN_PULL).replace('.',',')} điểm %</span>
+   <button class="tg-inpage-btn" onclick="sendKeoVungToTelegram()">📤 Bắn Kéo vùng TG</button></div></div>
+   ${cs.map(o=>card(o.sp,o.c)).join('')}`;
+ }catch(e){ el.innerHTML='<div class="page-header"><div class="page-title">📉 Phân tích kéo vùng</div></div><div class="analysis-box">Lỗi: '+(e&&e.message||e)+'</div>'; console.error('Kéo vùng:',e); }
+}
 /* ===== p44 — BƯU CỤC LÀM KÉM BẤT THƯỜNG ===== */
 async function buildBatThuongPage(){
  const el=document.getElementById('p44'); if(!el)return;
@@ -5401,6 +5526,8 @@ async function init(){
  buildThuNhapPage().catch(e=>console.warn('Thu nhập NV:',e&&e.message||e));
  // p43 — Tổng Quan Target (so số thật với mục tiêu Sếp)
  buildTargetPage().catch(e=>console.warn('Target:',e&&e.message||e));
+ // p50 — Phân tích kéo vùng GTC/FD/ODR/OPR (cần _D/_FD + _CC_BCAM)
+ buildKeoVungPage().catch(e=>console.warn('Kéo vùng:',e&&e.message||e));
  // p44 — Bưu Cục làm kém bất thường (cần _D/_FD + _agingRows)
  buildBatThuongPage().catch(e=>console.warn('BC bất thường:',e&&e.message||e));
  // p45 — Bưu Cục Bất Ổn (Vùng tự set %GTC Total<60%) (cần _D/_FD + _agingRows + _CC_BCAM)
