@@ -4598,7 +4598,7 @@ async function sendTargetToTelegram(){
      pull = |target − tỉ lệ BC| × SL_BC ÷ ΣSL_Vùng   (GTC/ODR/OPR: cao hơn là tốt · FD: thấp hơn là tốt)
    Nguồn: window._D (GTC/ODR/OPR theo Bưu Cục) + window._FD (FD theo Bưu Cục), ngày mới nhất trong sheet. */
 const KV_TAGS={'Nguyễn Phú Hưởng':'@NguyenphuHuongz3sz3','Cao Xuân Minh':'@CaoXuanMinh','Chu Mạnh Dũng':'@DUNG_AM','Cao Văn Đức':'@Duc_QN','Hạ Thị Lan Anh':'@mslananh8x','Lê Văn Lâm':'@lailalamday','Phạm Đức Thắng':'@thangquada'}; // AM chưa có tag (Vi Văn Trịnh, Trần Thu Ba) → hiện tên
-const KV_MIN_PULL=0.5; // BC đưa vào danh sách khi kéo vùng ≥ 0,5 điểm % (tối thiểu 3, tối đa 8 BC)
+const KV_MIN_PULL=0.5; // BC đưa vào danh sách khi kéo vùng ≥ 0,5 điểm % (tối thiểu 3 — FD tối thiểu 5, tối đa 8 BC)
 function _kvSpecs(){
  const D=window._D||{},FD=window._FD||{};
  const ISO=s=>(String(s==null?'':s).match(/\d{4}-\d{2}-\d{2}/)||[''])[0];
@@ -4617,10 +4617,10 @@ function _kvSpecs(){
  };
  return [
   {key:'gtc',grp:'gtc',name:'%GTC',tgt:70,hi:true,strict:false,volLbl:'SL',unit:' đơn',cnt:true,src:rate(D.gtcTotalBC,1,2,3,6)},
-  {key:'fdT',grp:'fd',name:'FD Total',tgt:7,hi:false,strict:false,volLbl:'%Vol',unit:'% tỉ trọng vol',cnt:false,src:fd(FD.totalBC)},
-  {key:'fdS',grp:'fd',name:'FD SME',tgt:9,hi:false,strict:true,volLbl:'%Vol',unit:'% tỉ trọng vol',cnt:false,src:fd(FD.smeBC)},
-  {key:'fdTt',grp:'fd',name:'FD TTS',tgt:4.5,hi:false,strict:true,volLbl:'%Vol',unit:'% tỉ trọng vol',cnt:false,src:fd(FD.ttsBC)},
-  {key:'fdCod',grp:'fd',name:'FD TTS COD',tgt:5,hi:false,strict:true,volLbl:'%Vol',unit:'% tỉ trọng vol',cnt:false,src:fd(FD.codBC)},
+  {key:'fdT',grp:'fd',name:'FD Total',tgt:7,hi:false,strict:false,volLbl:'%Vol',unit:' tỉ trọng vol',cnt:false,src:fd(FD.totalBC)},
+  {key:'fdS',grp:'fd',name:'FD SME',tgt:9,hi:false,strict:true,volLbl:'%Vol',unit:' tỉ trọng vol',cnt:false,src:fd(FD.smeBC)},
+  {key:'fdTt',grp:'fd',name:'FD TTS',tgt:4.5,hi:false,strict:true,volLbl:'%Vol',unit:' tỉ trọng vol',cnt:false,src:fd(FD.ttsBC)},
+  {key:'fdCod',grp:'fd',name:'FD TTS COD',tgt:5,hi:false,strict:true,volLbl:'%Vol',unit:' tỉ trọng vol',cnt:false,src:fd(FD.codBC)},
   {key:'odr',grp:'ontime',name:'%ODR',tgt:94,hi:true,strict:true,volLbl:'SL GTC',unit:' đơn',cnt:true,src:rate(D.odrBC,1,2,3,5)},
   {key:'opr',grp:'ontime',name:'%OPR',tgt:80,hi:true,strict:true,volLbl:'SL LTC',unit:' đơn',cnt:true,src:rate(D.oprBC,1,2,3,5)}
  ];
@@ -4630,7 +4630,7 @@ function _kvCalc(sp){
  if(!sp.src||!sp.src.items.length)return null;
  const it=sp.src.items,tv=it.reduce((a,x)=>a+x.vol,0),vung=it.reduce((a,x)=>a+x.val*x.vol,0)/tv;
  const all=it.map(x=>{const gap=sp.hi?Math.max(0,sp.tgt-x.val):Math.max(0,x.val-sp.tgt);return Object.assign({},x,{gap,pull:gap*x.vol/tv});}).filter(x=>x.pull>0).sort((a,b)=>b.pull-a.pull);
- let pick=all.filter(x=>x.pull>=KV_MIN_PULL).slice(0,8); if(pick.length<3)pick=all.slice(0,3);
+ let pick=all.filter(x=>x.pull>=KV_MIN_PULL).slice(0,8); const minN=sp.grp==='fd'?5:3; if(pick.length<minN)pick=all.slice(0,minN); // FD tối thiểu 5 BC, còn lại 3
  const sum=pick.reduce((a,x)=>a+x.pull,0),y=sp.hi?vung+sum:vung-sum;
  return {sp,day:sp.src.day,vung,tv,pass:_kvPass(sp,vung),pick,sum,y,yOk:sp.hi?y>=sp.tgt:y<=sp.tgt,nBad:it.filter(x=>!_kvPass(sp,x.val)).length,nAll:it.length};
 }
