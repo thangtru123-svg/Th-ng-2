@@ -276,7 +276,7 @@ tr.amchild td:first-child{padding-left:16px;font-size:12.5px}
         <button id="n1ModeWeek" onclick="n1SetMode('week')" style="border:none;background:transparent;color:var(--sub);font-weight:800;font-size:13px;padding:8px 14px">Tuần</button>
       </div>
       <span class="mut" id="n1SelLbl" style="font-size:12px">📅 Chọn ngày:</span>
-      <select id="n1DaySel" onchange="n1DayChange()" style="flex:1;min-width:120px;background:var(--card2);color:var(--txt);border:1px solid var(--line);border-radius:10px;padding:8px 12px;font-size:14px;font-weight:700"></select>
+      <select id="n1DaySel" onchange="n1FromChange()" style="flex:1;min-width:120px;background:var(--card2);color:var(--txt);border:1px solid var(--line);border-radius:10px;padding:8px 12px;font-size:14px;font-weight:700"></select>
       <span id="n1DaySelToWrap" style="display:none;align-items:center;gap:6px;flex:1;min-width:120px"><span class="mut" style="font-size:12px;flex-shrink:0">→ đến</span><select id="n1DaySel2" onchange="n1DayChange()" style="flex:1;min-width:110px;background:var(--card2);color:var(--txt);border:1px solid var(--line);border-radius:10px;padding:8px 12px;font-size:14px;font-weight:700"></select></span>
     </div>
 
@@ -836,6 +836,7 @@ function n1SetMode(mode){
 function n1PickDay(key){
   var src=_n1mode==='week'?_N1ALL.wdata:_N1ALL.data;
   if(!_N1ALL||!src||!src[key])return;
+  _n1rangeSeq++; // huỷ mọi yêu cầu "gộp khoảng" đang bay, tránh kết quả cũ (vd 03→04/11) ghi đè lên 1 ngày vừa chọn
   _n1cur=key; renderN1(src[key]);
   n1ReapplySearch();
 }
@@ -843,6 +844,12 @@ function n1ReapplySearch(){
   ['n1GtcBody','n1FdBody','n1TtsBody','n1OntimeBody'].forEach(function(id){ var inp=document.querySelector('input.search[oninput*="'+id+'"]'); if(inp&&inp.value) n1Filter(id, inp.value); });
 }
 // Đổi ô ngày: nếu "đến" khác "từ" (chế độ Ngày) → gộp khoảng A→B; còn lại → 1 ngày
+// Đổi ô "Từ ngày": đưa "đến" về cùng ngày (xem 1 ngày) — tránh bị gộp ngầm với ngày "đến" cũ (vd N-1 04/11)
+function n1FromChange(){
+  var s2=document.getElementById('n1DaySel2'), s1=document.getElementById('n1DaySel');
+  if(_n1mode!=='week' && s2 && s1) s2.value=s1.value;
+  n1DayChange();
+}
 function n1DayChange(){
   if(_n1mode==='week'){ n1PickDay(document.getElementById('n1DaySel').value); return; }
   var a=document.getElementById('n1DaySel').value, b=(document.getElementById('n1DaySel2')||{}).value;
