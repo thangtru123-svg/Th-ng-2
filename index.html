@@ -2953,10 +2953,11 @@ async function sendAllToTelegram(){
   await new Promise(r=>setTimeout(r,700));
 
   /* --- P51: Tình hình BC (N-1) → DM @anhthuvu123, chỉ BC %GTC Total N-1 < 60% --- */
+  let _p51Res=null;
   try{
    if(btn)btn.innerHTML='⏳ Đang gửi: Tình hình BC (N-1)...';
    if(!TG_ANHTHU_ID)console.warn('p51: chưa có chat_id @anhthuvu123 — bỏ qua bước này');
-   else{ if(!window._TINHHINH)await buildTinhHinhBCPage(); await sendTinhHinhBCToTelegram(null,true); }
+   else{ if(!window._TINHHINH)await buildTinhHinhBCPage(); _p51Res=await sendTinhHinhBCToTelegram(null,true); }
   }catch(_e){console.warn('TG p51 lỗi:',_e&&_e.message);_tgFail('Tình hình BC N-1 (@anhthuvu123)');}
   await new Promise(r=>setTimeout(r,700));
 
@@ -2981,6 +2982,13 @@ async function sendAllToTelegram(){
    if(btn){btn.innerHTML=`⚠️ Thiếu ${_tgFails.length} mục (đã nhắn Task Thắng)`;setTimeout(()=>{btn.innerHTML='<span id="tgSidebarIcon">📤</span> Bắn dữ liệu lên Telegram';btn.disabled=false;},8000);}
   }else{
    if(btn){btn.innerHTML='✅ Đã gửi xong!';setTimeout(()=>{btn.innerHTML='<span id="tgSidebarIcon">📤</span> Bắn dữ liệu lên Telegram';btn.disabled=false;},3000);}
+  }
+  // Đại nhân dặn (06/11): bắn đồng loạt xong mà ĐÃ bắn báo cáo cho @anhthuvu123 → nhắn riêng @thangquada xác nhận
+  if(_p51Res&&_p51Res.n>0){
+   try{
+    const _bn=((window._TINHHINH&&window._TINHHINH.rows)||[]).filter(r=>!r.noData&&r.send).map(r=>r.bc);
+    await _tgSend(GK_TG,undefined,`Đã bắn xong báo cáo Tình hình Bưu Cục (N-1) cho Thư Vũ (@anhthuvu123): ${_p51Res.n} BC — ${_bn.join(', ')}.`);
+   }catch(_e){console.warn('Nhắn xác nhận @thangquada lỗi:',_e&&_e.message);}
   }
  }catch(e){
   console.error('sendAllToTelegram error:',e);
