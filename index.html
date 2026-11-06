@@ -5039,7 +5039,7 @@ async function buildTinhHinhBCPage(){
    const nvOf=d=>{const m={};NS.forEach(r=>{if(norm(r[0])!==k||dt(r[2])!==d)return;const nv=(r[1]||'').trim();if(!nv)return;m[nv]=m[nv]||{gan:0,gtc:0};m[nv].gan+=P(r[3]);m[nv].gtc+=P(r[4]);});return Object.entries(m).filter(([,v])=>v.gtc>1).map(([n,v])=>({nv:n,gan:v.gan,gtc:v.gtc}));};
    const nv1=nvOf(d1), nv0=d0?nvOf(d0):null;
    let low=null; nv1.forEach(o=>{if(!low||o.gtc<low.gtc||(o.gtc===low.gtc&&o.gan>low.gan))low=o;});
-   const nm=n=>{const i=n.indexOf('_');return i>=0?n.slice(i+1):n;};
+   const nm=n=>{const i=n.indexOf('_');return (i>=0?n.slice(i+1):n).replace(/\s+/g,' ').trim();};
    rows.push({bc,d1,d0,vol:A.vol,gtc:A.gtc,ton:(tonMap[k+'|'+d1]!=null?Math.round(tonMap[k+'|'+d1]):null),pg:A.pg,pgPrev:B?B.pg:null,
     nv:nv1.length,nvPrev:nv0?nv0.length:null,ns:nv1.length?Math.round(A.gtc/nv1.length):null,
     low:low?{name:nm(low.nv),gtc:low.gtc,gan:low.gan}:null, send:A.pg<TINHHINH_NGUONG});
