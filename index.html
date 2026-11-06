@@ -5022,6 +5022,10 @@ async function buildTinhHinhBCPage(){
   const nsRes=await fetch(`https://docs.google.com/spreadsheets/d/${SID}/gviz/tq?tqx=out:csv&gid=1723871284&_=${Date.now()}`);
   if(!nsRes.ok)throw new Error('Năng suất NV HTTP '+nsRes.status);
   const NS=parseCSV(await nsRes.text()).slice(1).filter(r=>r[0]&&r[2]);
+  // Data_Voltotal: Hàng Tồn theo BC/ngày (BC=col1, Loại hàng=col2, Ngày=col4, Volume=col5; gộp mọi Nhóm hàng)
+  const VR=_vwParseCSV(await _getVolCSV());
+  const tonMap={};
+  for(let i=1;i<VR.length;i++){const r=VR[i];if((r[2]||'').trim()!=='Hàng Tồn')continue;const d=isoD(r[4]);if(!d)continue;const key=norm(r[1])+'|'+d;tonMap[key]=(tonMap[key]||0)+_vwNum(r[5]);}
   const latest=G.map(r=>dt(r[2])).filter(Boolean).sort().pop();
   const rows=[];
   TINHHINH_BCS.forEach(bc=>{
@@ -5036,7 +5040,7 @@ async function buildTinhHinhBCPage(){
    const nv1=nvOf(d1), nv0=d0?nvOf(d0):null;
    let low=null; nv1.forEach(o=>{if(!low||o.gtc<low.gtc||(o.gtc===low.gtc&&o.gan>low.gan))low=o;});
    const nm=n=>{const i=n.indexOf('_');return i>=0?n.slice(i+1):n;};
-   rows.push({bc,d1,d0,vol:A.vol,gtc:A.gtc,ton:Math.max(0,A.vol-A.gtc),pg:A.pg,pgPrev:B?B.pg:null,
+   rows.push({bc,d1,d0,vol:A.vol,gtc:A.gtc,ton:(tonMap[k+'|'+d1]!=null?Math.round(tonMap[k+'|'+d1]):null),pg:A.pg,pgPrev:B?B.pg:null,
     nv:nv1.length,nvPrev:nv0?nv0.length:null,ns:nv1.length?Math.round(A.gtc/nv1.length):null,
     low:low?{name:nm(low.nv),gtc:low.gtc,gan:low.gan}:null, send:A.pg<TINHHINH_NGUONG});
   });
@@ -5062,7 +5066,7 @@ async function buildTinhHinhBCPage(){
     ${line('Tổng đơn cần giao','<b>'+vn(r.vol)+' đơn</b>')}
     ${line('NS TB / nhân viên ngày N-1',r.ns==null?'không có dữ liệu':'<b>'+vn(r.ns)+' đơn</b>')}
     ${line('Vol đơn GTC ngày N-1','<b>'+vn(r.gtc)+' đơn</b>')}
-    ${line('Số đơn tồn ngày N-1','<b>'+vn(r.ton)+' đơn</b> <span style="color:var(--text-sub);font-size:11px">(cần giao − GTC)</span>')}
+    ${line('Số đơn tồn ngày N-1',r.ton==null?'không có dữ liệu (Data_Voltotal chưa có ngày '+fD(r.d1)+')':'<b>'+vn(r.ton)+' đơn</b> <span style="color:var(--text-sub);font-size:11px">(Hàng Tồn — Data_Voltotal)</span>')}
     ${line('% GTC ngày N-1 so với ngày N-2',cmp)}
     ${line('Biến động nhân sự','<b>'+r.nv+' NV</b> thực tế có phát sinh lương (GTC &gt; 1 đơn)'+nvBd)}
     ${line('Nguyên nhân thiếu',fill)}
@@ -5071,7 +5075,7 @@ async function buildTinhHinhBCPage(){
    </div>`;
   });
   h+='</div>';
-  h+=`<div class="analysis-box" style="margin-top:14px;line-height:1.9">Nguồn: sheet GTC Total theo Bưu Cục (cần giao = Vol, GTC, %GTC) + Năng suất NV (số NV có GTC &gt; 1 đơn; NV thấp nhất = ít GTC nhất trong nhóm đó).<br>NS TB = đơn GTC ÷ số NV có GTC &gt; 1 đơn · Tồn = cần giao − GTC.<br>Chỉ bắn Telegram các BC có %GTC Total N-1 &lt; ${TINHHINH_NGUONG}%.</div>`;
+  h+=`<div class="analysis-box" style="margin-top:14px;line-height:1.9">Nguồn: sheet GTC Total theo Bưu Cục (cần giao = Vol, GTC, %GTC) + Data_Voltotal (Hàng Tồn) + Năng suất NV (số NV có GTC &gt; 1 đơn; NV thấp nhất = ít GTC nhất trong nhóm đó).<br>NS TB = đơn GTC ÷ số NV có GTC &gt; 1 đơn · Tồn = dòng "Hàng Tồn" của Data_Voltotal.<br>Chỉ bắn Telegram các BC có %GTC Total N-1 &lt; ${TINHHINH_NGUONG}%.</div>`;
   el.innerHTML=h;
  }catch(e){el.innerHTML='<div class="page-header"><div class="page-title">📋 Tình hình Bưu Cục (N-1)</div></div><div class="analysis-box">Lỗi: '+esc(e&&e.message||e)+'</div>';console.error('p51:',e);}
 }
@@ -5091,7 +5095,7 @@ function _tinhHinhMsgs(){
    +`• Tổng đơn cần giao: ${vn(r.vol)} đơn\n`
    +`• NS TB / nhân viên ngày N-1: ${r.ns==null?'không có dữ liệu':vn(r.ns)+' đơn'}\n`
    +`• Vol đơn GTC ngày N-1: ${vn(r.gtc)} đơn\n`
-   +`• Số đơn tồn ngày N-1: ${vn(r.ton)} đơn\n`
+   +`• Số đơn tồn ngày N-1: ${r.ton==null?'không có dữ liệu':vn(r.ton)+' đơn'}\n`
    +`• % GTC ngày N-1 so với ngày N-2: ${cmp}\n`
    +`• Biến động nhân sự: ${r.nv} NV thực tế có phát sinh lương (GTC &gt; 1 đơn)${nvBd}\n`
    +`• Nguyên nhân thiếu: ( Tự điền)\n`
