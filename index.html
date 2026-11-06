@@ -5068,7 +5068,7 @@ async function buildTinhHinhBCPage(){
     ${line('Vol đơn GTC ngày N-1','<b>'+vn(r.gtc)+' đơn</b>')}
     ${line('Số đơn tồn ngày N-1',r.ton==null?'không có dữ liệu (Data_Voltotal chưa có ngày '+fD(r.d1)+')':'<b>'+vn(r.ton)+' đơn</b> <span style="color:var(--text-sub);font-size:11px">(Hàng Tồn — Data_Voltotal)</span>')}
     ${line('% GTC ngày N-1 so với ngày N-2',cmp)}
-    ${line('Biến động nhân sự','<b>'+r.nv+' NV</b> thực tế có phát sinh lương (GTC &gt; 1 đơn)'+nvBd)}
+    ${line('Biến động nhân sự','<b>'+r.nv+' NV</b> thực tế có phát sinh lương'+nvBd)}
     ${line('Nguyên nhân thiếu',fill)}
     ${line('NV năng suất thấp nhất',r.low?'<b>'+esc(r.low.name)+'</b> — GTC '+vn(r.low.gtc)+' đơn (gán '+vn(r.low.gan)+' đơn)':'không có dữ liệu')}
     ${line('Phương án xử lý',fill)}
@@ -5097,7 +5097,7 @@ function _tinhHinhMsgs(){
    +`• Vol đơn GTC ngày N-1: ${vn(r.gtc)} đơn\n`
    +`• Số đơn tồn ngày N-1: ${r.ton==null?'không có dữ liệu':vn(r.ton)+' đơn'}\n`
    +`• % GTC ngày N-1 so với ngày N-2: ${cmp}\n`
-   +`• Biến động nhân sự: ${r.nv} NV thực tế có phát sinh lương (GTC &gt; 1 đơn)${nvBd}\n`
+   +`• Biến động nhân sự: ${r.nv} NV thực tế có phát sinh lương${nvBd}\n`
    +`• Nguyên nhân thiếu: ( Tự điền)\n`
    +`• NV năng suất thấp nhất: ${r.low?esc(r.low.name)+' — GTC '+vn(r.low.gtc)+' đơn (gán '+vn(r.low.gan)+' đơn)':'không có dữ liệu'}\n`
    +`• Phương án xử lý: ( Tự điền)`;
