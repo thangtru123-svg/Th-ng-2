@@ -5059,7 +5059,7 @@ async function buildTinhHinhBCPage(){
   rows.forEach(r=>{
    if(r.noData){h+=`<div class="card" style="padding:14px"><div style="font-weight:800;color:#1F3864">${esc(r.bc)}</div><div style="color:var(--text-sub);margin-top:6px">Không có dữ liệu ngày ${fD(latest)} trong sheet.</div></div>`;return;}
    const dlt=r.pgPrev==null?null:r.pg-r.pgPrev;
-   const cmp=dlt==null?'không có dữ liệu ngày N-2':`<b style="color:${dlt<0?'#B91C1C':'#16A34A'}">${dlt<0?'Giảm':'Tăng'} ${Math.abs(dlt).toFixed(1).replace('.',',')} điểm %</b> (${pc(r.pg)} so với ${pc(r.pgPrev)} ngày ${fD(r.d0)})`;
+   const cmp=dlt==null?'không có dữ liệu ngày N-2':`<b style="color:${dlt<0?'#B91C1C':'#16A34A'}">${dlt<0?'Giảm':'Tăng'} ${Math.abs(dlt).toFixed(1).replace('.',',')}%</b> (${pc(r.pg)} so với ${pc(r.pgPrev)} ngày ${fD(r.d0)})`;
    const nvBd=r.nvPrev==null?'':` · N-2: ${r.nvPrev} NV (${r.nv-r.nvPrev>=0?'+':''}${r.nv-r.nvPrev})`;
    h+=`<div class="card" style="padding:14px 16px;border-left:4px solid ${r.send?'var(--red)':'#16A34A'}">
     <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px"><div style="font-weight:800;font-size:15px;color:#1F3864">${esc(r.bc)}</div><span style="font-size:11px;font-weight:800;border-radius:20px;padding:2px 10px;${r.send?'background:#FEE2E2;color:#B91C1C':'background:#DCFCE7;color:#166534'}">${r.send?'SẼ BẮN':'KHÔNG BẮN'} · %GTC ${pc(r.pg)}</span></div>
@@ -5088,7 +5088,7 @@ function _tinhHinhMsgs(){
  const vn=v=>Math.round(v).toLocaleString('vi-VN');
  return T.rows.filter(r=>!r.noData&&r.send).map(r=>{
   const dlt=r.pgPrev==null?null:r.pg-r.pgPrev;
-  const cmp=dlt==null?'không có dữ liệu ngày N-2':`${dlt<0?'Giảm':'Tăng'} ${Math.abs(dlt).toFixed(1).replace('.',',')} điểm % (${pc(r.pg)} so với ${pc(r.pgPrev)})`;
+  const cmp=dlt==null?'không có dữ liệu ngày N-2':`${dlt<0?'Giảm':'Tăng'} ${Math.abs(dlt).toFixed(1).replace('.',',')}% (${pc(r.pg)} so với ${pc(r.pgPrev)})`;
   const nvBd=r.nvPrev==null?'':` (ngày N-2: ${r.nvPrev} NV)`;
   return `<b>${esc(r.bc)}</b>\n`
    +`Tình hình bưu cục ngày N-1 (${fD(r.d1)}):\n`
