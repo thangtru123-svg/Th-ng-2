@@ -2413,7 +2413,7 @@ async function _fdSendWeekOverview(){
   try{const img=await _captureEl('tg-fdwkbc-tmp',1,true);let res=await _tgSendPhoto(TG_AGING_CHAT,TG_FD_THREAD,img,`${icon} <b>${title} — Tỉ lệ trả TUẦN ${sel2.join(' vs ')}</b> (kèm Δ so target)`);if(!res||!res.ok)await _tgSendDoc(TG_AGING_CHAT,TG_FD_THREAD,img,`${icon} ${title} — Tuần ${sel2[0]}`);}catch(e){console.warn('TG FD tuần BC:',e&&e.message);}finally{t2.remove();}
   await new Promise(r=>setTimeout(r,800));
  };
- try{ await sendWkBC('BƯU CỤC BẤT ỔN','⚠️',n=>isB(n)); await sendWkBC('BƯU CỤC ỔN ĐỊNH','✅',n=>!isB(n),30); }catch(e){ console.warn('TG FD tuần BC:',e&&e.message); }
+ try{ /* đại nhân chốt 06/11: BỎ ảnh "BƯU CỤC BẤT ỔN" khỏi bắn Tỉ lệ trả */ await sendWkBC('BƯU CỤC ỔN ĐỊNH','✅',n=>!isB(n),30); }catch(e){ console.warn('TG FD tuần BC:',e&&e.message); }
 }
 async function sendTLTToTelegram(){
  const fd=window._FD;
