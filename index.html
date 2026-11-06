@@ -224,6 +224,7 @@ tr.tot td{background:#FFF0EB!important;font-weight:800!important;border-top:2px 
  <button class="nav-item" onclick="show('p50',this)" style="background:linear-gradient(135deg,rgba(22,101,52,0.16),rgba(34,197,94,0.1));border:1px solid rgba(22,101,52,0.35);font-weight:700"><span class="icon">📉</span>Phân tích kéo vùng</button>
  <button class="nav-item" onclick="show('p44',this)" style="background:linear-gradient(135deg,rgba(220,38,38,0.2),rgba(241,93,41,0.1));border:1px solid rgba(220,38,38,0.4);font-weight:700"><span class="icon">🚨</span>Bưu Cục làm kém bất thường</button>
  <button class="nav-item" onclick="show('p45',this)" style="background:linear-gradient(135deg,rgba(185,28,28,0.24),rgba(241,93,41,0.12));border:1px solid rgba(185,28,28,0.45);font-weight:700"><span class="icon">⚠️</span>Bưu Cục Bất Ổn (Vùng)</button>
+ <button class="nav-item" onclick="show('p51',this)" style="background:linear-gradient(135deg,rgba(185,28,28,0.24),rgba(241,93,41,0.12));border:1px solid rgba(185,28,28,0.45);font-weight:700"><span class="icon">📋</span>Tình hình BC (N-1)</button>
  <button class="nav-item" onclick="show('p27',this)" style="background:linear-gradient(135deg,rgba(220,38,38,0.16),rgba(241,93,41,0.08));border:1px solid rgba(220,38,38,0.32);font-weight:700"><span class="icon">📉</span>Rớt LC theo ngày</button>
  <button class="nav-item" onclick="show('p30',this)" style="background:linear-gradient(135deg,rgba(220,38,38,0.16),rgba(241,93,41,0.08));border:1px solid rgba(220,38,38,0.32);font-weight:700"><span class="icon">🔒</span>Khoá ID vi phạm</button>
  <button class="nav-item" onclick="show('p32',this)" style="background:linear-gradient(135deg,rgba(37,99,235,0.14),rgba(59,130,246,0.08));border:1px solid rgba(37,99,235,0.3);font-weight:700"><span class="icon">📑</span>Báo Cáo Tồn / LC / 48H</button>
@@ -276,6 +277,7 @@ tr.tot td{background:#FFF0EB!important;font-weight:800!important;border-top:2px 
 <div class="page" id="p47"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
 <div class="page" id="p48"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
 <div class="page" id="p49"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
+<div class="page" id="p51"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
 <div class="page" id="p50"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
  <div class="page" id="p1"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
  <div class="page" id="p2"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
@@ -2950,6 +2952,14 @@ async function sendAllToTelegram(){
   }catch(_e){console.warn('TG p45 lỗi:',_e&&_e.message);_tgFail('Bưu Cục Bất Ổn (Vùng)');}
   await new Promise(r=>setTimeout(r,700));
 
+  /* --- P51: Tình hình BC (N-1) → DM @anhthuvu123, chỉ BC %GTC Total N-1 < 60% --- */
+  try{
+   if(btn)btn.innerHTML='⏳ Đang gửi: Tình hình BC (N-1)...';
+   if(!TG_ANHTHU_ID)console.warn('p51: chưa có chat_id @anhthuvu123 — bỏ qua bước này');
+   else{ if(!window._TINHHINH)await buildTinhHinhBCPage(); await sendTinhHinhBCToTelegram(null,true); }
+  }catch(_e){console.warn('TG p51 lỗi:',_e&&_e.message);_tgFail('Tình hình BC N-1 (@anhthuvu123)');}
+  await new Promise(r=>setTimeout(r,700));
+
   /* --- KD: 3 bảng "Doanh thu theo AM" (ngày/tuần/tháng) + phân tích → topic Kinh doanh --- */
   try{
    if(btn)btn.innerHTML='⏳ Đang gửi: Doanh thu theo AM...';
@@ -4995,6 +5005,120 @@ async function sendBatOnVungToTelegram(btn){
  }catch(e){alert('Lỗi bắn TG: '+e.message);}
  finally{ if(btn){btn.disabled=false;btn.textContent=_t||'📤 Bắn TG (đồng loạt)';} }
 }
+/* ===== p51 — TÌNH HÌNH BƯU CỤC N-1 (9 BC theo dõi; CHỈ BẮN BC có %GTC Total N-1 < 60%) ===== */
+const TINHHINH_BCS=['(LSO) Hữu Lũng','(LSO) Tam Thanh','(LSO) Chi Lăng','(QNI) Hạ Long','(QNI) Móng Cái 1','(QNI) Quảng Yên','(QNI) Uông Bí','(QNI) Cao Xanh','(QNI) Hồng Gai'];
+const TINHHINH_NGUONG=60;            // chỉ bắn BC có %GTC Total N-1 < 60%
+const TG_ANHTHU_ID=null;             // chat_id DM @anhthuvu123 — CHƯA CÓ: chị /start @thangtru_bot, bot sẽ báo id về @thangquada (api/tg-webhook.js)
+async function buildTinhHinhBCPage(){
+ const el=document.getElementById('p51'); if(!el)return;
+ const esc=t=>String(t==null?'':t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+ try{
+  const dt=x=>(String(x==null?'':x).match(/\d{4}-\d{2}-\d{2}/)||[''])[0];
+  const P=v=>{const n=parseFloat(String(v==null?'':v).replace(/,/g,''));return isNaN(n)?0:n;};
+  const norm=t=>String(t||'').toLowerCase().normalize('NFC').replace(/\s+/g,' ').trim();
+  const G=(window._D&&window._D.gtcTotalBC||[]).slice(1);
+  if(!G.length)throw new Error('chưa có dữ liệu GTC Total theo Bưu Cục');
+  // Năng suất NV (gid 1723871284): BC0 NV1 Ngày2 Gán3 GTC4
+  const nsRes=await fetch(`https://docs.google.com/spreadsheets/d/${SID}/gviz/tq?tqx=out:csv&gid=1723871284&_=${Date.now()}`);
+  if(!nsRes.ok)throw new Error('Năng suất NV HTTP '+nsRes.status);
+  const NS=parseCSV(await nsRes.text()).slice(1).filter(r=>r[0]&&r[2]);
+  const latest=G.map(r=>dt(r[2])).filter(Boolean).sort().pop();
+  const rows=[];
+  TINHHINH_BCS.forEach(bc=>{
+   const k=norm(bc);
+   const g=G.filter(r=>norm(r[1])===k&&dt(r[2]));
+   const byD={};g.forEach(r=>{byD[dt(r[2])]={vol:P(r[3]),pg:P(r[5])*100,gtc:P(r[6])};});
+   const ds=Object.keys(byD).sort();
+   const d1=latest, d0=ds.filter(d=>d<d1).pop(); // N-1 = ngày mới nhất của sheet; N-2 = ngày liền trước của BC
+   const A=byD[d1], B=d0?byD[d0]:null;
+   if(!A){rows.push({bc,noData:true});return;}
+   const nvOf=d=>{const m={};NS.forEach(r=>{if(norm(r[0])!==k||dt(r[2])!==d)return;const nv=(r[1]||'').trim();if(!nv)return;m[nv]=m[nv]||{gan:0,gtc:0};m[nv].gan+=P(r[3]);m[nv].gtc+=P(r[4]);});return Object.entries(m).filter(([,v])=>v.gtc>1).map(([n,v])=>({nv:n,gan:v.gan,gtc:v.gtc}));};
+   const nv1=nvOf(d1), nv0=d0?nvOf(d0):null;
+   let low=null; nv1.forEach(o=>{if(!low||o.gtc<low.gtc||(o.gtc===low.gtc&&o.gan>low.gan))low=o;});
+   const nm=n=>{const i=n.indexOf('_');return i>=0?n.slice(i+1):n;};
+   rows.push({bc,d1,d0,vol:A.vol,gtc:A.gtc,ton:Math.max(0,A.vol-A.gtc),pg:A.pg,pgPrev:B?B.pg:null,
+    nv:nv1.length,nvPrev:nv0?nv0.length:null,ns:nv1.length?Math.round(A.gtc/nv1.length):null,
+    low:low?{name:nm(low.nv),gtc:low.gtc,gan:low.gan}:null, send:A.pg<TINHHINH_NGUONG});
+  });
+  window._TINHHINH={day:latest,rows};
+  // ── render ──
+  const fD=iso=>{if(!iso)return'—';const p=iso.split('-');return p.length===3?`${p[2]}/${p[1]}`:iso;};
+  const pc=v=>v==null?'—':v.toFixed(1).replace('.',',')+'%';
+  const vn=v=>Math.round(v).toLocaleString('vi-VN');
+  const nSend=rows.filter(r=>r.send).length;
+  const kpi=(l,v,c)=>`<div style="flex:1;min-width:140px;background:var(--card);border:1px solid var(--border);border-top:3px solid ${c};border-radius:12px;padding:12px 14px;text-align:center"><div style="font-size:11px;font-weight:700;color:var(--text-sub);text-transform:uppercase;letter-spacing:.4px">${l}</div><div style="font-size:26px;font-weight:800;color:${c};line-height:1.1;margin-top:3px">${v}</div></div>`;
+  let h=`<div class="page-header"><div class="page-title">📋 Tình hình Bưu Cục (N-1)</div><div class="page-meta"><span class="tag tag-orange">📅 N-1 = ${fD(latest)}</span><span class="tag" style="background:#FEE2E2;color:#B91C1C;font-weight:700">Chỉ bắn BC có %GTC Total &lt; ${TINHHINH_NGUONG}%</span><button class="tg-inpage-btn" style="background:#16A34A;border-color:#16A34A" onclick="buildTinhHinhBCPage()">🔄 Tải lại</button><button class="tg-inpage-btn" onclick="sendTinhHinhBCToTelegram(this)">📤 Bắn TG @anhthuvu123</button></div></div>`;
+  h+=`<div style="display:flex;gap:11px;flex-wrap:wrap;margin-bottom:16px">${kpi('BC theo dõi',rows.length,'#1F3864')}${kpi('Sẽ bắn (&lt;'+TINHHINH_NGUONG+'%)',nSend,'var(--red)')}${kpi('Không bắn (≥'+TINHHINH_NGUONG+'%)',rows.length-nSend,'#16A34A')}</div>`;
+  const line=(l,v)=>`<div style="padding:5px 0;border-bottom:1px dashed var(--border);font-size:13px;line-height:1.5"><span style="color:var(--text-sub)">• ${l}:</span> ${v}</div>`;
+  const fill='<span style="color:#9CA3AF;font-style:italic">( Tự điền )</span>';
+  h+='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(400px,1fr));gap:14px">';
+  rows.forEach(r=>{
+   if(r.noData){h+=`<div class="card" style="padding:14px"><div style="font-weight:800;color:#1F3864">${esc(r.bc)}</div><div style="color:var(--text-sub);margin-top:6px">Không có dữ liệu ngày ${fD(latest)} trong sheet.</div></div>`;return;}
+   const dlt=r.pgPrev==null?null:r.pg-r.pgPrev;
+   const cmp=dlt==null?'không có dữ liệu ngày N-2':`<b style="color:${dlt<0?'#B91C1C':'#16A34A'}">${dlt<0?'Giảm':'Tăng'} ${Math.abs(dlt).toFixed(1).replace('.',',')} điểm %</b> (${pc(r.pg)} so với ${pc(r.pgPrev)} ngày ${fD(r.d0)})`;
+   const nvBd=r.nvPrev==null?'':` · N-2: ${r.nvPrev} NV (${r.nv-r.nvPrev>=0?'+':''}${r.nv-r.nvPrev})`;
+   h+=`<div class="card" style="padding:14px 16px;border-left:4px solid ${r.send?'var(--red)':'#16A34A'}">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px"><div style="font-weight:800;font-size:15px;color:#1F3864">${esc(r.bc)}</div><span style="font-size:11px;font-weight:800;border-radius:20px;padding:2px 10px;${r.send?'background:#FEE2E2;color:#B91C1C':'background:#DCFCE7;color:#166534'}">${r.send?'SẼ BẮN':'KHÔNG BẮN'} · %GTC ${pc(r.pg)}</span></div>
+    ${line('Tổng đơn cần giao','<b>'+vn(r.vol)+' đơn</b>')}
+    ${line('NS TB / nhân viên ngày N-1',r.ns==null?'không có dữ liệu':'<b>'+vn(r.ns)+' đơn</b>')}
+    ${line('Vol đơn GTC ngày N-1','<b>'+vn(r.gtc)+' đơn</b>')}
+    ${line('Số đơn tồn ngày N-1','<b>'+vn(r.ton)+' đơn</b> <span style="color:var(--text-sub);font-size:11px">(cần giao − GTC)</span>')}
+    ${line('% GTC ngày N-1 so với ngày N-2',cmp)}
+    ${line('Biến động nhân sự','<b>'+r.nv+' NV</b> thực tế có phát sinh lương (GTC &gt; 1 đơn)'+nvBd)}
+    ${line('Nguyên nhân thiếu',fill)}
+    ${line('NV năng suất thấp nhất',r.low?'<b>'+esc(r.low.name)+'</b> — GTC '+vn(r.low.gtc)+' đơn (gán '+vn(r.low.gan)+' đơn)':'không có dữ liệu')}
+    ${line('Phương án xử lý',fill)}
+   </div>`;
+  });
+  h+='</div>';
+  h+=`<div class="analysis-box" style="margin-top:14px;line-height:1.9">Nguồn: sheet GTC Total theo Bưu Cục (cần giao = Vol, GTC, %GTC) + Năng suất NV (số NV có GTC &gt; 1 đơn; NV thấp nhất = ít GTC nhất trong nhóm đó).<br>NS TB = đơn GTC ÷ số NV có GTC &gt; 1 đơn · Tồn = cần giao − GTC.<br>Chỉ bắn Telegram các BC có %GTC Total N-1 &lt; ${TINHHINH_NGUONG}%.</div>`;
+  el.innerHTML=h;
+ }catch(e){el.innerHTML='<div class="page-header"><div class="page-title">📋 Tình hình Bưu Cục (N-1)</div></div><div class="analysis-box">Lỗi: '+esc(e&&e.message||e)+'</div>';console.error('p51:',e);}
+}
+/* Dựng các tin TEXT (mỗi BC <60% = 1 tin) theo format đại nhân chốt */
+function _tinhHinhMsgs(){
+ const T=window._TINHHINH; if(!T)return[];
+ const esc=t=>String(t==null?'':t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+ const fD=iso=>{const p=(iso||'').split('-');return p.length===3?`${p[2]}/${p[1]}`:'—';};
+ const pc=v=>v==null?'—':v.toFixed(1).replace('.',',')+'%';
+ const vn=v=>Math.round(v).toLocaleString('vi-VN');
+ return T.rows.filter(r=>!r.noData&&r.send).map(r=>{
+  const dlt=r.pgPrev==null?null:r.pg-r.pgPrev;
+  const cmp=dlt==null?'không có dữ liệu ngày N-2':`${dlt<0?'Giảm':'Tăng'} ${Math.abs(dlt).toFixed(1).replace('.',',')} điểm % (${pc(r.pg)} so với ${pc(r.pgPrev)})`;
+  const nvBd=r.nvPrev==null?'':` (ngày N-2: ${r.nvPrev} NV)`;
+  return `<b>${esc(r.bc)}</b>\n`
+   +`Tình hình bưu cục ngày N-1 (${fD(r.d1)}):\n`
+   +`• Tổng đơn cần giao: ${vn(r.vol)} đơn\n`
+   +`• NS TB / nhân viên ngày N-1: ${r.ns==null?'không có dữ liệu':vn(r.ns)+' đơn'}\n`
+   +`• Vol đơn GTC ngày N-1: ${vn(r.gtc)} đơn\n`
+   +`• Số đơn tồn ngày N-1: ${vn(r.ton)} đơn\n`
+   +`• % GTC ngày N-1 so với ngày N-2: ${cmp}\n`
+   +`• Biến động nhân sự: ${r.nv} NV thực tế có phát sinh lương (GTC &gt; 1 đơn)${nvBd}\n`
+   +`• Nguyên nhân thiếu: ( Tự điền)\n`
+   +`• NV năng suất thấp nhất: ${r.low?esc(r.low.name)+' — GTC '+vn(r.low.gtc)+' đơn (gán '+vn(r.low.gan)+' đơn)':'không có dữ liệu'}\n`
+   +`• Phương án xử lý: ( Tự điền)`;
+ });
+}
+/* silent=true: dùng cho "Bắn tất cả" (không alert, ném lỗi để caller _tgFail) */
+async function sendTinhHinhBCToTelegram(btn,silent){
+ const _t=btn?btn.textContent:''; if(btn){btn.disabled=true;btn.textContent='⏳ Đang bắn...';}
+ try{
+  if(!TG_ANHTHU_ID)throw new Error('Chưa có chat_id của @anhthuvu123 — chị cần nhắn /start cho @thangtru_bot một lần để bot được phép gửi riêng.');
+  if(!window._TINHHINH)await buildTinhHinhBCPage();
+  if(!window._TINHHINH)throw new Error('chưa tải xong dữ liệu');
+  const msgs=_tinhHinhMsgs();
+  if(!msgs.length){if(!silent)alert('Không có Bưu Cục nào có %GTC Total N-1 < '+TINHHINH_NGUONG+'% — không bắn gì.');return {ok:true,n:0};}
+  for(const m of msgs){
+   const res=await _tgSend(TG_ANHTHU_ID,undefined,m);
+   if(!res||!res.ok)throw new Error((res&&res.description)||'TG lỗi');
+   await new Promise(r=>setTimeout(r,600));
+  }
+  if(!silent)alert('✅ Đã bắn '+msgs.length+' tin (BC có %GTC Total N-1 < '+TINHHINH_NGUONG+'%) cho @anhthuvu123.');
+  return {ok:true,n:msgs.length};
+ }catch(e){ if(silent)throw e; alert('Lỗi bắn TG: '+e.message); }
+ finally{ if(btn){btn.disabled=false;btn.textContent=_t||'📤 Bắn TG @anhthuvu123';} }
+}
+
 async function buildCodCheckPage(){
  const el=document.getElementById('p42'); if(!el) return;
  const trv=v=>((+v||0)/1e6).toLocaleString('vi-VN',{minimumFractionDigits:1,maximumFractionDigits:1})+' tr';
@@ -5532,6 +5656,8 @@ async function init(){
  buildBatThuongPage().catch(e=>console.warn('BC bất thường:',e&&e.message||e));
  // p45 — Bưu Cục Bất Ổn (Vùng tự set %GTC Total<60%) (cần _D/_FD + _agingRows + _CC_BCAM)
  buildBatOnVungPage().catch(e=>console.warn('BC bất ổn Vùng:',e&&e.message||e));
+ // p51 — Tình hình BC N-1 (9 BC; bắn DM @anhthuvu123 chỉ BC %GTC Total<60%)
+ buildTinhHinhBCPage().catch(e=>console.warn('Tình hình BC:',e&&e.message||e));
  // p16 — Báo Cáo Vận Hành Ngày
  const p16el=document.getElementById('p16');
  if(R['GTC ca 1,2 theo AM']){

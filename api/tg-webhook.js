@@ -19,6 +19,14 @@ export default async function handler(req, res) {
     const w0 = txt.split(/\s+/)[0] || "";
     const isCmd = w0 === "/am" || w0.startsWith("/am@");
     const frm = ((m.from || {}).username || "").toLowerCase();
+    // DM riêng với bot từ @anhthuvu123: báo chat_id về @thangquada để gắn vào dashboard (p51 "Tình hình BC N-1")
+    if (m.chat && m.chat.type === "private" && frm === "anhthuvu123") {
+      const send = (chat_id, text) => fetch(`https://api.telegram.org/bot${TOKEN}/sendMessage`, {
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ chat_id, text })
+      });
+      await send(m.chat.id, "Đã đăng ký nhận báo cáo Tình hình Bưu Cục từ dashboard XBG.");
+      await send(1747498029, "@anhthuvu123 vừa nhắn bot. chat_id = " + m.chat.id + " (điền vào TG_ANHTHU_ID trong index.html)");
+    }
     if (m.chat && m.chat.id === GROUP && m.message_thread_id === THREAD &&
         TRIGGER_USERS.map(x => x.toLowerCase()).includes(frm) && isCmd) {
       await fetch(`https://api.telegram.org/bot${TOKEN}/sendMessage`, {
