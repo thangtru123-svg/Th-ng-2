@@ -5008,7 +5008,7 @@ async function sendBatOnVungToTelegram(btn){
 /* ===== p51 — TÌNH HÌNH BƯU CỤC N-1 (9 BC theo dõi; CHỈ BẮN BC có %GTC Total N-1 < 60%) ===== */
 const TINHHINH_BCS=['(LSO) Hữu Lũng','(LSO) Tam Thanh','(LSO) Chi Lăng','(QNI) Hạ Long','(QNI) Móng Cái 1','(QNI) Quảng Yên','(QNI) Uông Bí','(QNI) Cao Xanh','(QNI) Hồng Gai'];
 const TINHHINH_NGUONG=60;            // chỉ bắn BC có %GTC Total N-1 < 60%
-const TG_ANHTHU_ID=null;             // chat_id DM @anhthuvu123 — CHƯA CÓ: chị /start @thangtru_bot, bot sẽ báo id về @thangquada (api/tg-webhook.js)
+const TG_ANHTHU_ID=5420832446;       // chat_id DM @anhthuvu123 (đại nhân cấp 06/11)
 async function buildTinhHinhBCPage(){
  const el=document.getElementById('p51'); if(!el)return;
  const esc=t=>String(t==null?'':t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
