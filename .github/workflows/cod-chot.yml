@@ -1,0 +1,38 @@
+name: COD chot 23h30 + 23h45
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '30 16 * * *'   # 23:30 gio VN (UTC+7)
+    - cron: '45 16 * * *'   # 23:45 gio VN (UTC+7)
+concurrency:
+  group: cod-chot
+  cancel-in-progress: false
+permissions:
+  contents: read
+jobs:
+  chot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Quet COD 2 tinh (Lang Son + Quang Ninh)
+        env:
+          GHN_SESSION: ${{ secrets.GHN_SESSION }}
+          COD_ONLY: '1'
+        run: node scripts/pull_gtc.js
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Cai thu vien
+        run: pip install openpyxl matplotlib
+      - name: Chot va ban Telegram (Excel + anh) vao topic Van de chung
+        run: python scripts/chot_cod.py
+      - name: Bao loi cho Thang neu that bai
+        if: failure()
+        run: |
+          curl -s -X POST "https://api.telegram.org/bot7471088067:AAGje2KrjUTzlkIiU05h1bm21IUkB0J2J0s/sendMessage" \
+            -d chat_id=1747498029 \
+            --data-urlencode "text=Chot COD 23h30/23h45 BI LOI (co the token GHN het han hoac GHN loi). Vao GitHub Actions xem log: https://github.com/thangtru123-svg/Th-ng-2/actions"
