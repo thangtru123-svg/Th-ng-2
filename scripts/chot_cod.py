@@ -35,6 +35,19 @@ def agg(keyf):
     return sorted(m.values(), key=lambda r: (-(r['gn'] + r['pn']), -(r['gc'] + r['pc'])))
 BY_AM = agg(lambda o: o.get('am') or '—'); BY_BC = agg(lambda o: o.get('bc') or '—'); BY_T = agg(lambda o: o.get('tinh') or '—')
 G_N, G_C = len(GTB), sum(o['cod'] for o in GTB); P_N, P_C = len(PEND), sum(o['cod'] for o in PEND)
+NV_MIN = 3   # NV có >= 3 đơn GTB → bắn danh sách riêng
+def nv_agg():
+    m = {}
+    for tag, lst in (('g', GTB), ('p', PEND)):
+        for o in lst:
+            k = str(o.get('idnv') or o.get('nv') or '?')
+            r = m.setdefault(k, dict(nv=o.get('nv') or '(không rõ)', idnv=o.get('idnv', ''), gn=0, gc=0, pn=0, pc=0, bcs=collections.Counter(), am=o.get('am', '')))
+            r[tag + 'n'] += 1; r[tag + 'c'] += o['cod']; r['bcs'][o.get('bc', '')] += 1
+    out = []
+    for r in m.values():
+        bc, _ = r['bcs'].most_common(1)[0]; r['bc'] = bc; out.append(r)
+    return sorted(out, key=lambda r: (-r['gn'], -r['gc']))
+BY_NV = nv_agg(); NV3 = [r for r in BY_NV if r['gn'] >= NV_MIN]
 
 # ===================== EXCEL =====================
 NAVY = '1F3864'; thin = Side(style='thin', color='A6A6A6'); brd = Border(left=thin, right=thin, top=thin, bottom=thin)
@@ -74,6 +87,12 @@ def olist(title, lst, note):
             cell(w, i, c, vv, '#,##0' if c == 3 else None, al=lft if c in (2, 4, 6, 7, 8, 9) else ctr)
     for i, wd in enumerate([6, 18, 14, 22, 10, 20, 20, 12, 40], 1): w.column_dimensions[L(i)].width = wd
     w.freeze_panes = 'A2'; w.auto_filter.ref = f"A1:I{max(2, len(lst) + 1)}"
+wn = wb.create_sheet('NV có ≥3 đơn GTB')
+hdr(wn, 1, ['STT', 'NV', 'ID NV', 'AM', 'Bưu Cục', 'Đơn GTB', 'COD GTB (đ)', 'Đơn chưa chốt', 'COD chưa chốt (đ)'])
+for i, r in enumerate(NV3, 2):
+    for c, vv in enumerate([i - 1, r['nv'], r['idnv'], r['am'], r['bc'], r['gn'], r['gc'], r['pn'], r['pc']], 1): cell(wn, i, c, vv, '#,##0' if c >= 6 else None, al=lft if c in (2, 4, 5) else ctr)
+for i, wd in enumerate([6, 26, 11, 20, 20, 11, 16, 13, 17], 1): wn.column_dimensions[L(i)].width = wd
+wn.freeze_panes = 'A2'
 olist('Đơn GTB', GTB, 'Lý do thất bại'); olist('Đơn chưa chốt', PEND, 'Ghi chú')
 fn = f"COD_Chot_{upd.strftime('%Y%m%d_%H%M')}.xlsx"; XLSX = os.path.join(OUT, fn); wb.save(XLSX)
 
@@ -102,7 +121,31 @@ def table_png(rows, title, path, key_label, maxrows, total_label='TỔNG'):
             if c_ in (3, 4): ce.get_text().set_color('#B45309')
         if c_ == 0 and r_ > 0: ce._loc = 'left'; ce.get_text().set_ha('left'); ce.PAD = 0.03
     fig.savefig(path, bbox_inches='tight', facecolor='white'); plt.close(fig)
-IMG1 = os.path.join(OUT, 'chot_cod_AM.png'); IMG2 = os.path.join(OUT, 'chot_cod_BC.png')
+def nv_png(rows, path, maxrows=40):
+    rows = rows[:maxrows]; n = len(rows) + 1
+    fig_h = 2.2 + 0.36 * n + 0.3
+    fig = plt.figure(figsize=(12.5, fig_h), dpi=140); fig.patch.set_facecolor('white')
+    ax = fig.add_axes([0.01, 0.01, 0.98, max(0.3, 1 - 1.55 / fig_h)]); ax.axis('off')
+    fig.text(0.02, 1 - 0.30 / fig_h, f'NHÂN VIÊN CÓ TỪ {NV_MIN} ĐƠN GTB COD ≥ 1.000.000đ — LẠNG SƠN + QUẢNG NINH — {STAMP}', fontsize=13.5, fontweight='bold', color='#1F3864', va='top')
+    fig.text(0.02, 1 - 0.78 / fig_h, f'{len(NV3)} nhân viên · {vn(sum(r["gn"] for r in NV3))} đơn GTB · {tr(sum(r["gc"] for r in NV3))}   (chiếm {sum(r["gn"] for r in NV3) * 100 // max(1, G_N)}% số đơn GTB toàn cụm)', fontsize=11.5, fontweight='bold', color='#C00000', va='top')
+    fig.text(0.02, 1 - 1.22 / fig_h, f'Sắp theo số đơn GTB giảm dần' + (f' — hiển thị {len(rows)}/{len(NV3)} NV, đủ danh sách trong file Excel' if len(NV3) > len(rows) else ''), fontsize=11, fontweight='bold', color='#444', va='top')
+    cols = ['NV', 'AM', 'Bưu Cục', 'Đơn GTB', 'COD GTB', 'Đơn chưa chốt', 'COD chưa chốt']
+    data = [[r['nv'], r['am'], r['bc'], vn(r['gn']), tr(r['gc']), vn(r['pn']), tr(r['pc'])] for r in rows]
+    data.append([f'TỔNG {len(NV3)} NV', '', '', vn(sum(r['gn'] for r in NV3)), tr(sum(r['gc'] for r in NV3)), vn(sum(r['pn'] for r in NV3)), tr(sum(r['pc'] for r in NV3))])
+    tb = ax.table(cellText=data, colLabels=cols, loc='upper center', cellLoc='center', colWidths=[0.19, 0.16, 0.18, 0.09, 0.12, 0.12, 0.14], bbox=[0.0, 0.0, 1.0, 1.0])
+    tb.auto_set_font_size(False); tb.set_fontsize(10)
+    for (r_, c_), ce in tb.get_celld().items():
+        ce.set_edgecolor('#9aa5b5'); ce.set_linewidth(0.6)
+        if r_ == 0: ce.set_facecolor('#1F3864'); ce.get_text().set_color('white'); ce.get_text().set_fontweight('bold')
+        elif r_ == len(data): ce.set_facecolor('#DCE6F1'); ce.get_text().set_fontweight('bold')
+        else:
+            ce.set_facecolor('#F5F7FA' if r_ % 2 == 0 else 'white')
+            if c_ in (3, 4): ce.get_text().set_color('#C00000'); ce.get_text().set_fontweight('bold')
+            if c_ in (5, 6): ce.get_text().set_color('#B45309')
+        if c_ in (0, 1, 2) and r_ > 0: ce.get_text().set_ha('left'); ce._loc = 'left'; ce.PAD = 0.03
+    fig.savefig(path, bbox_inches='tight', facecolor='white'); plt.close(fig)
+IMG1 = os.path.join(OUT, 'chot_cod_AM.png'); IMG2 = os.path.join(OUT, 'chot_cod_BC.png'); IMG3 = os.path.join(OUT, 'chot_cod_NV.png')
+if NV3: nv_png(NV3, IMG3)
 table_png(BY_AM, 'Theo AM quản lý', IMG1, 'AM', 30, f'TỔNG ({len(BY_AM)} AM)')
 table_png(BY_BC, f'Theo Bưu Cục — {min(18,len(BY_BC))} BC nhiều đơn nhất (đủ {len(BY_BC)} BC trong file Excel)', IMG2, 'Bưu Cục', 18, f'TỔNG cả {len(BY_BC)} BC')
 
@@ -113,6 +156,7 @@ CAP = (f"CHỐT COD ≥ 1 triệu — Lạng Sơn + Quảng Ninh — {STAMP}\n"
        f"- Đơn chưa chốt trạng thái: {vn(P_N)} đơn · {tr(P_C)}\n"
        f"- Tổng cần đối soát: {vn(G_N + P_N)} đơn · {tr(G_C + P_C)}\n"
        f"AM nhiều đơn nhất (GTB+chưa chốt): {top_am}\n"
+       f"NV có từ {NV_MIN} đơn GTB: {len(NV3)} người (xem ảnh NV).\n"
        f"Chi tiết theo AM, Bưu Cục, danh sách đơn: file Excel đính kèm.")[:1020]
 def tg(method, fields, files=None):
     b = uuid.uuid4().hex; body = io.BytesIO()
@@ -130,10 +174,22 @@ def tg(method, fields, files=None):
                 import time; time.sleep(int((json.loads(t).get('parameters') or {}).get('retry_after', 5)) + 1); continue
             raise RuntimeError(f'Telegram {method} HTTP {e.code}: {t[:200]}')
     raise RuntimeError('Telegram retry hết')
+# ===== LƯU DATA CUỐI NGÀY (1 file / ngày, lần chốt sau ghi đè lần trước) — dùng cho mục "NV nghi ngờ gối COD" trong báo cáo vận hành tuần =====
+def save_day():
+    t = str(D.get('today') or upd.strftime('%Y%m%d')); day = f'{t[:4]}-{t[4:6]}-{t[6:8]}'
+    folder = os.path.join(ROOT, 'data_cod'); os.makedirs(folder, exist_ok=True)
+    row = lambda o: [o['ma'], o['cod'], str(o.get('idnv', '')), o.get('nv', ''), o.get('bc', ''), o.get('am', '')]
+    doc = {'date': day, 'savedAt': D['updatedAt'], 'scope': 'LSO+QNI, COD>=1.000.000', 'cols': ['ma', 'cod', 'idnv', 'nv', 'bc', 'am'],
+           'gtb': [row(o) + [o.get('note', '')] for o in GTB], 'chuaChot': [row(o) for o in PEND]}
+    json.dump(doc, open(os.path.join(folder, day + '.json'), 'w', encoding='utf-8'), ensure_ascii=False, separators=(',', ':'))
+    return day
+SAVED = save_day()
 print(f'[chot] GTB={G_N} chuaChot={P_N} AM={len(BY_AM)} BC={len(BY_BC)} → {XLSX}')
 if DRY:
     print(CAP); print('DRY — không gửi'); sys.exit(0)
 r1 = tg('sendPhoto', {'chat_id': TG_CHAT, 'caption': CAP}, {'photo': (os.path.basename(IMG1), open(IMG1, 'rb').read(), 'image/png')})
 r2 = tg('sendPhoto', {'chat_id': TG_CHAT, 'caption': 'Theo Bưu Cục — ' + STAMP}, {'photo': (os.path.basename(IMG2), open(IMG2, 'rb').read(), 'image/png')})
+if NV3:
+    rn = tg('sendPhoto', {'chat_id': TG_CHAT, 'caption': f'NV có từ {NV_MIN} đơn GTB COD ≥ 1tr (kèm AM, Bưu Cục) — ' + STAMP}, {'photo': (os.path.basename(IMG3), open(IMG3, 'rb').read(), 'image/png')})
 r3 = tg('sendDocument', {'chat_id': TG_CHAT, 'caption': 'File chốt COD ≥ 1tr — ' + STAMP}, {'document': (fn, open(XLSX, 'rb').read(), 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')})
 print('[chot] đã gửi', [r.get('ok') for r in (r1, r2, r3)])
