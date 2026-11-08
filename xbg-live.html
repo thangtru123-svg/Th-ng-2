@@ -210,7 +210,7 @@ tr.amchild td:first-child{padding-left:16px;font-size:12.5px}
 
   <div class="subpage hidden" data-sub="L-cod">
   <div class="card">
-    <div class="lbl">💰 Đơn giao thất bại có COD ≥ 1 triệu · cần đối soát</div>
+    <div class="lbl">💰 Đơn giao thất bại (GTB) có COD ≥ 1 triệu · Lạng Sơn + Quảng Ninh · cần đối soát</div>
     <div class="row" style="margin-top:8px">
       <div class="chip"><span class="c">⚠️ Số đơn</span><b id="codSoDon" style="color:#ff5d6c">—</b></div>
       <div class="chip"><span class="c">💳 Tổng COD</span><b id="codTong" style="color:#ff5d6c">—</b></div>
@@ -219,6 +219,7 @@ tr.amchild td:first-child{padding-left:16px;font-size:12.5px}
       <div class="chip"><span class="c">📈 TB/đơn</span><b id="codTB">—</b></div>
       <div class="chip"><span class="c">👥 Số NV</span><b id="codNV">—</b></div>
     </div>
+    <div class="mut" style="margin-top:6px" id="codPend">—</div>
   </div>
   <div class="card">
     <div class="subtabs" style="margin-bottom:10px">
@@ -399,7 +400,7 @@ async function load(){
   }catch(e){ document.getElementById('updAt').textContent='Lỗi tải dữ liệu'; }
 }
 function render(d){
-  try{ renderCOD(d.cod); }catch(e){}
+  try{ renderCOD(d.cod); var _cp=document.getElementById('codPend'); if(_cp)_cp.textContent=d.codPending?('⏳ Chưa chốt trạng thái (COD ≥ 1tr): '+vn(d.codPending.soDon)+' đơn · '+_codTrv(d.codPending.tongCod)):''; }catch(e){}
   try{ renderTTS(d.ttsCod, d.bc); }catch(e){}
   _BCREP=d.bcReport||null; try{ if(!document.getElementById('tabBcrep').classList.contains('hidden')) renderBcrep(); }catch(e){}
   var v=d.vung;

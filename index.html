@@ -5163,7 +5163,7 @@ async function buildCodCheckPage(){
     <div class="page-header">
      <div class="page-title">💰 Check COD giá trị cao</div>
      <div class="page-meta">
-      <span style="color:var(--text-sub);font-size:13px">Đơn <b>giao thất bại</b> có COD từ <b>1.000.000đ</b> trở lên — cần đối soát tiền hàng.</span>
+      <span style="color:var(--text-sub);font-size:13px">Đơn <b>giao thất bại (GTB)</b> có COD từ <b>1.000.000đ</b> trở lên — <b>chỉ Lạng Sơn + Quảng Ninh</b> — cần đối soát tiền hàng. Đơn chưa chốt trạng thái KHÔNG tính vào đây.</span>
       <span style="background:#ECFDF5;color:#166534;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:700">🕒 Quét: ${updStr} · ${V.hubsOk||C.hubsOk||''} bưu cục</span>
       <button class="tg-inpage-btn" style="background:#16A34A;border-color:#16A34A" onclick="window._codRender&&window._codRender()">🔄 Tải lại</button>
      </div>
@@ -5173,6 +5173,7 @@ async function buildCodCheckPage(){
      ${kpi('💳 Tổng giá trị COD',trv(V.tongCod),dv(V.tongCod),'#DC2626')}
      ${kpi('📈 COD trung bình / đơn',trv(V.codTB),'Cao nhất '+trv(V.codMax),'var(--orange-dark)')}
      ${kpi('👥 Số nhân viên liên quan',fmt(V.soNV),'Trên '+(C.byBC?C.byBC.length:0)+' bưu cục','var(--text-main)')}
+     ${d.codPending?kpi('⏳ Chưa chốt trạng thái (COD ≥ 1tr)',fmt(d.codPending.soDon),trv(d.codPending.tongCod)+' · chưa giao xong, chưa có lý do thất bại','#B45309'):''}
     </div>
     <div style="display:flex;gap:8px;margin-bottom:12px">
      <button id="codTab_tinh" onclick="_codTab('tinh')" style="padding:7px 16px;border:none;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer;background:var(--orange);color:#fff">Theo Tỉnh</button>

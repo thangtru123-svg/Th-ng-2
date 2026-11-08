@@ -16,3 +16,7 @@
 
 # Claude memory (optional - bỏ comment nếu KHÔNG muốn commit lịch sử bài học)
 # .claude/memory/
+
+# chốt COD (23h30/23h45) — file tạm sinh ra trên Actions
+cod_chot.json
+out_chot/

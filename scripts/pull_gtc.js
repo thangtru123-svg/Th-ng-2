@@ -10,10 +10,14 @@ const SES = process.env.GHN_SESSION;
 if (!SES) { console.error('THIEU env GHN_SESSION'); process.exit(1); }
 const BASE = 'https://nhanh-api.ghn.vn';
 const ROOT = path.join(__dirname, '..');
-const HUBS = JSON.parse(fs.readFileSync(path.join(ROOT, 'hub_map_bc.json'), 'utf8'));
+const COD_ONLY = process.env.COD_ONLY === '1'; // chế độ "chốt COD" 23h30/23h45: chỉ quét COD (GTB + chưa chốt) của 2 tỉnh Lạng Sơn + Quảng Ninh → cod_chot.json
+const COD_TINH = ['Lạng Sơn', 'Quảng Ninh'];
+let HUBS = JSON.parse(fs.readFileSync(path.join(ROOT, 'hub_map_bc.json'), 'utf8'));
+if (COD_ONLY) HUBS = HUBS.filter(h => COD_TINH.includes(h.tinh));
 
 // ----- thời gian VN (UTC+7) -----
-const nowVN = new Date(Date.now() + 7 * 3600 * 1000); // dịch sang giờ VN
+let nowVN = new Date(Date.now() + 7 * 3600 * 1000); // dịch sang giờ VN
+if (COD_ONLY && nowVN.getUTCHours() < 6) nowVN = new Date(nowVN.getTime() - 86400000); // job chốt 23h30/23h45 bị GitHub trễ qua 00h → vẫn tính ngày hôm trước
 function idxOf(d) { return d.getUTCFullYear() * 10000 + (d.getUTCMonth() + 1) * 100 + d.getUTCDate(); }
 const TODAY = idxOf(nowVN);
 const YD = idxOf(new Date(nowVN.getTime() - 86400000));
@@ -46,7 +50,7 @@ async function proc(h) {
   let chuaGan = 0, canGiaoSnap = 0, wPick = 0, wDeliver = 0, wReturn = 0;
   let oPick = 0, oReturn = 0; // số đơn tồn kho lấy / trả (giao = canGiaoSnap)
   let dGiao5 = 0, dGiao8 = 0, dTra48 = 0; // tồn đọng giao>5ngày(120h), >8ngày(192h), trả>48h
-  try {
+  if (!COD_ONLY) try {
     const gi = await api('/api/core/oss/v1/report/get-general-info', { hub_ids: [hub], view_mode: 'CLIENT', order_type: 'DAILY_TRIP_NONE' });
     const infos = (((gi.data || [])[0] || {}).general_infos) || [];
     const sumB = (g, set) => { let s = 0; (g.order_inventories || []).forEach(x => { if (set.has(x.duration)) s += x.total_order || 0; }); return s; };
@@ -66,7 +70,9 @@ async function proc(h) {
   } catch (e) { if (e.auth) throw e; }
   // --- chuyến tạo hôm nay: đã gán + GTC + theo nhân viên (tài xế) ---
   const seen = {}; let carry = 0; const nvM = {}; const hangM = {}; // hangM: chuyến treo qua ngày chưa kết thúc (ON_TRIP, tạo trước hôm nay)
-  const codFail = []; // đơn giao thất bại có COD >= 1tr (cần đối soát tiền hàng)
+  const codFail = []; // đơn GIAO THẤT BẠI (GTB = isSucceeded false VÀ có failCode/lý do) có COD >= 1tr (cần đối soát tiền hàng)
+  const codPend = []; // đơn COD >= 1tr CHƯA CHỐT trạng thái (chưa giao xong, chưa có lý do thất bại)
+  const codScope = COD_TINH.includes(h.tinh); // chỉ 2 tỉnh Lạng Sơn + Quảng Ninh
   const ttsCod = []; // đơn TTS (mã VNGH) có COD < 50k, mọi trạng thái — chỉ gom ở 2 tỉnh LSO+QNI
   const wantTts = (h.tinh === 'Lạng Sơn' || h.tinh === 'Quảng Ninh');
   const okOrders = new Set(); // mã đơn ĐÃ giao thành công (isSucceeded) ở bất kỳ chuyến nào → loại khỏi codFail
@@ -103,8 +109,9 @@ async function proc(h) {
       const a = j.data || []; if (!a.length) break;
       a.forEach(it => {
         if (it.isSucceeded === true) { g++; okOrders.add(it.orderCode); }
-        else if (it.isSucceeded === false && (it.collectAmount || 0) >= 1000000) {
-          codFail.push({ ma: it.orderCode, cod: it.collectAmount, nv: v.driver, idnv: v.driverId, note: it.failNote || '' });
+        else if (codScope && (it.collectAmount || 0) >= 1000000) {
+          if (it.isSucceeded === false && (it.failCode || it.failNote)) codFail.push({ ma: it.orderCode, cod: it.collectAmount, nv: v.driver, idnv: v.driverId, note: it.failNote || String(it.failCode) });
+          else codPend.push({ ma: it.orderCode, cod: it.collectAmount, nv: v.driver, idnv: v.driverId });
         }
         // TTS COD < 50k (mã VNGH) — mọi trạng thái, chỉ 2 tỉnh
         if (wantTts) {
@@ -126,7 +133,7 @@ async function proc(h) {
     .map(n => ({ nv: n.nv, id: n.id, ganGiao: n.ganGiao, ganLay: n.ganLay, gtc: n.gtc, pct: n.ganGiao > 0 ? Math.round(n.gtc / n.ganGiao * 1000) / 10 : 0 }))
     .sort((a, b) => b.ganGiao - a.ganGiao);
   const hangTrips = Object.values(hangM).sort((a, b) => a.cd - b.cd).map(t => ({ nv: t.nv, ngay: t.ngay }));
-  return { name: h.name, am: h.am, tinh: h.tinh, chuaGan, daGan, gtc, nTripToday, nChuaXong, carry, canGiaoSnap, wPick, wDeliver, wReturn, oPick, oReturn, dGiao5, dGiao8, dTra48, nv, hangTrips, codFail, ttsCod, okOrders: [...okOrders] };
+  return { name: h.name, am: h.am, tinh: h.tinh, chuaGan, daGan, gtc, nTripToday, nChuaXong, carry, canGiaoSnap, wPick, wDeliver, wReturn, oPick, oReturn, dGiao5, dGiao8, dTra48, nv, hangTrips, codFail, codPend, ttsCod, okOrders: [...okOrders] };
 }
 
 // ----- pool song song -----
@@ -151,8 +158,10 @@ async function pool(items, n, fn) {
   let sum = { chuaGan: 0, daGan: 0, gtc: 0, nTripToday: 0, nChuaXong: 0, carry: 0, wPick: 0, wDeliver: 0, wReturn: 0, oPick: 0, oReturn: 0, canGiaoSnap: 0, dGiao5: 0, dGiao8: 0, dTra48: 0 };
   let hangTotal = 0;
   const codMap = new Map(); // dedup đơn COD giao thất bại theo mã đơn
+  const pendMap = new Map(); // dedup đơn COD chưa chốt trạng thái
   const okAll = new Set();  // mã đơn ĐÃ giao thành công (toàn Vùng) → loại khỏi danh sách COD
   for (const h of hubs) (h.okOrders || []).forEach(c => okAll.add(c));
+  for (const h of hubs) (h.codPend || []).forEach(o => { if (!okAll.has(o.ma)) pendMap.set(o.ma, { ma: o.ma, cod: o.cod, nv: o.nv, idnv: o.idnv, bc: h.name, am: h.am, tinh: h.tinh }); });
   for (const h of hubs) {
     const cg = h.chuaGan + h.daGan;
     const hangTrips = h.hangTrips || [];
@@ -160,7 +169,7 @@ async function pool(items, n, fn) {
     const a = amM[h.am] || (amM[h.am] = { am: h.am, canGiao: 0, daGan: 0, gtc: 0, hang: 0 });
     a.canGiao += cg; a.daGan += h.daGan; a.gtc += h.gtc; a.hang += hangTrips.length;
     hangTotal += hangTrips.length;
-    (h.codFail || []).forEach(o => { if (okAll.has(o.ma)) return; codMap.set(o.ma, { ma: o.ma, cod: o.cod, nv: o.nv, idnv: o.idnv, bc: h.name, am: h.am, tinh: h.tinh, note: o.note }); });
+    (h.codFail || []).forEach(o => { if (okAll.has(o.ma) || pendMap.has(o.ma)) return; codMap.set(o.ma, { ma: o.ma, cod: o.cod, nv: o.nv, idnv: o.idnv, bc: h.name, am: h.am, tinh: h.tinh, note: o.note }); });
     for (const k in sum) sum[k] += h[k] || 0;
   }
   const vung = {
@@ -192,6 +201,16 @@ async function pool(items, n, fn) {
     byTinh: codAgg(o => o.tinh), byAM: codAgg(o => o.am), byBC: codAgg(o => o.bc),
     orders: codOrders
   };
+
+  // ===== Đơn COD >= 1tr CHƯA CHỐT trạng thái (2 tỉnh) =====
+  const pendOrders = [...pendMap.values()].sort((a, b) => b.cod - a.cod);
+  const pendAgg = (keyFn) => { const m = {}; pendOrders.forEach(o => { const k = keyFn(o); const g = m[k] || (m[k] = { key: k, soDon: 0, tongCod: 0 }); g.soDon++; g.tongCod += o.cod; }); return Object.values(m).sort((a, b) => b.tongCod - a.tongCod); };
+  out.codPending = { nguong: 1000000, soDon: pendOrders.length, tongCod: pendOrders.reduce((s, o) => s + o.cod, 0), byTinh: pendAgg(o => o.tinh), byAM: pendAgg(o => o.am), byBC: pendAgg(o => o.bc), orders: pendOrders };
+  if (COD_ONLY) {
+    fs.writeFileSync(path.join(ROOT, 'cod_chot.json'), JSON.stringify({ updatedAt: out.updatedAt, hourVN: HOUR, today: TODAY, hubsOk: hubs.length, hubsErr: errN, cod: out.cod, codPending: out.codPending }));
+    console.log(`[chot] OK hubsOk=${hubs.length} err=${errN} GTB=${out.cod.vung.soDon} (${out.cod.vung.tongCod}d) chuaChot=${pendOrders.length} (${out.codPending.tongCod}d)`);
+    return;
+  }
 
   // ===== Đơn TTS (mã VNGH) có COD < 50k — LSO+QNI, mọi trạng thái (dedup theo mã, ưu tiên: thành công > đang giao > thất bại) =====
   const _stPri = { 'Giao thành công': 3, 'Đang giao': 2, 'Giao thất bại': 1 };
