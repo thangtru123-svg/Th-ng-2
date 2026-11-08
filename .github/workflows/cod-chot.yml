@@ -2,8 +2,7 @@ name: COD chot 23h30 + 23h45
 on:
   workflow_dispatch:
   schedule:
-    - cron: '30 16 * * *'   # 23:30 gio VN (UTC+7)
-    - cron: '45 16 * * *'   # 23:45 gio VN (UTC+7)
+    - cron: '27 16 * * *'   # ~23:30 gio VN (UTC+7), mot lan/ngay
 concurrency:
   group: cod-chot
   cancel-in-progress: false
