@@ -183,7 +183,7 @@ def tg(method, fields, files=None):
                 import time; time.sleep(int((json.loads(t).get('parameters') or {}).get('retry_after', 5)) + 1); continue
             raise RuntimeError(f'Telegram {method} HTTP {e.code}: {t[:200]}')
     raise RuntimeError('Telegram retry hết')
-# ===== LƯU DATA CUỐI NGÀY (1 file / ngày, lần chốt sau ghi đè lần trước) — dùng cho mục "NV nghi ngờ gối COD" trong báo cáo vận hành tuần =====
+# ===== LƯU DATA CUỐI NGÀY (1 file / ngày — mỗi ngày chỉ chốt + bắn 1 lần) — dùng cho mục "NV nghi ngờ gối COD" trong báo cáo vận hành tuần =====
 def save_day():
     t = str(D.get('today') or upd.strftime('%Y%m%d')); day = f'{t[:4]}-{t[4:6]}-{t[6:8]}'
     folder = os.path.join(ROOT, 'data_cod'); os.makedirs(folder, exist_ok=True)
@@ -192,7 +192,8 @@ def save_day():
            'gtb': [row(o) + [o.get('note', '')] for o in GTB], 'chuaChot': [row(o) for o in PEND]}
     json.dump(doc, open(os.path.join(folder, day + '.json'), 'w', encoding='utf-8'), ensure_ascii=False, separators=(',', ':'))
     return day
-SAVED = save_day()
+# Chỉ LƯU khi chạy theo LỊCH (schedule) — mỗi ngày đúng 1 lần chốt trong khung 23h30–23h45; chạy tay (workflow_dispatch) chỉ gửi Telegram, KHÔNG lưu (tránh ghi đè/ làm rối data). Muốn ép lưu khi chạy tay: đặt env CHOT_SAVE=1.
+SAVED = save_day() if (os.environ.get('GITHUB_EVENT_NAME') == 'schedule' or os.environ.get('CHOT_SAVE') == '1' or DRY) else None
 print(f'[chot] GTB={G_N} chuaChot={P_N} AM={len(BY_AM)} BC={len(BY_BC)} → {XLSX}')
 if DRY:
     print(CAP); print('DRY — không gửi'); sys.exit(0)
