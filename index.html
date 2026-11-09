@@ -734,7 +734,54 @@ window._ONT={};
 function renderOntime(pid){const o=window._ONT[pid];if(o)o.render();}
 function getDOW(iso){if(!iso)return'';const d=new Date(iso+'T00:00:00');return['CN','Thứ 2','Thứ 3','Thứ 4','Thứ 5','Thứ 6','Thứ 7'][d.getDay()]||'';}
 function shortDDow(iso){return iso?`${shortD(iso)} (${getDOW(iso)})`:'—';}
-function renderGTCAmTable(rows,dates){
+/* ===== NS TB + Chênh so Target (CÁCH A) cho bảng "A. Theo AM" p1 (đại nhân chốt 09/11) =====
+   NS ngày = ΣGTC ÷ số NV có GTC>1 đơn (giống báo cáo vận hành tuần), nguồn sheet Năng suất NV gid 1723871284.
+   Target NS từng AM (Cách A) = NS TB tuần Thứ2→Thứ7 gần nhất (làm tròn) + số đơn thêm/NV/ngày để %GTC Vùng đạt 70%:
+   mọi NV thêm 1 đơn/ngày, AM %GTC thấp nhất thêm nữa (lần lượt) cho đến khi đủ số đơn cần thêm của cả tuần. */
+function _gtcNormAM(s){return (s||'').split(',').map(x=>x.trim()).filter(Boolean).sort().join(',');}
+function _gtcNSCalc(rowsAM,rowsBC,dates){
+ const raw=window._gtcNSRaw;if(!raw||!raw.length)return null;
+ const bcAm={};(rowsBC||[]).slice(1).forEach(r=>{const bc=(r[1]||'').trim(),am=_gtcNormAM(r[0]);if(bc&&am&&!bcAm[bc])bcAm[bc]=am;});
+ const nvMap={};
+ raw.forEach(r=>{const bc=(r[0]||'').trim(),nv=(r[1]||'').trim(),d=isoD(r[2]),am=bcAm[bc];if(!am||!nv||!d)return;const k=am+'|'+d;const m=nvMap[k]||(nvMap[k]=new Map());const id=bc+'|'+nv;m.set(id,(m.get(id)||0)+(parseFloat(r[4])||0));});
+ const cell={},vday={};
+ Object.keys(nvMap).forEach(k=>{const p=k.lastIndexOf('|'),am=k.slice(0,p),d=k.slice(p+1);let g=0,n=0;nvMap[k].forEach(v=>{if(v>1){g+=v;n++;}});if(!n)return;(cell[am]||(cell[am]={}))[d]={g,n};const v=vday[d]||(vday[d]={g:0,n:0});v.g+=g;v.n+=n;});
+ // Tuần tham chiếu: Thứ 2 → Thứ 7 gần nhất có trong dữ liệu
+ const allD=[...new Set((rowsAM||[]).slice(1).map(r=>isoD(r[1])).filter(Boolean))].sort();
+ let target={},k={},tgtV=null,week=[],need=0;
+ if(allD.length){
+  const last=allD[allD.length-1],dt=new Date(last+'T00:00:00Z'),back=(dt.getUTCDay()+1)%7;
+  const sat=new Date(dt.getTime()-back*86400000);
+  for(let i=5;i>=0;i--)week.push(new Date(sat.getTime()-i*86400000).toISOString().slice(0,10));
+  if(week.every(d=>allD.includes(d))){
+   const agg={};let sv=0,sg=0;
+   (rowsAM||[]).slice(1).forEach(r=>{const nm=(r[0]||'').trim();if(!nm||nm.toLowerCase().includes('grand total'))return;const d=isoD(r[1]);if(!week.includes(d))return;const key=_gtcNormAM(nm),o=agg[key]||(agg[key]={vol:0,gtc:0});const v=parseFloat(r[2])||0,g=parseFloat(r[5])||0;o.vol+=v;o.gtc+=g;sv+=v;sg+=g;});
+   const base={},lt={};
+   Object.keys(agg).forEach(a=>{const ds=week.filter(d=>cell[a]?.[d]);if(!ds.length)return;base[a]=Math.round(ds.reduce((x,d)=>x+cell[a][d].g/cell[a][d].n,0)/ds.length);lt[a]=ds.reduce((x,d)=>x+cell[a][d].n,0);});
+   const ams=Object.keys(base);const sumLt=ams.reduce((x,a)=>x+lt[a],0);
+   need=Math.max(0,Math.ceil(0.7*sv-sg-1e-9));
+   ams.forEach(a=>k[a]=need>0?1:0);
+   let rem=need-(need>0?sumLt:0);
+   const order=[...ams].sort((a,b)=>agg[a].gtc/agg[a].vol-agg[b].gtc/agg[b].vol);
+   for(let g=0;g<20&&rem>0;g++){for(const a of order){if(rem<=0)break;k[a]++;rem-=lt[a];}}
+   ams.forEach(a=>target[a]=base[a]+k[a]);
+   const wd=week.filter(d=>vday[d]);
+   if(wd.length&&sumLt){const bv=Math.round(wd.reduce((x,d)=>x+vday[d].g/vday[d].n,0)/wd.length);tgtV=bv+ams.reduce((x,a)=>x+k[a]*lt[a],0)/sumLt;tgtV=Math.round(tgtV);}
+  }
+ }
+ return {cell,vday,target,tgtV,week,k,need};
+}
+async function _gtcNSLoad(pid){
+ if(window._gtcNSRaw||window._gtcNSLoading)return;window._gtcNSLoading=true;
+ try{
+  const r=await fetch(`https://docs.google.com/spreadsheets/d/${SID}/gviz/tq?tqx=out:csv&gid=1723871284&_=${Date.now()}`);
+  const rows=parseCSV(await r.text()).slice(1).filter(x=>x[0]&&x[2]);
+  window._gtcNSRaw=rows.length?rows:null;
+ }catch(e){window._gtcNSRaw=null;}
+ window._gtcNSLoading=false;
+ if(window._gtcNSRaw&&document.getElementById(pid+'_amTable'))renderGTC(pid); // sheet đọc xong → vẽ lại với cột NS (đọc lại ô ngày hiện tại, không ghi đè lựa chọn)
+}
+function renderGTCAmTable(rows,dates,ns){
  if(!rows||rows.length<2)return'<p style="padding:16px;color:var(--text-sub)">Không có dữ liệu</p>';
  const data=rows.slice(1).filter(r=>r.length>4&&(r[0]||'').trim());
  const isGrand=r=>(r[0]||'').toLowerCase().includes('grand total');
@@ -753,20 +800,22 @@ function renderGTCAmTable(rows,dates){
   <tr>
    <th rowspan="2" style="${cs}${sH}width:28px;text-align:center">STT</th>
    <th rowspan="2" style="${cs}${sH2}min-width:125px;max-width:175px">AM</th>
-   ${dates.map(d=>`<th colspan="4" style="${cs}text-align:center;border-left:2px solid #E5E7EB"><strong>${shortDDow(d)}</strong></th>`).join('')}
+   ${dates.map(d=>`<th colspan="${ns?6:4}" style="${cs}text-align:center;border-left:2px solid #E5E7EB"><strong>${shortDDow(d)}</strong></th>`).join('')}
   </tr>
   <tr>
-   ${dates.map(()=>`<th style="${cs}text-align:center;border-left:2px solid #E5E7EB">Vol</th><th style="${cs}text-align:center">%Gán</th><th style="${cs}text-align:center">%GTC</th><th style="${cs}text-align:center">GTC</th>`).join('')}
+   ${dates.map(()=>`<th style="${cs}text-align:center;border-left:2px solid #E5E7EB">Vol</th><th style="${cs}text-align:center">%Gán</th><th style="${cs}text-align:center">%GTC</th><th style="${cs}text-align:center">GTC</th>`+(ns?`<th style="${cs}text-align:center" title="Năng suất TB = GTC ÷ số NV có GTC>1 đơn (đơn/NV/ngày)">NS TB</th><th style="${cs}text-align:center" title="NS TB trừ Target NS (Cách A) của AM; số âm = chưa đạt">Chênh NS</th>`:'')).join('')}
   </tr>
  </thead><tbody>`;
+ const _nsCell=(am,d)=>{if(!ns)return'';const c=ns.cell[_gtcNormAM(am)]?.[d],t=ns.target[_gtcNormAM(am)];if(!c)return`<td style="${cs}text-align:center;color:var(--text-sub)">—</td><td style="${cs}text-align:center;color:var(--text-sub)">—</td>`;const v=Math.round(c.g/c.n);if(t==null)return`<td style="${cs}text-align:center">${v}</td><td style="${cs}text-align:center;color:var(--text-sub)">—</td>`;const df=v-t;return`<td style="${cs}text-align:center">${v}</td><td style="${cs}text-align:center;font-weight:700;color:${df>=0?'var(--green)':'var(--red)'}" title="Target ${t}">${df>0?'+':''}${df}</td>`;};
+ const _nsCellV=d=>{if(!ns)return'';const c=ns.vday[d];if(!c)return`<td style="${cs}text-align:center">—</td><td style="${cs}text-align:center">—</td>`;const v=Math.round(c.g/c.n);if(ns.tgtV==null)return`<td style="${cs}text-align:center">${v}</td><td style="${cs}text-align:center">—</td>`;const df=v-ns.tgtV;return`<td style="${cs}text-align:center">${v}</td><td style="${cs}text-align:center;font-weight:700;color:${df>=0?'var(--green)':'var(--red)'}" title="Target ${ns.tgtV}">${df>0?'+':''}${df}</td>`;};
  names.forEach((name,i)=>{
   h+=`<tr><td style="${cs}text-align:center;color:var(--text-sub);font-size:10px;position:sticky;left:0;background:#fff;z-index:2">${i+1}</td><td style="${cs}font-weight:700;position:sticky;left:28px;background:#fff;z-index:2;min-width:125px;max-width:175px;word-break:break-word">${name.split(',').map(s=>s.trim()).join('<br>')}</td>`;
-  dates.forEach(d=>{const c=pivot[name]?.[d];if(c){const gc=c.gtc>=65?'g':c.gtc>=50?'m':'b';h+=`<td style="${cs}text-align:center;border-left:2px solid #F3F4F6">${fmt(c.vol)}</td><td style="${cs}text-align:center">${c.gan.toFixed(1)}%</td><td style="${cs}text-align:center"><span class="pct ${gc}">${c.gtc.toFixed(1)}%</span></td><td style="${cs}text-align:center;color:var(--green);font-weight:600">${fmt(c.nGTC)}</td>`;}else{h+=`<td colspan="4" style="${cs}text-align:center;border-left:2px solid #F3F4F6;color:var(--text-sub)">—</td>`;}});
+  dates.forEach(d=>{const c=pivot[name]?.[d];if(c){const gc=c.gtc>=65?'g':c.gtc>=50?'m':'b';h+=`<td style="${cs}text-align:center;border-left:2px solid #F3F4F6">${fmt(c.vol)}</td><td style="${cs}text-align:center">${c.gan.toFixed(1)}%</td><td style="${cs}text-align:center"><span class="pct ${gc}">${c.gtc.toFixed(1)}%</span></td><td style="${cs}text-align:center;color:var(--green);font-weight:600">${fmt(c.nGTC)}</td>`+_nsCell(name,d);}else{h+=`<td colspan="${ns?6:4}" style="${cs}text-align:center;border-left:2px solid #F3F4F6;color:var(--text-sub)">—</td>`;}});
   h+='</tr>';
  });
  if(Object.keys(gPivot).length){
   h+=`<tr class="tot"><td style="${cs}position:sticky;left:0;background:#F8F9FA;z-index:2"></td><td style="${cs}position:sticky;left:28px;background:#F8F9FA;z-index:2">Grand Total</td>`;
-  dates.forEach(d=>{const c=gPivot[d];if(c){const gc=c.gtc>=65?'g':c.gtc>=50?'m':'b';h+=`<td style="${cs}text-align:center;border-left:2px solid #F3F4F6">${fmt(c.vol)}</td><td style="${cs}text-align:center">${c.gan.toFixed(1)}%</td><td style="${cs}text-align:center"><span class="pct ${gc}">${c.gtc.toFixed(1)}%</span></td><td style="${cs}text-align:center;color:var(--green);font-weight:600">${fmt(c.nGTC)}</td>`;}else{h+=`<td colspan="4" style="${cs}text-align:center;border-left:2px solid #F3F4F6">—</td>`;}});
+  dates.forEach(d=>{const c=gPivot[d];if(c){const gc=c.gtc>=65?'g':c.gtc>=50?'m':'b';h+=`<td style="${cs}text-align:center;border-left:2px solid #F3F4F6">${fmt(c.vol)}</td><td style="${cs}text-align:center">${c.gan.toFixed(1)}%</td><td style="${cs}text-align:center"><span class="pct ${gc}">${c.gtc.toFixed(1)}%</span></td><td style="${cs}text-align:center;color:var(--green);font-weight:600">${fmt(c.nGTC)}</td>`+_nsCellV(d);}else{h+=`<td colspan="${ns?6:4}" style="${cs}text-align:center;border-left:2px solid #F3F4F6">—</td>`;}});
   h+='</tr>';
  }
  h+='</tbody></table></div>';
@@ -785,6 +834,14 @@ function renderGTCAmTable(rows,dates){
   let maxDrop=null,maxAM='';
   names.forEach(name=>{const c1=pivot[name]?.[latest]?.vol??null,c2=pivot[name]?.[prev]?.vol??null;if(c1!==null&&c2!==null){const drop=c2-c1;if(maxDrop===null||drop>maxDrop){maxDrop=drop;maxAM=name;}}});
   if(maxAM&&maxDrop>0)ana+=`<br>AM giảm Vol nhiều nhất: <strong>${maxAM}</strong> (▼ ${fmt(maxDrop)} đơn)`;
+ }
+ if(ns&&ns.week.length&&Object.keys(ns.target).length){
+  const wk=ns.week,fw=shortD(wk[0]),lw=shortD(wk[5]);
+  ana+=`<br><br>Cột NS TB / Chênh NS (Cách A): NS TB = GTC ÷ số NV có GTC&gt;1 đơn (đơn/NV/ngày).`;
+  ana+=`<br>Target NS từng AM = NS TB tuần ${fw}–${lw} + số đơn thêm/NV/ngày để %GTC Vùng đạt 70% (mọi NV thêm 1 đơn/ngày, AM %GTC thấp nhất thêm nữa).`;
+  ana+=`<br>Chênh NS = NS TB ngày − Target; số âm (đỏ) là chưa đạt.`;
+  const tl=Object.keys(ns.target).sort((a,b)=>ns.target[a]-ns.target[b]).map(a=>`${a.split(',').join(' + ')}: <strong>${ns.target[a]}</strong>`);
+  ana+=`<br>Target NS (đơn/NV/ngày): ${tl.join(' · ')}`+(ns.tgtV!=null?` · Cả Vùng: <strong>${ns.tgtV}</strong>`:'');
  }
  if(ana)h+=`<div class="analysis-box">${ana}</div>`;
  return h;
@@ -846,7 +903,9 @@ function renderGTC(pid){
  const dates=allD.filter(d=>d>=lo&&d<=hi);
  if(!dates.length){document.getElementById(pid+'_amTable').innerHTML='<p style="padding:16px;color:var(--text-sub)">Không có dữ liệu trong khoảng đã chọn</p>';document.getElementById(pid+'_bcTable').innerHTML='';return;}
  const last5D=new Set(allD.slice(0,5));
- document.getElementById(pid+'_amTable').innerHTML=renderGTCAmTable(rowsAM,dates);
+ let _ns=null;try{_ns=(pid==='p1')?_gtcNSCalc(rowsAM,rowsBC,dates):null;}catch(e){console.warn('[NS p1]',e);_ns=null;}
+ if(pid==='p1'&&!window._gtcNSRaw)_gtcNSLoad(pid);
+ document.getElementById(pid+'_amTable').innerHTML=renderGTCAmTable(rowsAM,dates,_ns);
  document.getElementById(pid+'_bcTable').innerHTML=renderGTCBcTable(rowsBC,dates,last5D);
  addBCSearch(document.getElementById(pid+'_amTable'));
  addBCSearch(document.getElementById(pid+'_bcTable'));
