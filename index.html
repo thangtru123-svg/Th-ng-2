@@ -320,6 +320,7 @@ const TG_FD_THREAD   = 8250; // topic "FD - Mục tiêu toàn vùng 8%"
 const TG_PICKUP_THREAD = 7; // topic "Pickup / Luân chuyển"
 const TG_TTS_THREAD   = 3; // topic "TTS - Vận hành"
 const TG_VANDE_THREAD = null; // topic "Vấn đề chung" = General topic → gửi KHÔNG kèm thread (thread 1 báo "not found")
+const TG_KHOAID_EXTRA_CHAT = -1002572090380; // nhóm bắn THÊM Khoá ID (link t.me/c/2572090380/1 → General topic → gửi KHÔNG kèm thread)
 const TG_BATON_VUNG_CHAT = -1003237202833; // room "Bưu Cục Bất Ổn 2026"
 const TG_BATON_VUNG_THREAD = 5175;          // topic https://t.me/c/3237202833/5175 (p45 BC bất ổn Vùng)
 const TG_KD_CHAT   = -1003802272887; // nhóm "XBG - MỤC TIÊU phải đạt: GTC 70%"
@@ -7764,7 +7765,7 @@ async function sendKhoaIDToTelegram(){
    uniq.forEach((o,i)=>{ const ld=esc(o.lydoTxt||'—')+(o.ndon>1?` · ${o.ndon} đơn`:''); L.push(`${i+1}. <b>${esc(o.nv)}</b> — ${esc(o.bc)}`,`   • Lý do: ${ld}`,`   • Số lần vi phạm: ${o.lan}`); });
    L.push('',`⏰ <b>Hạn cuối giải trình: ${HAN}</b> (ngày thông báo + 3 ngày)`,'⚠️ Đề nghị AM vào check &amp; xử lý giải trình trước hạn để tránh ảnh hưởng vận hành.',`🔗 Chi tiết: ${LINK}`);
    return L.join('\n'); };
-  if(!confirm(`Bắn báo cáo Khoá ID tới ${chatIds.length} group AM có NV bị khoá + room "Vấn đề chung"?`+(missing.length?`\n⚠️ ${missing.length} AM chưa map group: ${missing.join(', ')}`:''))){ if(btn){btn.disabled=false;btn.innerHTML='📤 Bắn Khoá ID TG';} return; }
+  if(!confirm(`Bắn báo cáo Khoá ID tới ${chatIds.length} group AM có NV bị khoá + room "Vấn đề chung" + nhóm Khoá ID?`+(missing.length?`\n⚠️ ${missing.length} AM chưa map group: ${missing.join(', ')}`:''))){ if(btn){btn.disabled=false;btn.innerHTML='📤 Bắn Khoá ID TG';} return; }
   let ok=0,fail=0;
   for(const cid of chatIds){ const o=byChat[cid];
    let res=await _tgSend(Number(cid),undefined,render(o.ams,o.items));
@@ -7772,16 +7773,24 @@ async function sendKhoaIDToTelegram(){
    await new Promise(r=>setTimeout(r,1200));
   }
   // Ngoài 24 group AM: bắn ảnh tổng quan + tổng hợp theo AM vào room "Vấn đề chung" (nhóm Aging)
-  let roomOk=false;
+  // VÀ bắn thêm vào nhóm Khoá ID (TG_KHOAID_EXTRA_CHAT). Cả 2 đều là General topic → gửi không kèm thread.
+  let roomOk=false,extraOk=false;
   try{
    const img=await _captureEl('khoaidTbl');
-   let res=await _tgSendPhoto(TG_AGING_CHAT,undefined,img,R.noteTG);
-   if(!res||!res.ok)res=await _tgSendDoc(TG_AGING_CHAT,undefined,img,R.noteTG);
-   roomOk=!!(res&&res.ok);
-   if(R.amSummaryTG){await new Promise(r=>setTimeout(r,600));await _tgSend(TG_AGING_CHAT,undefined,'<b>📊 Số NV bị khoá theo AM — '+R.dmy(R.latest)+'</b>\n'+R.amList.map(([am,n])=>`• ${am}: ${n} NV`).join('\n'));}
-  }catch(e){ console.warn('Room Vấn đề chung lỗi',e); }
+   const summaryTxt=R.amSummaryTG?('<b>📊 Số NV bị khoá theo AM — '+R.dmy(R.latest)+'</b>\n'+R.amList.map(([am,n])=>`• ${am}: ${n} NV`).join('\n')):null;
+   for(const [chat,label] of [[TG_AGING_CHAT,'Vấn đề chung'],[TG_KHOAID_EXTRA_CHAT,'nhóm Khoá ID']]){
+    try{
+     let res=await _tgSendPhoto(chat,undefined,img,R.noteTG);
+     if(!res||!res.ok)res=await _tgSendDoc(chat,undefined,img,R.noteTG);
+     const sentOk=!!(res&&res.ok);
+     if(chat===TG_AGING_CHAT)roomOk=sentOk; else extraOk=sentOk;
+     if(summaryTxt){await new Promise(r=>setTimeout(r,600));await _tgSend(chat,undefined,summaryTxt);}
+    }catch(e2){ console.warn('Bắn ảnh Khoá ID lỗi ('+label+')',e2); }
+    await new Promise(r=>setTimeout(r,900));
+   }
+  }catch(e){ console.warn('Room bắn ảnh Khoá ID lỗi',e); }
   if(btn){btn.innerHTML=`✅ Đã gửi ${ok}/${chatIds.length}`;setTimeout(()=>{btn.disabled=false;btn.innerHTML='📤 Bắn Khoá ID TG';},3000);}
-  alert(`Đã bắn Khoá ID: ${ok} group AM OK${fail?`, ${fail} lỗi`:''} · room Vấn đề chung: ${roomOk?'OK':'lỗi'}.`+(missing.length?`\n⚠️ Chưa map group cho AM: ${missing.join(', ')}`:''));
+  alert(`Đã bắn Khoá ID: ${ok} group AM OK${fail?`, ${fail} lỗi`:''} · room Vấn đề chung: ${roomOk?'OK':'lỗi'} · nhóm Khoá ID: ${extraOk?'OK':'lỗi'}.`+(missing.length?`\n⚠️ Chưa map group cho AM: ${missing.join(', ')}`:''));
  }catch(e){ alert('Lỗi gửi Telegram: '+e.message); if(btn){btn.disabled=false;btn.innerHTML='📤 Bắn Khoá ID TG';} }
 }
 
