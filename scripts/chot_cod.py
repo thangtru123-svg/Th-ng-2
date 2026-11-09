@@ -174,15 +174,20 @@ def tg(method, fields, files=None):
         body.write(f'--{b}\r\nContent-Disposition: form-data; name="{k}"; filename="{name}"\r\nContent-Type: {ctype}\r\n\r\n'.encode()); body.write(data); body.write(b'\r\n')
     body.write(f'--{b}--\r\n'.encode())
     req = urllib.request.Request(f'https://api.telegram.org/bot{TG_TOKEN}/{method}', data=body.getvalue(), headers={'Content-Type': f'multipart/form-data; boundary={b}'})
-    for k in range(4):
+    import time
+    last = None
+    for k in range(6):   # thử lại cả khi lỗi mạng / quá thời gian chờ (runner GitHub đôi lúc kẹt kết nối Telegram)
         try:
-            return json.loads(urllib.request.urlopen(req, timeout=120).read())
+            return json.loads(urllib.request.urlopen(req, timeout=60).read())
         except urllib.error.HTTPError as e:
             t = e.read().decode('utf-8', 'ignore')
             if e.code == 429:
-                import time; time.sleep(int((json.loads(t).get('parameters') or {}).get('retry_after', 5)) + 1); continue
+                time.sleep(int((json.loads(t).get('parameters') or {}).get('retry_after', 5)) + 1); continue
+            if e.code >= 500: last = f'HTTP {e.code}'; time.sleep(3 * (k + 1)); continue
             raise RuntimeError(f'Telegram {method} HTTP {e.code}: {t[:200]}')
-    raise RuntimeError('Telegram retry hết')
+        except (TimeoutError, OSError, urllib.error.URLError) as e:   # gồm socket.timeout, ConnectionError, SSL
+            last = repr(e)[:120]; print(f'[tg] {method} lần {k + 1} lỗi mạng: {last} → thử lại'); time.sleep(3 * (k + 1)); continue
+    raise RuntimeError(f'Telegram {method} thất bại sau 6 lần: {last}')
 # ===== LƯU DATA CUỐI NGÀY (1 file / ngày — mỗi ngày chỉ chốt + bắn 1 lần) — dùng cho mục "NV nghi ngờ gối COD" trong báo cáo vận hành tuần =====
 def save_day():
     t = str(D.get('today') or upd.strftime('%Y%m%d')); day = f'{t[:4]}-{t[4:6]}-{t[6:8]}'
