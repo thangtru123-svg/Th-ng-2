@@ -208,6 +208,9 @@ if not DRY:
         print(f'[chot] lịch GitHub chạy TRỄ quá khung 23h15–00h45 (bây giờ {_vn:%H:%M}) → bỏ qua, không bắn.'); sys.exit(0)
     if IN_WIN and _saved:
         print(f'[chot] ngày {_day} ĐÃ chốt + lưu rồi → không bắn lần 2.'); sys.exit(0)
+# Chạy tay NGOÀI khung chốt = chạy thử → chỉ bắn riêng cho @thangquada (1747498029), không làm loãng nhóm. Trong khung 23h15–00h45 (kể cả do cron ngoài dispatch) vẫn bắn nhóm như thường.
+if EVENT == 'workflow_dispatch' and not IN_WIN and not os.environ.get('TG_CHAT'):
+    TG_CHAT = 1747498029; print('[chot] CHẠY THỬ ngoài khung → gửi riêng @thangquada, không gửi nhóm')
 SAVED = save_day() if ((IN_WIN and not DRY) or os.environ.get('CHOT_SAVE') == '1') else None
 print(f'[chot] GTB={G_N} chuaChot={P_N} AM={len(BY_AM)} BC={len(BY_BC)} inWin={IN_WIN} saved={SAVED} → {XLSX}')
 if DRY:
