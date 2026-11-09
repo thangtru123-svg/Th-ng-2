@@ -5073,8 +5073,8 @@ async function sendBatOnVungToTelegram(btn){
  }catch(e){alert('Lỗi bắn TG: '+e.message);}
  finally{ if(btn){btn.disabled=false;btn.textContent=_t||'📤 Bắn TG (đồng loạt)';} }
 }
-/* ===== p51 — TÌNH HÌNH BƯU CỤC N-1 (9 BC theo dõi; CHỈ BẮN BC có %GTC Total N-1 < 60%) ===== */
-const TINHHINH_BCS=['(LSO) Hữu Lũng','(LSO) Tam Thanh','(LSO) Chi Lăng','(QNI) Hạ Long','(QNI) Móng Cái 1','(QNI) Quảng Yên','(QNI) Uông Bí','(QNI) Cao Xanh','(QNI) Hồng Gai'];
+/* ===== p51 — TÌNH HÌNH BƯU CỤC N-1 (10 BC theo dõi; CHỈ BẮN BC có %GTC Total N-1 < 60%) ===== */
+const TINHHINH_BCS=['(LSO) Hữu Lũng','(LSO) Tam Thanh','(LSO) Chi Lăng','(QNI) Hạ Long','(QNI) Móng Cái 1','(QNI) Quảng Yên','(QNI) Uông Bí','(QNI) Hoành Bồ','(QNI) Bãi Cháy','(QNI) Việt Hưng'];
 const TINHHINH_NGUONG=60;            // chỉ bắn BC có %GTC Total N-1 < 60%
 const TG_ANHTHU_ID=5420832446;       // chat_id DM @anhthuvu123 (đại nhân cấp 06/11)
 async function buildTinhHinhBCPage(){
@@ -5729,7 +5729,7 @@ async function init(){
  buildBatThuongPage().catch(e=>console.warn('BC bất thường:',e&&e.message||e));
  // p45 — Bưu Cục Bất Ổn (Vùng tự set %GTC Total<60%) (cần _D/_FD + _agingRows + _CC_BCAM)
  buildBatOnVungPage().catch(e=>console.warn('BC bất ổn Vùng:',e&&e.message||e));
- // p51 — Tình hình BC N-1 (9 BC; bắn DM @anhthuvu123 chỉ BC %GTC Total<60%)
+ // p51 — Tình hình BC N-1 (10 BC; bắn DM @anhthuvu123 chỉ BC %GTC Total<60%)
  buildTinhHinhBCPage().catch(e=>console.warn('Tình hình BC:',e&&e.message||e));
  // p16 — Báo Cáo Vận Hành Ngày
  const p16el=document.getElementById('p16');
