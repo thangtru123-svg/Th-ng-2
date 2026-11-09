@@ -192,9 +192,19 @@ def save_day():
            'gtb': [row(o) + [o.get('note', '')] for o in GTB], 'chuaChot': [row(o) for o in PEND]}
     json.dump(doc, open(os.path.join(folder, day + '.json'), 'w', encoding='utf-8'), ensure_ascii=False, separators=(',', ':'))
     return day
-# Chỉ LƯU khi chạy theo LỊCH (schedule) — mỗi ngày đúng 1 lần chốt trong khung 23h30–23h45; chạy tay (workflow_dispatch) chỉ gửi Telegram, KHÔNG lưu (tránh ghi đè/ làm rối data). Muốn ép lưu khi chạy tay: đặt env CHOT_SAVE=1.
-SAVED = save_day() if (os.environ.get('GITHUB_EVENT_NAME') == 'schedule' or os.environ.get('CHOT_SAVE') == '1' or DRY) else None
-print(f'[chot] GTB={G_N} chuaChot={P_N} AM={len(BY_AM)} BC={len(BY_BC)} → {XLSX}')
+# ---- KHUNG GIỜ CHỐT 23h15–00h45 VN: chỉ trong khung này mới là "chốt cuối ngày" (bắn + LƯU, mỗi ngày đúng 1 lần) ----
+_vn = datetime.datetime.utcnow() + datetime.timedelta(hours=7); _m = _vn.hour * 60 + _vn.minute
+IN_WIN = (_m >= 23 * 60 + 15) or (_m < 45)
+_day = str(D.get('today') or upd.strftime('%Y%m%d')); _day = f'{_day[:4]}-{_day[4:6]}-{_day[6:8]}'
+_saved = os.path.exists(os.path.join(ROOT, 'data_cod', _day + '.json'))
+EVENT = os.environ.get('GITHUB_EVENT_NAME', '')
+if not DRY:
+    if EVENT == 'schedule' and not IN_WIN:
+        print(f'[chot] lịch GitHub chạy TRỄ quá khung 23h15–00h45 (bây giờ {_vn:%H:%M}) → bỏ qua, không bắn.'); sys.exit(0)
+    if IN_WIN and _saved:
+        print(f'[chot] ngày {_day} ĐÃ chốt + lưu rồi → không bắn lần 2.'); sys.exit(0)
+SAVED = save_day() if ((IN_WIN and not DRY) or os.environ.get('CHOT_SAVE') == '1') else None
+print(f'[chot] GTB={G_N} chuaChot={P_N} AM={len(BY_AM)} BC={len(BY_BC)} inWin={IN_WIN} saved={SAVED} → {XLSX}')
 if DRY:
     print(CAP); print('DRY — không gửi'); sys.exit(0)
 r1 = tg('sendPhoto', {'chat_id': TG_CHAT, 'caption': CAP}, {'photo': (os.path.basename(IMG1), open(IMG1, 'rb').read(), 'image/png')})

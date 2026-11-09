@@ -146,6 +146,10 @@ async function pool(items, n, fn) {
 }
 
 (async () => {
+  if (COD_ONLY) { // khung chốt 23h30–23h45: nếu được gọi sớm (23h15–23h30) thì chờ tới 23h30 mới quét, để số liệu + giờ bắn nằm trong khung
+    const v = new Date(Date.now() + 7 * 3600 * 1000); const mins = v.getUTCHours() * 60 + v.getUTCMinutes();
+    if (mins >= 23 * 60 + 15 && mins < 23 * 60 + 30) { const waitMs = ((23 * 60 + 30) - mins) * 60000 - v.getUTCSeconds() * 1000; console.log(`[chot] chờ ${Math.round(waitMs / 1000)}s tới 23h30`); await sleep(waitMs); }
+  }
   console.log(`[pull] today=${TODAY} hourVN=${HOUR} excl06=${EXCL06} hubs=${HUBS.length}`);
   let res;
   try { res = await pool(HUBS, 10, proc); }

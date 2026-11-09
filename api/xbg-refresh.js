@@ -17,7 +17,20 @@ export default async function handler(req, res) {
       },
       body: JSON.stringify({ ref: 'main' })
     });
-    if (r.status === 204) { res.status(200).json({ ok: true }); }
+    // Chốt COD hằng đêm: cron ngoài (cron-job.org) gọi endpoint này ~23h26 VN → dispatch thêm workflow cod-chot (chính xác hơn lịch GitHub, vốn hay trễ hàng giờ).
+    let cod = null;
+    try {
+      const vn = new Date(Date.now() + 7 * 3600 * 1000); const mins = vn.getUTCHours() * 60 + vn.getUTCMinutes();
+      if (mins >= 23 * 60 + 15 && mins <= 23 * 60 + 50) {
+        const r2 = await fetch('https://api.github.com/repos/thangtru123-svg/Th-ng-2/actions/workflows/cod-chot.yml/dispatches', {
+          method: 'POST',
+          headers: { 'Authorization': 'Bearer ' + token, 'Accept': 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28', 'User-Agent': 'tbb-live', 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ref: 'main' })
+        });
+        cod = r2.status;
+      }
+    } catch (e) { cod = 'err'; }
+    if (r.status === 204) { res.status(200).json({ ok: true, codChot: cod }); }
     else { const t = await r.text(); res.status(502).json({ ok: false, status: r.status, body: t.slice(0, 200) }); }
   } catch (e) {
     res.status(500).json({ ok: false, error: String(e && e.message || e) });
