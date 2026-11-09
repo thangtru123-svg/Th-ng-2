@@ -4789,6 +4789,7 @@ async function buildKeoVungPage(){
  }catch(e){ el.innerHTML='<div class="page-header"><div class="page-title">📉 Phân tích kéo vùng</div></div><div class="analysis-box">Lỗi: '+(e&&e.message||e)+'</div>'; console.error('Kéo vùng:',e); }
 }
 /* ===== p44 — BƯU CỤC LÀM KÉM BẤT THƯỜNG ===== */
+const BATTHUONG_AGING_NGUONG=20;   // p44 ③: BC có Aging > 5 ngày vượt ngưỡng này (đơn) bị liệt kê — đại nhân đặt 20 đơn (09/11)
 async function buildBatThuongPage(){
  const el=document.getElementById('p44'); if(!el)return;
  try{
@@ -4830,7 +4831,7 @@ async function buildBatThuongPage(){
    const c2=(gN1!=null&&gAvg7!=null)&&((gAvg7-gN1)>=5);
    const c3=(ftN1!=null&&ftN2!=null)&&((ftN1-ftN2)>=2);
    const c4=(fsN1!=null&&fsN2!=null)&&((fsN1-fsN2)>=2);
-   const c5=agN>50;
+   const c5=agN>BATTHUONG_AGING_NGUONG;
    const c6=(nsN1!=null&&nsN2!=null)&&((nsN2-nsN1)>5);
    const flags={c1,c2,c3,c4,c5,c6};const n=[c1,c2,c3,c4,c5,c6].filter(Boolean).length;
    if(n>0)rows.push({bc,am:(cc[bc]&&cc[bc].join(', '))||'—',gN1,gN2,gAvg7,ftN1,ftN2,fsN1,fsN2,agN,nsN1,nsN2,flags,n});
@@ -4859,7 +4860,7 @@ async function buildBatThuongPage(){
    ${kpi('BC bất thường',rows.length,'var(--red)')}
    ${kpi('① GTC giảm',A.length,'#DC2626')}
    ${kpi('② Tỉ lệ trả tăng',B.length,'#EA580C')}
-   ${kpi('③ Aging > 50',C.length,'#B91C1C')}
+   ${kpi('③ Aging > '+BATTHUONG_AGING_NGUONG,C.length,'#B91C1C')}
    ${kpi('④ Năng suất giảm',Dd.length,'#9333EA')}</div>`;
   if(!rows.length){h+='<div class="analysis-box">🎉 Không có Bưu Cục nào làm kém bất thường ở ngày N-1.</div>';el.innerHTML=h;return;}
   // ① GTC giảm
@@ -4871,8 +4872,8 @@ async function buildBatThuongPage(){
    TH('FD Total N-1')+TH('Tăng vs N-2','≥ 2 đ%')+TH('FD TTS N-1')+TH('Tăng vs N-2','≥ 2 đ%'),
    B.map((r,i)=>rowPre(r,i)+pcell(r.ftN1,r.flags.c3)+dcell((r.ftN1!=null&&r.ftN2!=null)?(r.ftN1-r.ftN2):null,r.flags.c3)+pcell(r.fsN1,r.flags.c4)+dcell((r.fsN1!=null&&r.fsN2!=null)?(r.fsN1-r.fsN2):null,r.flags.c4)+'</tr>').join(''));
   // ③ Aging > 50
-  h+=card('⏳','③ Aging > 5 ngày quá 50 đơn',C.length,
-   TH('Đơn Aging > 5 ngày','> 50 đơn'),
+  h+=card('⏳','③ Aging > 5 ngày quá '+BATTHUONG_AGING_NGUONG+' đơn',C.length,
+   TH('Đơn Aging > 5 ngày','> '+BATTHUONG_AGING_NGUONG+' đơn'),
    C.map((r,i)=>rowPre(r,i)+ncell(r.agN,true,' đơn')+'</tr>').join(''));
   // ④ Năng suất giảm
   h+=card('👷','④ Năng suất NV giảm bất thường',Dd.length,
@@ -4894,7 +4895,7 @@ function _btCaptions(){
  const hot=(T.rows||[]).slice(0,3).map(r=>shortBC(r.bc)+` (${r.n} tc)`).join(', ');
  let ov=`🚨 <b>BƯU CỤC LÀM KÉM BẤT THƯỜNG — Ngày ${day}</b>\n`;
  ov+=`Tổng: <b>${T.rows.length}</b> Bưu Cục có dấu hiệu bất thường (so N-1 vs N-2, có ngưỡng cảnh báo).\n\n`;
- ov+=`• ① Tỉ lệ GTC giảm: <b>${T.A.length}</b> BC\n• ② Tỉ lệ trả tăng: <b>${T.B.length}</b> BC\n• ③ Aging &gt; 50 đơn: <b>${T.C.length}</b> BC\n• ④ Năng suất giảm: <b>${T.D.length}</b> BC\n`;
+ ov+=`• ① Tỉ lệ GTC giảm: <b>${T.A.length}</b> BC\n• ② Tỉ lệ trả tăng: <b>${T.B.length}</b> BC\n• ③ Aging &gt; ${BATTHUONG_AGING_NGUONG} đơn: <b>${T.C.length}</b> BC\n• ④ Năng suất giảm: <b>${T.D.length}</b> BC\n`;
  if(hot)ov+=`\n🔥 Điểm nóng (nhiều tiêu chí nhất): ${hot}\n`;
  ov+=`\nChi tiết từng hạng mục ở các tin dưới ⬇️`;
  msgs.push(ov);
@@ -4911,8 +4912,8 @@ function _btCaptions(){
   const w=T.B[0];m2+=`\n\n→ <b>Nhận định:</b> Tăng trả mạnh nhất ${esc(w.bc)}. Rà soát nguyên nhân hoàn (sai địa chỉ / khách từ chối / giao ép cuối ngày).`; }
  msgs.push(m2);
  // ── ③ Aging > 50 ──
- let m3=`⏳ <b>③ AGING &gt; 5 NGÀY QUÁ 50 ĐƠN — Ngày ${day}</b> (${T.C.length} Bưu Cục)\n`;
- if(!T.C.length)m3+=`✅ Không có Bưu Cục nào vượt 50 đơn aging.`;
+ let m3=`⏳ <b>③ AGING &gt; 5 NGÀY QUÁ ${BATTHUONG_AGING_NGUONG} ĐƠN — Ngày ${day}</b> (${T.C.length} Bưu Cục)\n`;
+ if(!T.C.length)m3+=`✅ Không có Bưu Cục nào vượt ${BATTHUONG_AGING_NGUONG} đơn aging.`;
  else{ T.C.forEach(c=>{m3+=`\n• ${esc(c.bc)} — ${esc(c.am)}: <b>${fmt(c.agN)} đơn</b>`;});
   const w=T.C[0];m3+=`\n\n→ <b>Nhận định:</b> Tồn cao nhất ${esc(w.bc)} (${fmt(w.agN)} đơn) — cần dồn lực xử lý ngay, tránh tồn kéo dài.`; }
  msgs.push(m3);
