@@ -231,6 +231,7 @@ tr.tot td{background:#FFF0EB!important;font-weight:800!important;border-top:2px 
  <button class="nav-item" onclick="show('p35',this)" style="background:linear-gradient(135deg,rgba(220,38,38,0.16),rgba(241,93,41,0.08));border:1px solid rgba(220,38,38,0.32);font-weight:700"><span class="icon">🚨</span>Quá Hạn / Truy Thu</button>
  <button class="nav-item" onclick="show('p38',this)" style="background:linear-gradient(135deg,rgba(220,38,38,0.16),rgba(241,93,41,0.08));border:1px solid rgba(220,38,38,0.32);font-weight:700"><span class="icon">🔁</span>Tổng quan truy thu XBG</button>
  <button class="nav-item" onclick="show('p41',this)" style="background:linear-gradient(135deg,rgba(22,101,52,0.16),rgba(34,197,94,0.1));border:1px solid rgba(22,101,52,0.35);font-weight:700"><span class="icon">🚚</span>Báo cáo GTC realtime trong ngày</button>
+ <button class="nav-item" onclick="show('p52',this)" style="background:linear-gradient(135deg,rgba(22,101,52,0.16),rgba(34,197,94,0.1));border:1px solid rgba(22,101,52,0.35);font-weight:700"><span class="icon">📦</span>Báo cáo hàng về Realtime</button>
  <button class="nav-item" onclick="show('p42',this)" style="background:linear-gradient(135deg,rgba(220,38,38,0.16),rgba(241,93,41,0.08));border:1px solid rgba(220,38,38,0.32);font-weight:700"><span class="icon">💰</span>Check COD giá trị cao</button>
  <button class="nav-item" onclick="show('p47',this)" style="background:linear-gradient(135deg,rgba(37,99,235,0.14),rgba(59,130,246,0.08));border:1px solid rgba(37,99,235,0.3);font-weight:700"><span class="icon">📦</span>Đơn TTS COD &lt; 50k</button>
  <button class="nav-item" onclick="show('p48',this)" style="background:linear-gradient(135deg,rgba(234,88,12,0.16),rgba(249,115,22,0.09));border:1px solid rgba(234,88,12,0.33);font-weight:700"><span class="icon">📋</span>Báo Cáo 1 — Cần giao (ĐK·BG)</button>
@@ -277,7 +278,8 @@ tr.tot td{background:#FFF0EB!important;font-weight:800!important;border-top:2px 
 <div class="page" id="p47"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
 <div class="page" id="p48"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
 <div class="page" id="p49"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
-<div class="page" id="p51"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
+<div class="page" id="p51"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div>
+<div class="page" id="p52"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div></div>
 <div class="page" id="p50"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
  <div class="page" id="p1"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
  <div class="page" id="p2"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
@@ -5156,6 +5158,166 @@ async function buildTinhHinhBCPage(){
   el.innerHTML=h;
  }catch(e){el.innerHTML='<div class="page-header"><div class="page-title">📋 Tình hình Bưu Cục (N-1)</div></div><div class="analysis-box">Lỗi: '+esc(e&&e.message||e)+'</div>';console.error('p51:',e);}
 }
+/* ===== p52 — BÁO CÁO HÀNG VỀ REALTIME (Lạng Sơn + Quảng Ninh) =====
+   Volume hàng mới theo ngày của TUẦN HIỆN TẠI (T2→CN) + cột TB tuần N-1.
+   · Ngày quá khứ: Sheet Data_Voltotal (Hàng Mới Ca 1 + Ca 2).
+   · Ngày hôm nay: gtc_live.json.hangMoi (Action 30' quét nhanh.ghn.vn) — "Tổng đơn mới ngày N" cùng định nghĩa Báo cáo 1:
+     trước 14h = đơn nhập BC 0-6h; từ 14h = 0-6h + 6-12h; cộng dồn mã đơn trong ngày.
+   · Ngày chưa đến: ghi "Chưa đến". Không có số thì ghi "Chưa có" (không bịa). */
+async function buildHangVePage(){
+ const el=document.getElementById('p52'); if(!el)return;
+ const seq=(window._hvSeq=(window._hvSeq||0)+1);   // tránh kết quả fetch cũ ghi đè lần tải mới
+ el.innerHTML='<div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải báo cáo hàng về…</div></div>';
+ const esc=t=>String(t==null?'':t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+ try{
+  const [live,csv]=await Promise.all([
+   fetch('gtc_live.json?t='+Date.now()).then(r=>{if(!r.ok)throw new Error('gtc_live.json HTTP '+r.status);return r.json();}),
+   _getVolCSV()
+  ]);
+  if(seq!==window._hvSeq)return;
+  const HM=(live&&live.hangMoi&&!live.hangMoi.err&&Array.isArray(live.hangMoi.hubs))?live.hangMoi:null;
+  // ---- lịch: hôm nay (giờ VN), tuần hiện tại T2→CN, tuần N-1 ----
+  const isoOf=d=>d.toISOString().slice(0,10);
+  const vnNow=new Date(Date.now()+7*3600*1000), todayISO=isoOf(vnNow);
+  const dow=(vnNow.getUTCDay()+6)%7;
+  const mon=new Date(Date.UTC(vnNow.getUTCFullYear(),vnNow.getUTCMonth(),vnNow.getUTCDate()-dow));
+  const days=[...Array(7)].map((_,i)=>isoOf(new Date(mon.getTime()+i*86400000)));
+  const pmon=new Date(mon.getTime()-7*86400000);
+  const pdays=[...Array(7)].map((_,i)=>isoOf(new Date(pmon.getTime()+i*86400000)));
+  const isoWeek=d=>{const t=new Date(Date.UTC(d.getUTCFullYear(),d.getUTCMonth(),d.getUTCDate()));t.setUTCDate(t.getUTCDate()+4-(t.getUTCDay()||7));const y0=new Date(Date.UTC(t.getUTCFullYear(),0,1));return Math.ceil(((t-y0)/86400000+1)/7);};
+  const wPrev='W'+isoWeek(pmon), wCur='W'+isoWeek(mon);
+  const fD=iso=>iso.slice(8,10)+'/'+iso.slice(5,7)+'/'+iso.slice(0,4);
+  const num2iso=n=>String(n||'').replace(/^(\d{4})(\d{2})(\d{2})$/,'$1-$2-$3');
+  // ---- Sheet Data_Voltotal: Hàng Mới Ca 1 / Ca 2 theo BC × ngày ----
+  const VR=_vwParseCSV(csv), bcDay={};
+  for(let i=1;i<VR.length;i++){
+   const r=VR[i], l=(r[2]||'').trim(); if(l!=='Hàng Mới Ca 1'&&l!=='Hàng Mới Ca 2')continue;
+   const bc=(r[1]||'').trim(), d=isoD(r[4]); if(!bc||!d)continue;
+   const m=bcDay[bc]||(bcDay[bc]={}); const o=m[d]||(m[d]={c1:0,c2:0});
+   if(l==='Hàng Mới Ca 1')o.c1+=_vwNum(r[5]); else o.c2+=_vwNum(r[5]);
+  }
+  // ---- danh sách BC (2 tỉnh) + AM ----
+  const hmBy={}; if(HM)HM.hubs.forEach(h=>{hmBy[h.name]=h;});
+  let names=(live.bc||[]).map(x=>(x.bc||'').trim()).filter(n=>_2T_PFX.test(n));
+  if(!names.length&&HM)names=HM.hubs.map(h=>h.name);
+  names=[...new Set(names)];
+  if(!names.length)throw new Error('chưa có danh sách Bưu Cục (gtc_live.json)');
+  const cc=window._CC_BCAM||{};
+  const amOf=bc=>(cc[bc]&&cc[bc].length?cc[bc].join(', '):((hmBy[bc]&&hmBy[bc].am)||((live.bc||[]).find(x=>x.bc===bc)||{}).am||'(chưa map AM)'));
+  const tinhOf=bc=>/^\(LSO\)/.test(bc)?'Lạng Sơn':'Quảng Ninh';
+  // ---- hôm nay (realtime) + hôm qua dự phòng ----
+  const hmToday=HM&&num2iso(HM.date)===todayISO;
+  const mode=HM?HM.moiMode:'0-6h', afternoon=mode==='0-12h';
+  const yest=HM&&HM.yesterday&&HM.yesterday.hubs?{iso:num2iso(HM.yesterday.date),hubs:HM.yesterday.hubs}:null;
+  // ---- số theo BC ----
+  const rows=names.map(bc=>{
+   const sh=bcDay[bc]||{};
+   const val={};  // iso → {v, src}  hoặc null
+   days.forEach(d=>{
+    if(d>todayISO){val[d]={fut:true};return;}
+    if(d===todayISO){
+     const h=hmToday?hmBy[bc]:null;
+     val[d]=(h&&h.donMoi!=null)?{v:h.donMoi,src:'rt'}:null; return;
+    }
+    if(sh[d]){val[d]={v:sh[d].c1+sh[d].c2,src:'sheet'};return;}
+    if(yest&&yest.iso===d&&yest.hubs[bc]!=null){val[d]={v:yest.hubs[bc],src:'rt-yest'};return;}
+    val[d]=null;
+   });
+   const pv=pdays.map(d=>sh[d]).filter(Boolean);
+   const tb=pv.length?pv.reduce((s,x)=>s+x.c1+x.c2,0)/pv.length:null;
+   const tbC1=pv.length?pv.reduce((s,x)=>s+x.c1,0)/pv.length:null;
+   return {bc,am:amOf(bc),tinh:tinhOf(bc),val,tb,tbC1,nPrev:pv.length};
+  });
+  // ---- gộp (Tổng / Tỉnh / AM) ----
+  const agg=(list,label)=>{
+   const o={name:label,n:list.length,val:{},tb:0,tbC1:0,tbN:0};
+   days.forEach(d=>{
+    if(d>todayISO){o.val[d]={fut:true};return;}
+    const got=list.map(r=>r.val[d]).filter(x=>x&&x.v!=null);
+    o.val[d]=got.length?{v:got.reduce((s,x)=>s+x.v,0),have:got.length,of:list.length,src:got.some(x=>x.src!=='sheet')?'mix':'sheet'}:null;
+   });
+   list.forEach(r=>{if(r.tb!=null){o.tb+=r.tb;o.tbC1+=r.tbC1;o.tbN++;}});
+   if(!o.tbN){o.tb=null;o.tbC1=null;}
+   return o;
+  };
+  const byAM={}; rows.forEach(r=>{(byAM[r.am]=byAM[r.am]||[]).push(r);});
+  const amRows=Object.keys(byAM).map(a=>agg(byAM[a],a)).sort((a,b)=>(b.tb||0)-(a.tb||0));
+  const tongRows=[agg(rows.filter(r=>r.tinh==='Lạng Sơn'),'Lạng Sơn'),agg(rows.filter(r=>r.tinh==='Quảng Ninh'),'Quảng Ninh'),agg(rows,'Tổng Vùng (2 tỉnh)')];
+  const bcRows=rows.map(r=>({...agg([r],r.bc),am:r.am})).sort((a,b)=>(b.tb||0)-(a.tb||0));
+  // ---- render ----
+  const nf=n=>Math.round(n).toLocaleString('vi-VN');
+  const pcs=v=>(v>=0?'+':'−')+Math.abs(v).toFixed(1).replace('.',',')+'%';
+  const TH='style="background:#1F3864;color:#fff;padding:7px 10px;font-size:12px;font-weight:700;text-align:center;line-height:1.35;border:1px solid #fff"';
+  const THT='style="background:#C8461A;color:#fff;padding:7px 10px;font-size:12px;font-weight:700;text-align:center;line-height:1.35;border:1px solid #fff"';
+  const TDL='style="text-align:left;padding:6px 10px;font-size:12.5px;border-bottom:1px solid var(--border);white-space:nowrap;font-weight:600"';
+  const cell=(x,d,isTot)=>{
+   const fw=isTot?'font-weight:800;':'';
+   if(!x||x.fut===undefined&&x===null)return `<td style="text-align:center;padding:6px 10px;font-size:12px;border-bottom:1px solid var(--border);color:var(--text-sub);font-style:italic;white-space:nowrap">Chưa có</td>`;
+   if(x.fut)return `<td style="text-align:center;padding:6px 10px;font-size:12px;border-bottom:1px solid var(--border);color:#9CA3AF;font-style:italic;white-space:nowrap">Chưa đến</td>`;
+   const isT=d===todayISO;
+   const part=x.have!=null&&x.have<x.of;
+   const tip=x.src==='rt'?'Realtime (mốc '+mode+')':x.src==='rt-yest'?'Giá trị cuối ngày đo realtime (Sheet chưa có ngày này)':x.src==='mix'?'Gồm cả số realtime':'';
+   const tipP=part?(' · mới có '+x.have+'/'+x.of+' BC'):'';
+   return `<td title="${tip+tipP}" style="text-align:center;padding:6px 10px;font-size:12.5px;border-bottom:1px solid var(--border);white-space:nowrap;${fw}${isT?'background:#FFF4EC;color:#C8461A;font-weight:800;':''}${part?'font-style:italic;':''}">${nf(x.v)}${(x.src==='rt-yest')?'*':''}${part?'†':''}</td>`;
+  };
+  const deltaCell=(o,isTot)=>{
+   const x=o.val[todayISO]; const basis=afternoon?o.tb:o.tbC1;
+   const base='text-align:center;padding:6px 10px;font-size:12.5px;border-bottom:1px solid var(--border);white-space:nowrap;'+(isTot?'font-weight:800;':'');
+   if(!x||x.fut||x.v==null||!basis)return `<td style="${base}color:var(--text-sub);font-style:italic">—</td>`;
+   const p=(x.v/basis-1)*100;
+   return `<td title="So với TB ${wPrev}${afternoon?' (Ca 1+2)':' (Ca 1)'}: ${nf(basis)} đơn/ngày" style="${base}font-weight:800;color:${p>=0?'#B91C1C':'#15803D'}">${p>=0?'▲':'▼'} ${pcs(p)}</td>`;
+  };
+  const head=(first)=>`<tr><th ${TH}>${first}</th><th ${TH}>Volume hàng mới<br>TB ${wPrev}</th>${days.map(d=>`<th ${d===todayISO?THT:TH}>Volume hàng mới<br>${fD(d)}${d===todayISO?'<br>(hôm nay)':''}</th>`).join('')}<th ${TH}>Tăng giảm Ngày<br>(hiện tại) / TB ${wPrev}<br><span style="font-weight:500;font-size:10.5px">${afternoon?'so TB Ca 1+2':'so TB Ca 1 (mới tính 0-6h)'}</span></th></tr>`;
+  const body=(list,isTot,rowTitle)=>list.map((o,i)=>{
+   const tot=isTot&&i===list.length-1;
+   return `<tr title="${esc(rowTitle?rowTitle(o):'')}"><td ${TDL}${tot?' ':''}>${tot?'<b>':''}${esc(o.name)}${tot?'</b>':''}</td><td style="text-align:center;padding:6px 10px;font-size:12.5px;border-bottom:1px solid var(--border);white-space:nowrap;${tot?'font-weight:800;':'font-weight:600;'}">${o.tb==null?'<span style="color:var(--text-sub);font-style:italic">Chưa có</span>':nf(o.tb)}</td>${days.map(d=>cell(o.val[d],d,tot)).join('')}${deltaCell(o,tot)}</tr>`;
+  }).join('');
+  const tbl=(first,list,isTot,rt)=>`<div class="table-wrap" style="margin-bottom:6px"><table style="border-collapse:collapse;display:inline-block"><thead>${head(first)}</thead><tbody>${body(list,isTot,rt)}</tbody></table></div>`;
+  // ---- phân tích (mỗi ý 1 dòng) ----
+  const tv=tongRows[2].val[todayISO]; const tBasis=afternoon?tongRows[2].tb:tongRows[2].tbC1;
+  const updAt=HM&&HM.generatedAt?new Date(HM.generatedAt):null;
+  const updStr=updAt&&!isNaN(updAt)?updAt.toLocaleString('vi-VN',{hour:'2-digit',minute:'2-digit',day:'2-digit',month:'2-digit',year:'numeric'}):'chưa có';
+  const nBcToday=hmToday?rows.filter(r=>r.val[todayISO]&&r.val[todayISO].v!=null).length:0;
+  const amD=amRows.map(o=>{const x=o.val[todayISO],b=afternoon?o.tb:o.tbC1;return (x&&x.v!=null&&b)?{n:o.name,p:(x.v/b-1)*100,v:x.v}:null;}).filter(Boolean).sort((a,b)=>b.p-a.p);
+  const bcD=bcRows.map(o=>{const x=o.val[todayISO],b=afternoon?o.tb:o.tbC1;return (x&&x.v!=null&&b)?{n:o.name,p:(x.v/b-1)*100,v:x.v}:null;}).filter(Boolean).sort((a,b)=>b.p-a.p);
+  const L=[];
+  if(tv&&tv.v!=null){
+   L.push(`<b>Ngày ${fD(todayISO)} (mốc ${mode}, quét lúc ${esc(updStr)}):</b> tổng đơn mới <b>${nf(tv.v)} đơn</b> — ${nBcToday}/${rows.length} Bưu Cục có số.`);
+   if(tBasis)L.push(`So với TB ${wPrev} (${afternoon?'Ca 1+2':'Ca 1'}) ${nf(tBasis)} đơn/ngày: <b style="color:${tv.v>=tBasis?'#B91C1C':'#15803D'}">${pcs((tv.v/tBasis-1)*100)}</b> (${tv.v>=tBasis?'+':'−'}${nf(Math.abs(tv.v-tBasis))} đơn).`);
+   if(!afternoon)L.push('Trước 14h mới tính hàng nhập 0-6h nên số trong ngày còn thấp hơn cả ngày; từ 14h tính thêm 6-12h.');
+   if(HM&&HM.accFrom!=null&&HM.accFrom>7)L.push('<span style="color:#B45309">Lưu ý: số hôm nay mới tích lũy mã đơn từ '+HM.accFrom+'h nên có thể thiếu hàng đã giao xong trước giờ đó; từ ngày sau tích lũy từ 07h sẽ đủ.</span>');
+   if(amD.length>1)L.push(`AM tăng nhiều nhất: <b>${esc(amD[0].n)}</b> (${pcs(amD[0].p)}, ${nf(amD[0].v)} đơn) · AM giảm nhiều nhất: <b>${esc(amD[amD.length-1].n)}</b> (${pcs(amD[amD.length-1].p)}, ${nf(amD[amD.length-1].v)} đơn).`);
+   if(bcD.length>1)L.push(`BC tăng nhiều nhất: <b>${esc(bcD[0].n)}</b> (${pcs(bcD[0].p)}) · BC giảm nhiều nhất: <b>${esc(bcD[bcD.length-1].n)}</b> (${pcs(bcD[bcD.length-1].p)}).`);
+  }else{
+   L.push(`<b>Ngày ${fD(todayISO)}:</b> chưa có số realtime (Action quét 30 phút/lần chưa ghi số hôm nay) — các ngày quá khứ lấy từ Sheet.`);
+  }
+  const notYest=days.filter(d=>d<todayISO&&!tongRows[2].val[d]);
+  if(notYest.length)L.push('Chưa có số: '+notYest.map(fD).join(', ')+' (Sheet Data_Voltotal chưa cập nhật ngày này).');
+  const anaBox=`<div class="analysis-box" style="margin:6px 0 22px;line-height:1.7">${L.join('<br>')}</div>`;
+  const legend=`<div style="font-size:11.5px;color:var(--text-sub);margin:0 2px 14px;line-height:1.6">Đơn mới ngày N = Giao + Ưu tiên giao mốc 0-6h (từ 14h thêm 6-12h), cộng dồn mã đơn trong ngày — cùng định nghĩa Báo Cáo 1. Ngày quá khứ = Hàng Mới Ca 1 + Ca 2 (Sheet Data_Voltotal). TB ${wPrev} = trung bình/ngày của tuần ${fD(pdays[0])} → ${fD(pdays[6])}. * = giá trị cuối ngày đo realtime (Sheet chưa có). † = chưa đủ BC.</div>`;
+  const sec=(t)=>`<div style="font-size:14px;font-weight:800;color:var(--text-main);margin:6px 2px 8px">${t}</div>`;
+  el.innerHTML=`
+   <div class="page-header">
+    <div class="page-title">📦 Báo cáo hàng về Realtime</div>
+    <div class="page-meta">
+     <span style="background:var(--orange-light);color:var(--orange-dark);padding:3px 10px;border-radius:20px;font-size:12px;font-weight:700">🕒 Cập nhật: ${esc(updStr)}</span>
+     <span style="background:#ECFDF5;color:#166534;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:700">Tuần ${wCur} · đơn mới mốc ${mode}</span>
+     <span style="background:#EFF6FF;color:#1D4ED8;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:700">Lạng Sơn + Quảng Ninh · ${rows.length} BC</span>
+     <button class="tg-inpage-btn" style="background:#16A34A;border-color:#16A34A" onclick="buildHangVePage()">🔄 Tải lại</button>
+    </div>
+   </div>
+   ${legend}
+   ${sec('Tổng quan')}${tbl('Tổng quan',tongRows,true)}
+   ${anaBox}
+   ${sec('AM ('+amRows.length+')')}${tbl('AM',amRows,false,o=>o.n+' BC')}
+   <div style="height:18px"></div>
+   ${sec('Bưu Cục ('+bcRows.length+')')}${tbl('Bưu Cục',bcRows,false,o=>'AM: '+o.am)}`;
+ }catch(e){
+  if(seq!==window._hvSeq)return;
+  el.innerHTML='<div class="page-header"><div class="page-title">📦 Báo cáo hàng về Realtime</div></div><div class="analysis-box">Không tải được dữ liệu: '+esc(e&&e.message||e)+'</div>';
+ }
+}
+
 /* Dựng các tin TEXT (mỗi BC <60% = 1 tin) theo format đại nhân chốt */
 function _tinhHinhMsgs(){
  const T=window._TINHHINH; if(!T)return[];
@@ -5738,6 +5900,8 @@ async function init(){
  buildGKPage().catch(e=>console.warn('GTC khu vực:',e&&e.message||e));
  // p41 — Báo cáo GTC realtime trong ngày (đọc gtc_live.json, tự cập nhật 30')
  buildGTCRealtimePage().catch(e=>console.warn('GTC realtime:',e&&e.message||e));
+ // p52 — Báo cáo hàng về Realtime (Sheet Data_Voltotal + gtc_live.json.hangMoi, tự cập nhật 30')
+ buildHangVePage().catch(e=>console.warn('Hàng về:',e&&e.message||e));
  // p42 — Check COD giá trị cao (đọc gtc_live.json.cod, tự cập nhật 30')
  buildCodCheckPage().catch(e=>console.warn("COD:",e&&e.message||e));
  // p47 — Đơn TTS COD < 50k (realtime từ gtc_live.json.ttsCod, AM theo _CC_BCAM)

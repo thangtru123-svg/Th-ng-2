@@ -343,6 +343,46 @@ async function pool(items, n, fn) {
     out.bcReport = { generatedAt: out.updatedAt, date: TODAY, hourVN: HOUR, moiMode: HOUR >= 14 ? '0-12h' : '0-6h', hubs: rep, seen: seenOut };
   } catch (e) { out.bcReport = { err: String((e && e.message) || e) }; }
 
+  // ===== HÀNG VỀ REALTIME (p52 "Báo cáo hàng về Realtime") — TỔNG ĐƠN MỚI NGÀY N của 32 BC Lạng Sơn + Quảng Ninh =====
+  // Cùng định nghĩa Báo cáo 1 (2 BC): đơn mới = Giao + Ưu tiên giao mốc 0-6h (từ 14h thêm 6-12h), cộng 3 trạng thái chuyến; từ 07h cộng dồn MÃ đơn đã thấy trong ngày
+  // (đơn giao xong biến mất khỏi báo cáo tồn đọng) → không tụt. Mã lưu gọn: 8 ký tự cuối, nối liền theo hub (tránh phình gtc_live.json).
+  // Ngày quá khứ lấy từ Sheet Data_Voltotal (Ca1+Ca2) ở dashboard; `yesterday` = giá trị cuối ngày hôm qua đo realtime (dự phòng khi Sheet chưa có ngày đó).
+  try {
+    let prevHm = null; try { prevHm = JSON.parse(fs.readFileSync(path.join(ROOT, 'gtc_live.json'), 'utf8')).hangMoi || null; } catch (e) { prevHm = null; }
+    const HM_HUBS = HUBS.filter(h => COD_TINH.includes(h.tinh));
+    const dec8 = (str) => { const a = []; for (let i = 0; i + 8 <= (str || '').length; i += 8) a.push(str.slice(i, i + 8)); return a; };
+    const k8 = (c) => String(c).slice(-8).padStart(8, '_');
+    const prevSameDay = !!(prevHm && prevHm.date === TODAY);
+    async function hangMoiFor(h) {
+      const id = String(h.id);
+      let live = 0;
+      for (const st of STATES3) {
+        const gi = await api('/api/core/oss/v1/report/get-general-info', { hub_ids: [id], view_mode: 'CLIENT', order_type: st });
+        (((gi.data || [])[0] || {}).general_infos || []).forEach(g => { if (/^DELIVER/.test(g.order_type)) live += _sumBk(g.order_inventories, _MOI); });
+      }
+      const seen = new Set(prevSameDay && prevHm.seen && prevHm.seen.hubs ? dec8(prevHm.seen.hubs[id]) : []);
+      if (HOUR >= 7) {
+        const buckets = HOUR >= 14 ? ['0_6', '6_12'] : ['0_6'];
+        for (const st of STATES3) for (const ty of _stTypes[st]) for (const bk of buckets) {
+          const j = await api('/api/core/oss/v1/report/get-detail-by-code', { code: `${id}|${ty}|${bk}`, view_mode: 'CLIENT', order_type: st });
+          ((j.data || {}).order_codes || []).forEach(c => seen.add(k8(c)));
+        }
+      }
+      const prevH = prevSameDay ? (prevHm.hubs || []).find(x => x.hubId === id) : null;
+      const donMoi = HOUR >= 7 ? Math.max(live, seen.size, prevH ? prevH.donMoi || 0 : 0) : Math.max(live, prevH ? prevH.donMoi || 0 : 0);
+      return { name: h.name, hubId: id, am: h.am, tinh: h.tinh, donMoi, live, _seen: HOUR >= 7 ? [...seen].join('') : (prevSameDay && prevHm.seen && prevHm.seen.hubs ? (prevHm.seen.hubs[id] || '') : '') };
+    }
+    const hmRes = await pool(HM_HUBS, 4, async (h) => { try { return await hangMoiFor(h); } catch (e) { if (e.auth) throw e; const prevH = prevSameDay ? (prevHm.hubs || []).find(x => x.hubId === String(h.id)) : null; return { name: h.name, hubId: String(h.id), am: h.am, tinh: h.tinh, donMoi: prevH ? prevH.donMoi || 0 : null, live: null, err: String((e && e.message) || e), _seen: prevSameDay && prevHm.seen && prevHm.seen.hubs ? (prevHm.seen.hubs[String(h.id)] || '') : '' }; } });
+    const seenHm = { date: TODAY, hubs: {} };
+    hmRes.forEach(h => { seenHm.hubs[h.hubId] = h._seen || ''; delete h._seen; });
+    // giá trị CUỐI ngày hôm qua (đo realtime) — chốt khi sang ngày mới, giữ nguyên cả ngày
+    let yest = (prevHm && prevHm.yesterday) || null;
+    if (prevHm && prevHm.date && prevHm.date !== TODAY) yest = { date: prevHm.date, mode: prevHm.moiMode, hubs: Object.fromEntries((prevHm.hubs || []).filter(x => x.donMoi != null).map(x => [x.name, x.donMoi])) };
+    const accFrom = (prevSameDay && prevHm.accFrom != null) ? prevHm.accFrom : HOUR; // giờ bắt đầu tích lũy mã đơn trong ngày (<=7 là đủ cả ngày)
+    out.hangMoi = { generatedAt: out.updatedAt, date: TODAY, hourVN: HOUR, moiMode: HOUR >= 14 ? '0-12h' : '0-6h', accFrom, hubs: hmRes, yesterday: yest, seen: seenHm };
+    console.log(`[hangmoi] ${hmRes.length} hub, tổng đơn mới ${hmRes.reduce((s2, x) => s2 + (x.donMoi || 0), 0)} (mốc ${out.hangMoi.moiMode}), lỗi ${hmRes.filter(x => x.err).length}`);
+  } catch (e) { if (e && e.auth) throw e; out.hangMoi = { err: String((e && e.message) || e) }; }
+
   fs.writeFileSync(path.join(ROOT, 'gtc_live.json'), JSON.stringify(out));
   console.log(`[pull] OK hubsOk=${hubs.length} err=${errN} GTC=${vung.gtc} daGan=${vung.daGan} canGiao=${vung.canGiao} COD soDon=${out.cod.vung.soDon} tongCod=${codTong} TTS<50k soDon=${out.ttsCod.soDon}`);
 
