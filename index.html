@@ -5208,7 +5208,8 @@ async function buildHangVePage(){
   // ---- hôm nay (realtime) + hôm qua dự phòng ----
   const hmToday=HM&&num2iso(HM.date)===todayISO;
   const mode=HM?HM.moiMode:'0-6h', afternoon=mode==='0-12h';
-  const partialDay=!!(hmToday&&HM.accFrom!=null&&HM.accFrom>8);   // Action mới bắt đầu cộng dồn mã đơn muộn → số hôm nay chưa đủ, KHÔNG so với TB (tránh số giả)
+  const earlyDay=!!(hmToday&&HM.hourVN!=null&&HM.hourVN<7);   // trước 07h hàng 0-6h còn đang về, chưa chốt
+  const partialDay=!!(hmToday&&((HM.accFrom!=null&&HM.accFrom>8)||earlyDay));   // Action mới bắt đầu cộng dồn mã đơn muộn → số hôm nay chưa đủ, KHÔNG so với TB (tránh số giả)
   const yest=HM&&HM.yesterday&&HM.yesterday.hubs?{iso:num2iso(HM.yesterday.date),hubs:HM.yesterday.hubs}:null;
   // ---- số theo BC ----
   const rows=names.map(bc=>{
@@ -5264,7 +5265,7 @@ async function buildHangVePage(){
   const deltaCell=(o,isTot)=>{
    const x=o.val[todayISO]; const basis=afternoon?o.tb:o.tbC1;
    const base='text-align:center;padding:6px 10px;font-size:12.5px;border-bottom:1px solid var(--border);white-space:nowrap;'+(isTot?'font-weight:800;':'');
-   if(partialDay&&x&&!x.fut)return `<td title="Số hôm nay mới tích lũy từ ${HM.accFrom}h — chưa đủ cả ngày nên chưa so với TB" style="${base}color:var(--text-sub);font-style:italic">chưa đủ</td>`;
+   if(partialDay&&x&&!x.fut)return `<td title="${earlyDay?'Hàng 0-6h đang về, chốt sau 07h nên chưa so với TB':'Số hôm nay mới tích lũy từ '+HM.accFrom+'h — chưa đủ cả ngày nên chưa so với TB'}" style="${base}color:var(--text-sub);font-style:italic">chưa đủ</td>`;
    if(!x||x.fut||x.v==null||!basis)return `<td style="${base}color:var(--text-sub);font-style:italic">—</td>`;
    const p=(x.v/basis-1)*100;
    return `<td title="So với TB ${wPrev}${afternoon?' cả ngày':' hàng 0-6h'}: ${nf(basis)} đơn/ngày" style="${base}font-weight:800;color:${p>=0?'#B91C1C':'#15803D'}">${p>=0?'▲':'▼'} ${pcs(p)}</td>`;
