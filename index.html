@@ -5267,9 +5267,9 @@ async function buildHangVePage(){
    if(partialDay&&x&&!x.fut)return `<td title="Số hôm nay mới tích lũy từ ${HM.accFrom}h — chưa đủ cả ngày nên chưa so với TB" style="${base}color:var(--text-sub);font-style:italic">chưa đủ</td>`;
    if(!x||x.fut||x.v==null||!basis)return `<td style="${base}color:var(--text-sub);font-style:italic">—</td>`;
    const p=(x.v/basis-1)*100;
-   return `<td title="So với TB ${wPrev}${afternoon?' (Ca 1+2)':' (Ca 1)'}: ${nf(basis)} đơn/ngày" style="${base}font-weight:800;color:${p>=0?'#B91C1C':'#15803D'}">${p>=0?'▲':'▼'} ${pcs(p)}</td>`;
+   return `<td title="So với TB ${wPrev}${afternoon?' cả ngày':' hàng 0-6h'}: ${nf(basis)} đơn/ngày" style="${base}font-weight:800;color:${p>=0?'#B91C1C':'#15803D'}">${p>=0?'▲':'▼'} ${pcs(p)}</td>`;
   };
-  const head=(first)=>`<tr><th ${TH}>${first}</th><th ${TH}>Volume hàng mới<br>TB ${wPrev}</th>${days.map(d=>`<th ${d===todayISO?THT:TH}>Volume hàng mới<br>${fD(d)}${d===todayISO?'<br>(hôm nay)':''}</th>`).join('')}<th ${TH}>Tăng giảm Ngày<br>(hiện tại) / TB ${wPrev}<br><span style="font-weight:500;font-size:10.5px">${afternoon?'so TB Ca 1+2':'so TB Ca 1 (mới tính 0-6h)'}</span></th></tr>`;
+  const head=(first)=>`<tr><th ${TH}>${first}</th><th ${TH}>Volume hàng mới<br>TB ${wPrev}</th>${days.map(d=>`<th ${d===todayISO?THT:TH}>Volume hàng mới<br>${fD(d)}${d===todayISO?'<br>(hôm nay)':''}</th>`).join('')}<th ${TH}>Tăng giảm Ngày<br>(hiện tại) / TB ${wPrev}<br><span style="font-weight:500;font-size:10.5px">${afternoon?'so TB cả ngày '+wPrev:'so TB hàng 0-6h '+wPrev+' (cùng mốc)'}</span></th></tr>`;
   const body=(list,isTot,rowTitle)=>list.map((o,i)=>{
    const tot=isTot&&i===list.length-1;
    return `<tr title="${esc(rowTitle?rowTitle(o):'')}"><td ${TDL}${tot?' ':''}>${tot?'<b>':''}${esc(o.name)}${tot?'</b>':''}</td><td style="text-align:center;padding:6px 10px;font-size:12.5px;border-bottom:1px solid var(--border);white-space:nowrap;${tot?'font-weight:800;':'font-weight:600;'}">${o.tb==null?'<span style="color:var(--text-sub);font-style:italic">Chưa có</span>':nf(o.tb)}</td>${days.map(d=>cell(o.val[d],d,tot)).join('')}${deltaCell(o,tot)}</tr>`;
@@ -5285,7 +5285,7 @@ async function buildHangVePage(){
   const L=[];
   if(tv&&tv.v!=null){
    L.push(`<b>Ngày ${fD(todayISO)} (mốc ${mode}, quét lúc ${esc(updStr)}):</b> tổng đơn mới <b>${nf(tv.v)} đơn</b> — ${nBcToday}/${rows.length} Bưu Cục có số.`);
-   if(tBasis&&!partialDay)L.push(`So với TB ${wPrev} (${afternoon?'Ca 1+2':'Ca 1'}) ${nf(tBasis)} đơn/ngày: <b style="color:${tv.v>=tBasis?'#B91C1C':'#15803D'}">${pcs((tv.v/tBasis-1)*100)}</b> (${tv.v>=tBasis?'+':'−'}${nf(Math.abs(tv.v-tBasis))} đơn).`);
+   if(tBasis&&!partialDay)L.push(`So với TB ${wPrev} (${afternoon?'cả ngày':'hàng 0-6h, cùng mốc'}) ${nf(tBasis)} đơn/ngày: <b style="color:${tv.v>=tBasis?'#B91C1C':'#15803D'}">${pcs((tv.v/tBasis-1)*100)}</b> (${tv.v>=tBasis?'+':'−'}${nf(Math.abs(tv.v-tBasis))} đơn).`);
    if(!afternoon)L.push('Trước 14h mới tính hàng nhập 0-6h nên số trong ngày còn thấp hơn cả ngày; từ 14h tính thêm 6-12h.');
    if(HM&&HM.accFrom!=null&&HM.accFrom>7)L.push('<span style="color:#B45309">Lưu ý: số hôm nay mới tích lũy mã đơn từ '+HM.accFrom+'h nên có thể thiếu hàng đã giao xong trước giờ đó; từ ngày sau tích lũy từ 07h sẽ đủ.</span>');
    if(!partialDay&&amD.length>1)L.push(`AM tăng nhiều nhất: <b>${esc(amD[0].n)}</b> (${pcs(amD[0].p)}, ${nf(amD[0].v)} đơn) · AM giảm nhiều nhất: <b>${esc(amD[amD.length-1].n)}</b> (${pcs(amD[amD.length-1].p)}, ${nf(amD[amD.length-1].v)} đơn).`);
