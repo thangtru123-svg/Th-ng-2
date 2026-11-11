@@ -5747,7 +5747,7 @@ async function buildThuNhapPage(){
     <div class="page-meta"><span class="tag tag-orange">Nguồn: sheet Luong_NVBC · lọc 2 tỉnh (QNI + LSO)</span><span>Đơn giao/lấy = đơn tính lương · Tổng lương cột O</span></div></div>
    <div class="date-filter-bar" style="flex-wrap:wrap;gap:8px 14px">
     <label>AM:</label><select id="tn_am" onchange="tnAMChange()">${amOpts}</select>
-    <label>Bưu Cục:</label><select id="tn_bc" onchange="renderThuNhap()"><option value="">Tất cả Bưu Cục</option></select>
+    <label>Bưu Cục:</label><div style="position:relative"><input id="tn_bcq" type="text" autocomplete="off" placeholder="🔍 Gõ tên để tìm Bưu Cục…" oninput="tnBCFilter()" onfocus="this.select();tnBCFilter()" style="width:230px;padding:5px 10px;border-radius:6px;border:1px solid var(--border);font-size:12px;font-family:inherit;background:#fff;color:var(--text-main)"><input type="hidden" id="tn_bc" value=""><div id="tn_bcl" style="display:none;position:absolute;top:calc(100% + 2px);left:0;min-width:100%;max-height:320px;overflow-y:auto;background:#fff;border:1px solid var(--border);border-radius:8px;box-shadow:0 6px 20px rgba(0,0,0,.15);z-index:60"></div></div>
     <label>Từ ngày:</label><select id="tn_from" onchange="renderThuNhap()">${dOpts}</select>
     <label>Đến ngày:</label><select id="tn_to" onchange="renderThuNhap()">${dOpts}</select>
    </div>
@@ -5760,9 +5760,29 @@ function tnAMChange(){
  const esc=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
  const am=document.getElementById('tn_am').value;
  const bcs=[...new Set(T.rows.filter(o=>!am||o.am.split(', ').includes(am)).map(o=>o.bc))].sort((a,b)=>a.localeCompare(b,'vi'));
- document.getElementById('tn_bc').innerHTML='<option value="">Tất cả Bưu Cục</option>'+bcs.map(b=>`<option value="${esc(b)}">${esc(b)}</option>`).join('');
+ window._TN_BCS=bcs; document.getElementById('tn_bc').value=''; document.getElementById('tn_bcq').value='';
  renderThuNhap();
 }
+/* Ô tìm Bưu Cục (gõ để lọc danh sách) thay cho <select> dài khó dò */
+function tnBCFilter(){
+ const T=window._TN; if(!T)return;
+ const box=document.getElementById('tn_bcl'), cur=document.getElementById('tn_bc').value;
+ let q=(document.getElementById('tn_bcq').value||'').trim().toLowerCase(); if(cur&&q===cur.toLowerCase())q='';   // đang hiện tên đã chọn → mở ra thấy đủ danh sách
+ const esc=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+ const bcs=(window._TN_BCS||[]).filter(b=>!q||b.toLowerCase().includes(q)||b.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/đ/g,'d').includes(q.normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/đ/g,'d')));
+ const it=(v,t,on)=>`<div data-v="${esc(v)}" onmousedown="event.preventDefault();tnBCPick(this.dataset.v)" style="padding:7px 12px;font-size:12.5px;cursor:pointer;${on?'background:#FFF1E6;font-weight:700;':''}" onmouseover="this.style.background='#FFF7ED'" onmouseout="this.style.background='${on?'#FFF1E6':''}'">${esc(t)}</div>`;
+ box.innerHTML=(q?'':it('','Tất cả Bưu Cục',cur===''))+(bcs.length?bcs.map(b=>it(b,b,b===cur)).join(''):'<div style="padding:8px 12px;font-size:12px;color:var(--text-sub)">Không có Bưu Cục khớp</div>');
+ box.style.display='block';
+}
+function tnBCPick(v){
+ document.getElementById('tn_bc').value=v;
+ document.getElementById('tn_bcq').value=v;
+ document.getElementById('tn_bcl').style.display='none';
+ document.getElementById('tn_bcq').blur();
+ renderThuNhap();
+}
+if(!window._tnBCDoc){window._tnBCDoc=1;document.addEventListener('mousedown',e=>{const b=document.getElementById('tn_bcl');if(!b||b.style.display==='none')return;if(e.target.id==='tn_bcq'||b.contains(e.target))return;b.style.display='none';const q=document.getElementById('tn_bcq');if(q)q.value=document.getElementById('tn_bc').value;});
+ document.addEventListener('keydown',e=>{if(e.key==='Enter'&&document.activeElement&&document.activeElement.id==='tn_bcq'){const f=document.querySelector('#tn_bcl [data-v]');if(f){const v=document.getElementById('tn_bcq').value.trim()===''?'':f.dataset.v;tnBCPick(v);}}});}
 function renderThuNhap(){
  const T=window._TN; if(!T)return;
  const esc=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
