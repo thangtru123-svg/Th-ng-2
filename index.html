@@ -5208,6 +5208,7 @@ async function buildHangVePage(){
   // ---- hôm nay (realtime) + hôm qua dự phòng ----
   const hmToday=HM&&num2iso(HM.date)===todayISO;
   const mode=HM?HM.moiMode:'0-6h', afternoon=mode==='0-12h';
+  const partialDay=!!(hmToday&&HM.accFrom!=null&&HM.accFrom>8);   // Action mới bắt đầu cộng dồn mã đơn muộn → số hôm nay chưa đủ, KHÔNG so với TB (tránh số giả)
   const yest=HM&&HM.yesterday&&HM.yesterday.hubs?{iso:num2iso(HM.yesterday.date),hubs:HM.yesterday.hubs}:null;
   // ---- số theo BC ----
   const rows=names.map(bc=>{
@@ -5263,6 +5264,7 @@ async function buildHangVePage(){
   const deltaCell=(o,isTot)=>{
    const x=o.val[todayISO]; const basis=afternoon?o.tb:o.tbC1;
    const base='text-align:center;padding:6px 10px;font-size:12.5px;border-bottom:1px solid var(--border);white-space:nowrap;'+(isTot?'font-weight:800;':'');
+   if(partialDay&&x&&!x.fut)return `<td title="Số hôm nay mới tích lũy từ ${HM.accFrom}h — chưa đủ cả ngày nên chưa so với TB" style="${base}color:var(--text-sub);font-style:italic">chưa đủ</td>`;
    if(!x||x.fut||x.v==null||!basis)return `<td style="${base}color:var(--text-sub);font-style:italic">—</td>`;
    const p=(x.v/basis-1)*100;
    return `<td title="So với TB ${wPrev}${afternoon?' (Ca 1+2)':' (Ca 1)'}: ${nf(basis)} đơn/ngày" style="${base}font-weight:800;color:${p>=0?'#B91C1C':'#15803D'}">${p>=0?'▲':'▼'} ${pcs(p)}</td>`;
@@ -5283,11 +5285,11 @@ async function buildHangVePage(){
   const L=[];
   if(tv&&tv.v!=null){
    L.push(`<b>Ngày ${fD(todayISO)} (mốc ${mode}, quét lúc ${esc(updStr)}):</b> tổng đơn mới <b>${nf(tv.v)} đơn</b> — ${nBcToday}/${rows.length} Bưu Cục có số.`);
-   if(tBasis)L.push(`So với TB ${wPrev} (${afternoon?'Ca 1+2':'Ca 1'}) ${nf(tBasis)} đơn/ngày: <b style="color:${tv.v>=tBasis?'#B91C1C':'#15803D'}">${pcs((tv.v/tBasis-1)*100)}</b> (${tv.v>=tBasis?'+':'−'}${nf(Math.abs(tv.v-tBasis))} đơn).`);
+   if(tBasis&&!partialDay)L.push(`So với TB ${wPrev} (${afternoon?'Ca 1+2':'Ca 1'}) ${nf(tBasis)} đơn/ngày: <b style="color:${tv.v>=tBasis?'#B91C1C':'#15803D'}">${pcs((tv.v/tBasis-1)*100)}</b> (${tv.v>=tBasis?'+':'−'}${nf(Math.abs(tv.v-tBasis))} đơn).`);
    if(!afternoon)L.push('Trước 14h mới tính hàng nhập 0-6h nên số trong ngày còn thấp hơn cả ngày; từ 14h tính thêm 6-12h.');
    if(HM&&HM.accFrom!=null&&HM.accFrom>7)L.push('<span style="color:#B45309">Lưu ý: số hôm nay mới tích lũy mã đơn từ '+HM.accFrom+'h nên có thể thiếu hàng đã giao xong trước giờ đó; từ ngày sau tích lũy từ 07h sẽ đủ.</span>');
-   if(amD.length>1)L.push(`AM tăng nhiều nhất: <b>${esc(amD[0].n)}</b> (${pcs(amD[0].p)}, ${nf(amD[0].v)} đơn) · AM giảm nhiều nhất: <b>${esc(amD[amD.length-1].n)}</b> (${pcs(amD[amD.length-1].p)}, ${nf(amD[amD.length-1].v)} đơn).`);
-   if(bcD.length>1)L.push(`BC tăng nhiều nhất: <b>${esc(bcD[0].n)}</b> (${pcs(bcD[0].p)}) · BC giảm nhiều nhất: <b>${esc(bcD[bcD.length-1].n)}</b> (${pcs(bcD[bcD.length-1].p)}).`);
+   if(!partialDay&&amD.length>1)L.push(`AM tăng nhiều nhất: <b>${esc(amD[0].n)}</b> (${pcs(amD[0].p)}, ${nf(amD[0].v)} đơn) · AM giảm nhiều nhất: <b>${esc(amD[amD.length-1].n)}</b> (${pcs(amD[amD.length-1].p)}, ${nf(amD[amD.length-1].v)} đơn).`);
+   if(!partialDay&&bcD.length>1)L.push(`BC tăng nhiều nhất: <b>${esc(bcD[0].n)}</b> (${pcs(bcD[0].p)}) · BC giảm nhiều nhất: <b>${esc(bcD[bcD.length-1].n)}</b> (${pcs(bcD[bcD.length-1].p)}).`);
   }else{
    L.push(`<b>Ngày ${fD(todayISO)}:</b> chưa có số realtime (Action quét 30 phút/lần chưa ghi số hôm nay) — các ngày quá khứ lấy từ Sheet.`);
   }
