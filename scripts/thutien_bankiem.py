@@ -24,13 +24,13 @@ os.makedirs(OUT, exist_ok=True)
 EVENT = os.environ.get('GITHUB_EVENT_NAME', '')
 
 vnow = lambda: datetime.datetime.utcnow() + datetime.timedelta(hours=7)
-# ---- Khung chốt 22h55–00h45 VN. Lịch GitHub hay trễ hàng giờ → bản bắn đúng giờ do cron ngoài (cron-job.org) gọi /api/xbg-refresh ~23h rồi dispatch workflow này (giống cod-chot) ----
+# ---- Khung chốt 23h00–23h30 VN (cho phép run bắt đầu trễ tới 23h45). Lịch GitHub hay trễ hàng giờ → bản bắn đúng giờ do cron ngoài (cron-job.org) gọi /api/xbg-refresh ~23h rồi dispatch workflow này (giống cod-chot) ----
 _n = vnow(); _m = _n.hour * 60 + _n.minute
-IN_WIN = (_m >= 22 * 60 + 55) or (_m < 45)
+IN_WIN = (23 * 60 <= _m < 23 * 60 + 45)   # khung chốt đại nhân đặt: quét trong 23h00–23h30 (nới tới 23h45 vì workflow khởi động trễ vài phút sau khi cron ngoài kích hoạt)
 _dd = (_n - datetime.timedelta(days=1)) if _n.hour < 6 else _n
 GROUP_MODE = (not DRY) and (bool(os.environ.get('TG_CHAT')) or (EVENT in ('schedule', 'workflow_dispatch') and IN_WIN))   # trong khung → bắn nhóm; chạy tay NGOÀI khung = chạy thử → chỉ DM @thangquada
 if EVENT == 'schedule' and not IN_WIN and not DRY:
-    print(f'[thutien] lịch GitHub chạy TRỄ quá khung 22h55–00h45 (bây giờ {_n:%H:%M}) → bỏ qua, không bắn.'); sys.exit(0)
+    print(f'[thutien] lịch GitHub chạy TRỄ quá khung 23h00–23h45 (bây giờ {_n:%H:%M}) → bỏ qua, không bắn.'); sys.exit(0)
 if GROUP_MODE:
     try: _prev = json.load(open(os.path.join(ROOT, 'data_thutien', _dd.strftime('%Y-%m-%d') + '.json'), encoding='utf-8'))
     except Exception: _prev = {}
