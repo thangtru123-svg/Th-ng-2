@@ -24,12 +24,20 @@ os.makedirs(OUT, exist_ok=True)
 EVENT = os.environ.get('GITHUB_EVENT_NAME', '')
 
 vnow = lambda: datetime.datetime.utcnow() + datetime.timedelta(hours=7)
-# Lịch GitHub hay trễ: chạy cron sớm (22h47) rồi CHỜ tới 23h00 mới quét để số liệu đúng mốc 23h
-if EVENT == 'schedule' and not DRY:
-    n = vnow(); tgt = n.replace(hour=23, minute=0, second=5, microsecond=0)
-    if n.hour >= 22 and n < tgt:
-        w = (tgt - n).total_seconds()
-        if w <= 20 * 60: print(f'[thutien] chờ {int(w)}s tới 23h00'); time.sleep(w)
+# ---- Khung chốt 22h55–00h45 VN. Lịch GitHub hay trễ hàng giờ → bản bắn đúng giờ do cron ngoài (cron-job.org) gọi /api/xbg-refresh ~23h rồi dispatch workflow này (giống cod-chot) ----
+_n = vnow(); _m = _n.hour * 60 + _n.minute
+IN_WIN = (_m >= 22 * 60 + 55) or (_m < 45)
+_dd = (_n - datetime.timedelta(days=1)) if _n.hour < 6 else _n
+GROUP_MODE = (not DRY) and (bool(os.environ.get('TG_CHAT')) or (EVENT in ('schedule', 'workflow_dispatch') and IN_WIN))   # trong khung → bắn nhóm; chạy tay NGOÀI khung = chạy thử → chỉ DM @thangquada
+if EVENT == 'schedule' and not IN_WIN and not DRY:
+    print(f'[thutien] lịch GitHub chạy TRỄ quá khung 22h55–00h45 (bây giờ {_n:%H:%M}) → bỏ qua, không bắn.'); sys.exit(0)
+if GROUP_MODE:
+    try: _prev = json.load(open(os.path.join(ROOT, 'data_thutien', _dd.strftime('%Y-%m-%d') + '.json'), encoding='utf-8'))
+    except Exception: _prev = {}
+    if _prev.get('sentGroup') and not os.environ.get('TG_CHAT'):
+        print(f'[thutien] ngày {_dd:%Y-%m-%d} ĐÃ bắn nhóm rồi → không bắn lần 2.'); sys.exit(0)
+    _tgt = _n.replace(hour=23, minute=0, second=5, microsecond=0)
+    if _n < _tgt and (_tgt - _n).total_seconds() <= 10 * 60: print('[thutien] chờ tới 23h00'); time.sleep((_tgt - _n).total_seconds())
 
 HUBS = [h for h in json.load(open(os.path.join(ROOT, 'hub_map_bc.json'), encoding='utf-8')) if h['tinh'] in TINH]
 BASE = 'https://nhanh-api.ghn.vn/api/lastmile/order/get-collect-scan-orders'
@@ -178,9 +186,8 @@ def tg(method, fields, files=None):
 
 [print(re.sub(r'<[^>]+>', '', c) + '\n-----') for _, c in PARTS] or print(re.sub(r'<[^>]+>', '', CAP))
 if DRY: print('DRY — không gửi'); sys.exit(0)
-chat = TG_GROUP
-# Chạy tay (workflow_dispatch) = chạy thử → chỉ gửi riêng @thangquada, trừ khi đặt TG_CHAT
-if EVENT == 'workflow_dispatch' and not os.environ.get('TG_CHAT'): chat = TG_ADMIN; print('[thutien] CHẠY THỬ → gửi riêng @thangquada')
+chat = TG_GROUP if GROUP_MODE else TG_ADMIN
+if not GROUP_MODE: print('[thutien] CHẠY THỬ (ngoài khung chốt) → gửi riêng @thangquada')
 # Không có dòng nào + không lỗi = có thể thật sự xong hết, nhưng cũng là dấu hiệu token trả rỗng → không tự khẳng định với nhóm, chỉ báo @thangquada kiểm tra
 if n_rows == 0 and chat == TG_GROUP:
     chat = TG_ADMIN; CAP = 'KIỂM TRA: quét Thu tiền - Bắn kiểm ra 0 dòng ở cả ' + str(hubs_ok) + ' BC. Có thể toàn vùng đã xong, cũng có thể token GHN trả rỗng — đại nhân xem lại rồi mới báo nhóm.\n' + CAP
@@ -189,3 +196,7 @@ for i, (img, cap) in enumerate(PARTS):
     sent.append(tg('sendPhoto', {'chat_id': chat, 'caption': (cap + (ERR_LN if i == 0 else ''))[:1020]}, {'photo': (os.path.basename(img), open(img, 'rb').read(), 'image/png')}).get('ok'))
 if not PARTS: sent.append(tg('sendMessage', {'chat_id': chat, 'text': CAP}).get('ok'))
 print('[thutien] đã gửi', sent)
+if chat == TG_GROUP and sent and all(sent):   # đánh dấu đã bắn nhóm hôm nay → lần dispatch/lịch thứ 2 không bắn lại
+    doc['sentGroup'] = True
+    for pth in (os.path.join(ROOT, 'thutien_bankiem.json'), os.path.join(ROOT, 'data_thutien', DAY + '.json')):
+        json.dump(doc, open(pth, 'w', encoding='utf-8'), ensure_ascii=False, separators=(',', ':'))

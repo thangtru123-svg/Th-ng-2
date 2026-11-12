@@ -30,7 +30,20 @@ export default async function handler(req, res) {
         cod = r2.status;
       }
     } catch (e) { cod = 'err'; }
-    if (r.status === 204) { res.status(200).json({ ok: true, codChot: cod }); }
+    // Thu tiền - Bắn kiểm (23h): cùng cơ chế — cron ngoài gọi endpoint này trong khung 22h55–23h50 VN → dispatch thutien-bankiem (script tự chờ tới 23h00, tự chống bắn trùng trong ngày).
+    let tt = null;
+    try {
+      const vn2 = new Date(Date.now() + 7 * 3600 * 1000); const m2 = vn2.getUTCHours() * 60 + vn2.getUTCMinutes();
+      if (m2 >= 22 * 60 + 55 && m2 <= 23 * 60 + 50) {
+        const r3 = await fetch('https://api.github.com/repos/thangtru123-svg/Th-ng-2/actions/workflows/thutien-bankiem.yml/dispatches', {
+          method: 'POST',
+          headers: { 'Authorization': 'Bearer ' + token, 'Accept': 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28', 'User-Agent': 'tbb-live', 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ref: 'main' })
+        });
+        tt = r3.status;
+      }
+    } catch (e) { tt = 'err'; }
+    if (r.status === 204) { res.status(200).json({ ok: true, codChot: cod, thuTien: tt }); }
     else { const t = await r.text(); res.status(502).json({ ok: false, status: r.status, body: t.slice(0, 200) }); }
   } catch (e) {
     res.status(500).json({ ok: false, error: String(e && e.message || e) });
