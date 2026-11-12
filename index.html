@@ -5130,7 +5130,7 @@ async function buildTinhHinhBCPage(){
   const vn=v=>Math.round(v).toLocaleString('vi-VN');
   const nSend=rows.filter(r=>r.send).length;
   const kpi=(l,v,c)=>`<div style="flex:1;min-width:140px;background:var(--card);border:1px solid var(--border);border-top:3px solid ${c};border-radius:12px;padding:12px 14px;text-align:center"><div style="font-size:11px;font-weight:700;color:var(--text-sub);text-transform:uppercase;letter-spacing:.4px">${l}</div><div style="font-size:26px;font-weight:800;color:${c};line-height:1.1;margin-top:3px">${v}</div></div>`;
-  let h=`<div class="page-header"><div class="page-title">📋 Tình hình Bưu Cục (N-1)</div><div class="page-meta"><span class="tag tag-orange">📅 N-1 = ${fD(latest)}</span><span class="tag" style="background:#FEE2E2;color:#B91C1C;font-weight:700">Chỉ bắn BC có %GTC Total &lt; ${TINHHINH_NGUONG}%</span><button class="tg-inpage-btn" style="background:#16A34A;border-color:#16A34A" onclick="buildTinhHinhBCPage()">🔄 Tải lại</button><button class="tg-inpage-btn" onclick="sendTinhHinhBCToTelegram(this)">📤 Bắn TG @anhthuvu123</button></div></div>`;
+  let h=`<div class="page-header"><div class="page-title">📋 Tình hình Bưu Cục (N-1)</div><div class="page-meta"><span class="tag tag-orange">📅 N-1 = ${fD(latest)}</span><span class="tag" style="background:#FEE2E2;color:#B91C1C;font-weight:700">Chỉ bắn BC có %GTC Total &lt; ${TINHHINH_NGUONG}% (bấm tay khi không có BC nào &lt; ${TINHHINH_NGUONG}% → bắn toàn bộ)</span><button class="tg-inpage-btn" style="background:#16A34A;border-color:#16A34A" onclick="buildTinhHinhBCPage()">🔄 Tải lại</button><button class="tg-inpage-btn" onclick="sendTinhHinhBCToTelegram(this)">📤 Bắn TG @anhthuvu123</button></div></div>`;
   h+=`<div style="display:flex;gap:11px;flex-wrap:wrap;margin-bottom:16px">${kpi('BC theo dõi',rows.length,'#1F3864')}${kpi('Sẽ bắn (&lt;'+TINHHINH_NGUONG+'%)',nSend,'var(--red)')}${kpi('Không bắn (≥'+TINHHINH_NGUONG+'%)',rows.length-nSend,'#16A34A')}</div>`;
   const line=(l,v)=>`<div style="padding:5px 0;border-bottom:1px dashed var(--border);font-size:13px;line-height:1.5"><span style="color:var(--text-sub)">• ${l}:</span> ${v}</div>`;
   const fill='<span style="color:#9CA3AF;font-style:italic">( Tự điền )</span>';
@@ -5327,13 +5327,13 @@ async function buildHangVePage(){
 }
 
 /* Dựng các tin TEXT (mỗi BC <60% = 1 tin) theo format đại nhân chốt */
-function _tinhHinhMsgs(){
+function _tinhHinhMsgs(all){   // all=true: bấm tay khi không có BC nào <60% → bắn toàn bộ BC có dữ liệu
  const T=window._TINHHINH; if(!T)return[];
  const esc=t=>String(t==null?'':t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
  const fD=iso=>{const p=(iso||'').split('-');return p.length===3?`${p[2]}/${p[1]}`:'—';};
  const pc=v=>v==null?'—':v.toFixed(1).replace('.',',')+'%';
  const vn=v=>Math.round(v).toLocaleString('vi-VN');
- return T.rows.filter(r=>!r.noData&&r.send).map(r=>{
+ return T.rows.filter(r=>!r.noData&&(all||r.send)).map(r=>{
   const dlt=r.pgPrev==null?null:r.pg-r.pgPrev;
   const cmp=dlt==null?'không có dữ liệu ngày N-2':`${dlt<0?'Giảm':'Tăng'} ${Math.abs(dlt).toFixed(1).replace('.',',')}% (${pc(r.pg)} so với ${pc(r.pgPrev)})`;
   const nvBd=r.nvPrev==null?'':` (ngày N-2: ${r.nvPrev} NV)`;
@@ -5357,14 +5357,18 @@ async function sendTinhHinhBCToTelegram(btn,silent){
   if(!TG_ANHTHU_ID)throw new Error('Chưa có chat_id của @anhthuvu123 — chị cần nhắn /start cho @thangtru_bot một lần để bot được phép gửi riêng.');
   if(!window._TINHHINH)await buildTinhHinhBCPage();
   if(!window._TINHHINH)throw new Error('chưa tải xong dữ liệu');
-  const msgs=_tinhHinhMsgs();
-  if(!msgs.length){if(!silent)alert('Không có Bưu Cục nào có %GTC Total N-1 < '+TINHHINH_NGUONG+'% — không bắn gì.');return {ok:true,n:0};}
+  let msgs=_tinhHinhMsgs(), allMode=false;
+  if(!msgs.length){
+   if(silent)return {ok:true,n:0};                       // "Bắn tất cả" tự động: không có BC <60% thì không bắn
+   msgs=_tinhHinhMsgs(true); allMode=true;               // bấm tay: đại nhân vẫn muốn bắn → gửi toàn bộ BC có dữ liệu
+   if(!msgs.length){alert('Không có dữ liệu N-1 của Bưu Cục nào — không bắn gì.');return {ok:true,n:0};}
+  }
   for(const m of msgs){
    const res=await _tgSend(TG_ANHTHU_ID,undefined,m);
    if(!res||!res.ok)throw new Error((res&&res.description)||'TG lỗi');
    await new Promise(r=>setTimeout(r,600));
   }
-  if(!silent)alert('✅ Đã bắn '+msgs.length+' tin (BC có %GTC Total N-1 < '+TINHHINH_NGUONG+'%) cho @anhthuvu123.');
+  if(!silent)alert('✅ Đã bắn '+msgs.length+' tin '+(allMode?'(không có BC nào < '+TINHHINH_NGUONG+'% — bắn toàn bộ BC theo lệnh bấm tay)':'(BC có %GTC Total N-1 < '+TINHHINH_NGUONG+'%)')+' cho @anhthuvu123.');
   return {ok:true,n:msgs.length};
  }catch(e){ if(silent)throw e; alert('Lỗi bắn TG: '+e.message); }
  finally{ if(btn){btn.disabled=false;btn.textContent=_t||'📤 Bắn TG @anhthuvu123';} }
