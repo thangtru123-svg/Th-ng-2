@@ -105,8 +105,9 @@ for h in HUBROWS:
     if b: BK.append({'am': h['am'], 'bc': h['name'], 'nv': len(b), 'luu': sum(r['banKiem']['luuKho'] for r in b), 'scan': sum(r['banKiem']['canBan'] for r in b), 'ten': [r['nv'] for r in sorted(b, key=lambda r: -(r['banKiem']['luuKho'] + r['banKiem']['canBan']))]})
 PT.sort(key=lambda x: (x['am'], -x['tien'])); BK.sort(key=lambda x: (x['am'], -(x['luu'] + x['scan'])))
 
+PUB = [{**h, 'rows': [{k: v for k, v in r.items() if k not in ('idnv', 'nv', 'trip')} for r in h['rows']]} for h in HUBROWS]   # file json công khai trên web → bỏ tên/mã NV, chỉ giữ số đơn + số tiền
 doc = {'date': DAY, 'updatedAt': datetime.datetime.utcnow().replace(microsecond=0).isoformat() + 'Z', 'scope': 'LSO+QNI', 'hubsTotal': len(HUBROWS), 'hubsOk': hubs_ok,
-       'hubs': [h for h in HUBROWS if h['rows'] or h.get('err')], 'allHubs': [{'name': h['name'], 'am': h['am'], 'tinh': h['tinh']} for h in HUBROWS]}
+       'hubs': [h for h in PUB if h['rows'] or h.get('err')], 'allHubs': [{'name': h['name'], 'am': h['am'], 'tinh': h['tinh']} for h in HUBROWS]}
 if DRY: json.dump(doc, open(os.path.join(OUT, 'thutien_bankiem.json'), 'w', encoding='utf-8'), ensure_ascii=False, separators=(',', ':'))
 if not DRY:
     json.dump(doc, open(os.path.join(ROOT, 'thutien_bankiem.json'), 'w', encoding='utf-8'), ensure_ascii=False, separators=(',', ':'))
