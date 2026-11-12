@@ -1,0 +1,47 @@
+name: Thu tien - Ban kiem 23h
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '47 15 * * *'   # ~22h47 gio VN: script tu cho toi 23h00 roi moi quet (GitHub hay tre), mot lan/ngay
+concurrency:
+  group: thutien-bankiem
+  cancel-in-progress: false
+permissions:
+  contents: write
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Cai thu vien (playwright chup anh bang chinh ma ve cua dashboard)
+        run: |
+          pip install playwright
+          python -m playwright install chromium
+      - name: Quet Thu tien - Ban kiem 32 BC (LSO+QNI) + ban Telegram topic Van de chung
+        env:
+          GHN_SESSION: ${{ secrets.GHN_SESSION }}
+        run: python scripts/thutien_bankiem.py
+      - name: Luu du lieu vao repo (dashboard p53 doc thutien_bankiem.json)
+        run: |
+          git config user.name "thutien-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add thutien_bankiem.json data_thutien
+          if git diff --cached --quiet; then
+            echo "Khong co thay doi"
+          else
+            git commit -m "data(thutien): Thu tien - Ban kiem $(date -u +'%Y-%m-%d %H:%M')Z"
+            for i in 1 2 3; do
+              git pull --rebase origin main && git push && break
+              echo "push loi, thu lai ($i)"; sleep 5
+            done
+          fi
+      - name: Bao loi cho Thang neu that bai
+        if: failure()
+        run: |
+          curl -s -X POST "https://api.telegram.org/bot7471088067:AAGje2KrjUTzlkIiU05h1bm21IUkB0J2J0s/sendMessage" \
+            -d chat_id=1747498029 \
+            --data-urlencode "text=Quet Thu tien - Ban kiem 23h BI LOI (co the token GHN het han hoac GHN loi). Xem log: https://github.com/thangtru123-svg/Th-ng-2/actions"
