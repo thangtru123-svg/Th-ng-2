@@ -233,6 +233,7 @@ tr.tot td{background:#FFF0EB!important;font-weight:800!important;border-top:2px 
  <button class="nav-item" onclick="show('p52',this)" style="background:linear-gradient(135deg,rgba(22,101,52,0.16),rgba(34,197,94,0.1));border:1px solid rgba(22,101,52,0.35);font-weight:700"><span class="icon">📦</span>Báo cáo hàng về Realtime</button>
  <button class="nav-item" onclick="show('p42',this)" style="background:linear-gradient(135deg,rgba(220,38,38,0.16),rgba(241,93,41,0.08));border:1px solid rgba(220,38,38,0.32);font-weight:700"><span class="icon">💰</span>Check COD giá trị cao</button>
  <button class="nav-item" onclick="show('p47',this)" style="background:linear-gradient(135deg,rgba(37,99,235,0.14),rgba(59,130,246,0.08));border:1px solid rgba(37,99,235,0.3);font-weight:700"><span class="icon">📦</span>Đơn TTS COD &lt; 50k</button>
+ <button class="nav-item" onclick="show('p53',this)" style="background:linear-gradient(135deg,rgba(220,38,38,0.16),rgba(241,93,41,0.08));border:1px solid rgba(220,38,38,0.3);font-weight:700"><span class="icon">💵</span>Thu tiền - Bắn kiểm</button>
  <button class="nav-item" onclick="show('p48',this)" style="background:linear-gradient(135deg,rgba(234,88,12,0.16),rgba(249,115,22,0.09));border:1px solid rgba(234,88,12,0.33);font-weight:700"><span class="icon">📋</span>Báo Cáo 1 — Cần giao (ĐK·BG)</button>
  <button class="nav-item" onclick="show('p49',this)" style="background:linear-gradient(135deg,rgba(234,88,12,0.16),rgba(249,115,22,0.09));border:1px solid rgba(234,88,12,0.33);font-weight:700"><span class="icon">📊</span>Báo Cáo 2 — Tồn đọng (ĐK·BG)</button>
  <div class="nav-section">GTC</div>
@@ -275,6 +276,7 @@ tr.tot td{background:#FFF0EB!important;font-weight:800!important;border-top:2px 
 <div class="page" id="p45"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
 <div class="page" id="p46"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
 <div class="page" id="p47"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
+<div class="page" id="p53"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
 <div class="page" id="p48"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
 <div class="page" id="p49"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
 <div class="page" id="p51"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
@@ -5479,6 +5481,60 @@ async function buildTtsCodPage(){
  window._ttsTimer=setInterval(render,30*60*1000);
 }
 
+/* ===== p53 — Thu tiền - Bắn kiểm (chốt 23h, nguồn thutien_bankiem.json do scripts/thutien_bankiem.py ghi) ===== */
+async function buildThuTienPage(){
+ const el=document.getElementById('p53'); if(!el)return;
+ const N=v=>(+v||0).toLocaleString('vi-VN');
+ const tr=v=>((+v||0)/1e6).toLocaleString('vi-VN',{minimumFractionDigits:1,maximumFractionDigits:1})+' tr';
+ const dv=v=>(+v||0).toLocaleString('vi-VN')+' đ';
+ const esc=x=>String(x==null?'':x).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+ const HEAD='<div class="page-header"><div class="page-title">💵 Thu tiền - Bắn kiểm</div></div>';
+ const render=async()=>{
+  try{
+   const r=await fetch('thutien_bankiem.json?t='+Date.now());
+   if(!r.ok){ el.innerHTML=HEAD+'<div class="analysis-box">Chưa có dữ liệu — hệ thống quét lúc 23h hàng ngày (32 Bưu Cục Lạng Sơn + Quảng Ninh), chờ lần quét đầu tiên.</div>'; return; }
+   const d=await r.json();
+   const hubs=d.hubs||[]; const total=d.hubsTotal||0;
+   const upd=new Date(d.updatedAt); const updStr=isNaN(upd)?'—':upd.toLocaleString('vi-VN',{hour:'2-digit',minute:'2-digit',day:'2-digit',month:'2-digit',year:'numeric'});
+   const errHubs=hubs.filter(h=>h.err);
+   const pt=[],bk=[];
+   hubs.forEach(h=>{
+    const a=(h.rows||[]).filter(x=>x.conPhieuThu), b=(h.rows||[]).filter(x=>x.conBanKiem);
+    if(a.length) pt.push({am:h.am,bc:h.name,rows:a.sort((x,y)=>y.phieuThu.tien-x.phieuThu.tien),don:a.reduce((s,x)=>s+x.phieuThu.don,0),tien:a.reduce((s,x)=>s+x.phieuThu.tien,0)});
+    if(b.length) bk.push({am:h.am,bc:h.name,rows:b.sort((x,y)=>(y.banKiem.luuKho+y.banKiem.canBan)-(x.banKiem.luuKho+x.banKiem.canBan)),luu:b.reduce((s,x)=>s+x.banKiem.luuKho,0),scan:b.reduce((s,x)=>s+x.banKiem.canBan,0)});
+   });
+   pt.sort((x,y)=>x.am.localeCompare(y.am,'vi')||y.tien-x.tien); bk.sort((x,y)=>x.am.localeCompare(y.am,'vi')||(y.luu+y.scan)-(x.luu+x.scan));
+   const ptNV=pt.reduce((s,x)=>s+x.rows.length,0), ptDon=pt.reduce((s,x)=>s+x.don,0), ptTien=pt.reduce((s,x)=>s+x.tien,0);
+   const bkNV=bk.reduce((s,x)=>s+x.rows.length,0), bkLuu=bk.reduce((s,x)=>s+x.luu,0), bkScan=bk.reduce((s,x)=>s+x.scan,0);
+   const bothDone=(d.allHubs||[]).filter(h=>!pt.some(x=>x.bc===h.name)&&!bk.some(x=>x.bc===h.name)&&!errHubs.some(e=>e.name===h.name)).map(h=>h.name);
+   const kpi=(t,v,s,c)=>`<div style="flex:1;min-width:170px;background:#fff;border:1px solid var(--border);border-radius:14px;padding:13px 16px;box-shadow:var(--shadow-sm)"><div style="font-size:12px;color:var(--text-sub);font-weight:600">${t}</div><div style="font-size:24px;font-weight:800;color:${c}">${v}</div><div style="font-size:12px;color:var(--text-sub)">${s}</div></div>`;
+   const THS='background:#1F3864;color:#fff;padding:7px 11px;font-size:12px;font-weight:700;white-space:nowrap;text-align:center';
+   const tcS='text-align:center;padding:6px 10px;font-size:12.5px;border-bottom:1px solid var(--border);white-space:nowrap';
+   const tlS='text-align:left;padding:6px 10px;font-size:12.5px;border-bottom:1px solid var(--border);white-space:nowrap';
+   const tlTopS='text-align:left;padding:6px 10px;font-size:12.5px;border-bottom:1px solid var(--border);white-space:nowrap;vertical-align:top;line-height:1.6';
+   const tcTopS=tcS+';vertical-align:top';
+   const emptyOK=t=>`<div class="analysis-box" style="margin:0;background:#ECFDF5;border-left-color:#15803D">🟢 ${t}</div>`;
+   const tblPT=!pt.length?emptyOK('Tất cả Bưu Cục đã tạo xong phiếu thu.'):`<div class="table-wrap" style="overflow-x:auto"><table style="border-collapse:collapse"><thead><tr><th style="${THS}">STT</th><th style="${THS};background:#1F3864;color:#fff;padding:7px 11px;font-size:12px;text-align:left">AM</th><th style="${THS};background:#1F3864;color:#fff;padding:7px 11px;font-size:12px;text-align:left">Bưu Cục</th><th style="${THS}">Số NV chưa tạo</th><th style="${THS}">ĐH cần thu</th><th style="${THS}">Tiền cần thu</th><th style="${THS};background:#1F3864;color:#fff;padding:7px 11px;font-size:12px;text-align:left">Nhân viên (đơn · tiền)</th></tr></thead><tbody>${pt.map((x,i)=>`<tr><td style="${tcS};color:var(--text-sub);text-align:center;padding:6px 10px;font-size:12.5px;border-bottom:1px solid var(--border);vertical-align:top">${i+1}</td><td style="${tlTopS}">${esc(x.am)}</td><td style="${tlTopS};font-weight:600;text-align:left;padding:6px 10px;font-size:12.5px;border-bottom:1px solid var(--border);vertical-align:top;white-space:nowrap">${esc(x.bc)}</td><td style="${tcS};text-align:center;padding:6px 10px;font-size:12.5px;border-bottom:1px solid var(--border);vertical-align:top;font-weight:700">${x.rows.length}</td><td style="${tcS};text-align:center;padding:6px 10px;font-size:12.5px;border-bottom:1px solid var(--border);vertical-align:top">${N(x.don)}</td><td style="${tcS};text-align:center;padding:6px 10px;font-size:12.5px;border-bottom:1px solid var(--border);vertical-align:top;color:#C00000;font-weight:700">${tr(x.tien)}</td><td style="${tlTopS}">${x.rows.map(r=>`${esc(r.nv)} — ${N(r.phieuThu.don)} đơn · ${dv(r.phieuThu.tien)}`).join('<br>')}</td></tr>`).join('')}<tr style="background:#FFF7ED;font-weight:800"><td style="${tcS}"></td><td style="${tlS}">Tổng</td><td style="${tlS}">${pt.length} BC</td><td style="${tcS}">${ptNV}</td><td style="${tcS}">${N(ptDon)}</td><td style="${tcS};text-align:center;padding:6px 10px;font-size:12.5px;border-bottom:1px solid var(--border);color:#C00000">${tr(ptTien)}</td><td style="${tlS}"></td></tr></tbody></table></div>`;
+   const tblBK=!bk.length?emptyOK('Tất cả Bưu Cục đã bắn kiểm xong.'):`<div class="table-wrap" style="overflow-x:auto"><table style="border-collapse:collapse"><thead><tr><th style="${THS}">STT</th><th style="${THS};background:#1F3864;color:#fff;padding:7px 11px;font-size:12px;text-align:left">AM</th><th style="${THS};background:#1F3864;color:#fff;padding:7px 11px;font-size:12px;text-align:left">Bưu Cục</th><th style="${THS}">Số NV chưa bắn kiểm</th><th style="${THS}">ĐH cần lưu kho</th><th style="${THS}">ĐH cần bắn kiểm</th><th style="${THS};background:#1F3864;color:#fff;padding:7px 11px;font-size:12px;text-align:left">Nhân viên (đơn lưu kho · đơn cần bắn kiểm)</th></tr></thead><tbody>${bk.map((x,i)=>`<tr><td style="${tcS};color:var(--text-sub);text-align:center;padding:6px 10px;font-size:12.5px;border-bottom:1px solid var(--border);vertical-align:top">${i+1}</td><td style="${tlTopS}">${esc(x.am)}</td><td style="${tlTopS};font-weight:600;text-align:left;padding:6px 10px;font-size:12.5px;border-bottom:1px solid var(--border);vertical-align:top;white-space:nowrap">${esc(x.bc)}</td><td style="${tcS};text-align:center;padding:6px 10px;font-size:12.5px;border-bottom:1px solid var(--border);vertical-align:top;font-weight:700">${x.rows.length}</td><td style="${tcS};text-align:center;padding:6px 10px;font-size:12.5px;border-bottom:1px solid var(--border);vertical-align:top;color:#B45309;font-weight:700">${N(x.luu)}</td><td style="${tcS};text-align:center;padding:6px 10px;font-size:12.5px;border-bottom:1px solid var(--border);vertical-align:top">${N(x.scan)}</td><td style="${tlTopS}">${x.rows.map(r=>`${esc(r.nv)} — ${N(r.banKiem.luuKho)} đơn lưu kho · ${N(r.banKiem.canBan)} đơn cần bắn kiểm`).join('<br>')}</td></tr>`).join('')}<tr style="background:#FFF7ED;font-weight:800"><td style="${tcS}"></td><td style="${tlS}">Tổng</td><td style="${tlS}">${bk.length} BC</td><td style="${tcS}">${bkNV}</td><td style="${tcS};text-align:center;padding:6px 10px;font-size:12.5px;border-bottom:1px solid var(--border);color:#B45309">${N(bkLuu)}</td><td style="${tcS}">${N(bkScan)}</td><td style="${tlS}"></td></tr></tbody></table></div>`;
+   // nhận định — mỗi ý một dòng
+   const L=[];
+   L.push(`<b>Tổng thể:</b> chốt lúc ${updStr} — ${pt.length}/${total} BC còn tồn phiếu thu (${ptNV} NV · ${N(ptDon)} đơn · ${tr(ptTien)}), ${bk.length}/${total} BC còn tồn bắn kiểm (${bkNV} NV · ${N(bkLuu)} đơn cần lưu kho · ${N(bkScan)} đơn cần bắn kiểm).`);
+   if(pt.length){const w=[...pt].sort((a,b)=>b.tien-a.tien)[0]; L.push(`🔴 Tồn phiếu thu nhiều tiền nhất: <b>${esc(w.bc)}</b> (AM ${esc(w.am)}) — ${w.rows.length} NV · ${N(w.don)} đơn · ${tr(w.tien)}.`);}
+   if(bk.length){const w=[...bk].sort((a,b)=>(b.luu+b.scan)-(a.luu+a.scan))[0]; L.push(`🔴 Tồn bắn kiểm nhiều đơn nhất: <b>${esc(w.bc)}</b> (AM ${esc(w.am)}) — ${w.rows.length} NV · ${N(w.luu)} đơn cần lưu kho · ${N(w.scan)} đơn cần bắn kiểm.`);}
+   L.push(bothDone.length?`🟢 ${bothDone.length} BC đã hoàn tất cả phiếu thu lẫn bắn kiểm: ${bothDone.map(esc).join(', ')}.`:'Chưa có BC nào hoàn tất cả hai mục.');
+   if(errHubs.length) L.push(`⚠️ Không quét được ${errHubs.length} BC (lỗi GHN, chưa rõ trạng thái): ${errHubs.map(h=>esc(h.name)).join(', ')}.`);
+   el.innerHTML=`<div class="page-header"><div class="page-title">💵 Thu tiền - Bắn kiểm</div><div class="page-meta"><span style="color:var(--text-sub);font-size:13px">Lạng Sơn + Quảng Ninh · chỉ hiện Bưu Cục còn tồn dòng (trống = đã hoàn tất) · hạn hoàn thành 22:00 · quét 23h hàng ngày · dữ liệu chốt <b>${updStr}</b></span></div></div>
+    <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px">${kpi('💵 BC chưa tạo phiếu thu',pt.length+'/'+total,ptNV+' NV · '+N(ptDon)+' đơn','#C00000')}${kpi('💰 Tiền cần thu chưa tạo phiếu',tr(ptTien),dv(ptTien),'var(--orange-dark)')}${kpi('📷 BC chưa bắn kiểm',bk.length+'/'+total,bkNV+' NV','#C00000')}${kpi('📦 Đơn cần lưu kho / bắn kiểm',N(bkLuu)+' / '+N(bkScan),'đơn','#B45309')}${kpi('✅ BC hoàn tất cả hai',bothDone.length+'/'+total,'đã xong hết','#15803D')}</div>
+    <div class="card" style="margin-bottom:18px"><div class="card-header"><div class="card-title"><div class="card-icon">💵</div>Tình trạng TẠO PHIẾU THU — AM · Bưu Cục (${pt.length} BC còn tồn)</div></div>${tblPT}</div>
+    <div class="card" style="margin-bottom:18px"><div class="card-header"><div class="card-title"><div class="card-icon">📷</div>Tình trạng BẮN KIỂM — AM · Bưu Cục (${bk.length} BC còn tồn)</div></div>${tblBK}</div>
+    <div class="analysis-box">${L.join('<br>')}</div>`;
+  }catch(e){ el.innerHTML=HEAD+'<div class="analysis-box">Lỗi tải dữ liệu: '+esc(e&&e.message||e)+'</div>'; }
+ };
+ window._thutienRender=render; await render();
+ if(window._thutienTimer)clearInterval(window._thutienTimer);
+ window._thutienTimer=setInterval(render,30*60*1000);
+}
+
 /* ===== p48/p49 — Báo Cáo Vận Hành 2 Bưu Cục (Đông Kinh · Bình Gia) — tách 2 trang (bắn khác giờ) ===== */
 const BCREP_NAMES=['(LSO) Đông Kinh','(LSO) Bình Gia'];
 function _bcPct(v){return v==null?'—':(Math.round(v*10)/10).toLocaleString('vi-VN',{minimumFractionDigits:1,maximumFractionDigits:1})+'%';}
@@ -5933,6 +5989,8 @@ async function init(){
  buildCodCheckPage().catch(e=>console.warn("COD:",e&&e.message||e));
  // p47 — Đơn TTS COD < 50k (realtime từ gtc_live.json.ttsCod, AM theo _CC_BCAM)
  buildTtsCodPage().catch(e=>console.warn("TTS COD:",e&&e.message||e));
+ // p53 — Thu tiền - Bắn kiểm (thutien_bankiem.json, chốt 23h)
+ buildThuTienPage().catch(e=>console.warn('Thu tiền - Bắn kiểm:',e&&e.message||e));
  // p48/p49 — Báo Cáo 1 (cần giao) + Báo Cáo 2 (tồn đọng) ĐK·BG (realtime bcReport + sheet /api/bc-report-sheet)
  buildBcRep1Page().catch(e=>console.warn("BC Report 1:",e&&e.message||e));
  buildBcRep2Page().catch(e=>console.warn("BC Report 2:",e&&e.message||e));
