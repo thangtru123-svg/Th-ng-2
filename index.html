@@ -5273,12 +5273,14 @@ async function buildHangVePage(){
    const p=(x.v/basis-1)*100;
    return `<td title="So với TB hàng ${afternoon?'Ca 1 + Ca 2':'Ca 1'} ${wPrev}: ${nf(basis)} đơn/ngày" style="${base}font-weight:800;color:${p>=0?'#B91C1C':'#15803D'}">${p>=0?'▲':'▼'} ${pcs(p)}</td>`;
   };
-  const head=(first)=>`<tr><th ${TH}>${first}</th><th ${TH}>Volume hàng mới<br>TB ${wPrev}</th>${days.map(d=>`<th ${d===todayISO?THT:TH}>Volume hàng mới<br>${fD(d)}${d===todayISO?'<br>(hôm nay)':''}</th>`).join('')}<th ${TH}>Tăng giảm Ngày<br>(hiện tại) / TB ${wPrev}<br><span style="font-weight:500;font-size:10.5px">${afternoon?'so TB hàng Ca 1 + Ca 2 '+wPrev:'so TB hàng Ca 1 '+wPrev}</span></th></tr>`;
-  const body=(list,isTot,rowTitle)=>list.map((o,i)=>{
+  const head=(first,stt)=>`<tr>${stt?`<th ${TH}>STT</th>`:''}<th ${TH}>${first}</th><th ${TH}>Volume hàng mới<br>TB ${wPrev}</th>${days.map(d=>`<th ${d===todayISO?THT:TH}>Volume hàng mới<br>${fD(d)}${d===todayISO?'<br>(hôm nay)':''}</th>`).join('')}<th ${TH}>Tăng giảm Ngày<br>(hiện tại) / TB ${wPrev}<br><span style="font-weight:500;font-size:10.5px">${afternoon?'so TB hàng Ca 1 + Ca 2 '+wPrev:'so TB hàng Ca 1 '+wPrev}</span></th></tr>`;
+  const body=(list,isTot,rowTitle,stt)=>list.map((o,i)=>{
    const tot=isTot&&i===list.length-1;
-   return `<tr title="${esc(rowTitle?rowTitle(o):'')}"><td ${TDL}${tot?' ':''}>${tot?'<b>':''}${esc(o.name)}${tot?'</b>':''}</td><td style="text-align:center;padding:6px 10px;font-size:12.5px;border-bottom:1px solid var(--border);white-space:nowrap;${tot?'font-weight:800;':'font-weight:600;'}">${o.tb==null?'<span style="color:var(--text-sub);font-style:italic">Chưa có</span>':nf(o.tb)}</td>${days.map(d=>cell(o.val[d],d,tot)).join('')}${deltaCell(o,tot)}</tr>`;
+   const sttTd=stt?`<td style="text-align:center;padding:6px 10px;font-size:12px;border-bottom:1px solid var(--border);color:var(--text-sub);white-space:nowrap">${tot?'':(i+1)}</td>`:'';
+   return `<tr title="${esc(rowTitle?rowTitle(o):'')}"${tot&&stt?' style="background:#F1F5F9"':''}>${sttTd}<td ${TDL}${tot?' ':''}>${tot?'<b>':''}${esc(o.name)}${tot?'</b>':''}</td><td style="text-align:center;padding:6px 10px;font-size:12.5px;border-bottom:1px solid var(--border);white-space:nowrap;${tot?'font-weight:800;':'font-weight:600;'}">${o.tb==null?'<span style="color:var(--text-sub);font-style:italic">Chưa có</span>':nf(o.tb)}</td>${days.map(d=>cell(o.val[d],d,tot)).join('')}${deltaCell(o,tot)}</tr>`;
   }).join('');
-  const tbl=(first,list,isTot,rt)=>`<div class="table-wrap" style="margin-bottom:6px"><table style="border-collapse:collapse;display:inline-block"><thead>${head(first)}</thead><tbody>${body(list,isTot,rt)}</tbody></table></div>`;
+  const tbl=(first,list,isTot,rt,stt)=>`<div class="table-wrap" style="margin-bottom:6px"><table style="border-collapse:collapse;display:inline-block"><thead>${head(first,stt)}</thead><tbody>${body(list,isTot,rt,stt)}</tbody></table></div>`;
+  const totRow={...tongRows[2],name:'TỔNG CỘNG'};
   // ---- phân tích (mỗi ý 1 dòng) ----
   const tv=tongRows[2].val[todayISO]; const tBasis=afternoon?tongRows[2].tb:tongRows[2].tbC1;
   const updAt=HM&&HM.generatedAt?new Date(HM.generatedAt):null;
@@ -5315,9 +5317,9 @@ async function buildHangVePage(){
    ${legend}
    ${sec('Tổng quan')}${tbl('Tổng quan',tongRows,true)}
    ${anaBox}
-   ${sec('AM ('+amRows.length+')')}${tbl('AM',amRows,false,o=>o.n+' BC')}
+   ${sec('AM ('+amRows.length+')')}${tbl('AM',[...amRows,totRow],true,o=>o.n+' BC',true)}
    <div style="height:18px"></div>
-   ${sec('Bưu Cục ('+bcRows.length+')')}${tbl('Bưu Cục',bcRows,false,o=>'AM: '+o.am)}`;
+   ${sec('Bưu Cục ('+bcRows.length+')')}${tbl('Bưu Cục',[...bcRows,totRow],true,o=>o.am?'AM: '+o.am:'Tổng 32 Bưu Cục',true)}`;
  }catch(e){
   if(seq!==window._hvSeq)return;
   el.innerHTML='<div class="page-header"><div class="page-title">📦 Báo cáo hàng về Realtime</div></div><div class="analysis-box">Không tải được dữ liệu: '+esc(e&&e.message||e)+'</div>';
