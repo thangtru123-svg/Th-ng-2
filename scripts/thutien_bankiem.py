@@ -9,9 +9,7 @@
 #        GHN_SESSION=... python3 scripts/thutien_bankiem.py --dry DIR  → quét + tạo ảnh vào DIR, KHÔNG gửi, KHÔNG ghi json
 import json, os, sys, io, time, datetime, urllib.request, urllib.error, uuid
 from concurrent.futures import ThreadPoolExecutor
-import matplotlib
-matplotlib.use('Agg')
-import matplotlib.pyplot as plt
+import re, base64, threading, functools, http.server
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SES = os.environ.get('GHN_SESSION')
@@ -114,47 +112,53 @@ if not DRY:
     os.makedirs(os.path.join(ROOT, 'data_thutien'), exist_ok=True)
     json.dump(doc, open(os.path.join(ROOT, 'data_thutien', DAY + '.json'), 'w', encoding='utf-8'), ensure_ascii=False, separators=(',', ':'))
 
-# ---------- ảnh ----------
-def png(rows, cols, data, widths, title, sub, path, maxrows=40):
-    shown = data[:maxrows]; n = len(shown) + 1
-    fig_h = 1.0 + 0.38 * n + 0.2
-    fig = plt.figure(figsize=(10.5, fig_h), dpi=140); fig.patch.set_facecolor('white')
-    ax = fig.add_axes([0.01, 0.01, 0.98, max(0.3, 1 - 0.8 / fig_h)]); ax.axis('off')
-    fig.text(0.02, 1 - 0.28 / fig_h, title, fontsize=14, fontweight='bold', color='#1F3864', va='top')   # tổng đã nằm ở hàng TỔNG của bảng
-    tb = ax.table(cellText=shown, colLabels=cols, loc='upper center', cellLoc='center', colWidths=widths, bbox=[0, 0, 1, 1])
-    tb.auto_set_font_size(False); tb.set_fontsize(10)
-    last = len(shown)
-    for (r_, c_), ce in tb.get_celld().items():
-        ce.set_edgecolor('#9aa5b5'); ce.set_linewidth(0.6)
-        if r_ == 0: ce.set_facecolor('#1F3864'); ce.get_text().set_color('white'); ce.get_text().set_fontweight('bold')
-        elif r_ == last and shown[-1][0] == 'TỔNG': ce.set_facecolor('#DCE6F1'); ce.get_text().set_fontweight('bold')
-        else: ce.set_facecolor('#F5F7FA' if r_ % 2 == 0 else 'white')
-        if c_ == 1 and r_ > 0: ce.get_text().set_ha('left'); ce._loc = 'left'; ce.PAD = 0.02
-        if c_ == 0 and r_ > 0: ce.get_text().set_ha('left'); ce._loc = 'left'; ce.PAD = 0.02
-    fig.savefig(path, bbox_inches='tight', facecolor='white'); plt.close(fig)
-def names(ten, k=3): return ', '.join(short(x) for x in ten[:k]) + (f' +{len(ten) - k}' if len(ten) > k else '')
+# ---------- ảnh: CHỤP bằng đúng mã vẽ + _captureEl (html2canvas) của dashboard p53 trong index.html → y hệt nút "Bắn TG" (đại nhân duyệt kiểu này 12/11) ----------
 IMG1 = os.path.join(OUT, 'thutien_phieuthu.png'); IMG2 = os.path.join(OUT, 'thutien_bankiem.png')
-if PT:
-    d = [[x['am'], x['bc'], str(x['nv']), vn(x['don']), tr(x['tien'])] for x in PT]
-    d.append(['TỔNG', f'{len(PT)} BC', str(sum(x['nv'] for x in PT)), vn(sum(x['don'] for x in PT)), tr(sum(x['tien'] for x in PT))])
-    png(PT, ['AM', 'Bưu Cục', 'Số NV chưa tạo', 'Đơn cần thu', 'Tiền cần thu'], d, [0.26, 0.28, 0.14, 0.14, 0.18],
-        f'CHƯA TẠO PHIẾU THU — LẠNG SƠN + QUẢNG NINH — chốt {STAMP}',
-        f'{len(PT)} BC · {sum(x["nv"] for x in PT)} NV · {vn(sum(x["don"] for x in PT))} đơn · {tr(sum(x["tien"] for x in PT))} chưa tạo phiếu thu', IMG1)
-if BK:
-    d = [[x['am'], x['bc'], str(x['nv']), vn(x['luu']), vn(x['scan'])] for x in BK]
-    d.append(['TỔNG', f'{len(BK)} BC', str(sum(x['nv'] for x in BK)), vn(sum(x['luu'] for x in BK)), vn(sum(x['scan'] for x in BK))])
-    png(BK, ['AM', 'Bưu Cục', 'Số NV chưa bắn kiểm', 'ĐH cần lưu kho', 'ĐH cần bắn kiểm'], d, [0.24, 0.26, 0.17, 0.15, 0.18],
-        f'CHƯA BẮN KIỂM — LẠNG SƠN + QUẢNG NINH — chốt {STAMP}',
-        f'{len(BK)} BC · {sum(x["nv"] for x in BK)} NV · {vn(sum(x["luu"] for x in BK))} đơn cần lưu kho · {vn(sum(x["scan"] for x in BK))} đơn cần bắn kiểm', IMG2)
+def render_images():
+    html = open(os.path.join(ROOT, 'index.html'), encoding='utf-8').read()
+    a0 = html.index('async function buildThuTienPage'); b0 = html.index('/* ===== p48/p49', a0)
+    c0 = html.index('async function _captureEl'); c1 = html.index('\n}\n', c0) + 3
+    styles = '\n'.join(re.findall(r'<style[^>]*>.*?</style>', html, re.S)); links = '\n'.join(re.findall(r'<link[^>]+fonts[^>]*>', html))
+    shell = ('<!doctype html><html><head><meta charset="utf-8">' + links + styles + '</head><body style="display:block;background:#fff">'
+             '<div id="p53" class="page active" style="max-width:1200px;padding:16px"></div><script>function injectTgBtn(){}\n' + html[a0:b0] + '\n' + html[c0:c1] + '\nbuildThuTienPage();</script></body></html>')
+    open(os.path.join(OUT, 'render.html'), 'w', encoding='utf-8').write(shell)
+    json.dump(doc, open(os.path.join(OUT, 'thutien_bankiem.json'), 'w', encoding='utf-8'), ensure_ascii=False, separators=(',', ':'))
+    handler = functools.partial(http.server.SimpleHTTPRequestHandler, directory=OUT)
+    handler.log_message = lambda *a, **k: None
+    srv = http.server.ThreadingHTTPServer(('127.0.0.1', 0), handler); threading.Thread(target=srv.serve_forever, daemon=True).start()
+    from playwright.sync_api import sync_playwright
+    got = {}
+    try:
+        with sync_playwright() as pw:
+            try: br = pw.chromium.launch(channel='chrome')
+            except Exception: br = pw.chromium.launch()
+            pg = br.new_page(viewport={'width': 1300, 'height': 900}); pg.goto(f'http://127.0.0.1:{srv.server_address[1]}/render.html')
+            pg.wait_for_selector('#ttCardPT, #ttCardBK, .analysis-box', timeout=30000); pg.wait_for_timeout(1500)
+            for cid in ('ttCardPT', 'ttCardBK'):
+                if pg.query_selector('#' + cid):
+                    b64 = pg.evaluate("async (id) => { const b = await _captureEl(id, 2); const buf = new Uint8Array(await b.arrayBuffer()); let s = ''; buf.forEach(x => s += String.fromCharCode(x)); return btoa(s); }", cid)
+                    got[cid] = base64.b64decode(b64)
+            br.close()
+    finally: srv.shutdown()
+    return got
+SHOTS = render_images() if (PT or BK) else {}
+if 'ttCardPT' in SHOTS: open(IMG1, 'wb').write(SHOTS['ttCardPT'])
+if 'ttCardBK' in SHOTS: open(IMG2, 'wb').write(SHOTS['ttCardBK'])
+if (PT and 'ttCardPT' not in SHOTS) or (BK and 'ttCardBK' not in SHOTS): print('[thutien] LỖI: không chụp được ảnh bảng'); sys.exit(3)
 
-# ---------- caption: mỗi ảnh 1 dòng của riêng mục đó, không lặp lại (tiêu đề + tổng nằm sẵn trong ảnh) ----------
-CAP_PT = f'Chưa tạo phiếu thu: {len(PT)}/{len(HUBROWS)} BC · {sum(x["nv"] for x in PT)} NV · {vn(sum(x["don"] for x in PT))} đơn · {tr(sum(x["tien"] for x in PT))}' if PT else None
-CAP_BK = f'Chưa bắn kiểm: {len(BK)}/{len(HUBROWS)} BC · {sum(x["nv"] for x in BK)} NV · {vn(sum(x["luu"] for x in BK))} đơn cần lưu kho · {vn(sum(x["scan"] for x in BK))} đơn cần bắn kiểm' if BK else None
-OK_PT = 'Tạo phiếu thu: tất cả BC đã hoàn tất'; OK_BK = 'Bắn kiểm: tất cả BC đã hoàn tất'
-ERRLINE = (f'Không quét được {len(errs)} BC (lỗi GHN): ' + ', '.join(e.split(') ')[-1] for e in errs)) if errs else None
-CAP = '\n'.join(x for x in (CAP_PT or OK_PT, CAP_BK or OK_BK, ERRLINE) if x)   # chỉ dùng để in log / báo @thangquada khi 0 dòng
+# ---------- chú thích — GIỮ Y HỆT sendThuTienToTelegram() trong index.html (đại nhân duyệt 12/11): mỗi ảnh mang chú thích của RIÊNG mục đó ----------
+LN_PT = (f'❌ Chưa tạo phiếu thu: <b>{len(PT)}/{len(HUBROWS)} BC</b> · {sum(x["nv"] for x in PT)} NV · {vn(sum(x["don"] for x in PT))} đơn · <b>{tr(sum(x["tien"] for x in PT))}</b>' if PT else '✅ Tạo phiếu thu: tất cả BC đã hoàn tất')
+LN_BK = (f'❌ Chưa bắn kiểm: <b>{len(BK)}/{len(HUBROWS)} BC</b> · {sum(x["nv"] for x in BK)} NV · {vn(sum(x["luu"] for x in BK))} đơn cần lưu kho · {vn(sum(x["scan"] for x in BK))} đơn cần bắn kiểm' if BK else '✅ Bắn kiểm: tất cả BC đã hoàn tất')
+ERR_LN = ('\n⚠️ Không quét được ' + str(len(errs)) + ' BC (lỗi GHN): ' + ', '.join(errs)) if errs else ''
+HDR1 = f'💵 <b>THU TIỀN - BẮN KIỂM — LẠNG SƠN + QUẢNG NINH</b>\n🕒 Chốt {STAMP}\n\n'
+HDR2 = f'📷 <b>Tình trạng BẮN KIỂM</b> — chốt {STAMP}\n\n'
+PARTS = []   # (ảnh, chú thích)
+if PT: PARTS.append((IMG1, HDR1 + LN_PT + ('' if BK else '\n' + LN_BK)))
+if BK: PARTS.append((IMG2, (HDR2 if PT else HDR1 + LN_PT + '\n\n') + LN_BK))
+CAP = (HDR1 + LN_PT + '\n' + LN_BK + ERR_LN)[:1020]   # dùng cho tin chữ (cả hai mục xong hết) / log / báo @thangquada khi 0 dòng
 
 def tg(method, fields, files=None):
+    if 'caption' in fields or 'text' in fields: fields = {**fields, 'parse_mode': 'HTML', 'disable_web_page_preview': 'true'}
     b = uuid.uuid4().hex; body = io.BytesIO()
     for k, v in fields.items(): body.write(f'--{b}\r\nContent-Disposition: form-data; name="{k}"\r\n\r\n{v}\r\n'.encode())
     for k, (name, data, ctype) in (files or {}).items():
@@ -172,7 +176,7 @@ def tg(method, fields, files=None):
         except (TimeoutError, OSError, urllib.error.URLError) as e: last = repr(e)[:120]; time.sleep(3 * (k + 1))
     raise RuntimeError(f'Telegram {method} thất bại: {last}')
 
-print(CAP)
+[print(re.sub(r'<[^>]+>', '', c) + '\n-----') for _, c in PARTS] or print(re.sub(r'<[^>]+>', '', CAP))
 if DRY: print('DRY — không gửi'); sys.exit(0)
 chat = TG_GROUP
 # Chạy tay (workflow_dispatch) = chạy thử → chỉ gửi riêng @thangquada, trừ khi đặt TG_CHAT
@@ -181,14 +185,7 @@ if EVENT == 'workflow_dispatch' and not os.environ.get('TG_CHAT'): chat = TG_ADM
 if n_rows == 0 and chat == TG_GROUP:
     chat = TG_ADMIN; CAP = 'KIỂM TRA: quét Thu tiền - Bắn kiểm ra 0 dòng ở cả ' + str(hubs_ok) + ' BC. Có thể toàn vùng đã xong, cũng có thể token GHN trả rỗng — đại nhân xem lại rồi mới báo nhóm.\n' + CAP
 sent = []
-# ảnh 1 (phiếu thu) + ảnh 2 (bắn kiểm); mục nào đã xong hết thì thêm 1 dòng "đã hoàn tất" vào chú thích ảnh còn lại (hoặc gửi 1 tin chữ nếu cả hai xong)
-caps = [CAP_PT, CAP_BK]; imgs = [IMG1, IMG2]
-live = [i for i in (0, 1) if caps[i]]
-for j, i in enumerate(live):
-    c = caps[i]
-    if j == 0:
-        extra = [x for x, k in ((OK_PT, 0), (OK_BK, 1)) if not caps[k]]
-        c = '\n'.join([c] + extra + ([ERRLINE] if ERRLINE else []))
-    sent.append(tg('sendPhoto', {'chat_id': chat, 'caption': c[:1020]}, {'photo': (os.path.basename(imgs[i]), open(imgs[i], 'rb').read(), 'image/png')}).get('ok'))
-if not live: sent.append(tg('sendMessage', {'chat_id': chat, 'text': CAP}).get('ok'))
+for i, (img, cap) in enumerate(PARTS):
+    sent.append(tg('sendPhoto', {'chat_id': chat, 'caption': (cap + (ERR_LN if i == 0 else ''))[:1020]}, {'photo': (os.path.basename(img), open(img, 'rb').read(), 'image/png')}).get('ok'))
+if not PARTS: sent.append(tg('sendMessage', {'chat_id': chat, 'text': CAP}).get('ok'))
 print('[thutien] đã gửi', sent)
