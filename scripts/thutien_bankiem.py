@@ -117,7 +117,7 @@ if not DRY:
 def png(rows, cols, data, widths, title, sub, path, maxrows=40):
     shown = data[:maxrows]; n = len(shown) + 1
     fig_h = 1.9 + 0.38 * n + 0.2
-    fig = plt.figure(figsize=(13.5, fig_h), dpi=140); fig.patch.set_facecolor('white')
+    fig = plt.figure(figsize=(10.5, fig_h), dpi=140); fig.patch.set_facecolor('white')
     ax = fig.add_axes([0.01, 0.01, 0.98, max(0.3, 1 - 1.3 / fig_h)]); ax.axis('off')
     fig.text(0.02, 1 - 0.28 / fig_h, title, fontsize=14, fontweight='bold', color='#1F3864', va='top')
     fig.text(0.02, 1 - 0.80 / fig_h, sub, fontsize=11.5, fontweight='bold', color='#C00000', va='top')
@@ -129,21 +129,21 @@ def png(rows, cols, data, widths, title, sub, path, maxrows=40):
         if r_ == 0: ce.set_facecolor('#1F3864'); ce.get_text().set_color('white'); ce.get_text().set_fontweight('bold')
         elif r_ == last and shown[-1][0] == 'TỔNG': ce.set_facecolor('#DCE6F1'); ce.get_text().set_fontweight('bold')
         else: ce.set_facecolor('#F5F7FA' if r_ % 2 == 0 else 'white')
-        if c_ in (1, 5) and r_ > 0: ce.get_text().set_ha('left'); ce._loc = 'left'; ce.PAD = 0.02
+        if c_ == 1 and r_ > 0: ce.get_text().set_ha('left'); ce._loc = 'left'; ce.PAD = 0.02
         if c_ == 0 and r_ > 0: ce.get_text().set_ha('left'); ce._loc = 'left'; ce.PAD = 0.02
     fig.savefig(path, bbox_inches='tight', facecolor='white'); plt.close(fig)
 def names(ten, k=3): return ', '.join(short(x) for x in ten[:k]) + (f' +{len(ten) - k}' if len(ten) > k else '')
 IMG1 = os.path.join(OUT, 'thutien_phieuthu.png'); IMG2 = os.path.join(OUT, 'thutien_bankiem.png')
 if PT:
-    d = [[x['am'], x['bc'], str(x['nv']), vn(x['don']), tr(x['tien']), names(x['ten'])] for x in PT]
-    d.append(['TỔNG', f'{len(PT)} BC', str(sum(x['nv'] for x in PT)), vn(sum(x['don'] for x in PT)), tr(sum(x['tien'] for x in PT)), ''])
-    png(PT, ['AM', 'Bưu Cục', 'Số NV chưa tạo', 'Đơn cần thu', 'Tiền cần thu', 'Nhân viên (nhiều tiền nhất trước)'], d, [0.14, 0.16, 0.11, 0.09, 0.11, 0.39],
+    d = [[x['am'], x['bc'], str(x['nv']), vn(x['don']), tr(x['tien'])] for x in PT]
+    d.append(['TỔNG', f'{len(PT)} BC', str(sum(x['nv'] for x in PT)), vn(sum(x['don'] for x in PT)), tr(sum(x['tien'] for x in PT))])
+    png(PT, ['AM', 'Bưu Cục', 'Số NV chưa tạo', 'Đơn cần thu', 'Tiền cần thu'], d, [0.26, 0.28, 0.14, 0.14, 0.18],
         f'CHƯA TẠO PHIẾU THU — LẠNG SƠN + QUẢNG NINH — chốt {STAMP}',
         f'{len(PT)} BC · {sum(x["nv"] for x in PT)} NV · {vn(sum(x["don"] for x in PT))} đơn · {tr(sum(x["tien"] for x in PT))} chưa tạo phiếu thu', IMG1)
 if BK:
-    d = [[x['am'], x['bc'], str(x['nv']), vn(x['luu']), vn(x['scan']), names(x['ten'])] for x in BK]
-    d.append(['TỔNG', f'{len(BK)} BC', str(sum(x['nv'] for x in BK)), vn(sum(x['luu'] for x in BK)), vn(sum(x['scan'] for x in BK)), ''])
-    png(BK, ['AM', 'Bưu Cục', 'Số NV chưa bắn kiểm', 'ĐH cần lưu kho', 'ĐH cần bắn kiểm', 'Nhân viên (nhiều đơn nhất trước)'], d, [0.14, 0.16, 0.12, 0.10, 0.11, 0.37],
+    d = [[x['am'], x['bc'], str(x['nv']), vn(x['luu']), vn(x['scan'])] for x in BK]
+    d.append(['TỔNG', f'{len(BK)} BC', str(sum(x['nv'] for x in BK)), vn(sum(x['luu'] for x in BK)), vn(sum(x['scan'] for x in BK))])
+    png(BK, ['AM', 'Bưu Cục', 'Số NV chưa bắn kiểm', 'ĐH cần lưu kho', 'ĐH cần bắn kiểm'], d, [0.24, 0.26, 0.17, 0.15, 0.18],
         f'CHƯA BẮN KIỂM — LẠNG SƠN + QUẢNG NINH — chốt {STAMP}',
         f'{len(BK)} BC · {sum(x["nv"] for x in BK)} NV · {vn(sum(x["luu"] for x in BK))} đơn cần lưu kho · {vn(sum(x["scan"] for x in BK))} đơn cần bắn kiểm', IMG2)
 
@@ -154,7 +154,7 @@ else: L.append('- Tạo phiếu thu: tất cả BC đã hoàn tất')
 if BK: L.append(f'- Chưa bắn kiểm: {len(BK)}/{len(HUBROWS)} BC · {sum(x["nv"] for x in BK)} NV · {vn(sum(x["luu"] for x in BK))} đơn cần lưu kho · {vn(sum(x["scan"] for x in BK))} đơn cần bắn kiểm')
 else: L.append('- Bắn kiểm: tất cả BC đã hoàn tất')
 if errs: L.append(f'- Không quét được {len(errs)} BC (lỗi GHN): ' + ', '.join(e.split(') ')[-1] for e in errs))
-L.append('Chi tiết từng NV: dashboard "Thu tiền - Bắn kiểm" (th-ng-2.vercel.app).')
+L.append('Xem dashboard "Thu tiền - Bắn kiểm" (th-ng-2.vercel.app).')
 CAP = '\n'.join(L)[:1020]
 
 def tg(method, fields, files=None):
