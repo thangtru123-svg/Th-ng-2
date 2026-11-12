@@ -117,11 +117,10 @@ if not DRY:
 # ---------- ảnh ----------
 def png(rows, cols, data, widths, title, sub, path, maxrows=40):
     shown = data[:maxrows]; n = len(shown) + 1
-    fig_h = 1.9 + 0.38 * n + 0.2
+    fig_h = 1.0 + 0.38 * n + 0.2
     fig = plt.figure(figsize=(10.5, fig_h), dpi=140); fig.patch.set_facecolor('white')
-    ax = fig.add_axes([0.01, 0.01, 0.98, max(0.3, 1 - 1.3 / fig_h)]); ax.axis('off')
-    fig.text(0.02, 1 - 0.28 / fig_h, title, fontsize=14, fontweight='bold', color='#1F3864', va='top')
-    fig.text(0.02, 1 - 0.80 / fig_h, sub, fontsize=11.5, fontweight='bold', color='#C00000', va='top')
+    ax = fig.add_axes([0.01, 0.01, 0.98, max(0.3, 1 - 0.8 / fig_h)]); ax.axis('off')
+    fig.text(0.02, 1 - 0.28 / fig_h, title, fontsize=14, fontweight='bold', color='#1F3864', va='top')   # tổng đã nằm ở hàng TỔNG của bảng
     tb = ax.table(cellText=shown, colLabels=cols, loc='upper center', cellLoc='center', colWidths=widths, bbox=[0, 0, 1, 1])
     tb.auto_set_font_size(False); tb.set_fontsize(10)
     last = len(shown)
@@ -148,15 +147,12 @@ if BK:
         f'CHƯA BẮN KIỂM — LẠNG SƠN + QUẢNG NINH — chốt {STAMP}',
         f'{len(BK)} BC · {sum(x["nv"] for x in BK)} NV · {vn(sum(x["luu"] for x in BK))} đơn cần lưu kho · {vn(sum(x["scan"] for x in BK))} đơn cần bắn kiểm', IMG2)
 
-# ---------- caption ----------
-L = [f'THU TIỀN - BẮN KIỂM — Lạng Sơn + Quảng Ninh — chốt {STAMP}']
-if PT: L.append(f'- Chưa tạo phiếu thu: {len(PT)}/{len(HUBROWS)} BC · {sum(x["nv"] for x in PT)} NV · {vn(sum(x["don"] for x in PT))} đơn · {tr(sum(x["tien"] for x in PT))}')
-else: L.append('- Tạo phiếu thu: tất cả BC đã hoàn tất')
-if BK: L.append(f'- Chưa bắn kiểm: {len(BK)}/{len(HUBROWS)} BC · {sum(x["nv"] for x in BK)} NV · {vn(sum(x["luu"] for x in BK))} đơn cần lưu kho · {vn(sum(x["scan"] for x in BK))} đơn cần bắn kiểm')
-else: L.append('- Bắn kiểm: tất cả BC đã hoàn tất')
-if errs: L.append(f'- Không quét được {len(errs)} BC (lỗi GHN): ' + ', '.join(e.split(') ')[-1] for e in errs))
-L.append('Xem dashboard "Thu tiền - Bắn kiểm" (th-ng-2.vercel.app).')
-CAP = '\n'.join(L)[:1020]
+# ---------- caption: mỗi ảnh 1 dòng của riêng mục đó, không lặp lại (tiêu đề + tổng nằm sẵn trong ảnh) ----------
+CAP_PT = f'Chưa tạo phiếu thu: {len(PT)}/{len(HUBROWS)} BC · {sum(x["nv"] for x in PT)} NV · {vn(sum(x["don"] for x in PT))} đơn · {tr(sum(x["tien"] for x in PT))}' if PT else None
+CAP_BK = f'Chưa bắn kiểm: {len(BK)}/{len(HUBROWS)} BC · {sum(x["nv"] for x in BK)} NV · {vn(sum(x["luu"] for x in BK))} đơn cần lưu kho · {vn(sum(x["scan"] for x in BK))} đơn cần bắn kiểm' if BK else None
+OK_PT = 'Tạo phiếu thu: tất cả BC đã hoàn tất'; OK_BK = 'Bắn kiểm: tất cả BC đã hoàn tất'
+ERRLINE = (f'Không quét được {len(errs)} BC (lỗi GHN): ' + ', '.join(e.split(') ')[-1] for e in errs)) if errs else None
+CAP = '\n'.join(x for x in (CAP_PT or OK_PT, CAP_BK or OK_BK, ERRLINE) if x)   # chỉ dùng để in log / báo @thangquada khi 0 dòng
 
 def tg(method, fields, files=None):
     b = uuid.uuid4().hex; body = io.BytesIO()
@@ -185,10 +181,14 @@ if EVENT == 'workflow_dispatch' and not os.environ.get('TG_CHAT'): chat = TG_ADM
 if n_rows == 0 and chat == TG_GROUP:
     chat = TG_ADMIN; CAP = 'KIỂM TRA: quét Thu tiền - Bắn kiểm ra 0 dòng ở cả ' + str(hubs_ok) + ' BC. Có thể toàn vùng đã xong, cũng có thể token GHN trả rỗng — đại nhân xem lại rồi mới báo nhóm.\n' + CAP
 sent = []
-photos = [(IMG1, CAP if PT else None), (IMG2, (CAP if not PT else 'Chưa bắn kiểm — ' + STAMP) if BK else None)]
-first = True
-for img, cap in photos:
-    if cap is None: continue
-    sent.append(tg('sendPhoto', {'chat_id': chat, 'caption': cap}, {'photo': (os.path.basename(img), open(img, 'rb').read(), 'image/png')}).get('ok'))
-if not sent: sent.append(tg('sendMessage', {'chat_id': chat, 'text': CAP}).get('ok'))
+# ảnh 1 (phiếu thu) + ảnh 2 (bắn kiểm); mục nào đã xong hết thì thêm 1 dòng "đã hoàn tất" vào chú thích ảnh còn lại (hoặc gửi 1 tin chữ nếu cả hai xong)
+caps = [CAP_PT, CAP_BK]; imgs = [IMG1, IMG2]
+live = [i for i in (0, 1) if caps[i]]
+for j, i in enumerate(live):
+    c = caps[i]
+    if j == 0:
+        extra = [x for x, k in ((OK_PT, 0), (OK_BK, 1)) if not caps[k]]
+        c = '\n'.join([c] + extra + ([ERRLINE] if ERRLINE else []))
+    sent.append(tg('sendPhoto', {'chat_id': chat, 'caption': c[:1020]}, {'photo': (os.path.basename(imgs[i]), open(imgs[i], 'rb').read(), 'image/png')}).get('ok'))
+if not live: sent.append(tg('sendMessage', {'chat_id': chat, 'text': CAP}).get('ok'))
 print('[thutien] đã gửi', sent)

@@ -5544,19 +5544,18 @@ async function sendThuTienToTelegram(){ // bắn 2 bảng (phiếu thu + bắn k
  const _ld=btn?btn.innerHTML:''; if(btn){btn.disabled=true;btn.innerHTML='⏳ Đang bắn...';}
  const N=v=>(+v||0).toLocaleString('vi-VN'), tr=v=>((+v||0)/1e6).toLocaleString('vi-VN',{minimumFractionDigits:1,maximumFractionDigits:1})+' tr';
  try{
-  let cap='💵 <b>THU TIỀN - BẮN KIỂM — LẠNG SƠN + QUẢNG NINH</b>\n🕒 Chốt '+T.updStr+'\n\n';
-  cap+=T.pt?'❌ Chưa tạo phiếu thu: <b>'+T.pt+'/'+T.total+' BC</b> · '+T.ptNV+' NV · '+N(T.ptDon)+' đơn · <b>'+tr(T.ptTien)+'</b>\n':'✅ Tạo phiếu thu: tất cả BC đã hoàn tất\n';
-  cap+=T.bk?'❌ Chưa bắn kiểm: <b>'+T.bk+'/'+T.total+' BC</b> · '+T.bkNV+' NV · '+N(T.bkLuu)+' đơn cần lưu kho · '+N(T.bkScan)+' đơn cần bắn kiểm\n':'✅ Bắn kiểm: tất cả BC đã hoàn tất\n';
-  if(T.errN)cap+='⚠️ Không quét được '+T.errN+' BC (lỗi GHN): '+T.errNames.join(', ')+'\n';
-  cap=cap.slice(0,1020);
-  const parts=[['ttCardPT','thutien_phieuthu.png',T.pt],['ttCardBK','thutien_bankiem.png',T.bk]].filter(x=>x[2]);
-  if(!parts.length){await _tgSend(TG_AGING_CHAT,null,cap);}
-  let first=true;
-  for(const [id,fn,_] of parts){
+  // mỗi ảnh 1 dòng của riêng mục đó, không lặp (tiêu đề + hàng TỔNG đã nằm trong bảng); mục xong hết → 1 dòng "đã hoàn tất" gắn vào ảnh còn lại
+  const capPT=T.pt?'💵 <b>Chưa tạo phiếu thu:</b> '+T.pt+'/'+T.total+' BC · '+T.ptNV+' NV · '+N(T.ptDon)+' đơn · <b>'+tr(T.ptTien)+'</b>':null;
+  const capBK=T.bk?'📷 <b>Chưa bắn kiểm:</b> '+T.bk+'/'+T.total+' BC · '+T.bkNV+' NV · '+N(T.bkLuu)+' đơn cần lưu kho · '+N(T.bkScan)+' đơn cần bắn kiểm':null;
+  const okLines=[T.pt?null:'✅ Tạo phiếu thu: tất cả BC đã hoàn tất',T.bk?null:'✅ Bắn kiểm: tất cả BC đã hoàn tất'].filter(Boolean);
+  const errLine=T.errN?'⚠️ Không quét được '+T.errN+' BC (lỗi GHN): '+T.errNames.join(', '):null;
+  const parts=[['ttCardPT','thutien_phieuthu.png',capPT],['ttCardBK','thutien_bankiem.png',capBK]].filter(x=>x[2]);
+  if(!parts.length){await _tgSend(TG_AGING_CHAT,null,[...okLines,errLine].filter(Boolean).join('\n'));}
+  for(let i=0;i<parts.length;i++){
+   const [id,fn,c0]=parts[i];
+   const c=(i===0?[c0,...okLines,errLine]:[c0]).filter(Boolean).join('\n').slice(0,1020);
    const img=await _captureEl(id,2);
-   const c=first?cap:'📷 <b>Tình trạng BẮN KIỂM</b> — chốt '+T.updStr;
    const r=await _tgSendPhoto(TG_AGING_CHAT,null,img,c); if(!r||!r.ok)await _tgSendDoc(TG_AGING_CHAT,null,img,c,fn);
-   first=false;
   }
   if(btn){btn.innerHTML='✅ Đã bắn';setTimeout(()=>{btn.disabled=false;btn.innerHTML=_ld;},2500);}
  }catch(e){ if(btn){btn.disabled=false;btn.innerHTML=_ld;} alert('Lỗi bắn Telegram: '+(e&&e.message||e)); }
