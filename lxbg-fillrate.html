@@ -66,7 +66,8 @@ input.search{border:1px solid var(--line);background:var(--panel);color:var(--in
     <div class="bands" id="bands"></div>
   </div>
   <div class="tabs" id="tabs">
-    <div class="tab active" data-tab="prov">Theo tỉnh xuất phát</div>
+    <div class="tab active" data-tab="opt">⚠️ Tuyến chưa tối ưu</div>
+    <div class="tab" data-tab="prov">Theo tỉnh xuất phát</div>
     <div class="tab" data-tab="day">Theo ngày</div>
     <div class="tab" data-tab="week">Theo tuần</div>
     <div class="tab" data-tab="kct">🏬 Theo KCT</div>
@@ -80,6 +81,7 @@ input.search{border:1px solid var(--line);background:var(--panel);color:var(--in
 <script src="lxbg_data.js"></script>
 <script src="lxbg_cost.js"></script>
 <script src="lxbg_legs.js"></script>
+<script src="lxbg_opt.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script>
 const $=id=>document.getElementById(id);
@@ -91,7 +93,7 @@ const BCOL=['#B4232A','#D65A4A','#E08A1E','#7FB069','#1f7a4d','#9aa8a0'];
 const vn=n=>Math.round(n).toLocaleString('vi-VN');
 const esc=s=>String(s==null?'':s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
 const ddmm=s=>{const m=/(\d{4})-(\d{2})-(\d{2})/.exec(s);return m?m[3]+'/'+m[2]:s;};
-let state={tab:'prov',q:'',sortK:6,sortDir:1,from:'',to:'',bandFilter:null,legQ:'',legProv:'',legSel:null,legDay:'',kctSel:'all',kctSK:3,kctSD:1};
+let state={tab:'opt',q:'',sortK:6,sortDir:1,from:'',to:'',bandFilter:null,legQ:'',legProv:'',legSel:null,legDay:'',kctSel:'all',kctSK:3,kctSD:1};
 const n1=x=>Number(x||0).toLocaleString('vi-VN',{maximumFractionDigits:1});
 
 /* ---- KPI + bands ---- */
@@ -168,7 +170,7 @@ function pickCell(kind,key,bandIdx){
 /* ---- detail 346 ---- */
 const DET_MIN=OUT.meta.from, DET_MAX=OUT.meta.to;
 function detData(){
-  let d=DET.map(r=>({code:r[0],day:r[1],band:r[2],prov:r[3],cap:r[4],picked:r[5],fill:r[6],plate:r[7],mt:r[8],route:r[9],cuoc:r[10],km:r[11]}));
+  let d=DET.map(r=>({code:r[0],day:r[1],band:r[2],prov:r[3],cap:r[4],picked:r[5],fill:r[6],plate:r[7],mt:r[8],route:r[9],cuoc:r[10],km:r[11],tc:r[12]||0,ch:r[13]||'',ncc:r[14]||'',don:r[15]}));
   const bf=state.bandFilter;
   if(bf==null)d=d.filter(x=>x.band<=2);            // mặc định: 0-30% (lấp đầy thấp)
   else if(bf!=='all')d=d.filter(x=>x.band===bf);   // 1 mốc cụ thể
@@ -176,7 +178,7 @@ function detData(){
   if(state.to)d=d.filter(x=>x.day<=state.to);
   const q=state.q.trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/đ/g,'d');
   if(q){const w=q.split(/\s+/);d=d.filter(x=>{const h=(x.code+' '+x.prov+' '+x.plate+' '+x.mt+' '+x.route).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/đ/g,'d');return w.every(t=>h.includes(t));});}
-  const keys=['code','day','band','prov','cap','picked','fill','plate','mt','route','km','cuoc'];
+  const keys=['code','day','band','prov','cap','picked','fill','plate','mt','route','km','cuoc','tc','ch','ncc','don'];
   const k=keys[state.sortK]||'fill';
   d.sort((a,b)=>{let x=a[k],y=b[k];if(k==='cuoc'){x=x==null?-1:x;y=y==null?-1:y;}if(typeof x==='number')return state.sortDir*(x-y);return state.sortDir*String(x).localeCompare(String(y),'vi');});
   return d;
@@ -192,8 +194,10 @@ function renderDet(){
     <td>${esc(x.plate)}</td><td class="l">${esc(x.mt)}</td>
     <td class="l" style="white-space:normal;min-width:220px">${esc(x.route)}</td>
     <td>${x.km==null?'':x.km.toLocaleString('vi-VN')}</td>
-    <td style="text-align:right">${x.cuoc==null?'<span style="color:var(--muted)">Nội bộ</span>':'<b>'+vn(x.cuoc)+'</b>'}</td></tr>`;
-  const heads=[['code','Mã chuyến'],['day','Ngày'],['band','Mốc'],['prov','Tỉnh XP'],['cap','Tải trọng'],['picked','Đã xếp(kg)'],['fill','% Lấp đầy'],['plate','Biển số'],['mt','Mã tuyến'],['route','Lộ trình di chuyển'],['km','Tổng QĐ (km)'],['cuoc','Cước (đ)']];
+    <td style="text-align:right">${x.cuoc==null?'<span style="color:var(--muted)">Nội bộ</span>':'<b>'+vn(x.cuoc)+'</b>'}</td>
+    <td>${x.tc?'<span class="pill" style="background:#7B3FA0">Tăng cường</span>':'Cố định'}</td><td>${x.ch===2?'2 chiều':'1 chiều'}</td>
+    <td class="l">${esc(x.ncc)}</td><td>${x.don==null?'':vn(x.don)}</td></tr>`;
+  const heads=[['code','Mã chuyến'],['day','Ngày'],['band','Mốc'],['prov','Tỉnh XP'],['cap','Tải trọng'],['picked','Đã xếp(kg)'],['fill','% Lấp đầy'],['plate','Biển số'],['mt','Mã tuyến'],['route','Lộ trình di chuyển'],['km','Tổng QĐ (km)'],['cuoc','Cước (đ)'],['tc','Loại chuyến'],['ch','Chiều'],['ncc','NCC'],['don','Tổng đơn']];
   const bf=state.bandFilter;
   const rangeTxt=(state.from||state.to)?` · từ ${state.from?ddmm(state.from):'…'} đến ${state.to?ddmm(state.to):'…'}`:'';
   const titleTxt=(bf==null?`Chi tiết ${d.length} chuyến lấp đầy thấp (0-30%)`:bf==='all'?`Chi tiết TẤT CẢ ${d.length} chuyến`:`Chi tiết ${d.length} chuyến mốc ${BLABEL[bf]}`)+rangeTxt;
@@ -215,7 +219,7 @@ function renderDet(){
       <div class="s" style="margin:0">${d.length} chuyến · cước NCC: <b>${vn(totCuoc)}đ</b>${nNoibo?' · '+nNoibo+' chuyến nội bộ (không cước)':''}</div>
     </div>
     <div class="table-wrap"><table><thead><tr>${heads.map((h,i)=>`<th class="${i===0||i===3||i===8||i===9?'l':''}" data-i="${i}" style="${i===11?'text-align:right':''}">${h[1]}${state.sortK===i?(state.sortDir>0?' ▲':' ▼'):''}</th>`).join('')}</tr></thead>
-    <tbody>${d.map(rowH).join('')||'<tr><td colspan=12 style="padding:22px">Không có chuyến phù hợp.</td></tr>'}</tbody></table></div>`;
+    <tbody>${d.map(rowH).join('')||'<tr><td colspan=16 style="padding:22px">Không có chuyến phù hợp.</td></tr>'}</tbody></table></div>`;
   const sb=$('detSearch');
   sb.oninput=e=>{state.q=e.target.value;const p=sb.selectionStart;renderDet();const n=$('detSearch');if(n){n.focus();n.setSelectionRange(p,p);}};
   $('detFrom').onchange=e=>{state.from=e.target.value;renderDet();};
@@ -390,7 +394,7 @@ function renderLegDetail(r){
   $('legBack').onclick=()=>{state.legDay='';state.legSel=null;renderLegs();};
   const ds=$('legDaySel');if(ds)ds.onchange=e=>{state.legDay=e.target.value;renderLegDetail(r);};
 }
-function render(){ if(state.tab==='det')renderDet(); else if(state.tab==='cost')renderCost(); else if(state.tab==='legs')renderLegs(); else if(state.tab==='kct')renderKCT(); else renderAgg(state.tab); }
+function render(){ if(state.tab==='opt')renderOpt(); else if(state.tab==='det')renderDet(); else if(state.tab==='cost')renderCost(); else if(state.tab==='legs')renderLegs(); else if(state.tab==='kct')renderKCT(); else renderAgg(state.tab); }
 
 /* ---- Lấp đầy theo KCT (tuyến đi qua từng KCT) ---- */
 const KCT_LIST=['KCT Bắc Giang','KCT Lạng Sơn','KCT Quảng Ninh','KCT Hải Phòng'];
@@ -448,6 +452,104 @@ function renderKCT(){
   $('panel').querySelectorAll('thead th[data-ki]').forEach(th=>th.onclick=()=>{const i=+th.dataset.ki;if(state.kctSK===i)state.kctSD*=-1;else{state.kctSK=i;state.kctSD=(i===3)?1:-1;}renderKCT();});
 }
 
+
+/* ---- ⚠️ Tuyến chưa tối ưu (từ cấu trúc cột mới của Sheet Data chuyến) ---- */
+const OPTD=window.LXBG_OPT;
+let ostate={f:'all',q:'',sk:4,sd:1};
+function optClass(r){
+  const f=r.s.fill, lp=r.s.lowPct;
+  if(f>100)return {k:'over',lbl:'Quá tải',col:'#7B3FA0'};
+  if(f<30)return {k:'bad',lbl:'Rất thấp',col:'#B4232A'};
+  if(f<50)return {k:'bad',lbl:'Chưa tối ưu',col:'#E08A1E'};
+  if(lp>=12)return {k:'watch',lbl:'Cần theo dõi',col:'#C9A227'};
+  return {k:'ok',lbl:'Đạt',col:'#1f7a4d'};
+}
+function optReasons(r,cl){
+  const s=r.s,L=[];
+  const nf=n1;
+  if(cl.k==='bad')L.push(`Lấp đầy TB ${nf(s.fill)}% — dưới mốc 50% (mốc đầy tốt)`);
+  if(cl.k==='over')L.push(`Lấp đầy TB ${nf(s.fill)}% — vượt 100% tải tối đa`);
+  if(s.low>0)L.push(`${s.low}/${s.n} chuyến (${nf(s.lowPct)}%) lấp đầy dưới 30%`);
+  if(r.weak&&r.weak.f<30)L.push(`Chặng yếu nhất: ${r.weak.from} → ${r.weak.to} (${nf(r.weak.km)} km) chỉ ${nf(r.weak.f)}%`);
+  if(r.peakPct!=null){
+    if(r.peakPct<60&&cl.k!=='ok')L.push(`Tải đỉnh TB chỉ ${nf(r.peakPct)}% xe (${vn(r.peak)}/${vn(r.capMax)} kg) — cả chuyến luôn dư chỗ`);
+    else if(r.peakPct>100&&cl.k==='bad')L.push(`Có chặng chở vượt tải tối đa (đỉnh TB ${nf(r.peakPct)}%) nhưng chặng khác gần rỗng — chênh lệch giữa các chặng`);
+  }
+  if(r.ch==='1 Chiều'&&cl.k==='bad')L.push('Tuyến 1 chiều (chiều về không có hàng)');
+  if(cl.k==='watch')L.push(`Lấp đầy TB ổn (${nf(s.fill)}%) nhưng có ${s.low} chuyến thấp rải rác`);
+  return L;
+}
+function optAdvice(r,cl){
+  if(cl.k==='over')return 'Quá tải: xem xét thêm chuyến hoặc xe tải lớn hơn';
+  if(cl.k==='bad'){
+    if(r.peakPct!=null&&r.peakPct<60)return r.capDesign>1.9?'Dư tải cả chuyến: xem xét giảm cỡ xe hoặc gộp chuyến/tuyến':'Dư tải cả chuyến (xe 1,9 tấn): xem xét gộp chuyến/tuyến hoặc giảm tần suất';
+    return 'Chặng đầy – chặng rỗng chênh nhau: xem xét đổi thứ tự điểm dừng hoặc gộp chặng yếu sang tuyến khác';
+  }
+  if(cl.k==='watch')return 'Kiểm tra các ngày thấp ở tab "Chi tiết chuyến" (lọc mốc 0-30%)';
+  return '';
+}
+function renderOpt(){
+  const M=OPTD.meta, rows=OPTD.routes.map(r=>({r,cl:optClass(r)}));
+  const cnt={all:rows.length,bad:0,over:0,watch:0,ok:0}; rows.forEach(x=>cnt[x.cl.k]++);
+  const bad=rows.filter(x=>x.cl.k==='bad').sort((a,b)=>a.r.s.fill-b.r.s.fill);
+  const over=rows.filter(x=>x.cl.k==='over').sort((a,b)=>b.r.s.fill-a.r.s.fill);
+  const cuocBad=bad.reduce((s,x)=>s+(x.r.cuocLow||0),0), cuocAll=rows.reduce((s,x)=>s+(x.r.cuocLow||0),0);
+  const dlt=r=>r.p?r.s.fill-r.p.fill:null;
+  const cols=[
+    {h:'STT',k:null},{h:'Mã tuyến',l:1,k:x=>x.r.mt},{h:'Tỉnh',l:1,k:x=>x.r.pv},{h:'Đánh giá',k:x=>x.cl.k==='bad'?0:x.cl.k==='over'?1:x.cl.k==='watch'?2:3},
+    {h:'Lấp đầy TB<br>30 ngày',k:x=>x.r.s.fill},{h:'So 30 ngày<br>trước',k:x=>dlt(x.r)==null?-999:dlt(x.r)},{h:'Chuyến &lt;30%',k:x=>x.r.s.lowPct},{h:'Tải đỉnh TB<br>(% xe)',k:x=>x.r.peakPct==null?-1:x.r.peakPct},
+    {h:'Lý do chưa tối ưu',l:1,k:null},{h:'Gợi ý (tham khảo)',l:1,k:null},{h:'Lộ trình phổ biến',l:1,k:null},{h:'Chiều · NCC',k:null},{h:'Cước/chuyến (đ)',k:x=>x.r.gia||0},{h:'Cước các chuyến &lt;30% (đ)',k:x=>x.r.cuocLow||0}
+  ];
+  let list=rows.slice();
+  if(ostate.f!=='all')list=list.filter(x=>x.cl.k===ostate.f);
+  const q=_noacc(ostate.q.trim());
+  if(q)list=list.filter(x=>_noacc(x.r.mt+' '+x.r.pv+' '+x.r.lo+' '+x.r.ncc).includes(q));
+  const sk=cols[ostate.sk]&&cols[ostate.sk].k?cols[ostate.sk].k:cols[4].k;
+  list.sort((a,b)=>{const x=sk(a),y=sk(b);return typeof x==='number'?ostate.sd*(x-y):ostate.sd*String(x).localeCompare(String(y),'vi');});
+  const dCell=r=>{const d=dlt(r);if(d==null)return '<span style="color:var(--muted)">—</span>';return `<b style="color:${d>=0?'#1f7a4d':'#B4232A'}">${d>=0?'▲ +':'▼ −'}${n1(Math.abs(d))}%</b><div style="font-size:11px;color:var(--muted)">(trước ${n1(r.p.fill)}%)</div>`;};
+  const row=(x,i)=>{const r=x.r,cl=x.cl,s=r.s,reasons=optReasons(r,cl),adv=optAdvice(r,cl);
+    return `<tr>
+    <td style="color:var(--muted)">${i+1}</td>
+    <td class="l" style="font-weight:700">${esc(r.mt)}</td><td class="l">${esc(r.pv)}</td>
+    <td><span class="pill" style="background:${cl.col}">${cl.lbl}</span></td>
+    <td><span class="pill" style="background:${s.fill<30?'#B4232A':s.fill<50?'#E08A1E':s.fill>100?'#7B3FA0':'#1f7a4d'}">${n1(s.fill)}%</span><div style="font-size:11px;color:var(--muted)">${s.n} chuyến</div></td>
+    <td>${dCell(r)}</td>
+    <td>${s.low?`<b class="b0">${s.low}</b>/${s.n}<div style="font-size:11px;color:var(--muted)">${n1(s.lowPct)}%</div>`:'0'}</td>
+    <td>${r.peakPct==null?'':n1(r.peakPct)+'%'}<div style="font-size:11px;color:var(--muted)">${vn(r.peak)}/${vn(r.capMax)} kg</div></td>
+    <td class="l" style="white-space:normal;min-width:260px;font-size:12.5px">${reasons.length?reasons.map(t=>'• '+esc(t)).join('<br>'):'<span style="color:var(--muted)">—</span>'}</td>
+    <td class="l" style="white-space:normal;min-width:220px;font-size:12.5px">${esc(adv)||'<span style="color:var(--muted)">—</span>'}</td>
+    <td class="l" style="white-space:normal;min-width:240px;font-size:11.5px;color:#5a6b62">${esc(r.lo)}</td>
+    <td style="font-size:12px">${esc(r.ch)}<div style="color:var(--muted)">${esc(r.ncc)} · xe ${r.capDesign} tấn</div></td>
+    <td style="text-align:right">${r.gia==null?'<span style="color:var(--muted)">Nội bộ</span>':vn(r.gia)}</td>
+    <td style="text-align:right">${r.cuocLow?'<b class="b0">'+vn(r.cuocLow)+'</b>':'0'}</td></tr>`;};
+  const chipDef=[['Tất cả ('+cnt.all+')','all','#334155'],['Chưa tối ưu <50% ('+cnt.bad+')','bad','#B4232A'],['Quá tải >100% ('+cnt.over+')','over','#7B3FA0'],['Cần theo dõi ('+cnt.watch+')','watch','#C9A227'],['Đạt ('+cnt.ok+')','ok','#1f7a4d']];
+  const chips=chipDef.map(([l,v,c])=>{const on=ostate.f===v;return `<button class="bandChip" data-of="${v}" style="border:1.5px solid ${c};background:${on?c:'transparent'};color:${on?'#fff':c};border-radius:999px;padding:5px 12px;font-weight:700;font-size:12.5px;cursor:pointer;margin-right:6px">${l}</button>`;}).join('');
+  const lineBad=x=>{const r=x.r,s=r.s;return `<div style="margin:3px 0">• <b>${esc(r.mt)}</b> (${esc(r.pv)}) — lấp đầy TB <b style="color:${s.fill<30?'#B4232A':'#E08A1E'}">${n1(s.fill)}%</b>${r.p?` (30 ngày trước ${n1(r.p.fill)}%)`:''}; ${s.low}/${s.n} chuyến dưới 30%${r.weak?`; chặng yếu nhất ${esc(r.weak.from)} → ${esc(r.weak.to)} ${n1(r.weak.f)}%`:''}</div>`;};
+  const lineOver=x=>{const r=x.r,s=r.s;return `<div style="margin:3px 0">• <b>${esc(r.mt)}</b> (${esc(r.pv)}) — lấp đầy TB <b style="color:#7B3FA0">${n1(s.fill)}%</b> (quá tải, cần thêm chuyến/xe lớn hơn)</div>`;};
+  const stopped=(OPTD.stopped||[]);
+  $('panel').innerHTML=`<h3>⚠️ Tuyến chưa được tối ưu — 30 ngày ${ddmm(M.from)}–${ddmm(M.to)}/2026</h3>
+    <div class="s">So sánh với 30 ngày liền trước (${ddmm(M.prevFrom)}–${ddmm(M.prevTo)}). Lấp đầy = Tỷ lệ lấp đầy thật (cột D của sheet, tính theo tải trọng tối đa của xe). Bấm tiêu đề cột để sắp xếp.</div>
+    <div class="kpis" style="margin-bottom:12px">
+      <div class="kpi"><div class="t">Tuyến đang chạy</div><div class="v">${cnt.all}</div><div class="f">${vn(M.total)} chuyến trong kỳ</div></div>
+      <div class="kpi"><div class="t">Chưa tối ưu (lấp đầy TB &lt;50%)</div><div class="v" style="color:var(--red)">${cnt.bad}</div><div class="f">trong đó rất thấp (&lt;30%): ${bad.filter(x=>x.r.s.fill<30).length}</div></div>
+      <div class="kpi"><div class="t">Quá tải (TB &gt;100%)</div><div class="v" style="color:#7B3FA0">${cnt.over}</div><div class="f">cần thêm chuyến/xe lớn hơn</div></div>
+      <div class="kpi"><div class="t">Cần theo dõi</div><div class="v" style="color:#C9A227">${cnt.watch}</div><div class="f">TB đạt nhưng ≥12% chuyến thấp</div></div>
+      <div class="kpi"><div class="t">Cước chuyến lấp đầy &lt;30%</div><div class="v" style="color:var(--red)">${vn(cuocAll)}đ</div><div class="f">tuyến chưa tối ưu chiếm ${vn(cuocBad)}đ</div></div>
+    </div>
+    <div class="note" style="line-height:1.8"><b>Danh sách tuyến CHƯA TỐI ƯU (lấp đầy TB dưới 50%), xếp từ thấp nhất:</b>
+      ${bad.map(lineBad).join('')||'<div>Không có tuyến nào.</div>'}
+      ${over.length?'<div style="margin-top:8px"><b>Tuyến QUÁ TẢI (lấp đầy TB trên 100%):</b></div>'+over.map(lineOver).join(''):''}
+      <div style="margin-top:8px;font-size:12px;opacity:.9">Cách phân loại: Rất thấp = TB &lt;30% · Chưa tối ưu = 30-50% · Cần theo dõi = TB ≥50% nhưng ≥12% chuyến dưới 30% · Quá tải = TB &gt;100% · Đạt = còn lại. Ngưỡng theo mốc màu sẵn có của dashboard (30% / 50%).${stopped.length?' Tuyến đã ngừng chạy trong kỳ: '+stopped.map(x=>esc(x.mt)+' (chuyến cuối '+ddmm(x.last)+')').join(', ')+'.':''}</div>
+    </div>
+    <div class="bar" style="margin:0 0 10px;gap:8px"><div>${chips}</div><input class="search" id="optSearch" placeholder="Tìm mã tuyến, tỉnh, điểm dừng, NCC…" value="${esc(ostate.q)}"></div>
+    <div class="table-wrap"><table><thead><tr>${cols.map((c,i)=>`<th class="${c.l?'l':''}" data-oi="${i}" style="${c.k?'':'cursor:default'}">${c.h}${ostate.sk===i?(ostate.sd>0?' ▲':' ▼'):''}</th>`).join('')}</tr></thead>
+    <tbody>${list.map(row).join('')||'<tr><td colspan=14 style="padding:22px">Không có tuyến phù hợp.</td></tr>'}</tbody></table></div>`;
+  const sb=$('optSearch');
+  sb.oninput=e=>{ostate.q=e.target.value;const p=sb.selectionStart;renderOpt();const n=$('optSearch');if(n){n.focus();n.setSelectionRange(p,p);}};
+  $('panel').querySelectorAll('.bandChip[data-of]').forEach(c=>c.onclick=()=>{ostate.f=c.dataset.of;renderOpt();});
+  $('panel').querySelectorAll('thead th[data-oi]').forEach(th=>th.onclick=()=>{const i=+th.dataset.oi;if(!cols[i].k)return;if(ostate.sk===i)ostate.sd*=-1;else{ostate.sk=i;ostate.sd=(i===4||i===3||i===5)?1:-1;}renderOpt();});
+}
+
 /* ---- wiring ---- */
 document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));t.classList.add('active');state.tab=t.dataset.tab;render();});
 const themeBtn=$('themeBtn');
@@ -455,9 +557,9 @@ function applyTheme(t){document.documentElement.setAttribute('data-theme',t);the
 themeBtn.onclick=()=>applyTheme(document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark');
 try{const s=localStorage.getItem('lxbg_theme');if(s)applyTheme(s);}catch(e){}
 $('csvBtn').onclick=()=>{
-  const head=['ma_chuyen','ngay','muc','tinh_xuat_phat','tai_trong_kg','da_xep_kg','pct_lap_day','bien_so','ma_tuyen','lo_trinh','tong_quang_duong_km','cuoc'];
+  const head=['ma_chuyen','ngay','muc','tinh_xuat_phat','tai_trong_kg','da_xep_kg','pct_lap_day','bien_so','ma_tuyen','lo_trinh','tong_quang_duong_km','cuoc','loai_chuyen','chieu','ncc','tong_don'];
   const lines=[head.join(',')];
-  DET.forEach(r=>{const o=[r[0],r[1],BLABEL[r[2]],r[3],r[4],r[5],r[6],r[7],r[8],r[9],r[11]==null?'':r[11],r[10]==null?'':r[10]];lines.push(o.map(x=>`"${String(x==null?'':x).replace(/"/g,'""')}"`).join(','));});
+  DET.forEach(r=>{const o=[r[0],r[1],BLABEL[r[2]],r[3],r[4],r[5],r[6],r[7],r[8],r[9],r[11]==null?'':r[11],r[10]==null?'':r[10],r[12]?'Tăng cường':'Cố định',r[13]===2?'2 chiều':'1 chiều',r[14]||'',r[15]==null?'':r[15]];lines.push(o.map(x=>`"${String(x==null?'':x).replace(/"/g,'""')}"`).join(','));});
   const blob=new Blob(['﻿'+lines.join('\n')],{type:'text/csv;charset=utf-8'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='LXBG_tatca_chuyen_'+DET.length+'.csv';a.click();URL.revokeObjectURL(a.href);
 };
 
