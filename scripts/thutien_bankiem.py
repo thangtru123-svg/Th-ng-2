@@ -36,8 +36,6 @@ if GROUP_MODE:
     except Exception: _prev = {}
     if _prev.get('sentGroup') and not os.environ.get('TG_CHAT'):
         print(f'[thutien] ngày {_dd:%Y-%m-%d} ĐÃ bắn nhóm rồi → không bắn lần 2.'); sys.exit(0)
-    _tgt = _n.replace(hour=23, minute=0, second=5, microsecond=0)
-    if _n < _tgt and (_tgt - _n).total_seconds() <= 10 * 60: print('[thutien] chờ tới 23h00'); time.sleep((_tgt - _n).total_seconds())
 
 HUBS = [h for h in json.load(open(os.path.join(ROOT, 'hub_map_bc.json'), encoding='utf-8')) if h['tinh'] in TINH]
 BASE = 'https://nhanh-api.ghn.vn/api/lastmile/order/get-collect-scan-orders'

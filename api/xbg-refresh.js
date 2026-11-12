@@ -30,7 +30,7 @@ export default async function handler(req, res) {
         cod = r2.status;
       }
     } catch (e) { cod = 'err'; }
-    // Thu tiền - Bắn kiểm (23h): cùng cơ chế — cron ngoài gọi endpoint này trong khung 22h55–23h50 VN → dispatch thutien-bankiem (script tự chờ tới 23h00, tự chống bắn trùng trong ngày).
+    // Thu tiền - Bắn kiểm (23h): cùng cơ chế — cron ngoài gọi endpoint này trong khung 22h55–23h50 VN → dispatch thutien-bankiem (chạy lúc nào trong khung cũng được, không cố định 23h; script tự chống bắn trùng trong ngày).
     let tt = null;
     try {
       const vn2 = new Date(Date.now() + 7 * 3600 * 1000); const m2 = vn2.getUTCHours() * 60 + vn2.getUTCMinutes();
