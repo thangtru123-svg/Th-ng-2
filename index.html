@@ -5747,7 +5747,6 @@ async function sendOdrFailToTelegram(silent){
  const T=window._ODRFAIL; const btn=document.getElementById('tgInpage_p54'); let ok=true,err='';
  if(!T){ if(!silent)alert('Chưa có dữ liệu Đơn fail ODR TTS.'); return {ok:false,err:'chưa có dữ liệu'}; }
  const _ld=btn?btn.innerHTML:''; if(btn&&!silent){btn.disabled=true;btn.innerHTML='⏳ Đang bắn...';}
- const trim=s=>s.length>1020?s.slice(0,1017)+'...':s;
  const tg=s=>s.replace(/<br>/g,'\n');
  // nhận định đã dùng chung chuỗi với web; ở caption chỉ giữ thẻ <b>
  const parts=[
@@ -5772,10 +5771,14 @@ async function sendOdrFailToTelegram(silent){
    try{
     const img=await _captureEl(tmp.id);
     if(!img||!img.size)throw new Error('ảnh rỗng');
-    const cap=trim(cap0);
+    // chú thích ≤1020 ký tự: nhét NGUYÊN từng dòng; dòng còn lại gửi tiếp thành tin nhắn ngay sau ảnh (không cắt giữa dòng/giữa thẻ)
+    const ls=cap0.split('\n'); let cap=ls[0], li=1;
+    while(li<ls.length&&(cap+'\n'+ls[li]).length<=1020){cap+='\n'+ls[li];li++;}
+    const rest=ls.slice(li).join('\n');
     let res=await _tgSendPhoto(TG_AGING_CHAT,TG_TTS_THREAD,img,cap);
     if(!res||!res.ok)res=await _tgSendDoc(TG_AGING_CHAT,TG_TTS_THREAD,img,cap,fn);
     if(!res||!res.ok){ok=false;err=(res&&res.description)||'TG lỗi';}
+    else if(rest){ await new Promise(r=>setTimeout(r,500)); const r2=await _tgSend(TG_AGING_CHAT,TG_TTS_THREAD,rest.slice(0,4000)); if(r2&&r2.ok===false){ok=false;err=(r2.description)||'TG lỗi (phần tiếp)';} }
    }catch(e){ok=false;err=e.message;}
    finally{tmp.remove();}
    await new Promise(r=>setTimeout(r,800));
