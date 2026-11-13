@@ -5747,6 +5747,9 @@ async function buildGTCRealtimePage(){
     +`<td ${tdC} style="font-weight:800;color:#C8461A">${_grtVN(r.gtc)}</td><td ${tdC} style="font-weight:700;color:#DC2626">${_pD(r.gtc,dn)}</td>`; };
   const amRows=am.map((r,i)=>`<tr data-grt="${_grtStrip(r.am)}"><td ${tdC}>${i+1}</td><td ${tdL}>${r.am}</td>${rowCells(r)}</tr>`).join('');
   const bcRows=bc.map((r,i)=>`<tr data-grt="${_grtStrip(r.bc+' '+r.am)}"><td ${tdC}>${i+1}</td><td ${tdL}>${r.bc}</td><td ${tdL}>${r.am}</td>${rowCells(r)}</tr>`).join('');
+  // Dòng TỔNG CỘNG (= số Vùng V) — không gắn data-grt để luôn hiện kể cả khi lọc tìm BC
+  const amTot=`<tr style="background:#EEF2F7;font-weight:800"><td ${tdC}></td><td ${tdL}><b>TỔNG CỘNG (${am.length} AM)</b></td>${rowCells(V)}</tr>`;
+  const bcTot=`<tr style="background:#EEF2F7;font-weight:800"><td ${tdC}></td><td ${tdL}><b>TỔNG CỘNG (${bc.length} BC)</b></td><td ${tdL}></td>${rowCells(V)}</tr>`;
   const _colHead=`<th ${TH}>Tồn N-1</th><th ${TH}>Mới ca 1<br><span style="font-weight:500;font-size:10px">0h→9h</span></th><th ${TH}>Mới ca 2<br><span style="font-weight:500;font-size:10px">9h→15h</span></th><th ${TH3}>Mới ca 3<br><span style="font-weight:500;font-size:10px">15h→24h · TK</span></th><th ${TH}>Tổng cần giao<br><span style="font-weight:500;font-size:10px">tồn+ca1+ca2</span></th><th ${TH}>Đã gán</th><th ${TH}>% Gán<br><span style="font-weight:500;font-size:10px">/ tổng cần giao</span></th><th ${TH}>GTC</th><th ${TH}>% GTC<br><span style="font-weight:500;font-size:10px">/ tổng cần giao</span></th>`;
   el.innerHTML=`
    <div class="page-header">
@@ -5765,14 +5768,14 @@ async function buildGTCRealtimePage(){
    <div style="font-size:14px;font-weight:800;color:var(--text-main);margin:6px 2px 8px">📋 Theo AM (${am.length})</div>
    <div class="table-wrap" style="margin-bottom:22px"><table style="border-collapse:collapse;display:inline-block;min-width:880px">
     <thead><tr><th ${TH}>STT</th><th ${TH} style="text-align:left">AM</th>${_colHead}</tr></thead>
-    <tbody>${amRows}</tbody></table></div>
+    <tbody>${amRows}${amTot}</tbody></table></div>
    <div style="display:flex;align-items:center;gap:10px;margin:6px 2px 8px;flex-wrap:wrap">
     <span style="font-size:14px;font-weight:800;color:var(--text-main)">🏢 Theo Bưu Cục (${bc.length})</span>
     <input type="text" placeholder="🔎 Tìm Bưu Cục / AM…" oninput="grtFilter(this.value)" style="padding:5px 10px;border:1px solid var(--border);border-radius:8px;font-size:12.5px;min-width:200px">
    </div>
    <div class="table-wrap"><table style="border-collapse:collapse;display:inline-block;min-width:980px">
     <thead><tr><th ${TH}>STT</th><th ${TH} style="text-align:left">Bưu Cục</th><th ${TH} style="text-align:left">AM</th>${_colHead}</tr></thead>
-    <tbody>${bcRows}</tbody></table></div>
+    <tbody>${bcRows}${bcTot}</tbody></table></div>
    <div class="analysis-box" style="margin-top:16px;padding:12px 14px;font-size:12.5px;line-height:1.7">
     <b>Cách tính:</b><br>
     • <b>Hàng tồn N-1</b> = đơn Giao + Ưu tiên giao ở mốc tuổi hàng ≥ 6–12h, <b>chụp cứng lúc ~7h sáng</b> rồi giữ nguyên cả ngày.<br>
