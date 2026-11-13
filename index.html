@@ -5730,7 +5730,7 @@ async function buildOdrFailPage(){
    const ODR_MT=96, L0=[]; let topBody='';
    if(cmp&&cmp.cur&&cmp.cur.vol){
     const vol=cmp.cur.vol, okN=cmp.cur.ok, odr=okN/vol*100, failN=total, giam=Math.max(0,Math.ceil(failN-vol*(100-ODR_MT)/100));
-    const LB='background:#D9E2F3;font-weight:700;text-align:left;padding:6px 12px;font-size:13px;border:1px solid var(--border);white-space:nowrap';
+    const LB='background:#fff;font-weight:700;width:270px;text-align:left;padding:6px 12px;font-size:13px;border:1px solid var(--border);white-space:nowrap';
     const VB='text-align:center;padding:6px 14px;font-size:13px;border:1px solid var(--border);font-weight:700;white-space:nowrap';
     const r1=(l,v,red)=>`<tr><td style="${LB}">${l}</td><td style="${VB}${red?';color:#C00000':''}">${v}</td></tr>`;
     const kq=nhArr.filter(x=>x.k==='Khách hàng'), nb=nhArr.filter(x=>x.k!=='Khách hàng');
@@ -5740,7 +5740,7 @@ async function buildOdrFailPage(){
     const hd=(a,l1)=>`<thead><tr><th style="${THL}">${l1}</th>${a.map(h=>`<th style="${THS};white-space:normal;line-height:1.25">${h}</th>`).join('')}<th style="${THS}">Ghi chú</th></tr></thead>`;
     const row=(name,n,note,bold)=>`<tr${bold?` style="${TOT}"`:''}><td style="${TL};font-weight:700">${name}</td><td style="${TC}">${_ofN(n)}</td><td style="${TC}">${_ofPc(n/failN*100)}</td><td style="${TC};color:#C00000;font-weight:700">${(n/vol*100).toLocaleString('vi-VN',{minimumFractionDigits:2,maximumFractionDigits:2})}%</td><td style="${TC}">${((okN+n)/vol*100).toLocaleString('vi-VN',{minimumFractionDigits:2,maximumFractionDigits:2})}%</td><td style="${TL};font-weight:400">${note||''}</td></tr>`;
     const p2=v=>v.toLocaleString('vi-VN',{minimumFractionDigits:2,maximumFractionDigits:2})+'%';
-    topBody=`<table style="border-collapse:collapse;margin-bottom:14px"><tbody>${r1('Vol ODR ngày '+dd+' (đơn)',_ofN(vol))}${r1('Đơn đúng hạn (đơn)',_ofN(okN))}${r1('Đơn fail ODR (đơn)',_ofN(failN),true)}${r1('ODR Vùng',p2(odr))}${r1('Mục tiêu ODR',ODR_MT.toLocaleString('vi-VN',{minimumFractionDigits:1})+'%')}${r1('Cần giảm fail để đạt MT (đơn)',_ofN(giam),true)}${r1('Tỉ lệ fail (mất so với 100%)',p2(failN/vol*100))}</tbody></table>
+    topBody=`<table style="border-collapse:collapse;margin-bottom:14px;width:auto"><tbody>${r1('Vol ODR ngày '+dd+' (đơn)',_ofN(vol))}${r1('Đơn đúng hạn (đơn)',_ofN(okN))}${r1('Đơn fail ODR (đơn)',_ofN(failN),true)}${r1('ODR Vùng',p2(odr))}${r1('Mục tiêu ODR',ODR_MT.toLocaleString('vi-VN',{minimumFractionDigits:1})+'%')}${r1('Cần giảm fail để đạt MT (đơn)',_ofN(giam),true)}${r1('Tỉ lệ fail (mất so với 100%)',p2(failN/vol*100))}</tbody></table>
      <div style="font-weight:800;color:#1F3864;margin:4px 0 6px">Nhóm lỗi — tỉ trọng và ảnh hưởng tới ODR Vùng</div>
      <table style="border-collapse:collapse;margin-bottom:14px">${hd(H5,'Nhóm lỗi')}<tbody>${nhArr.map(x=>row(_ofEsc(x.k),x.n,_ofEsc(NOTE[x.k]||''))).join('')}${row('Tổng',failN,'',true)}</tbody></table>
      <div style="font-weight:800;color:#1F3864;margin:4px 0 6px">Gộp theo kiểm soát</div>
