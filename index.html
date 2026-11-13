@@ -5726,15 +5726,43 @@ async function buildOdrFailPage(){
     L4.push(`🚚 Trung chuyển — thời điểm hàng về BC giao: ${tl.map(t=>`${_ofEsc(t.k)} ${_ofN(t.n)} đơn (${_ofPc(t.n/tc.length*100)})`).join(' · ')}.`);}
    L4.push(`🔴 BC có nhiều đơn lỗi 2 nhóm nhất: <b>${_ofEsc(ksBCArr[0].k)}</b> (AM ${_ofEsc(ksBCArr[0].am)}) — ${_ofN(ksBCArr[0].n)} đơn (${_ofPc(ksBCArr[0].n/ksN*100)}), gồm BC giao ${_ofN(ksBCArr[0].g1)} + Trung chuyển ${_ofN(ksBCArr[0].g2)}.`);
    L4.push(`🔴 AM nhiều nhất: <b>${_ofEsc(ksAMArr[0].k)}</b> — ${_ofN(ksAMArr[0].n)} đơn (${_ofPc(ksAMArr[0].n/ksN*100)}); 🟢 ít nhất: <b>${_ofEsc(ksAMArr[ksAMArr.length-1].k)}</b> — ${_ofN(ksAMArr[ksAMArr.length-1].n)} đơn.`);
+   // ---- ⓪ Bảng tổng quan ODR (theo mẫu đại nhân, tính cho NGÀY GTC N-1): Vol ODR · đúng hạn · fail · ODR Vùng · mục tiêu · ảnh hưởng từng nhóm lỗi ----
+   const ODR_MT=96, L0=[]; let topBody='';
+   if(cmp&&cmp.cur&&cmp.cur.vol){
+    const vol=cmp.cur.vol, okN=cmp.cur.ok, odr=okN/vol*100, failN=total, giam=Math.max(0,Math.ceil(failN-vol*(100-ODR_MT)/100));
+    const LB='background:#D9E2F3;font-weight:700;text-align:left;padding:6px 12px;font-size:13px;border:1px solid var(--border);white-space:nowrap';
+    const VB='text-align:center;padding:6px 14px;font-size:13px;border:1px solid var(--border);font-weight:700;white-space:nowrap';
+    const r1=(l,v,red)=>`<tr><td style="${LB}">${l}</td><td style="${VB}${red?';color:#C00000':''}">${v}</td></tr>`;
+    const kq=nhArr.filter(x=>x.k==='Khách hàng'), nb=nhArr.filter(x=>x.k!=='Khách hàng');
+    const kqN=kq.reduce((a,x)=>a+x.n,0), nbN=nb.reduce((a,x)=>a+x.n,0);
+    const NOTE={'Khách hàng':'Giao thất bại trong hạn do khách (hẹn lại, không liên lạc được, không nghe máy...)','BC giao':'Lỗi tại BC giao: không đi giao trong hạn, NV gặp sự cố, có chuyến nhưng không giao','Trung chuyển':'Hàng về BC giao trễ do trung chuyển / đổi BC giao','BC lấy':'Trễ xuất khỏi BC lấy (BC lấy ở tỉnh gửi, không thuộc cụm)'};
+    const H5=['Đơn fail','% tỉ trọng trong fail','Ảnh hưởng ODR Vùng (%)','ODR Vùng nếu xử lý hết nhóm này'];
+    const hd=(a,l1)=>`<thead><tr><th style="${THL}">${l1}</th>${a.map(h=>`<th style="${THS};white-space:normal;line-height:1.25">${h}</th>`).join('')}<th style="${THS}">Ghi chú</th></tr></thead>`;
+    const row=(name,n,note,bold)=>`<tr${bold?` style="${TOT}"`:''}><td style="${TL};font-weight:700">${name}</td><td style="${TC}">${_ofN(n)}</td><td style="${TC}">${_ofPc(n/failN*100)}</td><td style="${TC};color:#C00000;font-weight:700">${(n/vol*100).toLocaleString('vi-VN',{minimumFractionDigits:2,maximumFractionDigits:2})}%</td><td style="${TC}">${((okN+n)/vol*100).toLocaleString('vi-VN',{minimumFractionDigits:2,maximumFractionDigits:2})}%</td><td style="${TL};font-weight:400">${note||''}</td></tr>`;
+    const p2=v=>v.toLocaleString('vi-VN',{minimumFractionDigits:2,maximumFractionDigits:2})+'%';
+    topBody=`<table style="border-collapse:collapse;margin-bottom:14px"><tbody>${r1('Vol ODR ngày '+dd+' (đơn)',_ofN(vol))}${r1('Đơn đúng hạn (đơn)',_ofN(okN))}${r1('Đơn fail ODR (đơn)',_ofN(failN),true)}${r1('ODR Vùng',p2(odr))}${r1('Mục tiêu ODR',ODR_MT.toLocaleString('vi-VN',{minimumFractionDigits:1})+'%')}${r1('Cần giảm fail để đạt MT (đơn)',_ofN(giam),true)}${r1('Tỉ lệ fail (mất so với 100%)',p2(failN/vol*100))}</tbody></table>
+     <div style="font-weight:800;color:#1F3864;margin:4px 0 6px">Nhóm lỗi — tỉ trọng và ảnh hưởng tới ODR Vùng</div>
+     <table style="border-collapse:collapse;margin-bottom:14px">${hd(H5,'Nhóm lỗi')}<tbody>${nhArr.map(x=>row(_ofEsc(x.k),x.n,_ofEsc(NOTE[x.k]||''))).join('')}${row('Tổng',failN,'',true)}</tbody></table>
+     <div style="font-weight:800;color:#1F3864;margin:4px 0 6px">Gộp theo kiểm soát</div>
+     <table style="border-collapse:collapse">${hd(H5,'Loại')}<tbody>${row('Khách hàng (khách quan)',kqN,'Khách hàng')}${row('Nội bộ vận hành (chủ quan)',nbN,_ofEsc(nb.map(x=>x.k).join(' + ')))}</tbody></table>`;
+    L0.push(`<b>Tổng thể:</b> ODR TTS Vùng ngày ${dd} đạt <b>${p2(odr)}</b> (${_ofN(okN)}/${_ofN(vol)} đơn), ${odr<ODR_MT?`thấp hơn mục tiêu ${ODR_MT}% là ${p2(ODR_MT-odr)}`:`đạt mục tiêu ${ODR_MT}%`}; có ${_ofN(failN)} đơn fail (${p2(failN/vol*100)}).`);
+    if(odr<ODR_MT)L0.push(`🎯 Cần giảm tối thiểu <b>${_ofN(giam)} đơn</b> fail (còn tối đa ${_ofN(failN-giam)} đơn) để đạt mục tiêu ${ODR_MT}%.`);
+    if(cmp.prev&&cmp.prev.vol){const po=cmp.prev.ok/cmp.prev.vol*100,d=odr-po;L0.push(`${d<0?'📉 Giảm':d>0?'📈 Tăng':'Không đổi'} so với ngày liền trước (${_ofD(cmp.prev.day)}): ${p2(po)} → ${p2(odr)} (${d>0?'+':''}${p2(d).replace('%','')}%).`);}
+    const w=nhArr[0]; L0.push(`🔴 Nhóm ảnh hưởng ODR nhiều nhất: <b>${_ofEsc(w.k)}</b> — ${_ofN(w.n)} đơn, kéo ODR xuống ${p2(w.n/vol*100)}; xử lý hết nhóm này ODR lên ${p2((okN+w.n)/vol*100)}.`);
+    L0.push(`👥 Khách quan (Khách hàng): ${_ofN(kqN)} đơn (${_ofPc(kqN/failN*100)}), ảnh hưởng ${p2(kqN/vol*100)} · 🏭 Chủ quan (nội bộ vận hành): <b>${_ofN(nbN)} đơn (${_ofPc(nbN/failN*100)})</b>, ảnh hưởng ${p2(nbN/vol*100)}.`);
+    const odrNb=(okN+nbN)/vol*100; L0.push(`${odrNb>=ODR_MT?'🟢':'🔴'} Nếu xử lý hết lỗi nội bộ vận hành, ODR đạt ${p2(odrNb)} — ${odrNb>=ODR_MT?`đủ vượt mục tiêu ${ODR_MT}%`:`vẫn thấp hơn mục tiêu ${ODR_MT}% là ${p2(ODR_MT-odrNb)}, cần giảm thêm cả lỗi Khách hàng`}.`);
+    if(failN!==vol-okN)L0.push(`⚠️ Lưu ý: sheet ODR TTS - AM ghi ${_ofN(vol-okN)} đơn fail, sheet chi tiết có ${_ofN(failN)} đơn — hai nguồn đang lệch.`);
+   }else{ topBody='<div class="analysis-box" style="margin:0">Không có dữ liệu Vol ODR của ngày '+dd+' (sheet ODR TTS - AM chưa có ngày này) nên chưa tính được ODR Vùng.</div>'; }
    const kpi=(t,v,s,c)=>`<div style="flex:1;min-width:170px;background:#fff;border:1px solid var(--border);border-radius:14px;padding:13px 16px;box-shadow:var(--shadow-sm)"><div style="font-size:12px;color:var(--text-sub);font-weight:600">${t}</div><div style="font-size:24px;font-weight:800;color:${c}">${v}</div><div style="font-size:12px;color:var(--text-sub)">${s}</div></div>`;
    const card=(id,ic,tt,body,note)=>`<div class="card" id="${id}" style="margin-bottom:18px"><div class="card-header"><div class="card-title"><div class="card-icon">${ic}</div>${tt}</div></div><div class="table-wrap" style="overflow-x:auto">${body}</div><div class="analysis-box" style="margin-top:12px">${note.join('<br>')}</div></div>`;
    el.innerHTML=`<div class="page-header"><div class="page-title">❌ Đơn fail ODR TTS (N-1)</div><div class="page-meta"><span style="color:var(--text-sub);font-size:13px">Lạng Sơn + Quảng Ninh · ngày GTC <b>${dd}</b> · nguồn sheet "Data đơn N-1" (tự cập nhật 7h10–7h30 hàng ngày)</span><button style="background:#16A34A;color:#fff;border:1px solid #16A34A;border-radius:8px;padding:5px 12px;font-size:12px;font-weight:700;cursor:pointer" onclick="buildOdrFailPage()">🔄 Tải lại</button></div></div>
+    ${card('ofCardTop','📌','⓪ Tổng quan ODR TTS ngày '+dd+' — ảnh hưởng của từng nhóm lỗi tới ODR Vùng',topBody,L0.length?L0:['Chưa đủ dữ liệu để phân tích.'])}
     <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px">${kpi('❌ Tổng đơn fail ODR TTS',_ofN(total),'đơn · ngày '+dd,'#C00000')}${nhArr.map(x=>kpi(_ofEsc(x.k),_ofN(x.n),'đơn · '+_ofPc(x.n/total*100),_OF_COL[x.k]||'#6B7280')).join('')}</div>
     ${card('ofCardOv','📊','① Tổng quan lỗi — Nhóm lỗi &amp; Lý do trễ',tblNh+tblLy,L1)}
     ${card('ofCardAM','👤','② Tỉ trọng đơn fail theo AM',tblAM,L2)}
     ${card('ofCardBC','🏪','③ Tỉ trọng đơn fail theo Bưu Cục',tblBC,L3)}
     ${card('ofCardKS','🎯','④ Phân tích chủ đạo — lỗi BC giao &amp; Trung chuyển (phần Vùng kiểm soát được)','<div style="font-weight:800;margin:4px 0 6px">4.1 Nguyên nhân chủ đạo</div>'+ksTblA+'<div style="font-weight:800;margin:4px 0 6px">4.2 Theo Bưu Cục</div>'+ksTblB+'<div style="font-weight:800;margin:4px 0 6px">4.3 Theo AM</div>'+ksTblC,L4)}`;
-   window._ODRFAIL={day,dd,total,L1,L2,L3,L4,nBC:bcArr.length};
+   window._ODRFAIL={day,dd,total,L0,L1,L2,L3,L4,nBC:bcArr.length};
    injectTgBtn('p54',()=>sendOdrFailToTelegram(),'Bắn Đơn fail ODR TTS TG');
   }catch(e){ if(my===window._ofSeq)el.innerHTML=HEAD+'<div class="analysis-box">Lỗi tải dữ liệu: '+_ofEsc(e&&e.message||e)+'</div>'; }
  };
@@ -5750,6 +5778,7 @@ async function sendOdrFailToTelegram(silent){
  const tg=s=>s.replace(/<br>/g,'\n');
  // nhận định đã dùng chung chuỗi với web; ở caption chỉ giữ thẻ <b>
  const parts=[
+  ['ofCardTop','odrfail_odr_vung.png',1300,0,'📌 <b>TỔNG QUAN ODR TTS VÙNG — ẢNH HƯỞNG CỦA TỪNG NHÓM LỖI</b> (ngày GTC '+T.dd+')\n'+(T.L0||[]).join('\n'),0],
   ['ofCardOv','odrfail_tongquan.png',1300,0,'❌ <b>ĐƠN FAIL ODR TTS — TỔNG QUAN LỖI</b> (ngày GTC '+T.dd+')\n'+T.L1.join('\n'),14],
   ['ofCardAM','odrfail_theo_am.png',1500,0,'👤 <b>ĐƠN FAIL ODR TTS — THEO AM</b> (ngày GTC '+T.dd+')\n'+T.L2.join('\n'),0],
   ['ofCardBC','odrfail_theo_bc.png',1500,20,'🏪 <b>ĐƠN FAIL ODR TTS — THEO BƯU CỤC</b> (ngày GTC '+T.dd+', top 20 BC)\n'+T.L3.join('\n'),0],
