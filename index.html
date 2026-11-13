@@ -5702,35 +5702,52 @@ async function buildGTCRealtimePage(){
   if(!r.ok) r=await fetch('gtc_realtime.json?t='+Date.now());
   if(!r.ok) throw new Error('HTTP '+r.status);
   const d=await r.json(); window._GTCRT=d;
-  // ===== Lọc 2 tỉnh Lạng Sơn (LSO) + Quảng Ninh (QNI) — đồng bộ window._ONLY_2T =====
-  // Lọc BC theo tiền tố mã, rồi DỰNG LẠI bảng AM + tổng Vùng từ chính BC đã lọc (số khớp đúng 2 tỉnh).
-  if(window._ONLY_2T!==false && Array.isArray(d.bc)){
-   const bcF=d.bc.filter(x=>_2T_PFX.test((x.bc||'').trim()));
-   if(bcF.length){
-    const amMap={};
-    bcF.forEach(x=>{ const k=(x.am||'').trim()||'(chưa map AM)';
-     const g=amMap[k]||(amMap[k]={am:k,canGiao:0,daGan:0,gtc:0});
-     g.canGiao+=(+x.canGiao||0); g.daGan+=(+x.daGan||0); g.gtc+=(+x.gtc||0); });
-    d.bc=bcF;
-    d.am=Object.values(amMap);
-    d.vung={ canGiao:bcF.reduce((s,x)=>s+(+x.canGiao||0),0),
-             daGan :bcF.reduce((s,x)=>s+(+x.daGan ||0),0),
-             gtc   :bcF.reduce((s,x)=>s+(+x.gtc   ||0),0) };
-   }
-  }
-  const V=d.vung||{canGiao:0,daGan:0,gtc:0};
+  // ===== Lọc 2 tỉnh + join Hàng tồn N-1 / Hàng mới ca1-3 (d.hangMoi) + dựng lại AM & Vùng =====
+  const _hm=(d.hangMoi&&Array.isArray(d.hangMoi.hubs))?d.hangMoi.hubs:[];
+  const _hmBy={}; _hm.forEach(h=>{_hmBy[(h.name||'').trim()]=h;});
+  if(window._ONLY_2T!==false && Array.isArray(d.bc)) d.bc=d.bc.filter(x=>_2T_PFX.test((x.bc||'').trim()));
+  (d.bc||[]).forEach(x=>{ const h=_hmBy[(x.bc||'').trim()];
+   x._ton=h&&h.tonN1!=null?+h.tonN1:null; x._ca1=h&&h.ca1!=null?+h.ca1:null;
+   x._ca2=h&&h.ca2!=null?+h.ca2:null;     x._ca3=h&&h.ca3!=null?+h.ca3:null; });
+  const _sumF=(arr,f)=>arr.reduce((s,x)=>s+(x[f]!=null?+x[f]:0),0);
+  const _hasF=(arr,f)=>arr.some(x=>x[f]!=null);
+  const _amMap={};
+  (d.bc||[]).forEach(x=>{ const k=(x.am||'').trim()||'(chưa map AM)';
+   const g=_amMap[k]||(_amMap[k]={am:k,canGiao:0,daGan:0,gtc:0,_bcs:[]});
+   g.canGiao+=(+x.canGiao||0); g.daGan+=(+x.daGan||0); g.gtc+=(+x.gtc||0); g._bcs.push(x); });
+  Object.values(_amMap).forEach(g=>['_ton','_ca1','_ca2','_ca3'].forEach(f=>{g[f]=_hasF(g._bcs,f)?_sumF(g._bcs,f):null;}));
+  d.am=Object.values(_amMap);
+  d.vung={ canGiao:_sumF(d.bc||[],'canGiao'), daGan:_sumF(d.bc||[],'daGan'), gtc:_sumF(d.bc||[],'gtc'),
+   _ton:_hasF(d.bc||[],'_ton')?_sumF(d.bc||[],'_ton'):null, _ca1:_hasF(d.bc||[],'_ca1')?_sumF(d.bc||[],'_ca1'):null,
+   _ca2:_hasF(d.bc||[],'_ca2')?_sumF(d.bc||[],'_ca2'):null, _ca3:_hasF(d.bc||[],'_ca3')?_sumF(d.bc||[],'_ca3'):null };
+  const V=d.vung;
   const _scopeLbl=(window._ONLY_2T!==false)?('Lạng Sơn + Quảng Ninh · '+(d.bc?d.bc.length:0)+' BC'):('Toàn Vùng XBG · '+(d.bc?d.bc.length:0)+' BC');
   const upd=new Date(d.updatedAt);
   const updStr=isNaN(upd)?'—':upd.toLocaleString('vi-VN',{hour:'2-digit',minute:'2-digit',day:'2-digit',month:'2-digit',year:'numeric'});
-  const _gttot=r=>(r.canGiao>0?r.gtc/r.canGiao:-1);
-  const am=[...(d.am||[])].sort((a,b)=>_gttot(b)-_gttot(a));
-  const bc=[...(d.bc||[])].sort((a,b)=>_gttot(b)-_gttot(a));
+  // Tổng cần giao = tồn N-1 + ca1 + ca2 (ca3 chỉ tham khảo) · mẫu số % Gán & % GTC = ca1 + ca2
+  const _den=r=>(r._ca1!=null&&r._ca2!=null)?(r._ca1+r._ca2):null;
+  const _tcg=r=>(r._ton!=null&&r._ca1!=null&&r._ca2!=null)?(r._ton+r._ca1+r._ca2):null;
+  const _sortKey=r=>{const dn=_den(r);return dn?r.gtc/dn:-1;};   // xếp theo % GTC (gtc/(ca1+ca2)) giảm dần
+  const am=[...(d.am||[])].sort((a,b)=>_sortKey(b)-_sortKey(a));
+  const bc=[...(d.bc||[])].sort((a,b)=>_sortKey(b)-_sortKey(a));
   const kpi=(t,v,s,c)=>`<div style="background:#fff;border:1px solid var(--border);border-radius:14px;padding:14px 16px;min-width:160px;box-shadow:var(--shadow-sm)"><div style="font-size:12px;color:var(--text-sub);font-weight:600">${t}</div><div style="font-size:24px;font-weight:800;color:${c||'var(--text-main)'};margin-top:2px">${v}</div><div style="font-size:11.5px;color:var(--text-sub)">${s}</div></div>`;
   const TH='style="background:#1F3864;color:#fff;padding:7px 11px;font-size:12px;font-weight:700;white-space:nowrap;text-align:center"';
+  const TH3='style="background:#415A86;color:#fff;padding:7px 11px;font-size:12px;font-weight:700;white-space:nowrap;text-align:center"';
   const tdC='style="text-align:center;padding:6px 11px;font-size:12.5px;border-bottom:1px solid var(--border);white-space:nowrap"';
   const tdL='style="text-align:left;padding:6px 11px;font-size:12.5px;border-bottom:1px solid var(--border);white-space:nowrap"';
-  const amRows=am.map((r,i)=>`<tr data-grt="${_grtStrip(r.am)}"><td ${tdC}>${i+1}</td><td ${tdL}>${r.am}</td><td ${tdC}>${_grtVN(r.canGiao)}</td><td ${tdC}>${_grtVN(r.daGan)}</td><td ${tdC} style="color:#C8461A;font-weight:700">${_grtPct(r.daGan,r.canGiao)}</td><td ${tdC} style="font-weight:800;color:#C8461A">${_grtVN(r.gtc)}</td><td ${tdC}>${_grtPct(r.gtc,r.daGan)}</td><td ${tdC}>${_grtPct(r.gtc,r.canGiao)}</td></tr>`).join('');
-  const bcRows=bc.map((r,i)=>`<tr data-grt="${_grtStrip(r.bc+' '+r.am)}"><td ${tdC}>${i+1}</td><td ${tdL}>${r.bc}</td><td ${tdL}>${r.am}</td><td ${tdC}>${_grtVN(r.canGiao)}</td><td ${tdC}>${_grtVN(r.daGan)}</td><td ${tdC} style="color:#C8461A;font-weight:700">${_grtPct(r.daGan,r.canGiao)}</td><td ${tdC} style="font-weight:800;color:#C8461A">${_grtVN(r.gtc)}</td><td ${tdC}>${_grtPct(r.gtc,r.daGan)}</td><td ${tdC}>${_grtPct(r.gtc,r.canGiao)}</td></tr>`).join('');
+  const _na='<span style="color:#9CA3AF;font-style:italic">chưa có</span>';
+  const cHM=v=>v==null?_na:_grtVN(v);
+  const c3=v=>v==null?_na:('<span style="color:#64748B">'+_grtVN(v)+'</span>');   // ca3 làm nhạt (tham khảo)
+  const _pD=(a,dn)=>dn?_grtPct(a,dn):'—';
+  const rowCells=r=>{ const dn=_den(r), tcg=_tcg(r);
+   return `<td ${tdC}>${cHM(r._ton)}</td><td ${tdC}>${cHM(r._ca1)}</td><td ${tdC}>${cHM(r._ca2)}</td>`
+    +`<td ${tdC} style="background:#F8FAFC">${c3(r._ca3)}</td>`
+    +`<td ${tdC} style="font-weight:700">${tcg==null?_na:_grtVN(tcg)}</td>`
+    +`<td ${tdC}>${_grtVN(r.daGan)}</td><td ${tdC} style="color:#C8461A;font-weight:700">${_pD(r.daGan,dn)}</td>`
+    +`<td ${tdC} style="font-weight:800;color:#C8461A">${_grtVN(r.gtc)}</td><td ${tdC} style="font-weight:700;color:#DC2626">${_pD(r.gtc,dn)}</td>`; };
+  const amRows=am.map((r,i)=>`<tr data-grt="${_grtStrip(r.am)}"><td ${tdC}>${i+1}</td><td ${tdL}>${r.am}</td>${rowCells(r)}</tr>`).join('');
+  const bcRows=bc.map((r,i)=>`<tr data-grt="${_grtStrip(r.bc+' '+r.am)}"><td ${tdC}>${i+1}</td><td ${tdL}>${r.bc}</td><td ${tdL}>${r.am}</td>${rowCells(r)}</tr>`).join('');
+  const _colHead=`<th ${TH}>Tồn N-1</th><th ${TH}>Mới ca 1<br><span style="font-weight:500;font-size:10px">0h→9h</span></th><th ${TH}>Mới ca 2<br><span style="font-weight:500;font-size:10px">9h→15h</span></th><th ${TH3}>Mới ca 3<br><span style="font-weight:500;font-size:10px">15h→24h · TK</span></th><th ${TH}>Tổng cần giao<br><span style="font-weight:500;font-size:10px">tồn+ca1+ca2</span></th><th ${TH}>Đã gán</th><th ${TH}>% Gán<br><span style="font-weight:500;font-size:10px">/(ca1+ca2)</span></th><th ${TH}>GTC</th><th ${TH}>% GTC<br><span style="font-weight:500;font-size:10px">/(ca1+ca2)</span></th>`;
   const excl=d.excl06?'ĐÃ loại đơn nhập BC 0–6h (sau 18h)':'KHÔNG loại 0–6h (khung 6h–18h)';
   el.innerHTML=`
    <div class="page-header">
@@ -5742,28 +5759,30 @@ async function buildGTCRealtimePage(){
     </div>
    </div>
    <div class="kpis" style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px">
-    ${kpi('Tổng đơn cần giao',_grtVN(V.canGiao)+' đơn',_scopeLbl,'#1F3864')}
-    ${kpi('Tổng đơn đã gán',_grtVN(V.daGan)+' đơn','tỉ lệ gán '+_grtPct(V.daGan,V.canGiao)+' (đã gán / cần giao) · Chuyến tạo trong ngày','#C8461A')}
-    ${kpi('Tổng đơn GTC',_grtVN(V.gtc)+' đơn',_grtPct(V.gtc,V.daGan)+' / đã gán · '+_grtPct(V.gtc,V.canGiao)+' / cần giao','#DC2626')}
+    ${kpi('Tổng cần giao',(_tcg(V)==null?_na:_grtVN(_tcg(V))+' đơn'),'Tồn N-1 '+cHM(V._ton)+' + Ca1 '+cHM(V._ca1)+' + Ca2 '+cHM(V._ca2)+' · '+_scopeLbl,'#1F3864')}
+    ${kpi('Tổng đơn đã gán',_grtVN(V.daGan)+' đơn','% Gán '+_pD(V.daGan,_den(V))+' (đã gán / ca1+ca2) · Chuyến tạo trong ngày','#C8461A')}
+    ${kpi('Tổng đơn GTC',_grtVN(V.gtc)+' đơn','% GTC '+_pD(V.gtc,_den(V))+' (GTC / ca1+ca2)','#DC2626')}
+    ${kpi('Hàng mới ca 3 (tham khảo)',(V._ca3==null?_na:_grtVN(V._ca3)+' đơn'),'15h→24h · không tính vào % ngày N','#64748B')}
    </div>
    <div style="font-size:14px;font-weight:800;color:var(--text-main);margin:6px 2px 8px">📋 Theo AM (${am.length})</div>
-   <div class="table-wrap" style="margin-bottom:22px"><table style="border-collapse:collapse;display:inline-block;min-width:520px">
-    <thead><tr><th ${TH}>STT</th><th ${TH} style="text-align:left">AM</th><th ${TH}>Cần giao</th><th ${TH}>Đã gán</th><th ${TH}>% Gán</th><th ${TH}>GTC</th><th ${TH}>%GTC/gán</th><th ${TH}>GTC total</th></tr></thead>
+   <div class="table-wrap" style="margin-bottom:22px"><table style="border-collapse:collapse;display:inline-block;min-width:880px">
+    <thead><tr><th ${TH}>STT</th><th ${TH} style="text-align:left">AM</th>${_colHead}</tr></thead>
     <tbody>${amRows}</tbody></table></div>
    <div style="display:flex;align-items:center;gap:10px;margin:6px 2px 8px;flex-wrap:wrap">
     <span style="font-size:14px;font-weight:800;color:var(--text-main)">🏢 Theo Bưu Cục (${bc.length})</span>
     <input type="text" placeholder="🔎 Tìm Bưu Cục / AM…" oninput="grtFilter(this.value)" style="padding:5px 10px;border:1px solid var(--border);border-radius:8px;font-size:12.5px;min-width:200px">
    </div>
-   <div class="table-wrap"><table style="border-collapse:collapse;display:inline-block;min-width:680px">
-    <thead><tr><th ${TH}>STT</th><th ${TH} style="text-align:left">Bưu Cục</th><th ${TH} style="text-align:left">AM</th><th ${TH}>Cần giao</th><th ${TH}>Đã gán</th><th ${TH}>% Gán</th><th ${TH}>GTC</th><th ${TH}>%GTC/gán</th><th ${TH}>GTC total</th></tr></thead>
+   <div class="table-wrap"><table style="border-collapse:collapse;display:inline-block;min-width:980px">
+    <thead><tr><th ${TH}>STT</th><th ${TH} style="text-align:left">Bưu Cục</th><th ${TH} style="text-align:left">AM</th>${_colHead}</tr></thead>
     <tbody>${bcRows}</tbody></table></div>
    <div class="analysis-box" style="margin-top:16px;padding:12px 14px;font-size:12.5px;line-height:1.7">
-    <b>Cách tính (bản nhanh):</b><br>
-    • <b>Cần giao</b> = chưa gán + đã gán (của chuyến tạo trong ngày).<br>
-    • <b>Đã gán</b> = tổng đơn đã gán vào chuyến tạo hôm nay.<br>
-    • <b>GTC</b> = đơn giao thành công (DELIVER, isSucceeded) của chuyến tạo hôm nay.<br>
-    • 6h–18h: KHÔNG loại 0–6h · Sau 18h: loại đơn nhập BC 0–6h khỏi "cần giao".<br>
-    • Số liệu realtime lấy qua nhanh.ghn.vn mỗi lần chạy lệnh <b>"Năng suất giao Vùng"</b> (snapshot).
+    <b>Cách tính:</b><br>
+    • <b>Hàng tồn N-1</b> = đơn Giao + Ưu tiên giao ở mốc tuổi hàng ≥ 6–12h, <b>chụp cứng lúc ~7h sáng</b> rồi giữ nguyên cả ngày.<br>
+    • <b>Hàng mới ca 1 / ca 2 / ca 3</b> = đơn mới về (mốc 0–6h, cộng dồn theo mã) <b>chốt lần lượt lúc 9h / 15h / 24h</b>; mỗi ca chạy realtime trong khung giờ của nó rồi đứng yên. Ca 1 = đến 9h · Ca 2 = 9h→15h · Ca 3 = 15h→24h (<i>tham khảo, không tính vào % ngày N</i>).<br>
+    • <b>Tổng cần giao</b> = Tồn N-1 + Ca 1 + Ca 2 (ca 3 chỉ tham khảo).<br>
+    • <b>% Gán</b> = Đã gán ÷ (Ca 1 + Ca 2) · <b>% GTC</b> = GTC ÷ (Ca 1 + Ca 2).<br>
+    • <b>Đã gán</b> = đơn gán vào chuyến tạo hôm nay · <b>GTC</b> = đơn giao thành công (DELIVER, isSucceeded) của chuyến tạo hôm nay.<br>
+    • Realtime qua nhanh.ghn.vn, Action quét 30'/lần (mốc chốt lệch ~±30'). Ca 1/2/3 chỉ đủ chuẩn từ ngày triển khai trở đi; ô "chưa có" = nhịp quét chưa sinh đủ dữ liệu.
    </div>`;
  }catch(e){el.innerHTML=(typeof errPage==='function'?errPage('Không tải được GTC realtime: '+(e&&e.message||e)):'<div style="padding:20px;color:#b91c1c">Lỗi: '+(e&&e.message||e)+'</div>');}
 }
