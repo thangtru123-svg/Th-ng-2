@@ -234,6 +234,7 @@ tr.tot td{background:#FFF0EB!important;font-weight:800!important;border-top:2px 
  <button class="nav-item" onclick="show('p42',this)" style="background:linear-gradient(135deg,rgba(220,38,38,0.16),rgba(241,93,41,0.08));border:1px solid rgba(220,38,38,0.32);font-weight:700"><span class="icon">💰</span>Check COD giá trị cao</button>
  <button class="nav-item" onclick="show('p47',this)" style="background:linear-gradient(135deg,rgba(37,99,235,0.14),rgba(59,130,246,0.08));border:1px solid rgba(37,99,235,0.3);font-weight:700"><span class="icon">📦</span>Đơn TTS COD &lt; 50k</button>
  <button class="nav-item" onclick="show('p53',this)" style="background:linear-gradient(135deg,rgba(220,38,38,0.16),rgba(241,93,41,0.08));border:1px solid rgba(220,38,38,0.3);font-weight:700"><span class="icon">💵</span>Thu tiền - Bắn kiểm</button>
+ <button class="nav-item" onclick="show('p54',this)" style="background:linear-gradient(135deg,rgba(220,38,38,0.16),rgba(241,93,41,0.08));border:1px solid rgba(220,38,38,0.3);font-weight:700"><span class="icon">❌</span>Đơn fail ODR TTS</button>
  <button class="nav-item" onclick="show('p48',this)" style="background:linear-gradient(135deg,rgba(234,88,12,0.16),rgba(249,115,22,0.09));border:1px solid rgba(234,88,12,0.33);font-weight:700"><span class="icon">📋</span>Báo Cáo 1 — Cần giao (ĐK·BG)</button>
  <button class="nav-item" onclick="show('p49',this)" style="background:linear-gradient(135deg,rgba(234,88,12,0.16),rgba(249,115,22,0.09));border:1px solid rgba(234,88,12,0.33);font-weight:700"><span class="icon">📊</span>Báo Cáo 2 — Tồn đọng (ĐK·BG)</button>
  <div class="nav-section">GTC</div>
@@ -277,6 +278,7 @@ tr.tot td{background:#FFF0EB!important;font-weight:800!important;border-top:2px 
 <div class="page" id="p46"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
 <div class="page" id="p47"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
 <div class="page" id="p53"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
+<div class="page" id="p54"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
 <div class="page" id="p48"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
 <div class="page" id="p49"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
 <div class="page" id="p51"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
@@ -2957,6 +2959,17 @@ async function sendAllToTelegram(){
   }catch(_e){console.warn('TG ODR lỗi:',_e&&_e.message);_tgFail('ODR TTS (AM + Bưu Cục)');}
   await new Promise(r=>setTimeout(r,700));
 
+  /* --- P54: Đơn fail ODR TTS (3 ảnh: tổng quan + AM + BC, kèm nhận định) → TTS - Vận hành thread --- */
+  try{
+   if(btn)btn.innerHTML='⏳ Đang gửi: Đơn fail ODR TTS...';
+   await navTo('p54');
+   await new Promise(r=>setTimeout(r,600));
+   if(!window._ODRFAIL)await buildOdrFailPage();
+   const _ofR=await sendOdrFailToTelegram(true);
+   if(!_ofR||!_ofR.ok)_tgFail('Đơn fail ODR TTS');
+  }catch(_e){console.warn('TG Đơn fail ODR lỗi:',_e&&_e.message);_tgFail('Đơn fail ODR TTS');}
+  await new Promise(r=>setTimeout(r,700));
+
   /* --- P7: Aging → Aging thread (kèm phân tích cap1-4 như nút Aging riêng) --- */
   await navTo('p7');
   await new Promise(r=>setTimeout(r,400));
@@ -5585,6 +5598,167 @@ async function sendThuTienToTelegram(){ // bắn 2 bảng (phiếu thu + bắn k
  }catch(e){ if(btn){btn.disabled=false;btn.innerHTML=_ld;} alert('Lỗi bắn Telegram: '+(e&&e.message||e)); }
 }
 
+/* ===== p54 — Đơn fail ODR TTS (N-1) — nguồn: sheet "Data đơn N-1" (cập nhật 7h10–7h30 hàng ngày) ===== */
+const ODRFAIL_SHEET_ID='1nAtrYVZUHTOlp695fDPeFTDwN94jeCo8-pPrb3HXYko';
+const _OF_NH=['Khách hàng','BC giao','Trung chuyển','BC lấy'];
+const _OF_COL={'Khách hàng':'#D97706','BC giao':'#DC2626','Trung chuyển':'#2563EB','BC lấy':'#7C3AED'};
+const _ofEsc=x=>String(x==null?'':x).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const _ofN=v=>(+v||0).toLocaleString('vi-VN');
+const _ofPc=v=>(Math.round((+v||0)*10)/10).toLocaleString('vi-VN',{minimumFractionDigits:1,maximumFractionDigits:1})+'%';
+const _ofLy=s=>String(s||'(không rõ)').replace(/^Giao thất bại trong hạn:\s*/,'Giao thất bại: ');
+const _ofD=iso=>{const p=String(iso||'').slice(0,10).split('-');return p.length===3?p[2]+'/'+p[1]+'/'+p[0]:(iso||'—');};
+// so với ngày liền trước: lấy từ sheet SID "ODR TTS - AM" (fail = Vol GTC − GTC đúng Ontime)
+async function _ofPrev(day){
+ try{
+  const csv=await (await fetch('https://docs.google.com/spreadsheets/d/'+SID+'/gviz/tq?tqx=out:csv&sheet='+encodeURIComponent('ODR TTS - AM'))).text();
+  const by={};
+  parseCSV(csv).slice(1).forEach(r=>{
+   const d=(r[1]||'').slice(0,10), am=(r[0]||'').trim();
+   if(!/^\d{4}-\d{2}-\d{2}$/.test(d)||!am||/grand total/i.test(am))return;
+   const vol=+String(r[2]).replace(/,/g,'')||0, ok=+String(r[4]).replace(/,/g,'')||0; if(!vol)return;
+   const o=by[d]=by[d]||{vol:0,ok:0,am:{}}; o.vol+=vol; o.ok+=ok; o.am[am]={vol,ok};
+  });
+  const ds=Object.keys(by).filter(d=>d<day).sort(); const pd=ds[ds.length-1];
+  return {cur:by[day]||null, prev:pd?Object.assign({day:pd},by[pd]):null};
+ }catch(e){console.warn('[ODR fail] so ngày trước:',e&&e.message);return null;}
+}
+async function buildOdrFailPage(){
+ const el=document.getElementById('p54'); if(!el)return;
+ const HEAD='<div class="page-header"><div class="page-title">❌ Đơn fail ODR TTS (N-1)</div></div>';
+ const render=async()=>{
+  const my=window._ofSeq=(window._ofSeq||0)+1;
+  try{
+   const csv=await (await fetch('https://docs.google.com/spreadsheets/d/'+ODRFAIL_SHEET_ID+'/gviz/tq?tqx=out:csv&gid=0')).text();
+   if(my!==window._ofSeq)return;
+   const rows=parseCSV(csv); const H=rows[0]||[]; const ix=n=>H.findIndex(h=>String(h).trim()===n);
+   const iMa=ix('Mã đơn'),iBC=ix('BC giao'),iHan=ix('Hạn ODR'),iGTC=ix('Ngày GTC'),iNh=ix('Nhóm lỗi'),iLy=ix('Lý do trễ'),iAM=ix('AM');
+   if([iMa,iBC,iNh,iLy,iAM,iGTC].some(i=>i<0)){el.innerHTML=HEAD+'<div class="analysis-box">Sheet đổi cấu trúc cột (thiếu: Mã đơn / BC giao / Nhóm lỗi / Lý do trễ / AM / Ngày GTC) — cần chỉnh lại trang.</div>';return;}
+   const D=rows.slice(1).filter(r=>(r[iMa]||'').trim()).map(r=>({bc:(r[iBC]||'').trim(),am:(r[iAM]||'').trim()||'(chưa có AM)',nh:(r[iNh]||'').trim()||'(không rõ)',ly:(r[iLy]||'').trim()||'(không rõ)',gtc:(r[iGTC]||'').slice(0,10)}));
+   if(!D.length){el.innerHTML=HEAD+'<div class="analysis-box">Sheet chưa có đơn fail ODR TTS nào (sheet cập nhật 7h10–7h30 hàng ngày).</div>';return;}
+   const day=D.map(x=>x.gtc).filter(Boolean).sort().pop()||''; const total=D.length;
+   const NHS=_OF_NH.concat([...new Set(D.map(x=>x.nh))].filter(n=>!_OF_NH.includes(n)));
+   const add=(m,k,x)=>{const o=m[k]=m[k]||{n:0,nh:{},ly:{},am:{}};o.n++;o.nh[x.nh]=(o.nh[x.nh]||0)+1;o.ly[x.ly]=(o.ly[x.ly]||0)+1;o.am[x.am]=(o.am[x.am]||0)+1;return o;};
+   const byNh={},byLy={},byAM={},byBC={};
+   D.forEach(x=>{add(byNh,x.nh,x);const l=add(byLy,x.ly,x);l.nhom=x.nh;add(byAM,x.am,x);add(byBC,x.bc,x);});
+   const top=m=>Object.entries(m).sort((a,b)=>b[1]-a[1])[0]||['—',0];
+   const nhArr=NHS.map(n=>({k:n,n:(byNh[n]||{n:0}).n})).sort((a,b)=>b.n-a.n);
+   const lyArr=Object.entries(byLy).map(([k,o])=>({k,n:o.n,nhom:o.nhom})).sort((a,b)=>b.n-a.n);
+   const amArr=Object.entries(byAM).map(([k,o])=>({k,n:o.n,nh:o.nh,ly:o.ly})).sort((a,b)=>b.n-a.n);
+   const bcArr=Object.entries(byBC).map(([k,o])=>({k,n:o.n,nh:o.nh,ly:o.ly,am:top(o.am)[0]})).sort((a,b)=>b.n-a.n);
+   const cmp=await _ofPrev(day); if(my!==window._ofSeq)return;
+   // ---- style (không width:100%, số căn giữa) ----
+   const THS='background:#1F3864;color:#fff;padding:7px 11px;font-size:12px;font-weight:700;white-space:nowrap;text-align:center;border:1px solid #cfd6e4';
+   const THL=THS.replace('text-align:center','text-align:left');
+   const TC='text-align:center;padding:6px 10px;font-size:12.5px;border:1px solid var(--border);white-space:nowrap';
+   const TL='text-align:left;padding:6px 10px;font-size:12.5px;border:1px solid var(--border);white-space:nowrap';
+   const TLW='text-align:left;padding:6px 10px;font-size:12.5px;border:1px solid var(--border);white-space:normal;line-height:1.35;max-width:520px';
+   const TOT='background:#FFF7ED;font-weight:800';
+   const bar=(p,mx,c)=>`<div style="display:inline-block;width:${Math.max(2,Math.round(p/(mx||1)*150))}px;height:11px;background:${c};border-radius:3px;vertical-align:middle"></div>`;
+   const heat=(n,den,c)=>{const s=den?n/den:0;return n?`background:${c}${Math.round(Math.min(.55,s*.9)*255).toString(16).padStart(2,'0')}`:'';};
+   const nhHead=NHS.map(n=>`<th style="${THS}"><span style="display:inline-block;width:9px;height:9px;border-radius:2px;background:${_OF_COL[n]||'#6B7280'};margin-right:5px"></span>${_ofEsc(n)}</th>`).join('');
+   const nhCells=(o,tot)=>NHS.map(n=>{const v=(o.nh[n]||0);return `<td style="${TC};${heat(v,tot,_OF_COL[n]||'#6B7280')}">${v?_ofN(v)+' <span style="color:var(--text-sub);font-size:11px">('+_ofPc(v/tot*100)+')</span>':'<span style="color:var(--text-sub)">—</span>'}</td>`;}).join('');
+   const topLy=o=>{const [k,n]=top(o.ly);return `${_ofEsc(_ofLy(k))} <b>(${_ofN(n)})</b>`;};
+   // ---- ① Tổng quan: nhóm lỗi + lý do ----
+   const mxNh=Math.max(...nhArr.map(x=>x.n),1), mxLy=Math.max(...lyArr.map(x=>x.n),1);
+   const tblNh=`<table style="border-collapse:collapse;margin-bottom:14px"><thead><tr><th style="${THS}">STT</th><th style="${THL}">Nhóm lỗi</th><th style="${THS}">Số đơn fail</th><th style="${THS}">Tỉ trọng</th><th style="${THL}">Biểu đồ</th></tr></thead><tbody>${nhArr.map((x,i)=>`<tr><td style="${TC};color:var(--text-sub)">${i+1}</td><td style="${TL};font-weight:700"><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:${_OF_COL[x.k]||'#6B7280'};margin-right:6px"></span>${_ofEsc(x.k)}</td><td style="${TC};font-weight:700">${_ofN(x.n)}</td><td style="${TC};font-weight:800;color:#C00000">${_ofPc(x.n/total*100)}</td><td style="${TL}">${bar(x.n,mxNh,_OF_COL[x.k]||'#6B7280')}</td></tr>`).join('')}<tr style="${TOT}"><td style="${TC}"></td><td style="${TL}">Tổng</td><td style="${TC}">${_ofN(total)}</td><td style="${TC}">100,0%</td><td style="${TL}"></td></tr></tbody></table>`;
+   const tblLy=`<table style="border-collapse:collapse" id="ofLyTbl"><thead><tr><th style="${THS}">STT</th><th style="${THL}">Lý do trễ</th><th style="${THL}">Nhóm lỗi</th><th style="${THS}">Số đơn</th><th style="${THS}">Tỉ trọng</th><th style="${THL}">Biểu đồ</th></tr></thead><tbody>${lyArr.map((x,i)=>`<tr><td style="${TC};color:var(--text-sub)">${i+1}</td><td style="${TLW}">${_ofEsc(_ofLy(x.k))}</td><td style="${TL}"><span style="color:${_OF_COL[x.nhom]||'#6B7280'};font-weight:700">${_ofEsc(x.nhom)}</span></td><td style="${TC};font-weight:700">${_ofN(x.n)}</td><td style="${TC};font-weight:800;color:#C00000">${_ofPc(x.n/total*100)}</td><td style="${TL}">${bar(x.n,mxLy,_OF_COL[x.nhom]||'#6B7280')}</td></tr>`).join('')}<tr style="${TOT}"><td style="${TC}"></td><td style="${TL}">Tổng (${lyArr.length} lý do)</td><td style="${TL}"></td><td style="${TC}">${_ofN(total)}</td><td style="${TC}">100,0%</td><td style="${TL}"></td></tr></tbody></table>`;
+   // ---- ② theo AM ----
+   const tblAM=`<table style="border-collapse:collapse"><thead><tr><th style="${THS}">STT</th><th style="${THL}">AM</th><th style="${THS}">Tổng đơn fail</th><th style="${THS}">% so với Vùng</th>${nhHead}<th style="${THL}">Lý do nhiều nhất</th></tr></thead><tbody>${amArr.map((x,i)=>`<tr><td style="${TC};color:var(--text-sub)">${i+1}</td><td style="${TL};font-weight:700">${_ofEsc(x.k)}</td><td style="${TC};font-weight:800">${_ofN(x.n)}</td><td style="${TC};font-weight:800;color:#C00000">${_ofPc(x.n/total*100)}</td>${nhCells(x,x.n)}<td style="${TLW}">${topLy(x)}</td></tr>`).join('')}<tr style="${TOT}"><td style="${TC}"></td><td style="${TL}">Toàn Vùng</td><td style="${TC}">${_ofN(total)}</td><td style="${TC}">100,0%</td>${NHS.map(n=>`<td style="${TC}">${_ofN((byNh[n]||{n:0}).n)} <span style="font-size:11px">(${_ofPc(((byNh[n]||{n:0}).n)/total*100)})</span></td>`).join('')}<td style="${TLW}">${topLy({ly:Object.fromEntries(lyArr.map(l=>[l.k,l.n]))})}</td></tr></tbody></table>`;
+   // ---- ③ theo Bưu Cục ----
+   const tblBC=`<table style="border-collapse:collapse"><thead><tr><th style="${THS}">STT</th><th style="${THL}">AM</th><th style="${THL}">Bưu Cục</th><th style="${THS}">Tổng đơn fail</th><th style="${THS}">% so với Vùng</th>${nhHead}<th style="${THL}">Lý do nhiều nhất</th></tr></thead><tbody>${bcArr.map((x,i)=>`<tr><td style="${TC};color:var(--text-sub)">${i+1}</td><td style="${TL}">${_ofEsc(x.am)}</td><td style="${TL};font-weight:700">${_ofEsc(x.k)}</td><td style="${TC};font-weight:800">${_ofN(x.n)}</td><td style="${TC};font-weight:800;color:#C00000">${_ofPc(x.n/total*100)}</td>${nhCells(x,x.n)}<td style="${TLW}">${topLy(x)}</td></tr>`).join('')}<tr style="${TOT}"><td style="${TC}"></td><td style="${TL}"></td><td style="${TL}">Toàn Vùng (${bcArr.length} BC)</td><td style="${TC}">${_ofN(total)}</td><td style="${TC}">100,0%</td>${NHS.map(n=>`<td style="${TC}">${_ofN((byNh[n]||{n:0}).n)} <span style="font-size:11px">(${_ofPc(((byNh[n]||{n:0}).n)/total*100)})</span></td>`).join('')}<td style="${TLW}"></td></tr></tbody></table>`;
+   // ---- nhận định (mỗi ý một dòng; cùng chuỗi dùng cho web + caption TG) ----
+   const dd=_ofD(day), L1=[],L2=[],L3=[];
+   const n1=nhArr[0], l1=lyArr[0];
+   L1.push(`<b>Tổng thể:</b> ngày GTC ${dd} toàn Vùng có <b>${_ofN(total)} đơn</b> TTS fail ODR, thuộc ${lyArr.length} lý do trễ.`);
+   if(cmp&&cmp.cur&&cmp.prev){
+    const fc=cmp.cur.vol-cmp.cur.ok, fp=cmp.prev.vol-cmp.prev.ok, d=fc-fp;
+    L1.push(`${d>0?'📈 Tăng':d<0?'📉 Giảm':'Không đổi'} so với ngày liền trước (${_ofD(cmp.prev.day)}): ${_ofN(fp)} → ${_ofN(fc)} đơn (${d>0?'+':''}${_ofN(d)} đơn) · Ontime ODR TTS ${_ofPc(cmp.prev.ok/cmp.prev.vol*100)} → ${_ofPc(cmp.cur.ok/cmp.cur.vol*100)}.`);
+    if(fc!==total)L1.push(`⚠️ Lưu ý: sheet ODR TTS - AM ghi ${_ofN(fc)} đơn fail, sheet chi tiết có ${_ofN(total)} đơn — hai nguồn đang lệch.`);
+   }
+   L1.push(`🔴 Nhóm lỗi nhiều nhất: <b>${_ofEsc(n1.k)}</b> — ${_ofN(n1.n)} đơn (${_ofPc(n1.n/total*100)}).`);
+   nhArr.slice(1).filter(x=>x.n>0).forEach(x=>L1.push(`• ${_ofEsc(x.k)}: ${_ofN(x.n)} đơn (${_ofPc(x.n/total*100)}).`));
+   L1.push(`🔴 Lý do lớn nhất: <b>${_ofEsc(_ofLy(l1.k))}</b> — ${_ofN(l1.n)} đơn (${_ofPc(l1.n/total*100)}).`);
+   if(lyArr[1])L1.push(`• Lý do thứ hai: ${_ofEsc(_ofLy(lyArr[1].k))} — ${_ofN(lyArr[1].n)} đơn (${_ofPc(lyArr[1].n/total*100)}).`);
+   const t3=amArr.slice(0,3), t3n=t3.reduce((s,x)=>s+x.n,0);
+   L2.push(`<b>Tổng thể:</b> ${amArr.length} AM có đơn fail, tổng ${_ofN(total)} đơn; 3 AM cao nhất (${t3.map(x=>_ofEsc(x.k)).join(', ')}) chiếm ${_ofN(t3n)} đơn (${_ofPc(t3n/total*100)}).`);
+   L2.push(`🔴 Nhiều nhất: <b>${_ofEsc(amArr[0].k)}</b> — ${_ofN(amArr[0].n)} đơn (${_ofPc(amArr[0].n/total*100)} Vùng), lý do chính: ${topLy(amArr[0])}.`);
+   const aL=amArr[amArr.length-1]; L2.push(`🟢 Ít nhất: <b>${_ofEsc(aL.k)}</b> — ${_ofN(aL.n)} đơn (${_ofPc(aL.n/total*100)} Vùng).`);
+   if(cmp&&cmp.cur&&cmp.prev){
+    const dl=amArr.map(x=>{const p=cmp.prev.am[x.k];return p?{k:x.k,d:x.n-(p.vol-p.ok),p:p.vol-p.ok,n:x.n}:null;}).filter(Boolean).sort((a,b)=>b.d-a.d);
+    if(dl.length){const w=dl[0],b=dl[dl.length-1];
+     L2.push(`📈 So với ${_ofD(cmp.prev.day)}: tăng nhiều nhất <b>${_ofEsc(w.k)}</b> (${_ofN(w.p)} → ${_ofN(w.n)} đơn, ${w.d>0?'+':''}${_ofN(w.d)}).`);
+     L2.push(`📉 ${b.d<0?'Giảm nhiều nhất':'Tăng ít nhất'}: <b>${_ofEsc(b.k)}</b> (${_ofN(b.p)} → ${_ofN(b.n)} đơn, ${b.d>0?'+':''}${_ofN(b.d)}).`);}
+   }
+   const tTop=[...amArr].sort((a,b)=>((b.nh['Trung chuyển']||0)-(a.nh['Trung chuyển']||0)))[0];
+   if(tTop&&(tTop.nh['Trung chuyển']||0)>0)L2.push(`🚚 Lỗi Trung chuyển cao nhất: <b>${_ofEsc(tTop.k)}</b> — ${_ofN(tTop.nh['Trung chuyển'])} đơn (${_ofPc(tTop.nh['Trung chuyển']/tTop.n*100)} đơn fail của AM này).`);
+   const t5=bcArr.slice(0,5), t5n=t5.reduce((s,x)=>s+x.n,0);
+   L3.push(`<b>Tổng thể:</b> ${bcArr.length} Bưu Cục có đơn fail, tổng ${_ofN(total)} đơn; 5 BC cao nhất chiếm ${_ofN(t5n)} đơn (${_ofPc(t5n/total*100)}).`);
+   t5.forEach((x,i)=>L3.push(`${i===0?'🔴':'•'} ${i+1}. <b>${_ofEsc(x.k)}</b> (AM ${_ofEsc(x.am)}): ${_ofN(x.n)} đơn (${_ofPc(x.n/total*100)} Vùng) — lý do chính: ${topLy(x)}.`));
+   const bL=bcArr[bcArr.length-1]; L3.push(`🟢 Ít nhất: <b>${_ofEsc(bL.k)}</b> — ${_ofN(bL.n)} đơn (${_ofPc(bL.n/total*100)} Vùng).`);
+   const bg=[...bcArr].sort((a,b)=>((b.nh['BC giao']||0)-(a.nh['BC giao']||0)))[0];
+   if(bg&&(bg.nh['BC giao']||0)>0)L3.push(`🏪 Lỗi do BC giao cao nhất: <b>${_ofEsc(bg.k)}</b> — ${_ofN(bg.nh['BC giao'])} đơn (${_ofPc(bg.nh['BC giao']/bg.n*100)} đơn fail của BC này).`);
+   const bt=[...bcArr].sort((a,b)=>((b.nh['Trung chuyển']||0)-(a.nh['Trung chuyển']||0)))[0];
+   if(bt&&(bt.nh['Trung chuyển']||0)>0)L3.push(`🚚 Lỗi Trung chuyển cao nhất: <b>${_ofEsc(bt.k)}</b> — ${_ofN(bt.nh['Trung chuyển'])} đơn (${_ofPc(bt.nh['Trung chuyển']/bt.n*100)} đơn fail của BC này).`);
+   const kpi=(t,v,s,c)=>`<div style="flex:1;min-width:170px;background:#fff;border:1px solid var(--border);border-radius:14px;padding:13px 16px;box-shadow:var(--shadow-sm)"><div style="font-size:12px;color:var(--text-sub);font-weight:600">${t}</div><div style="font-size:24px;font-weight:800;color:${c}">${v}</div><div style="font-size:12px;color:var(--text-sub)">${s}</div></div>`;
+   const card=(id,ic,tt,body,note)=>`<div class="card" id="${id}" style="margin-bottom:18px"><div class="card-header"><div class="card-title"><div class="card-icon">${ic}</div>${tt}</div></div><div class="table-wrap" style="overflow-x:auto">${body}</div><div class="analysis-box" style="margin-top:12px">${note.join('<br>')}</div></div>`;
+   el.innerHTML=`<div class="page-header"><div class="page-title">❌ Đơn fail ODR TTS (N-1)</div><div class="page-meta"><span style="color:var(--text-sub);font-size:13px">Lạng Sơn + Quảng Ninh · ngày GTC <b>${dd}</b> · nguồn sheet "Data đơn N-1" (tự cập nhật 7h10–7h30 hàng ngày)</span><button class="tg-inpage-btn" style="background:#16A34A;border-color:#16A34A" onclick="buildOdrFailPage()">🔄 Tải lại</button></div></div>
+    <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px">${kpi('❌ Tổng đơn fail ODR TTS',_ofN(total),'đơn · ngày '+dd,'#C00000')}${nhArr.map(x=>kpi(_ofEsc(x.k),_ofN(x.n),'đơn · '+_ofPc(x.n/total*100),_OF_COL[x.k]||'#6B7280')).join('')}</div>
+    ${card('ofCardOv','📊','① Tổng quan lỗi — Nhóm lỗi &amp; Lý do trễ',tblNh+tblLy,L1)}
+    ${card('ofCardAM','👤','② Tỉ trọng đơn fail theo AM',tblAM,L2)}
+    ${card('ofCardBC','🏪','③ Tỉ trọng đơn fail theo Bưu Cục',tblBC,L3)}`;
+   window._ODRFAIL={day,dd,total,L1,L2,L3,nBC:bcArr.length};
+   injectTgBtn('p54',()=>sendOdrFailToTelegram(),'Bắn Đơn fail ODR TTS TG');
+  }catch(e){ if(my===window._ofSeq)el.innerHTML=HEAD+'<div class="analysis-box">Lỗi tải dữ liệu: '+_ofEsc(e&&e.message||e)+'</div>'; }
+ };
+ window._ofRender=render; await render();
+ if(window._ofTimer)clearInterval(window._ofTimer);
+ window._ofTimer=setInterval(render,30*60*1000);
+}
+// Bắn 3 ảnh (Tổng quan · theo AM · theo BC) kèm nhận định → nhóm XBG, topic "TTS - Vận hành" (TG_TTS_THREAD)
+async function sendOdrFailToTelegram(silent){
+ const T=window._ODRFAIL; const btn=document.getElementById('tgInpage_p54'); let ok=true,err='';
+ if(!T){ if(!silent)alert('Chưa có dữ liệu Đơn fail ODR TTS.'); return {ok:false,err:'chưa có dữ liệu'}; }
+ const _ld=btn?btn.innerHTML:''; if(btn&&!silent){btn.disabled=true;btn.innerHTML='⏳ Đang bắn...';}
+ const trim=s=>s.length>1020?s.slice(0,1017)+'...':s;
+ const tg=s=>s.replace(/<br>/g,'\n');
+ // nhận định đã dùng chung chuỗi với web; ở caption chỉ giữ thẻ <b>
+ const parts=[
+  ['ofCardOv','odrfail_tongquan.png',1300,0,'❌ <b>ĐƠN FAIL ODR TTS — TỔNG QUAN LỖI</b> (ngày GTC '+T.dd+')\n'+T.L1.join('\n'),14],
+  ['ofCardAM','odrfail_theo_am.png',1500,0,'👤 <b>ĐƠN FAIL ODR TTS — THEO AM</b> (ngày GTC '+T.dd+')\n'+T.L2.join('\n'),0],
+  ['ofCardBC','odrfail_theo_bc.png',1500,20,'🏪 <b>ĐƠN FAIL ODR TTS — THEO BƯU CỤC</b> (ngày GTC '+T.dd+', top 20 BC)\n'+T.L3.join('\n'),0]
+ ];
+ try{
+  for(const [cid,fn,w,maxRows,cap0,maxLy] of parts){
+   const src=document.getElementById(cid); if(!src){ok=false;err='thiếu '+cid;continue;}
+   const cl=src.cloneNode(true);
+   cl.querySelectorAll('.analysis-box').forEach(e=>e.remove());
+   cl.querySelectorAll('*').forEach(e=>{ if(e.style){ if(e.style.position==='sticky')e.style.position='static'; e.style.left='';e.style.top='';e.style.zIndex=''; } });
+   cl.querySelectorAll('.table-wrap').forEach(e=>{e.style.overflow='visible';e.style.maxHeight='none';e.style.maxWidth='none';});
+   const trimTbl=(tb,keep)=>{ if(!tb||keep<=0)return; const trs=[...tb.querySelectorAll('tr')]; const tot=trs[trs.length-1]; trs.slice(keep,-1).forEach(r=>r.remove()); if(tot&&!tb.contains(tot))tb.appendChild(tot); };
+   if(maxRows>0)trimTbl(cl.querySelector('table tbody'),maxRows);
+   if(maxLy>0)trimTbl(cl.querySelector('#ofLyTbl tbody'),maxLy);
+   const tmp=document.createElement('div');tmp.id='tg-of-'+cid;tmp.style.cssText=`position:fixed;top:-9999px;left:0;z-index:-1;width:${w}px;padding:0;background:#fff`;
+   tmp.appendChild(cl);document.body.appendChild(tmp);
+   await new Promise(r=>setTimeout(r,400));
+   try{
+    const img=await _captureEl(tmp.id);
+    if(!img||!img.size)throw new Error('ảnh rỗng');
+    const cap=trim(cap0);
+    let res=await _tgSendPhoto(TG_AGING_CHAT,TG_TTS_THREAD,img,cap);
+    if(!res||!res.ok)res=await _tgSendDoc(TG_AGING_CHAT,TG_TTS_THREAD,img,cap,fn);
+    if(!res||!res.ok){ok=false;err=(res&&res.description)||'TG lỗi';}
+   }catch(e){ok=false;err=e.message;}
+   finally{tmp.remove();}
+   await new Promise(r=>setTimeout(r,800));
+  }
+ }catch(e){ok=false;err=e.message;}
+ if(!silent){
+  if(ok){ if(btn){btn.innerHTML='✅ Đã bắn';setTimeout(()=>{btn.disabled=false;btn.innerHTML=_ld;},2500);} }
+  else{ alert('Lỗi bắn Telegram: '+err); if(btn){btn.disabled=false;btn.innerHTML=_ld;} }
+ }
+ return {ok,err};
+}
+
 /* ===== p48/p49 — Báo Cáo Vận Hành 2 Bưu Cục (Đông Kinh · Bình Gia) — tách 2 trang (bắn khác giờ) ===== */
 const BCREP_NAMES=['(LSO) Đông Kinh','(LSO) Bình Gia'];
 function _bcPct(v){return v==null?'—':(Math.round(v*10)/10).toLocaleString('vi-VN',{minimumFractionDigits:1,maximumFractionDigits:1})+'%';}
@@ -6062,6 +6236,8 @@ async function init(){
  buildTtsCodPage().catch(e=>console.warn("TTS COD:",e&&e.message||e));
  // p53 — Thu tiền - Bắn kiểm (thutien_bankiem.json, chốt 23h)
  buildThuTienPage().catch(e=>console.warn('Thu tiền - Bắn kiểm:',e&&e.message||e));
+ // p54 — Đơn fail ODR TTS N-1 (sheet Data đơn N-1, cập nhật 7h10–7h30)
+ buildOdrFailPage().catch(e=>console.warn('Đơn fail ODR TTS:',e&&e.message||e));
  // p48/p49 — Báo Cáo 1 (cần giao) + Báo Cáo 2 (tồn đọng) ĐK·BG (realtime bcReport + sheet /api/bc-report-sheet)
  buildBcRep1Page().catch(e=>console.warn("BC Report 1:",e&&e.message||e));
  buildBcRep2Page().catch(e=>console.warn("BC Report 2:",e&&e.message||e));
