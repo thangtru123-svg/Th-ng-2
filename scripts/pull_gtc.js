@@ -239,6 +239,7 @@ async function pool(items, n, fn) {
     { id: '21301000', name: '(LSO) Bình Gia', dinhBien: 7 }
   ];
   const _MOI = HOUR >= 14 ? new Set(['0_6', '6_12']) : new Set(['0_6']); // đơn mới: sáng(<14h)=0-6h · chiều(≥14h)=0-6h+6-12h
+  const _TON_N1 = new Set(['6_12', '12_24', '24_36', '36_48', '48_72', '72_96', '96_120', '120_192', '192']); // Hàng tồn N-1 = tuổi hàng ≥ 6-12h (mọi mốc trừ 0-6h) — chụp cứng ở lần quét đầu ≥7h, giữ cả ngày
   const _GE48 = new Set(['48_72', '72_96', '96_120', '120_192', '192']);
   const _GE36 = new Set(['36_48', '48_72', '72_96', '96_120', '120_192', '192']);
   const _sumBk = (inv, set) => { let s = 0; (inv || []).forEach(x => { if (set.has(x.duration)) s += x.total_order || 0; }); return s; };
@@ -355,10 +356,10 @@ async function pool(items, n, fn) {
     const prevSameDay = !!(prevHm && prevHm.date === TODAY);
     async function hangMoiFor(h) {
       const id = String(h.id);
-      let live = 0;
+      let live = 0, tonLive = 0;
       for (const st of STATES3) {
         const gi = await api('/api/core/oss/v1/report/get-general-info', { hub_ids: [id], view_mode: 'CLIENT', order_type: st });
-        (((gi.data || [])[0] || {}).general_infos || []).forEach(g => { if (/^DELIVER/.test(g.order_type)) live += _sumBk(g.order_inventories, _MOI); });
+        (((gi.data || [])[0] || {}).general_infos || []).forEach(g => { if (/^DELIVER/.test(g.order_type)) { live += _sumBk(g.order_inventories, _MOI); tonLive += _sumBk(g.order_inventories, _TON_N1); } });
       }
       const seen = new Set(prevSameDay && prevHm.seen && prevHm.seen.hubs ? dec8(prevHm.seen.hubs[id]) : []);
       if (HOUR >= 7) {
@@ -370,9 +371,22 @@ async function pool(items, n, fn) {
       }
       const prevH = prevSameDay ? (prevHm.hubs || []).find(x => x.hubId === id) : null;
       const donMoi = HOUR >= 7 ? Math.max(live, seen.size, prevH ? prevH.donMoi || 0 : 0) : Math.max(live, prevH ? prevH.donMoi || 0 : 0);
-      return { name: h.name, hubId: id, am: h.am, tinh: h.tinh, donMoi, live, _seen: HOUR >= 7 ? [...seen].join('') : (prevSameDay && prevHm.seen && prevHm.seen.hubs ? (prevHm.seen.hubs[id] || '') : '') };
+      // --- Hàng tồn N-1: chụp cứng ở lần quét đầu ≥7h rồi giữ nguyên cả ngày (prevH.tonFrozen=true) ---
+      let tonN1, tonFrozen;
+      if (prevH && prevH.tonFrozen) { tonN1 = prevH.tonN1 || 0; tonFrozen = true; }
+      else if (HOUR >= 7) { tonN1 = tonLive; tonFrozen = true; }
+      else { tonN1 = tonLive; tonFrozen = false; }
+      // --- Ca 1/2/3: chốt đơn mới tích lũy tại mốc 9h & 15h; mỗi ca đứng yên sau mốc của nó ---
+      const _ps = (prevH && prevH.caSnap) || {};
+      let at9 = (_ps.at9 != null) ? _ps.at9 : null, at15 = (_ps.at15 != null) ? _ps.at15 : null;
+      if (HOUR >= 9 && at9 == null) at9 = donMoi;   // chốt ca1 ở lần quét đầu ≥9h
+      if (HOUR >= 15 && at15 == null) at15 = donMoi; // chốt ca2 ở lần quét đầu ≥15h
+      const ca1 = (at9 != null) ? at9 : donMoi;                                   // <9h: ca1 chạy realtime
+      const ca2 = (at15 != null) ? (at15 - at9) : (at9 != null ? donMoi - at9 : 0); // 9h–15h: ca2 chạy realtime
+      const ca3 = (at15 != null) ? (donMoi - at15) : 0;                            // ≥15h: ca3 chạy realtime (tham khảo)
+      return { name: h.name, hubId: id, am: h.am, tinh: h.tinh, donMoi, live, tonN1, tonFrozen, caSnap: { at9, at15 }, ca1, ca2, ca3, _seen: HOUR >= 7 ? [...seen].join('') : (prevSameDay && prevHm.seen && prevHm.seen.hubs ? (prevHm.seen.hubs[id] || '') : '') };
     }
-    const hmRes = await pool(HM_HUBS, 4, async (h) => { try { return await hangMoiFor(h); } catch (e) { if (e.auth) throw e; const prevH = prevSameDay ? (prevHm.hubs || []).find(x => x.hubId === String(h.id)) : null; return { name: h.name, hubId: String(h.id), am: h.am, tinh: h.tinh, donMoi: prevH ? prevH.donMoi || 0 : null, live: null, err: String((e && e.message) || e), _seen: prevSameDay && prevHm.seen && prevHm.seen.hubs ? (prevHm.seen.hubs[String(h.id)] || '') : '' }; } });
+    const hmRes = await pool(HM_HUBS, 4, async (h) => { try { return await hangMoiFor(h); } catch (e) { if (e.auth) throw e; const prevH = prevSameDay ? (prevHm.hubs || []).find(x => x.hubId === String(h.id)) : null; return { name: h.name, hubId: String(h.id), am: h.am, tinh: h.tinh, donMoi: prevH ? prevH.donMoi || 0 : null, live: null, tonN1: prevH ? (prevH.tonN1 || 0) : null, tonFrozen: prevH ? !!prevH.tonFrozen : false, caSnap: prevH ? (prevH.caSnap || {}) : {}, ca1: prevH ? (prevH.ca1 != null ? prevH.ca1 : null) : null, ca2: prevH ? (prevH.ca2 != null ? prevH.ca2 : null) : null, ca3: prevH ? (prevH.ca3 != null ? prevH.ca3 : null) : null, err: String((e && e.message) || e), _seen: prevSameDay && prevHm.seen && prevHm.seen.hubs ? (prevHm.seen.hubs[String(h.id)] || '') : '' }; } });
     const seenHm = { date: TODAY, hubs: {} };
     hmRes.forEach(h => { seenHm.hubs[h.hubId] = h._seen || ''; delete h._seen; });
     // giá trị CUỐI ngày hôm qua (đo realtime) — chốt khi sang ngày mới, giữ nguyên cả ngày
