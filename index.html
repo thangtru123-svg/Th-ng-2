@@ -5699,14 +5699,42 @@ async function buildOdrFailPage(){
    if(bg&&(bg.nh['BC giao']||0)>0)L3.push(`🏪 Lỗi do BC giao cao nhất: <b>${_ofEsc(bg.k)}</b> — ${_ofN(bg.nh['BC giao'])} đơn (${_ofPc(bg.nh['BC giao']/bg.n*100)} đơn fail của BC này).`);
    const bt=[...bcArr].sort((a,b)=>((b.nh['Trung chuyển']||0)-(a.nh['Trung chuyển']||0)))[0];
    if(bt&&(bt.nh['Trung chuyển']||0)>0)L3.push(`🚚 Lỗi Trung chuyển cao nhất: <b>${_ofEsc(bt.k)}</b> — ${_ofN(bt.nh['Trung chuyển'])} đơn (${_ofPc(bt.nh['Trung chuyển']/bt.n*100)} đơn fail của BC này).`);
+   // ---- ④ Phân tích chủ đạo: nhóm lỗi BC giao + Trung chuyển (phần Vùng tự kiểm soát) ----
+   const KS=['BC giao','Trung chuyển'].filter(g=>byNh[g]);
+   const ksD=D.filter(x=>KS.includes(x.nh)), ksN=ksD.length;
+   const fam=x=>x.nh==='Trung chuyển'?x.ly.split(' → ')[0].trim():x.ly.replace(/\s*\((về[^)]*)\)\s*$/,'').trim();
+   const gBy=(arr,f)=>{const m={};arr.forEach(x=>{const k=f(x);(m[k]=m[k]||[]).push(x);});return m;};
+   const cntBy=(arr,f)=>Object.entries(gBy(arr,f)).map(([k,a])=>({k,n:a.length,a})).sort((a,b)=>b.n-a.n);
+   const mxFam=Math.max(1,...KS.flatMap(g=>cntBy(ksD.filter(x=>x.nh===g),fam).map(f=>f.n)));
+   let ksTblA=`<table style="border-collapse:collapse;margin-bottom:14px"><thead><tr><th style="${THL}">Nhóm lỗi</th><th style="${THL}">Nguyên nhân chủ đạo</th><th style="${THS}">Số đơn</th><th style="${THS}">% trong nhóm</th><th style="${THS}">% toàn Vùng</th><th style="${THL}">Biểu đồ</th></tr></thead><tbody>`;
+   KS.forEach(g=>{const ga=ksD.filter(x=>x.nh===g);cntBy(ga,fam).forEach((f,i)=>{ksTblA+=`<tr>${i===0?`<td style="${TL};font-weight:800;color:${_OF_COL[g]};vertical-align:top" rowspan="${cntBy(ga,fam).length+1}">${_ofEsc(g)}<br><span style="font-weight:600;color:var(--text-sub)">${_ofN(ga.length)} đơn</span></td>`:''}<td style="${TLW}">${_ofEsc(_ofLy(f.k))}</td><td style="${TC};font-weight:700">${_ofN(f.n)}</td><td style="${TC};font-weight:800;color:#C00000">${_ofPc(f.n/ga.length*100)}</td><td style="${TC}">${_ofPc(f.n/total*100)}</td><td style="${TL}">${bar(f.n,mxFam,_OF_COL[g])}</td></tr>`;});
+    ksTblA+=`<tr style="${TOT}"><td style="${TL}">Tổng ${_ofEsc(g)}</td><td style="${TC}">${_ofN(ga.length)}</td><td style="${TC}">100,0%</td><td style="${TC}">${_ofPc(ga.length/total*100)}</td><td style="${TL}"></td></tr>`;});
+   ksTblA+='</tbody></table>';
+   const ksBCArr=cntBy(ksD,x=>x.bc).map(b=>({k:b.k,n:b.n,am:top(Object.fromEntries(Object.entries(gBy(b.a,x=>x.am)).map(([a,v])=>[a,v.length])))[0],g1:b.a.filter(x=>x.nh==='BC giao').length,g2:b.a.filter(x=>x.nh==='Trung chuyển').length,ly:Object.fromEntries(Object.entries(gBy(b.a,x=>_ofLy(x.ly))).map(([a,v])=>[a,v.length]))}));
+   const ksTblB=`<table style="border-collapse:collapse;margin-bottom:14px" id="ofKsBC"><thead><tr><th style="${THS}">STT</th><th style="${THL}">AM</th><th style="${THL}">Bưu Cục</th><th style="${THS}">BC giao</th><th style="${THS}">Trung chuyển</th><th style="${THS}">Tổng 2 nhóm</th><th style="${THS}">% trong ${_ofN(ksN)} đơn</th><th style="${THL}">Nguyên nhân chủ đạo</th></tr></thead><tbody>${ksBCArr.map((x,i)=>`<tr><td style="${TC};color:var(--text-sub)">${i+1}</td><td style="${TL}">${_ofEsc(x.am)}</td><td style="${TL};font-weight:700">${_ofEsc(x.k)}</td><td style="${TC};${heat(x.g1,x.n,_OF_COL['BC giao'])}">${x.g1?_ofN(x.g1):'—'}</td><td style="${TC};${heat(x.g2,x.n,_OF_COL['Trung chuyển'])}">${x.g2?_ofN(x.g2):'—'}</td><td style="${TC};font-weight:800">${_ofN(x.n)}</td><td style="${TC};font-weight:800;color:#C00000">${_ofPc(x.n/ksN*100)}</td><td style="${TLW}">${topLy(x)}</td></tr>`).join('')}<tr style="${TOT}"><td style="${TC}"></td><td style="${TL}"></td><td style="${TL}">Toàn Vùng (${ksBCArr.length} BC)</td><td style="${TC}">${_ofN((byNh['BC giao']||{n:0}).n)}</td><td style="${TC}">${_ofN((byNh['Trung chuyển']||{n:0}).n)}</td><td style="${TC}">${_ofN(ksN)}</td><td style="${TC}">100,0%</td><td style="${TL}"></td></tr></tbody></table>`;
+   const ksAMArr=cntBy(ksD,x=>x.am).map(a=>({k:a.k,n:a.n,g1:a.a.filter(x=>x.nh==='BC giao').length,g2:a.a.filter(x=>x.nh==='Trung chuyển').length,bc:top(Object.fromEntries(Object.entries(gBy(a.a,x=>x.bc)).map(([b,v])=>[b,v.length])))}));
+   const ksTblC=`<table style="border-collapse:collapse"><thead><tr><th style="${THS}">STT</th><th style="${THL}">AM</th><th style="${THS}">BC giao</th><th style="${THS}">Trung chuyển</th><th style="${THS}">Tổng 2 nhóm</th><th style="${THS}">% trong ${_ofN(ksN)} đơn</th><th style="${THS}">% đơn fail của AM</th><th style="${THL}">BC nhiều nhất</th></tr></thead><tbody>${ksAMArr.map((x,i)=>`<tr><td style="${TC};color:var(--text-sub)">${i+1}</td><td style="${TL};font-weight:700">${_ofEsc(x.k)}</td><td style="${TC};${heat(x.g1,x.n,_OF_COL['BC giao'])}">${x.g1?_ofN(x.g1):'—'}</td><td style="${TC};${heat(x.g2,x.n,_OF_COL['Trung chuyển'])}">${x.g2?_ofN(x.g2):'—'}</td><td style="${TC};font-weight:800">${_ofN(x.n)}</td><td style="${TC};font-weight:800;color:#C00000">${_ofPc(x.n/ksN*100)}</td><td style="${TC}">${_ofPc(x.n/(byAM[x.k].n)*100)}</td><td style="${TL}">${_ofEsc(x.bc[0])} <b>(${_ofN(x.bc[1])})</b></td></tr>`).join('')}<tr style="${TOT}"><td style="${TC}"></td><td style="${TL}">Toàn Vùng</td><td style="${TC}">${_ofN((byNh['BC giao']||{n:0}).n)}</td><td style="${TC}">${_ofN((byNh['Trung chuyển']||{n:0}).n)}</td><td style="${TC}">${_ofN(ksN)}</td><td style="${TC}">100,0%</td><td style="${TC}">${_ofPc(ksN/total*100)}</td><td style="${TL}"></td></tr></tbody></table>`;
+   const L4=[];
+   L4.push(`<b>Tổng thể:</b> BC giao + Trung chuyển = <b>${_ofN(ksN)} đơn (${_ofPc(ksN/total*100)} đơn fail)</b> — phần Vùng tự kiểm soát được; ${KS.map(g=>`${_ofEsc(g)} ${_ofN(byNh[g].n)} đơn`).join(' · ')}.`);
+   KS.forEach(g=>{const ga=ksD.filter(x=>x.nh===g), fs=cntBy(ga,fam);
+    L4.push(`<b style="color:${_OF_COL[g]}">● ${_ofEsc(g)}</b> (${_ofN(ga.length)} đơn): chủ đạo là <b>${_ofEsc(_ofLy(fs[0].k))}</b> — ${_ofN(fs[0].n)} đơn (${_ofPc(fs[0].n/ga.length*100)} nhóm).`);
+    if(fs[1])L4.push(`• Tiếp theo: ${fs.slice(1,3).map(f=>`${_ofEsc(_ofLy(f.k))} ${_ofN(f.n)} đơn (${_ofPc(f.n/ga.length*100)})`).join(' · ')}.`);
+    const bs=cntBy(ga,x=>x.bc), b3=bs.slice(0,3), b3n=b3.reduce((a,x)=>a+x.n,0);
+    L4.push(`• 3 BC cao nhất chiếm ${_ofN(b3n)}/${_ofN(ga.length)} đơn (${_ofPc(b3n/ga.length*100)}): ${b3.map(x=>`${_ofEsc(x.k)} ${_ofN(x.n)}`).join(' · ')}.`);});
+   if(byNh['Trung chuyển']){const tc=ksD.filter(x=>x.nh==='Trung chuyển');
+    const tl=cntBy(tc,x=>{const t=(x.ly.split(' → ')[1]||'').trim();return /ngày hạn/.test(t)?'về BC giao NGÀY HẠN (Ca3, từ 15h)':(/sau hạn (\d+) ngày/.exec(t)?'về BC giao SAU HẠN '+(+(/sau hạn (\d+)/.exec(t)[1])>=2?'≥2':'1')+' ngày':'khác');});
+    L4.push(`🚚 Trung chuyển — thời điểm hàng về BC giao: ${tl.map(t=>`${_ofEsc(t.k)} ${_ofN(t.n)} đơn (${_ofPc(t.n/tc.length*100)})`).join(' · ')}.`);}
+   L4.push(`🔴 BC có nhiều đơn lỗi 2 nhóm nhất: <b>${_ofEsc(ksBCArr[0].k)}</b> (AM ${_ofEsc(ksBCArr[0].am)}) — ${_ofN(ksBCArr[0].n)} đơn (${_ofPc(ksBCArr[0].n/ksN*100)}), gồm BC giao ${_ofN(ksBCArr[0].g1)} + Trung chuyển ${_ofN(ksBCArr[0].g2)}.`);
+   L4.push(`🔴 AM nhiều nhất: <b>${_ofEsc(ksAMArr[0].k)}</b> — ${_ofN(ksAMArr[0].n)} đơn (${_ofPc(ksAMArr[0].n/ksN*100)}); 🟢 ít nhất: <b>${_ofEsc(ksAMArr[ksAMArr.length-1].k)}</b> — ${_ofN(ksAMArr[ksAMArr.length-1].n)} đơn.`);
    const kpi=(t,v,s,c)=>`<div style="flex:1;min-width:170px;background:#fff;border:1px solid var(--border);border-radius:14px;padding:13px 16px;box-shadow:var(--shadow-sm)"><div style="font-size:12px;color:var(--text-sub);font-weight:600">${t}</div><div style="font-size:24px;font-weight:800;color:${c}">${v}</div><div style="font-size:12px;color:var(--text-sub)">${s}</div></div>`;
    const card=(id,ic,tt,body,note)=>`<div class="card" id="${id}" style="margin-bottom:18px"><div class="card-header"><div class="card-title"><div class="card-icon">${ic}</div>${tt}</div></div><div class="table-wrap" style="overflow-x:auto">${body}</div><div class="analysis-box" style="margin-top:12px">${note.join('<br>')}</div></div>`;
    el.innerHTML=`<div class="page-header"><div class="page-title">❌ Đơn fail ODR TTS (N-1)</div><div class="page-meta"><span style="color:var(--text-sub);font-size:13px">Lạng Sơn + Quảng Ninh · ngày GTC <b>${dd}</b> · nguồn sheet "Data đơn N-1" (tự cập nhật 7h10–7h30 hàng ngày)</span><button class="tg-inpage-btn" style="background:#16A34A;border-color:#16A34A" onclick="buildOdrFailPage()">🔄 Tải lại</button></div></div>
     <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px">${kpi('❌ Tổng đơn fail ODR TTS',_ofN(total),'đơn · ngày '+dd,'#C00000')}${nhArr.map(x=>kpi(_ofEsc(x.k),_ofN(x.n),'đơn · '+_ofPc(x.n/total*100),_OF_COL[x.k]||'#6B7280')).join('')}</div>
     ${card('ofCardOv','📊','① Tổng quan lỗi — Nhóm lỗi &amp; Lý do trễ',tblNh+tblLy,L1)}
     ${card('ofCardAM','👤','② Tỉ trọng đơn fail theo AM',tblAM,L2)}
-    ${card('ofCardBC','🏪','③ Tỉ trọng đơn fail theo Bưu Cục',tblBC,L3)}`;
-   window._ODRFAIL={day,dd,total,L1,L2,L3,nBC:bcArr.length};
+    ${card('ofCardBC','🏪','③ Tỉ trọng đơn fail theo Bưu Cục',tblBC,L3)}
+    ${card('ofCardKS','🎯','④ Phân tích chủ đạo — lỗi BC giao &amp; Trung chuyển (phần Vùng kiểm soát được)','<div style="font-weight:800;margin:4px 0 6px">4.1 Nguyên nhân chủ đạo</div>'+ksTblA+'<div style="font-weight:800;margin:4px 0 6px">4.2 Theo Bưu Cục</div>'+ksTblB+'<div style="font-weight:800;margin:4px 0 6px">4.3 Theo AM</div>'+ksTblC,L4)}`;
+   window._ODRFAIL={day,dd,total,L1,L2,L3,L4,nBC:bcArr.length};
    injectTgBtn('p54',()=>sendOdrFailToTelegram(),'Bắn Đơn fail ODR TTS TG');
   }catch(e){ if(my===window._ofSeq)el.innerHTML=HEAD+'<div class="analysis-box">Lỗi tải dữ liệu: '+_ofEsc(e&&e.message||e)+'</div>'; }
  };
@@ -5725,17 +5753,18 @@ async function sendOdrFailToTelegram(silent){
  const parts=[
   ['ofCardOv','odrfail_tongquan.png',1300,0,'❌ <b>ĐƠN FAIL ODR TTS — TỔNG QUAN LỖI</b> (ngày GTC '+T.dd+')\n'+T.L1.join('\n'),14],
   ['ofCardAM','odrfail_theo_am.png',1500,0,'👤 <b>ĐƠN FAIL ODR TTS — THEO AM</b> (ngày GTC '+T.dd+')\n'+T.L2.join('\n'),0],
-  ['ofCardBC','odrfail_theo_bc.png',1500,20,'🏪 <b>ĐƠN FAIL ODR TTS — THEO BƯU CỤC</b> (ngày GTC '+T.dd+', top 20 BC)\n'+T.L3.join('\n'),0]
+  ['ofCardBC','odrfail_theo_bc.png',1500,20,'🏪 <b>ĐƠN FAIL ODR TTS — THEO BƯU CỤC</b> (ngày GTC '+T.dd+', top 20 BC)\n'+T.L3.join('\n'),0],
+  ['ofCardKS','odrfail_bcgiao_trungchuyen.png',1500,15,'🎯 <b>PHÂN TÍCH CHỦ ĐẠO — LỖI BC GIAO &amp; TRUNG CHUYỂN</b> (ngày GTC '+T.dd+')\n'+(T.L4||[]).join('\n').replace(/<b [^>]*>/g,'<b>'),0,'#ofKsBC tbody']
  ];
  try{
-  for(const [cid,fn,w,maxRows,cap0,maxLy] of parts){
+  for(const [cid,fn,w,maxRows,cap0,maxLy,rowSel] of parts){
    const src=document.getElementById(cid); if(!src){ok=false;err='thiếu '+cid;continue;}
    const cl=src.cloneNode(true);
    cl.querySelectorAll('.analysis-box').forEach(e=>e.remove());
    cl.querySelectorAll('*').forEach(e=>{ if(e.style){ if(e.style.position==='sticky')e.style.position='static'; e.style.left='';e.style.top='';e.style.zIndex=''; } });
    cl.querySelectorAll('.table-wrap').forEach(e=>{e.style.overflow='visible';e.style.maxHeight='none';e.style.maxWidth='none';});
    const trimTbl=(tb,keep)=>{ if(!tb||keep<=0)return; const trs=[...tb.querySelectorAll('tr')]; const tot=trs[trs.length-1]; trs.slice(keep,-1).forEach(r=>r.remove()); if(tot&&!tb.contains(tot))tb.appendChild(tot); };
-   if(maxRows>0)trimTbl(cl.querySelector('table tbody'),maxRows);
+   if(maxRows>0)trimTbl(cl.querySelector(rowSel||'table tbody'),maxRows);
    if(maxLy>0)trimTbl(cl.querySelector('#ofLyTbl tbody'),maxLy);
    const tmp=document.createElement('div');tmp.id='tg-of-'+cid;tmp.style.cssText=`position:fixed;top:-9999px;left:0;z-index:-1;width:${w}px;padding:0;background:#fff`;
    tmp.appendChild(cl);document.body.appendChild(tmp);
