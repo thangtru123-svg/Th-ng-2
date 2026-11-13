@@ -5941,7 +5941,9 @@ async function buildGTCRealtimePage(){
   const _hm=(d.hangMoi&&Array.isArray(d.hangMoi.hubs))?d.hangMoi.hubs:[];
   const _hmBy={}; _hm.forEach(h=>{_hmBy[(h.name||'').trim()]=h;});
   if(window._ONLY_2T!==false && Array.isArray(d.bc)) d.bc=d.bc.filter(x=>_2T_PFX.test((x.bc||'').trim()));
-  (d.bc||[]).forEach(x=>{ const h=_hmBy[(x.bc||'').trim()];
+  const _cc=window._CC_BCAM||{};
+  (d.bc||[]).forEach(x=>{ const nm=(x.bc||'').trim(); const h=_hmBy[nm];
+   if(_cc[nm]&&_cc[nm].length) x.am=_cc[nm].join(', ');   // AM lấy theo sheet "Cơ cấu AM" (nguồn chuẩn), không theo hub_map cứng
    x._ton=h&&h.tonN1!=null?+h.tonN1:null; x._ca1=h&&h.ca1!=null?+h.ca1:null;
    x._ca2=h&&h.ca2!=null?+h.ca2:null;     x._ca3=h&&h.ca3!=null?+h.ca3:null; });
   const _sumF=(arr,f)=>arr.reduce((s,x)=>s+(x[f]!=null?+x[f]:0),0);
