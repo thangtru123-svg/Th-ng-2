@@ -5748,13 +5748,11 @@ async function buildGTCRealtimePage(){
   const amRows=am.map((r,i)=>`<tr data-grt="${_grtStrip(r.am)}"><td ${tdC}>${i+1}</td><td ${tdL}>${r.am}</td>${rowCells(r)}</tr>`).join('');
   const bcRows=bc.map((r,i)=>`<tr data-grt="${_grtStrip(r.bc+' '+r.am)}"><td ${tdC}>${i+1}</td><td ${tdL}>${r.bc}</td><td ${tdL}>${r.am}</td>${rowCells(r)}</tr>`).join('');
   const _colHead=`<th ${TH}>Tồn N-1</th><th ${TH}>Mới ca 1<br><span style="font-weight:500;font-size:10px">0h→9h</span></th><th ${TH}>Mới ca 2<br><span style="font-weight:500;font-size:10px">9h→15h</span></th><th ${TH3}>Mới ca 3<br><span style="font-weight:500;font-size:10px">15h→24h · TK</span></th><th ${TH}>Tổng cần giao<br><span style="font-weight:500;font-size:10px">tồn+ca1+ca2</span></th><th ${TH}>Đã gán</th><th ${TH}>% Gán<br><span style="font-weight:500;font-size:10px">/ tổng cần giao</span></th><th ${TH}>GTC</th><th ${TH}>% GTC<br><span style="font-weight:500;font-size:10px">/ tổng cần giao</span></th>`;
-  const excl=d.excl06?'ĐÃ loại đơn nhập BC 0–6h (sau 18h)':'KHÔNG loại 0–6h (khung 6h–18h)';
   el.innerHTML=`
    <div class="page-header">
     <div class="page-title">🚚 Báo cáo GTC realtime trong ngày</div>
     <div class="page-meta">
      <span style="background:var(--orange-light);color:var(--orange-dark);padding:3px 10px;border-radius:20px;font-size:12px;font-weight:700">🕒 Cập nhật: ${updStr}</span>
-     <span style="background:#ECFDF5;color:#166534;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:700">${excl}</span>
      <button class="tg-inpage-btn" style="background:#16A34A;border-color:#16A34A" onclick="buildGTCRealtimePage()">🔄 Tải lại</button>
     </div>
    </div>
