@@ -7,7 +7,7 @@
 #   Dòng nào xong hết thì GHN tự bỏ khỏi danh sách → BC không có dòng = đã hoàn tất.
 # Dùng:  GHN_SESSION=... python3 scripts/thutien_bankiem.py            → quét + gửi Telegram (theo luật khung giờ bên dưới)
 #        GHN_SESSION=... python3 scripts/thutien_bankiem.py --dry DIR  → quét + tạo ảnh vào DIR, KHÔNG gửi, KHÔNG ghi json
-import json, os, sys, io, time, datetime, urllib.request, urllib.error, uuid
+import json, os, sys, io, time, datetime, urllib.request, urllib.error, uuid, random
 from concurrent.futures import ThreadPoolExecutor
 import re, base64, threading, functools, http.server
 
@@ -38,23 +38,30 @@ if GROUP_MODE:
         print(f'[thutien] ngày {_dd:%Y-%m-%d} ĐÃ bắn nhóm rồi → không bắn lần 2.'); sys.exit(0)
 
 HUBS = [h for h in json.load(open(os.path.join(ROOT, 'hub_map_bc.json'), encoding='utf-8')) if h['tinh'] in TINH]
-BASE = 'https://nhanh-api.ghn.vn/api/lastmile/order/get-collect-scan-orders'
+BASE = os.environ.get('THUTIEN_BASE') or 'https://nhanh-api.ghn.vn/api/lastmile/order/get-collect-scan-orders'
+BK = float(os.environ.get('THUTIEN_BACKOFF_SCALE') or 1)   # hệ số thời gian chờ (chỉ để test nhanh)
 
 class AuthErr(Exception): pass
 def call(hub_id, offset, limit=100):
+    # GHN hay trả HTTP 429 (giới hạn tốc độ) — nhất là lúc ~23h khi chốt COD + gtc-live chạy cùng token → chờ theo Retry-After / lùi mũ, thử tới 8 lần
     body = json.dumps({'hub_id': str(hub_id), 'paging': {'offset': offset, 'limit': limit}, 'hubId': str(hub_id)}).encode()
     last = None
-    for k in range(5):
+    for k in range(8):
         req = urllib.request.Request(BASE, data=body, headers={'Content-Type': 'application/json', 'Accept': 'application/json', 'Authorization': 'Bearer ' + SES})
         try:
             j = json.loads(urllib.request.urlopen(req, timeout=40).read())
             if isinstance(j.get('data'), dict) and (j['data'].get('data') is None or isinstance(j['data'].get('data'), list)): return j   # BC đã xong hết → data.data = null, total = 0
-            last = f"code {j.get('code')} {str(j.get('message'))[:60]}"; time.sleep(1 + k)
+            last = f"code {j.get('code')} {str(j.get('message'))[:60]}"; time.sleep((1 + k) * BK)
         except urllib.error.HTTPError as e:
             if e.code in (401, 403): raise AuthErr()
-            last = f'HTTP {e.code}'; time.sleep(1.5 * (k + 1))
+            last = f'HTTP {e.code}'
+            if e.code == 429:
+                try: ra = float(e.headers.get('Retry-After') or 0)
+                except Exception: ra = 0
+                time.sleep((ra if ra > 0 else min(45, 4 * (2 ** k))) * BK + random.random())
+            else: time.sleep(1.5 * (k + 1) * BK)
         except Exception as e:
-            last = repr(e)[:80]; time.sleep(1.5 * (k + 1))
+            last = repr(e)[:80]; time.sleep(1.5 * (k + 1) * BK)
     raise RuntimeError(last or 'lỗi')
 
 FIX = json.load(open(os.environ['THUTIEN_FIXTURE'], encoding='utf-8')) if os.environ.get('THUTIEN_FIXTURE') else None   # chỉ để thử bố cục ảnh bằng dữ liệu giả — KHÔNG dùng khi chạy thật
@@ -80,7 +87,14 @@ def work(h):
     except Exception as e: return {'name': h['name'], 'hubId': str(h['id']), 'am': h['am'], 'tinh': h['tinh'], 'rows': [], 'err': str(e)}
 
 try:
-    with ThreadPoolExecutor(4) as ex: HUBROWS = list(ex.map(work, HUBS))
+    with ThreadPoolExecutor(2) as ex: HUBROWS = list(ex.map(work, HUBS))   # 2 luồng (trước 4) để đỡ dính 429
+    # Quét lại các BC lỗi (429...) tuần tự, nghỉ dài dần giữa các vòng — tối đa 4 vòng
+    for rnd in range(4):
+        bad = [i for i, h in enumerate(HUBROWS) if h.get('err')]
+        if not bad: break
+        print(f'[thutien] vòng quét lại {rnd + 1}: {len(bad)} BC lỗi → nghỉ rồi thử lại'); time.sleep(25 * (rnd + 1) * BK)
+        for i in bad:
+            HUBROWS[i] = work(HUBS[i]); time.sleep(1.2 * BK)
 except AuthErr:
     print('TOKEN GHN het han / khong hop le — can cap nhat GHN_SESSION'); sys.exit(2)
 
