@@ -158,9 +158,20 @@ LN_BK = (f'❌ Chưa bắn kiểm: <b>{len(BK)}/{len(HUBROWS)} BC</b> · {sum(x[
 ERR_LN = ('\n⚠️ Không quét được ' + str(len(errs)) + ' BC (lỗi GHN): ' + ', '.join(errs)) if errs else ''
 HDR1 = f'💵 <b>THU TIỀN - BẮN KIỂM — LẠNG SƠN + QUẢNG NINH</b>\n🕒 Chốt {STAMP}\n\n'
 HDR2 = f'📷 <b>Tình trạng BẮN KIỂM</b> — chốt {STAMP}\n\n'
-PARTS = []   # (ảnh, chú thích)
-if PT: PARTS.append((IMG1, HDR1 + LN_PT + ('' if BK else '\n' + LN_BK)))
-if BK: PARTS.append((IMG2, (HDR2 if PT else HDR1 + LN_PT + '\n\n') + LN_BK))
+# Tag @AM (đại nhân cấp 15/11/2026) — mỗi chú thích tag đúng các AM còn tồn ở mục đó, ĐẶT CUỐI chú thích (khớp _amTags trong index.html)
+AM_TG = {'Phạm Đức Thắng': 'thangquada', 'Chu Mạnh Dũng': 'DUNG_AM', 'Vi Văn Trịnh': 'trinhvv', 'Cao Xuân Minh': 'CaoXuanMinh', 'Vũ Hồng Thái': 'thai4568',
+         'Nguyễn Phú Hưởng': 'NguyenphuHuongz3sz3', 'Lê Văn Lâm': 'lailalamday', 'Trần Thu Ba': 'ThuBaTheMoon', 'Cao Văn Đức': 'Duc_QN', 'Hạ Thị Lan Anh': 'mslananh8x'}
+def am_tags(rows):
+    out = []
+    for r in rows:
+        for x in re.split(r'[,;]', str(r.get('am') or '')):
+            h = AM_TG.get(x.strip())
+            if h and '@' + h not in out: out.append('@' + h)
+    return ' '.join(out)
+def cap_tags(cap, tags): return (cap[:1020 - len(tags) - 2] + '\n\n' + tags) if tags else cap[:1020]
+PARTS = []   # (ảnh, chú thích, tag AM)
+if PT: PARTS.append((IMG1, HDR1 + LN_PT + ('' if BK else '\n' + LN_BK), am_tags(PT)))
+if BK: PARTS.append((IMG2, (HDR2 if PT else HDR1 + LN_PT + '\n\n') + LN_BK, am_tags(BK)))
 CAP = (HDR1 + LN_PT + '\n' + LN_BK + ERR_LN)[:1020]   # dùng cho tin chữ (cả hai mục xong hết) / log / báo @thangquada khi 0 dòng
 
 def tg(method, fields, files=None):
@@ -182,7 +193,7 @@ def tg(method, fields, files=None):
         except (TimeoutError, OSError, urllib.error.URLError) as e: last = repr(e)[:120]; time.sleep(3 * (k + 1))
     raise RuntimeError(f'Telegram {method} thất bại: {last}')
 
-[print(re.sub(r'<[^>]+>', '', c) + '\n-----') for _, c in PARTS] or print(re.sub(r'<[^>]+>', '', CAP))
+[print(re.sub(r'<[^>]+>', '', cap_tags(c + (ERR_LN if k == 0 else ''), t)) + '\n-----') for k, (_, c, t) in enumerate(PARTS)] or print(re.sub(r'<[^>]+>', '', CAP))
 if DRY: print('DRY — không gửi'); sys.exit(0)
 chat = TG_GROUP if GROUP_MODE else TG_ADMIN
 if not GROUP_MODE: print('[thutien] CHẠY THỬ (ngoài khung chốt) → gửi riêng @thangquada')
@@ -190,8 +201,8 @@ if not GROUP_MODE: print('[thutien] CHẠY THỬ (ngoài khung chốt) → gửi
 if n_rows == 0 and chat == TG_GROUP:
     chat = TG_ADMIN; CAP = 'KIỂM TRA: quét Thu tiền - Bắn kiểm ra 0 dòng ở cả ' + str(hubs_ok) + ' BC. Có thể toàn vùng đã xong, cũng có thể token GHN trả rỗng — đại nhân xem lại rồi mới báo nhóm.\n' + CAP
 sent = []
-for i, (img, cap) in enumerate(PARTS):
-    sent.append(tg('sendPhoto', {'chat_id': chat, 'caption': (cap + (ERR_LN if i == 0 else ''))[:1020]}, {'photo': (os.path.basename(img), open(img, 'rb').read(), 'image/png')}).get('ok'))
+for i, (img, cap, tags) in enumerate(PARTS):
+    sent.append(tg('sendPhoto', {'chat_id': chat, 'caption': cap_tags(cap + (ERR_LN if i == 0 else ''), tags)}, {'photo': (os.path.basename(img), open(img, 'rb').read(), 'image/png')}).get('ok'))
 if not PARTS: sent.append(tg('sendMessage', {'chat_id': chat, 'text': CAP}).get('ok'))
 print('[thutien] đã gửi', sent)
 if chat == TG_GROUP and sent and all(sent):   # đánh dấu đã bắn nhóm hôm nay → lần dispatch/lịch thứ 2 không bắn lại

@@ -324,6 +324,12 @@ const TG_FD_THREAD   = 8250; // topic "FD - Mục tiêu toàn vùng 8%"
 const TG_PICKUP_THREAD = 7; // topic "Pickup / Luân chuyển"
 const TG_TTS_THREAD   = 3; // topic "TTS - Vận hành"
 const TG_VANDE_THREAD = null; // topic "Vấn đề chung" = General topic → gửi KHÔNG kèm thread (thread 1 báo "not found")
+/* Tag @AM trên Telegram (đại nhân cấp 15/11/2026) — tin theo AM/BC thì tag đúng các AM liên quan ở CUỐI tin */
+const AM_TG={'Phạm Đức Thắng':'thangquada','Chu Mạnh Dũng':'DUNG_AM','Vi Văn Trịnh':'trinhvv','Cao Xuân Minh':'CaoXuanMinh','Vũ Hồng Thái':'thai4568','Nguyễn Phú Hưởng':'NguyenphuHuongz3sz3','Lê Văn Lâm':'lailalamday','Trần Thu Ba':'ThuBaTheMoon','Cao Văn Đức':'Duc_QN','Hạ Thị Lan Anh':'mslananh8x'};
+// names: mảng tên AM (mỗi phần tử có thể là "A, B"); trả "@a @b" không trùng, giữ thứ tự xuất hiện; tên chưa có @ thì bỏ qua
+function _amTags(names){const out=[];(names||[]).forEach(n=>String(n==null?'':n).split(/[,;]/).forEach(x=>{const h=AM_TG[x.trim()];if(h&&!out.includes('@'+h))out.push('@'+h);}));return out.join(' ');}
+// ghép chú thích ≤1020 ký tự mà KHÔNG cắt mất dòng tag ở cuối
+function _capWithTags(cap,tags){return tags?String(cap).slice(0,1020-tags.length-2)+'\n\n'+tags:String(cap).slice(0,1020);}
 const TG_KHOAID_EXTRA_CHAT = -1002572090380; // nhóm bắn THÊM Khoá ID (link t.me/c/2572090380/1 → General topic → gửi KHÔNG kèm thread)
 const TG_BATON_VUNG_CHAT = -1003237202833; // room "Bưu Cục Bất Ổn 2026"
 const TG_BATON_VUNG_THREAD = 5175;          // topic https://t.me/c/3237202833/5175 (p45 BC bất ổn Vùng)
@@ -4924,24 +4930,28 @@ function _btCaptions(){
  if(!T.A.length)m1+=`✅ Không có Bưu Cục nào.`;
  else{ T.A.forEach(a=>{const p=[];if(a.flags.c1)p.push(`<b>Giảm</b> ${n(Math.abs(a.gN1-a.gN2))}% vs N-2`);if(a.flags.c2)p.push(`<b>Giảm</b> ${n(Math.abs(a.gN1-a.gAvg7))}% vs TB 7 ngày gần nhất`);m1+=`\n• ${esc(a.bc)} — ${esc(a.am)}: GTC <b>${n(a.gN1)}%</b> · ${p.join(' · ')}`;});
   const w=T.A[0];m1+=`\n\n→ <b>Nhận định:</b> Nặng nhất ${esc(w.bc)} (GTC ${n(w.gN1)}%). Ưu tiên soát chia tuyến/nhân sự; BC giảm cả so N-2 lẫn nền 7 ngày là sa sút rõ.`; }
+ if(T.A.length){const _tg=_amTags(T.A.map(x=>x.am));if(_tg)m1+='\n\n'+_tg;}
  msgs.push(m1);
  // ── ② Tỉ lệ trả tăng ──
  let m2=`↩️ <b>② TỈ LỆ TRẢ (FD) TĂNG BẤT THƯỜNG — Ngày ${day}</b> (${T.B.length} Bưu Cục)\n`;
  if(!T.B.length)m2+=`✅ Không có Bưu Cục nào.`;
  else{ T.B.forEach(b=>{const p=[];if(b.flags.c3)p.push(`FD Total <b>${n(b.ftN1)}%</b> (<b>Tăng</b> ${n(Math.abs(b.ftN1-b.ftN2))}%)`);if(b.flags.c4)p.push(`FD TTS <b>${n(b.fsN1)}%</b> (<b>Tăng</b> ${n(Math.abs(b.fsN1-b.fsN2))}%)`);m2+=`\n• ${esc(b.bc)} — ${esc(b.am)}: ${p.join(' · ')}`;});
   const w=T.B[0];m2+=`\n\n→ <b>Nhận định:</b> Tăng trả mạnh nhất ${esc(w.bc)}. Rà soát nguyên nhân hoàn (sai địa chỉ / khách từ chối / giao ép cuối ngày).`; }
+ if(T.B.length){const _tg=_amTags(T.B.map(x=>x.am));if(_tg)m2+='\n\n'+_tg;}
  msgs.push(m2);
  // ── ③ Aging > 50 ──
  let m3=`⏳ <b>③ AGING &gt; 5 NGÀY QUÁ ${BATTHUONG_AGING_NGUONG} ĐƠN — Ngày ${day}</b> (${T.C.length} Bưu Cục)\n`;
  if(!T.C.length)m3+=`✅ Không có Bưu Cục nào vượt ${BATTHUONG_AGING_NGUONG} đơn aging.`;
  else{ T.C.forEach(c=>{m3+=`\n• ${esc(c.bc)} — ${esc(c.am)}: <b>${fmt(c.agN)} đơn</b>`;});
   const w=T.C[0];m3+=`\n\n→ <b>Nhận định:</b> Tồn cao nhất ${esc(w.bc)} (${fmt(w.agN)} đơn) — cần dồn lực xử lý ngay, tránh tồn kéo dài.`; }
+ if(T.C.length){const _tg=_amTags(T.C.map(x=>x.am));if(_tg)m3+='\n\n'+_tg;}
  msgs.push(m3);
  // ── ④ Năng suất giảm ──
  let m4=`👷 <b>④ NĂNG SUẤT NV GIẢM BẤT THƯỜNG — Ngày ${day}</b> (${T.D.length} Bưu Cục)\n`;
  if(!T.D.length)m4+=`✅ Không có Bưu Cục nào.`;
  else{ T.D.forEach(d=>{const drop=Math.round(d.nsN1-d.nsN2);m4+=`\n• ${esc(d.bc)} — ${esc(d.am)}: NS <b>${Math.round(d.nsN1)} đơn</b> (<b>Giảm</b> ${Math.abs(drop)}, từ ${Math.round(d.nsN2)})`;});
   const w=T.D[0];m4+=`\n\n→ <b>Nhận định:</b> Tụt sâu nhất ${esc(w.bc)} (<b>Giảm</b> ${Math.abs(Math.round(w.nsN1-w.nsN2))} đơn). Kiểm tra NV nghỉ/thiếu người hoặc sản lượng dồn đột biến.`; }
+ if(T.D.length){const _tg=_amTags(T.D.map(x=>x.am));if(_tg)m4+='\n\n'+_tg;}
  msgs.push(m4);
  return msgs;
 }
@@ -5563,7 +5573,7 @@ async function buildThuTienPage(){
     <div class="card" id="ttCardPT" style="margin-bottom:18px"><div class="card-header"><div class="card-title"><div class="card-icon">💵</div>Tình trạng TẠO PHIẾU THU — AM · Bưu Cục (${pt.length} BC còn tồn)</div></div>${tblPT}</div>
     <div class="card" id="ttCardBK" style="margin-bottom:18px"><div class="card-header"><div class="card-title"><div class="card-icon">📷</div>Tình trạng BẮN KIỂM — AM · Bưu Cục (${bk.length} BC còn tồn)</div></div>${tblBK}</div>
     <div class="analysis-box">${L.join('<br>')}</div>`;
-   window._THUTIEN={updStr,total,pt:pt.length,ptNV,ptDon,ptTien,bk:bk.length,bkNV,bkLuu,bkScan,errN:errHubs.length,errNames:errHubs.map(h=>h.name)};
+   window._THUTIEN={ptAM:pt.map(x=>x.am),bkAM:bk.map(x=>x.am),updStr,total,pt:pt.length,ptNV,ptDon,ptTien,bk:bk.length,bkNV,bkLuu,bkScan,errN:errHubs.length,errNames:errHubs.map(h=>h.name)};
    injectTgBtn('p53',()=>sendThuTienToTelegram(),'Bắn Thu tiền - Bắn kiểm TG');
   }catch(e){ el.innerHTML=HEAD+'<div class="analysis-box">Lỗi tải dữ liệu: '+esc(e&&e.message||e)+'</div>'; }
  };
@@ -5586,11 +5596,11 @@ async function sendThuTienToTelegram(){ // bắn 2 bảng (phiếu thu + bắn k
   const hdr1='💵 <b>THU TIỀN - BẮN KIỂM — LẠNG SƠN + QUẢNG NINH</b>\n🕒 Chốt '+T.updStr+'\n\n';
   const hdr2='📷 <b>Tình trạng BẮN KIỂM</b> — chốt '+T.updStr+'\n\n';
   const parts=[];
-  if(T.pt)parts.push(['ttCardPT','thutien_phieuthu.png',hdr1+lnPT+(T.bk?'':'\n'+lnBK)]);
-  if(T.bk)parts.push(['ttCardBK','thutien_bankiem.png',(T.pt?hdr2:hdr1+lnPT+'\n\n')+lnBK]);
+  if(T.pt)parts.push(['ttCardPT','thutien_phieuthu.png',hdr1+lnPT+(T.bk?'':'\n'+lnBK),_amTags(T.ptAM)]);
+  if(T.bk)parts.push(['ttCardBK','thutien_bankiem.png',(T.pt?hdr2:hdr1+lnPT+'\n\n')+lnBK,_amTags(T.bkAM)]);
   if(!parts.length){await _tgSend(TG_AGING_CHAT,null,(hdr1+lnPT+'\n'+lnBK+errLn).slice(0,1020));}
   for(let i=0;i<parts.length;i++){
-   const [id,fn,c0]=parts[i]; const c=(c0+(i===0?errLn:'')).slice(0,1020);
+   const [id,fn,c0,tg0]=parts[i]; const c=_capWithTags(c0+(i===0?errLn:''),tg0);
    const img=await _captureEl(id,2);
    const r=await _tgSendPhoto(TG_AGING_CHAT,null,img,c); if(!r||!r.ok)await _tgSendDoc(TG_AGING_CHAT,null,img,c,fn);
   }
