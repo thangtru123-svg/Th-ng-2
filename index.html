@@ -5600,6 +5600,7 @@ async function sendThuTienToTelegram(){ // bắn 2 bảng (phiếu thu + bắn k
 
 /* ===== p54 — Đơn fail ODR TTS (N-1) — nguồn: sheet "Data đơn N-1" (cập nhật 7h10–7h30 hàng ngày) ===== */
 const ODRFAIL_SHEET_ID='1nAtrYVZUHTOlp695fDPeFTDwN94jeCo8-pPrb3HXYko';
+const _OF_TG_ONLY=['ofCardTop','ofCardKS']; // các mục được bắn TG; muốn bắn thêm mục khác → thêm id card (ofCardOv/ofCardAM/ofCardBC)
 const _OF_NH=['Khách hàng','BC giao','Trung chuyển','BC lấy'];
 const _OF_COL={'Khách hàng':'#D97706','BC giao':'#DC2626','Trung chuyển':'#2563EB','BC lấy':'#7C3AED'};
 const _ofEsc=x=>String(x==null?'':x).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -5783,7 +5784,7 @@ async function sendOdrFailToTelegram(silent){
   ['ofCardAM','odrfail_theo_am.png',1500,0,'👤 <b>ĐƠN FAIL ODR TTS — THEO AM</b> (ngày GTC '+T.dd+')\n'+T.L2.join('\n'),0],
   ['ofCardBC','odrfail_theo_bc.png',1500,20,'🏪 <b>ĐƠN FAIL ODR TTS — THEO BƯU CỤC</b> (ngày GTC '+T.dd+', top 20 BC)\n'+T.L3.join('\n'),0],
   ['ofCardKS','odrfail_bcgiao_trungchuyen.png',1500,15,'🎯 <b>PHÂN TÍCH CHỦ ĐẠO — LỖI BC GIAO &amp; TRUNG CHUYỂN</b> (ngày GTC '+T.dd+')\n'+(T.L4||[]).join('\n').replace(/<b [^>]*>/g,'<b>'),0,'#ofKsBC tbody']
- ];
+ ].filter(x=>_OF_TG_ONLY.includes(x[0])); // đại nhân chốt 15/11: CHỈ bắn ⓪ Tổng quan ODR + ④ Chủ đạo BC giao/Trung chuyển (3 mục còn lại chỉ xem trên web)
  try{
   for(const [cid,fn,w,maxRows,cap0,maxLy,rowSel] of parts){
    const src=document.getElementById(cid); if(!src){ok=false;err='thiếu '+cid;continue;}
