@@ -40,13 +40,15 @@ if GROUP_MODE:
 HUBS = [h for h in json.load(open(os.path.join(ROOT, 'hub_map_bc.json'), encoding='utf-8')) if h['tinh'] in TINH]
 BASE = os.environ.get('THUTIEN_BASE') or 'https://nhanh-api.ghn.vn/api/lastmile/order/get-collect-scan-orders'
 BK = float(os.environ.get('THUTIEN_BACKOFF_SCALE') or 1)   # hệ số thời gian chờ (chỉ để test nhanh)
+DEADLINE = time.time() + float(os.environ.get('THUTIEN_MAX_SEC') or 900)   # tổng thời gian quét tối đa 15' → GHN chặn mãi thì vẫn kịp báo cáo trong khung 23h (BC lỗi ghi rõ)
 
 class AuthErr(Exception): pass
 def call(hub_id, offset, limit=100):
     # GHN hay trả HTTP 429 (giới hạn tốc độ) — nhất là lúc ~23h khi chốt COD + gtc-live chạy cùng token → chờ theo Retry-After / lùi mũ, thử tới 8 lần
     body = json.dumps({'hub_id': str(hub_id), 'paging': {'offset': offset, 'limit': limit}, 'hubId': str(hub_id)}).encode()
     last = None
-    for k in range(8):
+    for k in range(7):
+        if time.time() > DEADLINE: raise RuntimeError(last or 'hết thời gian quét')
         req = urllib.request.Request(BASE, data=body, headers={'Content-Type': 'application/json', 'Accept': 'application/json', 'Authorization': 'Bearer ' + SES})
         try:
             j = json.loads(urllib.request.urlopen(req, timeout=40).read())
@@ -58,7 +60,7 @@ def call(hub_id, offset, limit=100):
             if e.code == 429:
                 try: ra = float(e.headers.get('Retry-After') or 0)
                 except Exception: ra = 0
-                time.sleep((ra if ra > 0 else min(45, 4 * (2 ** k))) * BK + random.random())
+                time.sleep(min((ra if ra > 0 else min(30, 3 * (2 ** k))) * BK + random.random() * BK, max(0, DEADLINE - time.time())))
             else: time.sleep(1.5 * (k + 1) * BK)
         except Exception as e:
             last = repr(e)[:80]; time.sleep(1.5 * (k + 1) * BK)
@@ -91,9 +93,10 @@ try:
     # Quét lại các BC lỗi (429...) tuần tự, nghỉ dài dần giữa các vòng — tối đa 4 vòng
     for rnd in range(4):
         bad = [i for i, h in enumerate(HUBROWS) if h.get('err')]
-        if not bad: break
+        if not bad or time.time() > DEADLINE: break
         print(f'[thutien] vòng quét lại {rnd + 1}: {len(bad)} BC lỗi → nghỉ rồi thử lại'); time.sleep(25 * (rnd + 1) * BK)
         for i in bad:
+            if time.time() > DEADLINE: break
             HUBROWS[i] = work(HUBS[i]); time.sleep(1.2 * BK)
 except AuthErr:
     print('TOKEN GHN het han / khong hop le — can cap nhat GHN_SESSION'); sys.exit(2)
