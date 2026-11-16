@@ -1079,9 +1079,7 @@ function buildFDDayPage(fd){
  </div>
  <div class="card" id="p3-card-overview"><div class="card-header"><div class="card-title"><div class="card-icon">📊</div>Tổng quan Tỉ Lệ Trả toàn Vùng</div></div><div id="fdOverview"></div></div>
  <div class="card" id="p3-card-am"><div class="card-header"><div class="card-title"><div class="card-icon">📅</div>Tỉ lệ trả theo AM</div></div><div id="fdDayAMTable"></div></div>
- <div class="card" id="p3-card-bc-baton"><div class="card-header"><div class="card-title"><div class="card-icon">⚠️</div>Bưu Cục Bất Ổn — Tỉ lệ trả</div></div><div id="fdDayBatOnTable"></div></div>
- <div class="card" id="p3-card-bc-ondinh"><div class="card-header"><div class="card-title"><div class="card-icon">✅</div>Bưu Cục Ổn Định — Tỉ lệ trả</div></div><div id="fdDayOnDinhTable"></div></div>
- <div class="card" id="p3-card-bc"><div class="card-header"><div class="card-title"><div class="card-icon">🏪</div>B. Theo Bưu Cục (tất cả)</div></div><div id="fdDayBCTable"></div></div>`;
+ <div class="card" id="p3-card-bc"><div class="card-header"><div class="card-title"><div class="card-icon">🏪</div>Bưu Cục — Tỉ lệ trả <span style="font-size:12px;font-weight:600;color:#B91C1C;margin-left:6px">(⚠️ = Bưu Cục bất ổn)</span></div></div><div id="fdDayBCTable"></div></div>`;
 }
 function renderFDDay(){
  const fd=window._FD;if(!fd.totalAM)return;
@@ -1096,8 +1094,8 @@ function renderFDDay(){
  // ===== Nhóm BC bất ổn / ổn định (theo sheet cột E) + Tổng quan =====
  const baton=window._BC_BATON||new Set();
  const _isBaton=n=>baton.has((n||'').trim());
- document.getElementById('fdDayBatOnTable').innerHTML=buildFDDayTable([fd.totalBC,fd.smeBC,fd.ttsBC,fd.codBC,fd.shopeeBC],['Total','SME','TTS','TTS COD','Shopee'],dates,'Bưu Cục',window._GTC_MAP_BC,bcAM,n=>_isBaton(n));
- document.getElementById('fdDayOnDinhTable').innerHTML=buildFDDayTable([fd.totalBC,fd.smeBC,fd.ttsBC,fd.codBC,fd.shopeeBC],['Total','SME','TTS','TTS COD','Shopee'],dates,'Bưu Cục',window._GTC_MAP_BC,bcAM,n=>!_isBaton(n));
+ // Gộp bất ổn + ổn định vào 1 bảng: BC bất ổn có note "⚠️ BC bất ổn" + tô vàng nhạt (đại nhân chốt 16/11)
+ (function(){const t=document.querySelector('#fdDayBCTable table tbody');if(!t)return;t.querySelectorAll('tr:not(.tot)').forEach(tr=>{const nm=((tr.children[1]||{}).textContent||'').trim();if(!_isBaton(nm))return;[...tr.children].slice(0,3).forEach(td=>{td.style.background='#FFFBEB';});tr.children[1].insertAdjacentHTML('beforeend',' <span style="color:#B91C1C;font-size:10px;font-weight:800;white-space:nowrap">⚠️ BC bất ổn</span>');});})();
  // Tổng quan: toàn Vùng (Total/SME/TTS/Shopee) + nhóm ổn định/bất ổn (Total + Δ so N-1). Mốc = ngày "Đến ngày" (hi).
  (function(){
   const latest=hi, prevD=allD.find(d=>d<hi);
@@ -1117,8 +1115,6 @@ function renderFDDay(){
  })();
  addBCSearch(document.getElementById('fdDayAMTable'));
  addBCSearch(document.getElementById('fdDayBCTable'));
- addBCSearch(document.getElementById('fdDayBatOnTable'));
- addBCSearch(document.getElementById('fdDayOnDinhTable'));
 }
 // Mốc bôi đỏ %FD theo từng nhóm khách (đại nhân chốt 29/10): > mốc = đỏ
 const _FD_RED_THR={'Total':10,'SME':9,'TTS':4.5,'TTS COD':5,'Shopee':8};
