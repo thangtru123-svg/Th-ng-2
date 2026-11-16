@@ -1078,6 +1078,7 @@ function buildFDDayPage(fd){
   <select id="fdDay_dTo" onchange="renderFDDay()">${mkOpts(dTo)}</select>
  </div>
  <div class="card" id="p3-card-overview"><div class="card-header"><div class="card-title"><div class="card-icon">📊</div>Tổng quan Tỉ Lệ Trả toàn Vùng</div></div><div id="fdOverview"></div></div>
+ <div class="card" id="p3-card-keovung"><div class="card-header"><div class="card-title"><div class="card-icon">🎯</div>Bưu Cục kéo tỉ lệ trả Vùng — mức cần đạt để Vùng về target</div></div><div id="fdKeoVung"></div></div>
  <div class="card" id="p3-card-am"><div class="card-header"><div class="card-title"><div class="card-icon">📅</div>Tỉ lệ trả theo AM</div></div><div id="fdDayAMTable"></div></div>
  <div class="card" id="p3-card-bc"><div class="card-header"><div class="card-title"><div class="card-icon">🏪</div>Bưu Cục — Tỉ lệ trả <span style="font-size:12px;font-weight:600;color:#B91C1C;margin-left:6px">(⚠️ = Bưu Cục bất ổn)</span></div></div><div id="fdDayBCTable"></div></div>`;
 }
@@ -1094,6 +1095,9 @@ function renderFDDay(){
  // ===== Nhóm BC bất ổn / ổn định (theo sheet cột E) + Tổng quan =====
  const baton=window._BC_BATON||new Set();
  const _isBaton=n=>baton.has((n||'').trim());
+ // Bảng BC kéo tỉ lệ trả Vùng (mốc = "Đến ngày"): nếu các BC này đạt bao nhiêu thì Vùng về target
+ (function(){const el=document.getElementById('fdKeoVung');if(!el)return;const c=_fdKeoVungCalc(fd,hi);
+  el.innerHTML=!c?'<p style="padding:16px;color:var(--text-sub)">Không có dữ liệu ngày này</p>':c.ok?`<div class="analysis-box">Ngày ${shortDDow(hi)}: Vùng Total <b>${c.V.toFixed(2)}%</b> — đã đạt target ≤ ${c.T}%, không có Bưu Cục nào cần kéo xuống.</div>`:_fdKeoVungHtml(c,hi,false);})();
  // Gộp bất ổn + ổn định vào 1 bảng: BC bất ổn có note "⚠️ BC bất ổn" + tô vàng nhạt (đại nhân chốt 16/11)
  (function(){const t=document.querySelector('#fdDayBCTable table tbody');if(!t)return;t.querySelectorAll('tr:not(.tot)').forEach(tr=>{const nm=((tr.children[1]||{}).textContent||'').trim();if(!_isBaton(nm))return;[...tr.children].slice(0,3).forEach(td=>{td.style.background='#FFFBEB';});tr.children[1].insertAdjacentHTML('beforeend',' <span style="color:#B91C1C;font-size:10px;font-weight:800;white-space:nowrap">⚠️ BC bất ổn</span>');});})();
  // Tổng quan: toàn Vùng (Total/SME/TTS/Shopee) + nhóm ổn định/bất ổn (Total + Δ so N-1). Mốc = ngày "Đến ngày" (hi).
@@ -2484,6 +2488,43 @@ async function _fdSendWeekOverview(){
 }
 // ===== TG Tỉ lệ trả: (1) 1 bảng Bưu Cục GỘP ổn định + bất ổn (BC bất ổn có note) · (2) bảng BC KÉO TỈ LỆ TRẢ VÙNG + mức cần đạt để Vùng về target =====
 const FD_VUNG_TARGET=7; // mục tiêu FD Total toàn Vùng (Sếp 29/10: ≤7%; tên topic cũ ghi 8%)
+// Bảng BC KÉO TỈ LỆ TRẢ VÙNG — dùng chung cho web (p3) và Telegram. fd.totalBC: cột %Vol (trọng số) + %FD, ngày dd.
+// Xếp BC trên target theo mức kéo (fd−T)×tỉ trọng; lấy ÍT BC nhất để nếu về đúng T thì Vùng ≤T; rồi mức cần đạt chung r (các BC >r cùng về r thì Vùng = T), làm tròn XUỐNG.
+function _fdKeoVungCalc(fd,dd){
+ const rows=[];
+ ((fd&&fd.totalBC)||[]).slice(1).forEach(r=>{if(isoD(r[1])!==dd)return;const n=(r[0]||'').trim();if(!n||n.toLowerCase().includes('grand total'))return;const w=parsePct(r[2]),f=parsePct(r[3]);if(f!=null&&w>0)rows.push({n,fd:f,w});});
+ const SW=rows.reduce((s,x)=>s+x.w,0); if(!SW)return null;
+ const T=FD_VUNG_TARGET, V=rows.reduce((s,x)=>s+x.fd*x.w,0)/SW, gap=V-T;
+ if(gap<=0)return{V,T,gap,ok:true};
+ const above=rows.filter(x=>x.fd>T).map(x=>({...x,pull:(x.fd-T)*x.w/SW})).sort((a,b)=>b.pull-a.pull);
+ let cum=0,k=0; for(const x of above){cum+=x.pull;k++;if(cum>=gap-1e-9)break;}
+ const S=above.slice(0,k).sort((a,b)=>b.fd-a.fd);
+ const G=gap*SW; let m=S.length, r=null;
+ for(let i=1;i<=S.length;i++){
+  const sw=S.slice(0,i).reduce((s,x)=>s+x.w,0), sf=S.slice(0,i).reduce((s,x)=>s+x.w*x.fd,0), rr=(sf-G)/sw, nxt=S[i]?S[i].fd:-Infinity;
+  if(rr>=nxt-1e-9){m=i;r=rr;break;}
+ }
+ if(r==null){m=S.length;const sw=S.reduce((s,x)=>s+x.w,0),sf=S.reduce((s,x)=>s+x.w*x.fd,0);r=(sf-G)/sw;}
+ const rF=Math.floor(r*100)/100;
+ const list=S.slice(0,m).sort((a,b)=>b.pull-a.pull);
+ const sumPull=list.reduce((s,x)=>s+x.pull,0), sumW=list.reduce((s,x)=>s+x.w,0), grpF=list.reduce((s,x)=>s+x.fd*x.w,0)/sumW;
+ return{V,T,gap,ok:false,list,rF,sumPull,sumW,grpF,SW};
+}
+function _fdKeoVungHtml(c,dd,titleBar){
+ const esc=t=>String(t==null?'':t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+ const P2=x=>x.toFixed(2)+'%';
+ const fD=d=>{const p=(d||'').split('-');return p.length===3?`${p[2]}/${p[1]}/${p[0]}`:d;};
+ const baton=window._BC_BATON||new Set(); const isB=n=>baton.has((n||'').trim());
+ const cm=window._CC_BCAM||{}; const amOf=n=>(cm[n]||[]).join(', ')||'—';
+ const TD='style="padding:5px 9px;font-size:12.5px;text-align:center;border:1px solid #E5E7EB;white-space:nowrap"', TDL='style="padding:5px 9px;font-size:12.5px;text-align:left;border:1px solid #E5E7EB;white-space:nowrap;font-weight:600"';
+ const TH='style="background:#1F3864;color:#fff;padding:6px 9px;font-size:12px;font-weight:700;text-align:center;border:1px solid #fff;line-height:1.3"';
+ const L=c.list, T=c.T;
+ const body=L.map((x,i)=>`<tr><td ${TD}>${i+1}</td><td ${TDL}>${esc(x.n)}${isB(x.n)?' <span style="color:#B91C1C;font-size:10px;font-weight:800">⚠️ BC bất ổn</span>':''}</td><td ${TDL}>${esc(amOf(x.n))}</td><td ${TD}>${(x.w/c.SW*100).toFixed(1)}%</td><td ${TD}><b style="color:#DC2626">${P2(x.fd)}</b></td><td ${TD}>+${x.pull.toFixed(2)}</td><td ${TD}><b style="color:#15803D">≤ ${P2(c.rF)}</b></td><td ${TD}>−${(x.fd-c.rF).toFixed(2)}</td></tr>`).join('');
+ const head=titleBar?`<div style="background:#FFF200;text-align:center;font-weight:800;font-size:16px;padding:7px;border:1px solid #333">🎯 BƯU CỤC KÉO TỈ LỆ TRẢ VÙNG — ${fD(dd)} · Vùng ${P2(c.V)} → target ≤ ${T}%</div>`:`<div style="font-size:13px;margin:0 0 8px">Ngày <b>${fD(dd)}</b> · Vùng Total <b>${P2(c.V)}</b> → target ≤ ${T}% · các Bưu Cục xếp theo mức kéo Vùng lên (nhiều → ít)</div>`;
+ return head+`<div class="table-wrap" style="overflow-x:auto;max-height:none"><table style="border-collapse:collapse;margin-top:8px;display:inline-block"><thead><tr><th ${TH}>STT</th><th ${TH}>Bưu Cục</th><th ${TH}>AM</th><th ${TH}>Tỉ trọng vol<br>trong Vùng</th><th ${TH}>%Trả hiện tại<br>(Total)</th><th ${TH}>Kéo Vùng lên<br>(điểm %)</th><th ${TH}>Cần đạt để<br>Vùng về ${T}%</th><th ${TH}>Cần giảm<br>(điểm %)</th></tr></thead><tbody>${body}
+  <tr style="background:#F1F5F9;font-weight:800"><td ${TD}></td><td ${TDL}>NHÓM ${L.length} BC</td><td ${TD}></td><td ${TD}>${(c.sumW/c.SW*100).toFixed(1)}%</td><td ${TD}>${P2(c.grpF)}</td><td ${TD}>+${c.sumPull.toFixed(2)}</td><td ${TD}>≤ ${P2(c.rF)}</td><td ${TD}>−${(c.grpF-c.rF).toFixed(2)}</td></tr></tbody></table></div>
+  <div class="analysis-box" style="font-size:12.5px;line-height:1.7;margin-top:8px">Vùng hiện <b>${P2(c.V)}</b> (vượt target ${T}% là ${c.gap.toFixed(2)} điểm %).<br>Nếu ${L.length} Bưu Cục trên cùng về ≤ <b>${P2(c.rF)}</b> thì Vùng về đúng <b>${T}%</b>.</div>`;
+}
 async function _fdSendBCTables(){
  const fd=window._FD; if(!fd||!fd.totalBC||fd.totalBC.length<2)return;
  const baton=window._BC_BATON||new Set(); const isB=n=>baton.has((n||'').trim());
@@ -2529,41 +2570,16 @@ async function _fdSendBCTables(){
   const cap=trimCap(`📊 <b>BƯU CỤC — TỈ LỆ TRẢ ${fD(latest)}</b> (gộp ổn định + bất ổn)\nToàn Vùng: <b>${P2(all.fd)}</b> · Nhóm ổn định (${od.n} BC): ${P2(od.fd)} · Nhóm bất ổn (${bo.n} BC): ${P2(bo.fd)}\n⚠️ = Bưu Cục bất ổn\n\n📝 Top FD cao nhất:\n`+topL.join('\n'));
   await send('tg-fd-bcmerged',box,1250,cap);
  }catch(e){console.warn('TG FD bảng BC gộp:',e&&e.message);}
- // ---------- (2) Bảng BC KÉO VÙNG — nếu đạt bao nhiêu thì Vùng về target ----------
+ // ---------- (2) Bảng BC KÉO VÙNG — nếu đạt bao nhiêu thì Vùng về target (dùng chung _fdKeoVungCalc với web p3) ----------
  try{
-  const T=FD_VUNG_TARGET;
-  const rows=Object.entries(cur).filter(([,v])=>v.fd!=null&&v.vol>0).map(([n,v])=>({n,fd:v.fd,w:v.vol}));
-  const SW=rows.reduce((s,x)=>s+x.w,0); if(!SW)return;
-  const V=rows.reduce((s,x)=>s+x.fd*x.w,0)/SW, gap=V-T;
-  if(gap<=0){
-   await _tgSend(TG_AGING_CHAT,TG_FD_THREAD,`🎯 <b>BƯU CỤC KÉO TỈ LỆ TRẢ VÙNG — ${fD(latest)}</b>\nToàn Vùng Total <b>${P2(V)}</b> — đã đạt target ≤ ${T}%, không cần Bưu Cục nào phải kéo xuống.`);
+  const c=_fdKeoVungCalc(fd,latest); if(!c)return;
+  if(c.ok){
+   await _tgSend(TG_AGING_CHAT,TG_FD_THREAD,`🎯 <b>BƯU CỤC KÉO TỈ LỆ TRẢ VÙNG — ${fD(latest)}</b>\nToàn Vùng Total <b>${P2(c.V)}</b> — đã đạt target ≤ ${c.T}%, không cần Bưu Cục nào phải kéo xuống.`);
    return;
   }
-  // 1) xếp theo mức kéo (fd−T)×tỉ trọng; lấy ít BC nhất để nếu cùng về đúng target thì Vùng về target
-  const above=rows.filter(x=>x.fd>T).map(x=>({...x,pull:(x.fd-T)*x.w/SW})).sort((a,b)=>b.pull-a.pull);
-  let cum=0,k=0; for(const x of above){cum+=x.pull;k++;if(cum>=gap-1e-9)break;}
-  const S=above.slice(0,k).sort((a,b)=>b.fd-a.fd);
-  // 2) mức cần đạt chung r: các BC cao hơn r cùng giảm về r thì Vùng = T (water-filling trong nhóm)
-  const G=gap*SW; let m=S.length, r=null;
-  for(let i=1;i<=S.length;i++){
-   const sw=S.slice(0,i).reduce((s,x)=>s+x.w,0), sf=S.slice(0,i).reduce((s,x)=>s+x.w*x.fd,0), rr=(sf-G)/sw, nxt=S[i]?S[i].fd:-Infinity;
-   if(rr>=nxt-1e-9){m=i;r=rr;break;}
-  }
-  if(r==null){m=S.length;const sw=S.reduce((s,x)=>s+x.w,0),sf=S.reduce((s,x)=>s+x.w*x.fd,0);r=(sf-G)/sw;}
-  const rF=Math.floor(r*100)/100;   // làm tròn xuống để chắc chắn đạt
-  const list=S.slice(0,m).sort((a,b)=>b.pull-a.pull);
-  const bcAM2={};const cm2=window._CC_BCAM||{};Object.keys(cm2).forEach(bc=>bcAM2[bc]=(cm2[bc]||[]).join(', '));
-  const sumPull=list.reduce((s,x)=>s+x.pull,0), sumW=list.reduce((s,x)=>s+x.w,0), grpF=list.reduce((s,x)=>s+x.fd*x.w,0)/sumW;
-  const TD='style="padding:5px 9px;font-size:12.5px;text-align:center;border:1px solid #E5E7EB;white-space:nowrap"', TDL='style="padding:5px 9px;font-size:12.5px;text-align:left;border:1px solid #E5E7EB;white-space:nowrap;font-weight:600"';
-  const TH='style="background:#1F3864;color:#fff;padding:6px 9px;font-size:12px;font-weight:700;text-align:center;border:1px solid #fff;line-height:1.3"';
-  const body=list.map((x,i)=>`<tr><td ${TD}>${i+1}</td><td ${TDL}>${esc(x.n)}${isB(x.n)?' <span style="color:#B91C1C;font-size:10px;font-weight:800">⚠️ BC bất ổn</span>':''}</td><td ${TDL}>${esc(bcAM2[x.n]||'—')}</td><td ${TD}>${(x.w/SW*100).toFixed(1)}%</td><td ${TD}><b style="color:#DC2626">${x.fd.toFixed(2)}%</b></td><td ${TD}>+${x.pull.toFixed(2)}</td><td ${TD} ><b style="color:#15803D">≤ ${rF.toFixed(2)}%</b></td><td ${TD}>−${(x.fd-rF).toFixed(2)}</td></tr>`).join('');
-  const box=document.createElement('div');
-  box.innerHTML=`<div style="background:#FFF200;text-align:center;font-weight:800;font-size:16px;padding:7px;border:1px solid #333">🎯 BƯU CỤC KÉO TỈ LỆ TRẢ VÙNG — ${fD(latest)} · Vùng ${P2(V)} → target ≤ ${T}%</div>
-   <table style="border-collapse:collapse;margin-top:8px"><thead><tr><th ${TH}>STT</th><th ${TH}>Bưu Cục</th><th ${TH}>AM</th><th ${TH}>Tỉ trọng vol<br>trong Vùng</th><th ${TH}>%Trả hiện tại<br>(Total)</th><th ${TH}>Kéo Vùng lên<br>(điểm %)</th><th ${TH}>Cần đạt để<br>Vùng về ${T}%</th><th ${TH}>Cần giảm<br>(điểm %)</th></tr></thead><tbody>${body}
-   <tr style="background:#F1F5F9;font-weight:800"><td ${TD}></td><td ${TDL}>NHÓM ${list.length} BC</td><td ${TD}></td><td ${TD}>${(sumW/SW*100).toFixed(1)}%</td><td ${TD}>${grpF.toFixed(2)}%</td><td ${TD}>+${sumPull.toFixed(2)}</td><td ${TD}>≤ ${rF.toFixed(2)}%</td><td ${TD}>−${(grpF-rF).toFixed(2)}</td></tr></tbody></table>
-   <div style="font-size:12.5px;line-height:1.7;margin-top:8px;padding:8px 10px;border-left:3px solid #C8461A;background:#FFF7ED">Vùng hiện <b>${P2(V)}</b> (vượt target ${T}% là ${gap.toFixed(2)} điểm %).<br>Nếu ${list.length} Bưu Cục trên cùng về ≤ <b>${rF.toFixed(2)}%</b> thì Vùng về đúng <b>${T}%</b>.</div>`;
-  const names=list.map(x=>x.n.replace(/^\((QNI|LSO)\)\s*/,'')).join(', ');
-  const cap=trimCap(`🎯 <b>BƯU CỤC KÉO TỈ LỆ TRẢ VÙNG — ${fD(latest)}</b>\nToàn Vùng Total <b>${P2(V)}</b> — vượt target ≤ ${T}% là <b>${gap.toFixed(2)} điểm %</b>.\n• <b>${list.length} BC</b> kéo Vùng nhiều nhất (chiếm ${(sumW/SW*100).toFixed(1)}% vol, kéo Vùng lên +${sumPull.toFixed(2)} điểm %): ${names}.\n• Nếu ${list.length} BC này cùng về <b>≤ ${rF.toFixed(2)}%</b> (hiện ${grpF.toFixed(2)}%) thì Vùng về đúng <b>${T}%</b>.`);
+  const box=document.createElement('div'); box.innerHTML=_fdKeoVungHtml(c,latest,true);
+  const names=c.list.map(x=>x.n.replace(/^\((QNI|LSO)\)\s*/,'')).join(', ');
+  const cap=trimCap(`🎯 <b>BƯU CỤC KÉO TỈ LỆ TRẢ VÙNG — ${fD(latest)}</b>\nToàn Vùng Total <b>${P2(c.V)}</b> — vượt target ≤ ${c.T}% là <b>${c.gap.toFixed(2)} điểm %</b>.\n• <b>${c.list.length} BC</b> kéo Vùng nhiều nhất (chiếm ${(c.sumW/c.SW*100).toFixed(1)}% vol, kéo Vùng lên +${c.sumPull.toFixed(2)} điểm %): ${names}.\n• Nếu ${c.list.length} BC này cùng về <b>≤ ${c.rF.toFixed(2)}%</b> (hiện ${c.grpF.toFixed(2)}%) thì Vùng về đúng <b>${c.T}%</b>.`);
   await send('tg-fd-keovung',box,1100,cap);
  }catch(e){console.warn('TG FD kéo Vùng:',e&&e.message);}
 }
