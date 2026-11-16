@@ -7958,16 +7958,19 @@ async function buildRotLCPage(){
    const isoD0=dmy2iso(d0);
    const last7Iso=new Set(last7.map(dmy2iso).filter(Boolean));
    const P=v=>parseFloat(v)||0;
-   const grandByIso={}, amByIso={};// đơn LTC theo NGÀY (đại nhân: chỉ lấy ngày gần nhất, không cộng 7N)
+   const grandByIso={}, amByIso={}, sumByIso={};// đơn LTC theo NGÀY (đại nhân: chỉ lấy ngày gần nhất, không cộng 7N)
    ld.forEach(r=>{
     const iso=isoD(r[1]); if(!last7Iso.has(iso))return;
     const am=(r[0]||'').trim();
     const vol=Math.round(P(r[2])), pLTC=P(r[4]), pLC=P(r[6]);
     if(!am){ grandByIso[iso]={vol,pLTC,pLC}; return; }
+    { const q=sumByIso[iso]||(sumByIso[iso]={vol:0,w1:0,w2:0}); q.vol+=vol; q.w1+=vol*pLTC; q.w2+=vol*pLC; }   // cộng từ các dòng AM (mỗi dòng 1 lần)
     if(!amByIso[iso])amByIso[iso]={};
     const ltcOrders=Math.round(vol*pLC), pickOrders=Math.round(vol*pLTC);
     am.split(',').map(x=>x.trim()).filter(Boolean).forEach(nm=>{const k=nrm(nm), m=amByIso[iso]; if(!m[k])m[k]={ltc:0,pick:0,vol:0}; m[k].ltc+=ltcOrders; m[k].pick+=pickOrders; m[k].vol+=vol;});
    });
+   // Bộ lọc 2 tỉnh (window._ONLY_2T) BỎ dòng Tổng (AM trống) của sheet theo AM → Vùng = cộng các dòng AM (Σvol, %LTC/%LC bình quân gia quyền theo Volume). Khi tắt lọc thì dùng dòng Tổng của sheet.
+   Object.keys(sumByIso).forEach(iso=>{ const q=sumByIso[iso]; if(q.vol>0 && (!grandByIso[iso] || window._ONLY_2T!==false)) grandByIso[iso]={vol:q.vol,pLTC:q.w1/q.vol,pLC:q.w2/q.vol}; });
    if(grandByIso[isoD0]){ ltcOv=grandByIso[isoD0]; ltcOvDay=d0; }
    else{ const av=[...last7Iso].filter(x=>grandByIso[x]).sort().reverse(); if(av[0]){ ltcOv=grandByIso[av[0]]; ltcOvDay=last7.find(s=>dmy2iso(s)===av[0])||null; } }
    ltcByAM=amByIso[ltcOvDay?dmy2iso(ltcOvDay):isoD0]||{};
@@ -8078,7 +8081,7 @@ async function buildRotLCPage(){
    const _fd=iso=>iso?iso.split('-').reverse().join('/'):'—';
    const why=ltcErr?`không đọc được sheet <b>LTC - AM</b> (lỗi: ${String(ltcErr).replace(/</g,'&lt;')}).`
     :(!ltcRowsN?`sheet <b>LTC - AM</b> trả về rỗng.`
-    :`đọc được sheet <b>LTC - AM</b> (${ltcRowsN} dòng, ngày mới nhất trong dữ liệu đọc được: <b>${_fd(ltcDaysAll[0])}</b>) nhưng không có dòng <i>Tổng</i> (AM trống) của 7 ngày gần nhất. Nếu sheet đang bật <b>bộ lọc</b> (biểu tượng phễu ở cột Ngày) thì đường đọc CSV chỉ trả các dòng đang lọc — hãy tắt bộ lọc.`);
+    :`đọc được sheet <b>LTC - AM</b> (${ltcRowsN} dòng, ngày mới nhất trong dữ liệu đọc được: <b>${_fd(ltcDaysAll[0])}</b>) nhưng không có dòng AM nào của 7 ngày gần nhất để cộng.`);
    ovLC=`<div class="card" id="rotlcOvLC" style="margin-bottom:16px"><div style="padding:4px 2px;color:var(--text-sub);font-size:13px;line-height:1.7">🚚 <b>Tổng quan Lấy & Luân chuyển:</b> chưa hiển thị được số LTC cho ${dhdr(d0)} — ${why} <button style="margin-left:6px;background:#16A34A;color:#fff;border:1px solid #16A34A;border-radius:8px;padding:3px 10px;font-size:12px;font-weight:700;cursor:pointer" onclick="buildRotLCPage()">🔄 Tải lại</button></div></div>`;
   }
   const head=`<div class="page-header"><div class="page-title">📉 Rớt LC theo ngày — XBG</div><div class="page-meta"><span style="color:var(--text-sub);font-size:12px">Nguồn: Data rớt LC các ngày · 7 ngày gần nhất (mới → cũ)</span></div></div>`;
