@@ -31,3 +31,7 @@ _Các bài học chi tiết khác xem bảng "Lỗi đã gặp & cách xử lý"
 ## 2026-11-16 — Token GHN trong Action chết → số 0 giả bị ghi đè
 - GHN trả token hỏng bằng HTTP **400** `{code:1003 "Token is not alive" | 1004 | 401, data:null}` (KHÔNG phải 401/403) → `api()` cũ coi là rỗng → toàn Vùng ra GTC=0 và bot commit số 0. Đã thêm guard `AUTH_BAD/AUTH_OK` trong scripts/pull_gtc.js: mọi phản hồi là lỗi quyền → exit 2, không ghi đè. Token đại nhân cập nhật 13:22 VN chỉ sống ~6 phút (khác token trong Chrome vẫn sống) → cần tìm cách lấy token bền.
 - `api()` trả `{data:[]}` khi lỗi nên "rỗng" ≠ "0 đơn": mọi khối mới phải kiểm phản hồi hợp lệ + thử lại, lỗi thì ghi err (xem khối tonLC).
+
+## 2026-11-16 — Tồn LC: "Chưa đóng kiện" = packing_type `UNPACKED`, KHÔNG phải NOT_PACKED
+- get-backlog-transport-info nhận packing_type sai thì trả 200 OK + 0 đơn (im lặng). 3 giá trị đúng: **UNPACKED** (chưa đóng kiện) · PACKED · NO_NEED_TO_PACK. Cộng thiếu UNPACKED làm Vùng báo 16/64 thay vì 166/259 (Móng Cái 1: 13 thay vì 36 đơn trả). Bài học: số mới phải đối chiếu TỪNG Ô với UI cả khi chọn "tất cả" (bỏ chọn trạng thái), không chỉ 1 BC nhỏ. Lỗi này cũng làm báo cáo 2 BC (p49) LC>36h thiếu từ trước.
+- Chạy workflow gtc-live 2 lần sát nhau → lần sau checkout SHA cũ → commit data xung đột, không push được. Chỉ chạy 1 lần/đợt, chờ xong mới chạy tiếp.
