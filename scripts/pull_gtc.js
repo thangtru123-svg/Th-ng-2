@@ -414,13 +414,15 @@ async function pool(items, n, fn) {
     const TRA_B = ['48_72', '72_96', '96_120', '120_192', '192'];
     const bkArr = (inv, list) => list.map(b => (inv || []).filter(x => x.duration === b).reduce((s2, x) => s2 + (x.total_order || 0), 0));
     const addArr = (a, b) => a.map((v, i) => v + b[i]);
+    let lastBad = '';
     const okApi = async (p, body) => {
       for (let k = 0; k < 4; k++) {
         const j = await api(p, body);
         if (j && Array.isArray(j.data) && j.data.length) return j;
+        lastBad = JSON.stringify(j || null).slice(0, 160);
         await sleep(600 * (k + 1));
       }
-      throw new Error('API rỗng/lỗi: ' + p.split('/').pop());
+      throw new Error('API rỗng/lỗi: ' + p.split('/').pop() + ' → ' + lastBad);
     };
     const TL_HUBS = HUBS.filter(h => COD_TINH.includes(h.tinh));
     async function tonLcFor(h) {
