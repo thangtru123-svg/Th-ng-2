@@ -81,6 +81,21 @@ async function proc(h) {
   const ttsCod = []; // đơn TTS (mã VNGH) có COD < 50k, mọi trạng thái — chỉ gom ở 2 tỉnh LSO+QNI
   const wantTts = (h.tinh === 'Lạng Sơn' || h.tinh === 'Quảng Ninh');
   const okOrders = new Set(); // mã đơn ĐÃ giao thành công (isSucceeded) ở bất kỳ chuyến nào → loại khỏi codFail
+  // --- TTS (mã VNGH / nhóm |TTS|) theo từng BC cho p41: chưa gán (get-detail-by-status) + đã gán + GTC (đếm trong items chuyến) ---
+  let ttsChuaGan = 0, ttsDa = 0, ttsGtcN = 0, ttsErr = null;
+  if (!COD_ONLY && wantTts) {
+    for (let k = 0; k < 4; k++) {
+      const j = await api('/api/core/oss/v1/report/get-detail-by-status', { hub_id: hub, order_type: 'DAILY_TRIP_NONE', view_mode: 'CLIENT', status: ['DELIVER', 'DELIVER_PRIORITY'] });
+      if (j && j.data && !Array.isArray(j.data) && Array.isArray(j.data.detail_backlog_types)) {
+        ttsChuaGan = 0;
+        j.data.detail_backlog_types.forEach(t => (t.details || []).forEach(d => {
+          if (/\|TTS\|/.test(d.code)) { const tot = d.total_order || 0; let u6 = 0; (d.order_inventories || []).forEach(x => { if (x.duration === '0_6') u6 += x.total_order || 0; }); ttsChuaGan += EXCL06 ? (tot - u6) : tot; }
+        }));
+        ttsErr = null; break;
+      }
+      ttsErr = 'API rỗng/lỗi get-detail-by-status'; await sleep(500 * (k + 1)); // rỗng ≠ 0 đơn: gọi lại, vẫn lỗi thì ghi err (frontend hiện "chưa có")
+    }
+  }
   const nvOf = (name, id) => { const e = nvM[name] || (nvM[name] = { nv: name || '(không rõ)', id: id || '', ganGiao: 0, ganLay: 0, gtc: 0 }); if (id && !e.id) e.id = id; return e; };
   const fmtCd = (cd) => { const s = String(cd); return s.length === 8 ? `${s.slice(6, 8)}/${s.slice(4, 6)}` : String(cd); };
   for (const st of ['FINISHED', 'ON_TRIP']) {
@@ -113,6 +128,7 @@ async function proc(h) {
       const j = await api('/api/lastmile/trip/get-trip-items', { trip_code: c, tripCode: c, typeList: ['DELIVER'], offset: (pg - 1) * 100, limit: 100, page: pg, size: 100 });
       const a = j.data || []; if (!a.length) break;
       a.forEach(it => {
+        if (wantTts && String(it.orderCode || '').startsWith('VNGH')) { ttsDa++; if (it.isSucceeded === true) ttsGtcN++; }
         if (it.isSucceeded === true) { g++; okOrders.add(it.orderCode); }
         else if (codScope && (it.collectAmount || 0) >= 1000000) {
           if (it.isSucceeded === false && (it.failCode || it.failNote)) codFail.push({ ma: it.orderCode, cod: it.collectAmount, nv: v.driver, idnv: v.driverId, note: it.failNote || String(it.failCode) });
@@ -138,7 +154,7 @@ async function proc(h) {
     .map(n => ({ nv: n.nv, id: n.id, ganGiao: n.ganGiao, ganLay: n.ganLay, gtc: n.gtc, pct: n.ganGiao > 0 ? Math.round(n.gtc / n.ganGiao * 1000) / 10 : 0 }))
     .sort((a, b) => b.ganGiao - a.ganGiao);
   const hangTrips = Object.values(hangM).sort((a, b) => a.cd - b.cd).map(t => ({ nv: t.nv, ngay: t.ngay }));
-  return { name: h.name, am: h.am, tinh: h.tinh, chuaGan, daGan, gtc, nTripToday, nChuaXong, carry, canGiaoSnap, wPick, wDeliver, wReturn, oPick, oReturn, dGiao5, dGiao8, dTra48, nv, hangTrips, codFail, codPend, ttsCod, okOrders: [...okOrders] };
+  return { name: h.name, am: h.am, tinh: h.tinh, chuaGan, daGan, gtc, nTripToday, nChuaXong, carry, canGiaoSnap, wPick, wDeliver, wReturn, oPick, oReturn, dGiao5, dGiao8, dTra48, nv, hangTrips, codFail, codPend, ttsCod, okOrders: [...okOrders], tts: wantTts ? { chuaGan: ttsChuaGan, daGan: ttsDa, gtc: ttsGtcN, err: ttsErr } : null };
 }
 
 // ----- pool song song -----
@@ -175,7 +191,7 @@ async function pool(items, n, fn) {
   for (const h of hubs) {
     const cg = h.chuaGan + h.daGan;
     const hangTrips = h.hangTrips || [];
-    bcL.push({ bc: h.name, am: h.am, tinh: h.tinh, canGiao: cg, daGan: h.daGan, gtc: h.gtc, dGiao5: h.dGiao5, dGiao8: h.dGiao8, dTra48: h.dTra48, nv: h.nv || [], hang: hangTrips.length, hangTrips });
+    bcL.push({ bc: h.name, am: h.am, tinh: h.tinh, canGiao: cg, daGan: h.daGan, gtc: h.gtc, dGiao5: h.dGiao5, dGiao8: h.dGiao8, dTra48: h.dTra48, nv: h.nv || [], hang: hangTrips.length, hangTrips, tts: h.tts || null });
     const a = amM[h.am] || (amM[h.am] = { am: h.am, canGiao: 0, daGan: 0, gtc: 0, hang: 0 });
     a.canGiao += cg; a.daGan += h.daGan; a.gtc += h.gtc; a.hang += hangTrips.length;
     hangTotal += hangTrips.length;
