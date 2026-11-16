@@ -235,6 +235,7 @@ tr.tot td{background:#FFF0EB!important;font-weight:800!important;border-top:2px 
  <button class="nav-item" onclick="show('p47',this)" style="background:linear-gradient(135deg,rgba(37,99,235,0.14),rgba(59,130,246,0.08));border:1px solid rgba(37,99,235,0.3);font-weight:700"><span class="icon">📦</span>Đơn TTS COD &lt; 50k</button>
  <button class="nav-item" onclick="show('p53',this)" style="background:linear-gradient(135deg,rgba(220,38,38,0.16),rgba(241,93,41,0.08));border:1px solid rgba(220,38,38,0.3);font-weight:700"><span class="icon">💵</span>Thu tiền - Bắn kiểm</button>
  <button class="nav-item" onclick="show('p54',this)" style="background:linear-gradient(135deg,rgba(220,38,38,0.16),rgba(241,93,41,0.08));border:1px solid rgba(220,38,38,0.3);font-weight:700"><span class="icon">❌</span>Đơn fail ODR TTS</button>
+ <button class="nav-item" onclick="show('p55',this)" style="background:linear-gradient(135deg,rgba(124,58,237,0.14),rgba(167,139,250,0.08));border:1px solid rgba(124,58,237,0.3);font-weight:700"><span class="icon">🔁</span>Tồn LC - Tồn trả Shop</button>
  <button class="nav-item" onclick="show('p48',this)" style="background:linear-gradient(135deg,rgba(234,88,12,0.16),rgba(249,115,22,0.09));border:1px solid rgba(234,88,12,0.33);font-weight:700"><span class="icon">📋</span>Báo Cáo 1 — Cần giao (ĐK·BG)</button>
  <button class="nav-item" onclick="show('p49',this)" style="background:linear-gradient(135deg,rgba(234,88,12,0.16),rgba(249,115,22,0.09));border:1px solid rgba(234,88,12,0.33);font-weight:700"><span class="icon">📊</span>Báo Cáo 2 — Tồn đọng (ĐK·BG)</button>
  <div class="nav-section">GTC</div>
@@ -279,6 +280,7 @@ tr.tot td{background:#FFF0EB!important;font-weight:800!important;border-top:2px 
 <div class="page" id="p47"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
 <div class="page" id="p53"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
 <div class="page" id="p54"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
+<div class="page" id="p55"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
 <div class="page" id="p48"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
 <div class="page" id="p49"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
 <div class="page" id="p51"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
@@ -3003,6 +3005,17 @@ async function sendAllToTelegram(){
    await sendPhoto('Aging TTS Theo BC','aging-tts-bc',TG_AGING_CHAT,TG_AGING_THREAD,window._ttsCap.bc);
    ttsHid.forEach(tr=>tr.style.display='');
   }
+
+  /* --- P55: Tồn LC - Tồn trả Shop (3 ảnh: Vùng + AM + BC, kèm nhận định) → Aging/Backlog thread --- */
+  try{
+   if(btn)btn.innerHTML='⏳ Đang gửi: Tồn LC - Tồn trả Shop...';
+   await navTo('p55');
+   await new Promise(r=>setTimeout(r,600));
+   if(!window._TONLC)await buildTonLCPage();
+   const _tlR=await sendTonLCToTelegram(true);
+   if(!_tlR||!_tlR.ok)_tgFail('Tồn LC - Tồn trả Shop');
+  }catch(_e){console.warn('TG Tồn LC lỗi:',_e&&_e.message);_tgFail('Tồn LC - Tồn trả Shop');}
+  await new Promise(r=>setTimeout(r,700));
 
   /* P23 (khu vực Bắc Giang) & P34 (Báo cáo Bưu Cục → BOT) đã BỎ bắn Telegram theo yêu cầu */
 
@@ -5831,6 +5844,144 @@ async function sendOdrFailToTelegram(silent){
  return {ok,err};
 }
 
+/* ===== p55 — Tồn LC - Tồn trả Shop (32 BC Lạng Sơn + Quảng Ninh) — nguồn gtc_live.json.tonLC (scripts/pull_gtc.js, quét 30'/lần) =====
+   LC giao + LC trả: từ mốc 36-48h trở lên (nhanh.ghn.vn/lastmile/report/backlog-rotation, cộng 3 kiểu đóng kiện)
+   Trả Shop: từ mốc 48-72h trở lên (nhanh.ghn.vn/lastmile/report/backlog-lgt, cộng 3 trạng thái chuyến) */
+async function buildTonLCPage(){
+ const el=document.getElementById('p55'); if(!el)return;
+ const seq=(window._tlSeq=(window._tlSeq||0)+1);   // kết quả fetch cũ không được ghi đè lần tải mới
+ const esc=t=>String(t==null?'':t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+ const HEAD='<div class="page-header"><div class="page-title">🔁 Tồn LC - Tồn trả Shop</div></div>';
+ const sum=a=>a?a.reduce((x,y)=>x+y,0):0;
+ const nf=n=>Math.round(n).toLocaleString('vi-VN');
+ try{
+  const live=await fetch('gtc_live.json?t='+Date.now()).then(r=>{if(!r.ok)throw new Error('gtc_live.json HTTP '+r.status);return r.json();});
+  if(seq!==window._tlSeq)return;
+  const TL=live&&live.tonLC;
+  if(!TL||TL.err||!Array.isArray(TL.hubs)||!TL.hubs.length){
+   el.innerHTML=HEAD+'<div class="analysis-box">Chưa có dữ liệu Tồn LC - Tồn trả Shop: Action quét 30 phút/lần chưa ghi số'+(TL&&TL.err?' ('+esc(TL.err)+')':'')+'. Không có dữ liệu thì không hiển thị số.</div>';
+   window._TONLC=null; return;
+  }
+  const cc=window._CC_BCAM||{};
+  const amOf=h=>(cc[h.name]&&cc[h.name].length?cc[h.name].join(', '):(h.am||'(chưa map AM)'));
+  const all=TL.hubs.map(h=>{
+   const ok=!h.err&&h.lcGiao&&h.lcTra&&h.traShop;
+   const g=ok?sum(h.lcGiao):null,t=ok?sum(h.lcTra):null,s=ok?sum(h.traShop):null;
+   return {bc:h.name,am:amOf(h),tinh:h.tinh,ok,lcGiao:h.lcGiao,lcTra:h.lcTra,traShop:h.traShop,g,t,lc:ok?g+t:null,s,tot:ok?g+t+s:null,err:h.err};
+  });
+  const rows=all.filter(r=>r.ok), bad=all.filter(r=>!r.ok);
+  if(!rows.length){el.innerHTML=HEAD+'<div class="analysis-box">Không có Bưu Cục nào quét được số (đều lỗi API). Không có dữ liệu.</div>';window._TONLC=null;return;}
+  // ---- gộp theo AM ----
+  const byAM={}; rows.forEach(r=>{const a=byAM[r.am]||(byAM[r.am]={name:r.am,n:0,g:0,t:0,lc:0,s:0,tot:0});a.n++;a.g+=r.g;a.t+=r.t;a.lc+=r.lc;a.s+=r.s;a.tot+=r.tot;});
+  const amRows=Object.values(byAM).sort((a,b)=>b.tot-a.tot||b.s-a.s||a.name.localeCompare(b.name,'vi'));
+  const bcRows=[...rows].sort((a,b)=>b.tot-a.tot||b.s-a.s||a.bc.localeCompare(b.bc,'vi'));
+  const T={n:rows.length,g:0,t:0,lc:0,s:0,tot:0}; rows.forEach(r=>{T.g+=r.g;T.t+=r.t;T.lc+=r.lc;T.s+=r.s;T.tot+=r.tot;});
+  const tinhAgg=ten=>{const l=rows.filter(r=>r.tinh===ten);const o={name:ten,n:l.length,g:0,t:0,lc:0,s:0,tot:0};l.forEach(r=>{o.g+=r.g;o.t+=r.t;o.lc+=r.lc;o.s+=r.s;o.tot+=r.tot;});return o;};
+  // ---- theo mốc (Vùng) ----
+  const vec=(k,n)=>{const v=Array(n).fill(0);rows.forEach(r=>(r[k]||[]).forEach((x,i)=>{v[i]+=x;}));return v;};
+  const vG=vec('lcGiao',6), vT=vec('lcTra',6), vS=vec('traShop',5);   // vS: 48-72…192+ (5 mốc) → đệm 1 ô đầu
+  const vSp=[null,...vS];
+  const BK=['36 - 48h','48 - 72h','72 - 96h','96 - 120h','120 - 192h','192h+'];
+  // ---- thời điểm quét ----
+  const updAt=TL.generatedAt?new Date(TL.generatedAt):null;
+  const updStr=updAt&&!isNaN(updAt)?updAt.toLocaleString('vi-VN',{hour:'2-digit',minute:'2-digit',day:'2-digit',month:'2-digit',year:'numeric'}):'chưa có';
+  // ---- render ----
+  const TH='style="background:#1F3864;color:#fff;padding:7px 8px;font-size:12px;font-weight:700;text-align:center;line-height:1.35;border:1px solid #fff"';
+  const THO='style="background:#C8461A;color:#fff;padding:7px 8px;font-size:12px;font-weight:700;text-align:center;line-height:1.35;border:1px solid #fff"';
+  const TDL='text-align:left;padding:6px 10px;font-size:12.5px;border-bottom:1px solid var(--border);white-space:nowrap;font-weight:600;';
+  const TDN='text-align:center;padding:6px 8px;font-size:12.5px;border-bottom:1px solid var(--border);white-space:nowrap;width:92px;min-width:92px;';
+  const num=(v,bold)=>v==null?`<td style="${TDN}color:var(--text-sub)">—</td>`:`<td style="${TDN}${bold?'font-weight:800;':''}${v===0?'color:#9CA3AF;':''}">${v===0?'–':nf(v)}</td>`;
+  const totCol=v=>`<td style="${TDN}font-weight:800;background:#FFF4EC;color:#C8461A">${v===0?'–':nf(v)}</td>`;
+  const hdr=(first,stt,withAM)=>`<tr>${stt?`<th ${TH}>STT</th>`:''}<th ${TH}>${first}</th>${withAM?`<th ${TH}>AM</th>`:''}<th ${TH}>Luân chuyển giao<br>≥ 36h</th><th ${TH}>Luân chuyển trả<br>≥ 36h</th><th ${TH}>Tổng<br>luân chuyển</th><th ${TH}>Tồn trả Shop<br>≥ 48h</th><th ${THO}>TỔNG<br>CỘNG</th></tr>`;
+  const line=(o,i,stt,withAM,isTot)=>`<tr${isTot?' style="background:#F1F5F9"':''}>${stt?`<td style="${TDN}width:46px;min-width:46px;color:var(--text-sub);font-size:12px">${isTot?'':(i+1)}</td>`:''}<td style="${TDL}${isTot?'font-weight:800;':''}">${esc(isTot?o.name:(o.bc||o.name))}</td>${withAM?`<td style="${TDL}font-weight:500;color:var(--text-sub)">${isTot?'':esc(o.am)}</td>`:''}${num(o.g,isTot)}${num(o.t,isTot)}${num(o.lc,isTot)}${num(o.s,isTot)}${totCol(o.tot)}</tr>`;
+  const tbl=(first,list,tot,stt,withAM,id)=>`<div class="table-wrap" style="margin-bottom:6px"><table${id?` id="${id}"`:''} style="border-collapse:collapse;display:inline-block"><thead>${hdr(first,stt,withAM)}</thead><tbody>${list.map((o,i)=>line(o,i,stt,withAM,false)).join('')}${tot?line(tot,0,stt,withAM,true):''}</tbody></table></div>`;
+  const totObj={...T,name:'TỔNG CỘNG'};
+  const vungTbl=`<div class="table-wrap" style="margin-bottom:10px"><table style="border-collapse:collapse;display:inline-block"><thead><tr><th ${TH}>Loại tồn</th>${BK.map(b=>`<th ${TH}>${b}</th>`).join('')}<th ${THO}>TỔNG</th></tr></thead><tbody>
+   ${[['Luân chuyển giao',vG,T.g],['Luân chuyển trả',vT,T.t],['Tồn trả Shop',vSp,T.s]].map(([n,v,t])=>`<tr><td style="${TDL}">${n}</td>${v.map(x=>x==null?`<td style="${TDN}color:var(--text-sub)">—</td>`:num(x)).join('')}${totCol(t)}</tr>`).join('')}
+   <tr style="background:#F1F5F9"><td style="${TDL}font-weight:800">TỔNG CỘNG</td>${BK.map((_,i)=>num(vG[i]+vT[i]+(vSp[i]||0),true)).join('')}${totCol(T.tot)}</tr></tbody></table></div>`;
+  const tinhTbl=`<div class="table-wrap" style="margin-bottom:6px"><table style="border-collapse:collapse;display:inline-block"><thead>${hdr('Tỉnh',false,false)}</thead><tbody>${[tinhAgg('Lạng Sơn'),tinhAgg('Quảng Ninh')].map(o=>line({...o,bc:o.name+' ('+o.n+' BC)'},0,false,false,false)).join('')}${line({...totObj,name:'Tổng Vùng ('+T.n+' BC)'},0,false,false,true)}</tbody></table></div>`;
+  // ---- phân tích (mỗi ý 1 dòng) ----
+  const ge96=(v)=>v.slice(3).reduce((x,y)=>x+y,0);
+  const old96=ge96(vG)+ge96(vT)+ge96(vSp.map(x=>x||0));
+  const L=[];
+  L.push(`<b>Tổng tồn LC + trả Shop toàn Vùng: ${nf(T.tot)} đơn</b> (${T.n}/${all.length} Bưu Cục có số, quét lúc ${esc(updStr)}).`);
+  L.push(`• Luân chuyển giao ≥36h: <b>${nf(T.g)} đơn</b> · Luân chuyển trả ≥36h: <b>${nf(T.t)} đơn</b> · Tồn trả Shop ≥48h: <b>${nf(T.s)} đơn</b>.`);
+  L.push(`• Hàng tồn từ 96h (4 ngày) trở lên: <b>${nf(old96)} đơn</b> (${T.tot?(old96/T.tot*100).toFixed(1).replace('.',','):'0'}% tổng tồn).`);
+  L.push('So với kỳ liền trước / cùng kỳ: chưa có dữ liệu (báo cáo mới, hiện chỉ có số tại thời điểm quét).');
+  const top=(arr,n,f)=>arr.filter(x=>f(x)>0).slice(0,n);
+  const amT=top(amRows,1,x=>x.tot)[0], amL=amRows.length>1?amRows[amRows.length-1]:null;
+  if(amT)L.push(`🔴 AM tồn nhiều nhất: <b>${esc(amT.name)}</b> — ${nf(amT.tot)} đơn (LC ${nf(amT.lc)} · trả Shop ${nf(amT.s)}).`);
+  if(amL&&amT&&amL.name!==amT.name)L.push(`🟢 AM tồn ít nhất: <b>${esc(amL.name)}</b> — ${nf(amL.tot)} đơn.`);
+  const bc3=top(bcRows,3,x=>x.tot);
+  if(bc3.length)L.push(`🔴 Bưu Cục tồn nhiều nhất: ${bc3.map(x=>`<b>${esc(x.bc)}</b> ${nf(x.tot)} đơn`).join(' · ')}.`);
+  const sach=rows.filter(r=>r.tot===0);
+  L.push(`🟢 Bưu Cục không tồn (0 đơn): <b>${sach.length}/${rows.length}</b>${sach.length&&sach.length<=8?' — '+sach.map(x=>esc(x.bc)).join(', '):''}.`);
+  if(bad.length)L.push(`<span style="color:#B45309">⚠️ ${bad.length} Bưu Cục quét lỗi, chưa có số (không tính vào tổng): ${bad.map(x=>esc(x.bc)).join(', ')}.</span>`);
+  const legend=`<div style="font-size:11.5px;color:var(--text-sub);margin:0 2px 14px;line-height:1.6">Luân chuyển giao + trả: các đơn đang tồn từ mốc 36-48h trở lên (trang Tồn đọng luân chuyển, cộng cả 3 kiểu đóng kiện: chưa đóng / đã đóng / không cần đóng kiện). Tồn trả Shop: đơn Trả (trả về Shop) từ mốc 48-72h trở lên (trang Tồn đọng lấy-giao-trả, cộng cả 3 trạng thái chuyến). Đơn vị: đơn. Bảng AM và Bưu Cục xếp từ cao xuống thấp theo TỔNG CỘNG.</div>`;
+  const card=(id,ic,tt,body,note)=>`<div class="card" id="${id}" style="margin-bottom:18px"><div class="card-header"><div class="card-title"><div class="card-icon">${ic}</div>${tt}</div></div><div class="table-wrap" style="overflow-x:auto">${body}</div>${note?`<div class="analysis-box" style="margin-top:12px;line-height:1.7">${note.join('<br>')}</div>`:''}</div>`;
+  el.innerHTML=`<div class="page-header"><div class="page-title">🔁 Tồn LC - Tồn trả Shop</div><div class="page-meta">
+    <span style="background:var(--orange-light);color:var(--orange-dark);padding:3px 10px;border-radius:20px;font-size:12px;font-weight:700">🕒 Cập nhật: ${esc(updStr)}</span>
+    <span style="background:#EFF6FF;color:#1D4ED8;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:700">Lạng Sơn + Quảng Ninh · ${all.length} BC</span>
+    <button style="background:#16A34A;color:#fff;border:1px solid #16A34A;border-radius:8px;padding:5px 12px;font-size:12px;font-weight:700;cursor:pointer" onclick="buildTonLCPage()">🔄 Tải lại</button></div></div>
+   ${legend}
+   ${card('tonlcCardVung','🌐','Tổng quan theo Vùng',vungTbl+tinhTbl,L)}
+   ${card('tonlcCardAM','👤','Tổng quan theo AM ('+amRows.length+' AM)',tbl('AM',amRows.map(o=>({...o,bc:o.name})),totObj,true,false))}
+   ${card('tonlcCardBC','🏪','Tổng quan theo Bưu Cục ('+bcRows.length+' BC)',tbl('Bưu Cục',bcRows,totObj,true,true))}`;
+  window._TONLC={L,updStr,T,amRows,bcRows,bad:bad.length,nAll:all.length};
+  injectTgBtn('p55',()=>sendTonLCToTelegram(),'Bắn Tồn LC - Trả Shop TG');
+  if(!window._tlTimer)window._tlTimer=setInterval(()=>buildTonLCPage().catch(()=>{}),30*60*1000);
+ }catch(e){
+  if(seq!==window._tlSeq)return;
+  el.innerHTML=HEAD+'<div class="analysis-box">Không tải được dữ liệu: '+esc(e&&e.message||e)+'</div>';
+ }
+}
+// Bắn 3 ảnh (Vùng · AM · Bưu Cục) kèm nhận định → nhóm XBG, topic "Aging/ Backlog" (TG_AGING_THREAD)
+async function sendTonLCToTelegram(silent){
+ const T=window._TONLC; const btn=document.getElementById('tgInpage_p55'); let ok=true,err='';
+ if(!T){ if(!silent)alert('Chưa có dữ liệu Tồn LC - Tồn trả Shop.'); return {ok:false,err:'chưa có dữ liệu'}; }
+ const _ld=btn?btn.innerHTML:''; if(btn&&!silent){btn.disabled=true;btn.innerHTML='⏳ Đang bắn...';}
+ const nf=n=>Math.round(n).toLocaleString('vi-VN');
+ const clean=s=>s.replace(/<span[^>]*>|<\/span>/g,'').replace(/<b [^>]*>/g,'<b>');
+ const amL=T.amRows.filter(a=>a.tot>0).slice(0,5).map((a,i)=>`${i+1}. ${a.name.replace(/&/g,'&amp;')} — <b>${nf(a.tot)} đơn</b> (LC ${nf(a.lc)} · trả Shop ${nf(a.s)})`);
+ const bcL=T.bcRows.filter(b=>b.tot>0).slice(0,5).map((b,i)=>`${i+1}. ${b.bc.replace(/&/g,'&amp;')} — <b>${nf(b.tot)} đơn</b> (LC ${nf(b.lc)} · trả Shop ${nf(b.s)})`);
+ const parts=[
+  ['tonlcCardVung','tonlc_vung.png',1100,'🔁 <b>TỒN LC - TỒN TRẢ SHOP — TỔNG QUAN VÙNG</b> ('+T.updStr+')\n'+T.L.map(clean).join('\n')],
+  ['tonlcCardAM','tonlc_theo_am.png',1100,'👤 <b>TỒN LC - TỒN TRẢ SHOP — THEO AM</b> (cao → thấp)\n'+(amL.length?'Top AM tồn nhiều:\n'+amL.join('\n'):'Không có AM nào tồn.')],
+  ['tonlcCardBC','tonlc_theo_bc.png',1250,'🏪 <b>TỒN LC - TỒN TRẢ SHOP — THEO BƯU CỤC</b> (cao → thấp)\n'+(bcL.length?'Top BC tồn nhiều:\n'+bcL.join('\n'):'Không có BC nào tồn.')]
+ ];
+ try{
+  for(const [cid,fn,w,cap0] of parts){
+   const src=document.getElementById(cid); if(!src){ok=false;err='thiếu '+cid;continue;}
+   const cl=src.cloneNode(true);
+   cl.querySelectorAll('.analysis-box').forEach(e=>e.remove());
+   cl.querySelectorAll('*').forEach(e=>{ if(e.style){ if(e.style.position==='sticky')e.style.position='static'; e.style.left='';e.style.top='';e.style.zIndex=''; } });
+   cl.querySelectorAll('.table-wrap').forEach(e=>{e.style.overflow='visible';e.style.maxHeight='none';e.style.maxWidth='none';});
+   const tmp=document.createElement('div');tmp.id='tg-tl-'+cid;tmp.style.cssText=`position:fixed;top:-9999px;left:0;z-index:-1;width:${w}px;padding:0;background:#fff`;
+   tmp.appendChild(cl);document.body.appendChild(tmp);
+   await new Promise(r=>setTimeout(r,400));
+   try{
+    const img=await _captureEl(tmp.id);
+    if(!img||!img.size)throw new Error('ảnh rỗng');
+    // chú thích ≤1020 ký tự: nhét NGUYÊN từng dòng; dòng còn lại gửi tiếp thành tin nhắn ngay sau ảnh (không cắt giữa dòng/giữa thẻ)
+    const ls=cap0.split('\n'); let cap=ls[0], li=1;
+    while(li<ls.length&&(cap+'\n'+ls[li]).length<=1020){cap+='\n'+ls[li];li++;}
+    const rest=ls.slice(li).join('\n');
+    let res=await _tgSendPhoto(TG_AGING_CHAT,TG_AGING_THREAD,img,cap);
+    if(!res||!res.ok)res=await _tgSendDoc(TG_AGING_CHAT,TG_AGING_THREAD,img,cap,fn);
+    if(!res||!res.ok){ok=false;err=(res&&res.description)||'TG lỗi';}
+    else if(rest){ await new Promise(r=>setTimeout(r,500)); const r2=await _tgSend(TG_AGING_CHAT,TG_AGING_THREAD,rest.slice(0,4000)); if(r2&&r2.ok===false){ok=false;err=(r2.description)||'TG lỗi (phần tiếp)';} }
+   }catch(e){ok=false;err=e.message;}
+   finally{tmp.remove();}
+   await new Promise(r=>setTimeout(r,800));
+  }
+ }catch(e){ok=false;err=e.message;}
+ if(!silent){
+  if(ok){ if(btn){btn.innerHTML='✅ Đã bắn';setTimeout(()=>{btn.disabled=false;btn.innerHTML=_ld;},2500);} }
+  else{ alert('Lỗi bắn Telegram: '+err); if(btn){btn.disabled=false;btn.innerHTML=_ld;} }
+ }
+ return {ok,err};
+}
+
 /* ===== p48/p49 — Báo Cáo Vận Hành 2 Bưu Cục (Đông Kinh · Bình Gia) — tách 2 trang (bắn khác giờ) ===== */
 const BCREP_NAMES=['(LSO) Đông Kinh','(LSO) Bình Gia'];
 function _bcPct(v){return v==null?'—':(Math.round(v*10)/10).toLocaleString('vi-VN',{minimumFractionDigits:1,maximumFractionDigits:1})+'%';}
@@ -6312,6 +6463,8 @@ async function init(){
  buildThuTienPage().catch(e=>console.warn('Thu tiền - Bắn kiểm:',e&&e.message||e));
  // p54 — Đơn fail ODR TTS N-1 (sheet Data đơn N-1, cập nhật 7h10–7h30)
  buildOdrFailPage().catch(e=>console.warn('Đơn fail ODR TTS:',e&&e.message||e));
+ // p55 — Tồn LC - Tồn trả Shop (gtc_live.json.tonLC, quét 30' cùng hàng mới)
+ buildTonLCPage().catch(e=>console.warn('Tồn LC - Tồn trả Shop:',e&&e.message||e));
  // p48/p49 — Báo Cáo 1 (cần giao) + Báo Cáo 2 (tồn đọng) ĐK·BG (realtime bcReport + sheet /api/bc-report-sheet)
  buildBcRep1Page().catch(e=>console.warn("BC Report 1:",e&&e.message||e));
  buildBcRep2Page().catch(e=>console.warn("BC Report 2:",e&&e.message||e));

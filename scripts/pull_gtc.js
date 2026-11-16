@@ -25,6 +25,7 @@ const HOUR = nowVN.getUTCHours();
 const EXCL06 = HOUR >= 18; // 6h-18h giữ 0-6h; sau 18h loại
 
 const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+let AUTH_BAD = 0, AUTH_OK = 0; // số phản hồi "không có quyền" / số phản hồi có data
 async function api(p, body, tries = 5) {
   for (let k = 0; k < tries; k++) {
     try {
@@ -35,7 +36,11 @@ async function api(p, body, tries = 5) {
       });
       if (r.status === 401 || r.status === 403) { throw Object.assign(new Error('AUTH'), { auth: true }); }
       if (r.status === 429) { await sleep(500 * (k + 1)); continue; }
-      return await r.json();
+      const jj = await r.json();
+      // token hết hạn/hỏng: GHN trả HTTP 400 {code:1004|401, data:null} (KHÔNG phải 401/403) → đếm để cuối bước quét biết, tránh ghi đè số thật bằng số 0
+      if (jj && (jj.code === 1004 || jj.code === 401) && (jj.data === null || jj.data === undefined)) AUTH_BAD++;
+      else if (jj && jj.data != null) AUTH_OK++;
+      return jj;
     } catch (e) {
       if (e.auth) throw e;
       await sleep(300 * (k + 1));
@@ -155,6 +160,7 @@ async function pool(items, n, fn) {
   try { res = await pool(HUBS, 10, proc); }
   catch (e) { if (e.auth) { console.error('TOKEN GHN het han / khong hop le — can cap nhat GHN_SESSION'); process.exit(2); } throw e; }
 
+  if (AUTH_BAD > 0 && AUTH_OK === 0) { console.error(`TOKEN GHN het han: ${AUTH_BAD} phan hoi "Khong co quyen truy cap" (code 1004/401), 0 phan hoi hop le — KHONG ghi de du lieu. Can cap nhat GHN_SESSION.`); process.exit(2); }
   const hubs = res.filter(r => !r.err);
   const errN = res.length - hubs.length;
   // tổng hợp
