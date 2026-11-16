@@ -376,6 +376,21 @@ async function pool(items, n, fn) {
     const dec8 = (str) => { const a = []; for (let i = 0; i + 8 <= (str || '').length; i += 8) a.push(str.slice(i, i + 8)); return a; };
     const k8 = (c) => String(c).slice(-8).padStart(8, '_');
     const prevSameDay = !!(prevHm && prevHm.date === TODAY);
+    // ---- TTS (nhóm |TTS| / mã VNGH): Tồn N-1 + Mới ca 1/2/3 theo BC cho p41 — bắt đầu tích lũy mã từ lần quét đầu tiên của ngày (accFromT); ngày đầu triển khai (accFromT>8) ca/tồn TTS = null, không bịa ----
+    const accFromT = (prevSameDay && prevHm.accFromT != null) ? prevHm.accFromT : HOUR;
+    const _stStatus = { DAILY_TRIP_NONE: ['DELIVER', 'DELIVER_PRIORITY'], DAILY_TRIP_COMPLETED: ['DELIVER', 'DELIVER_PRIORITY'], DAILY_TRIP_IN_PROGRESS: ['DELIVERING', 'DELIVERING_PRIORITY'] };
+    async function ttsInv(id, st) { // đơn TTS mới (mốc _MOI) + tồn (mốc _TON_N1) của 1 trạng thái chuyến; rỗng ≠ 0 → gọi lại, vẫn lỗi thì throw
+      for (let k = 0; k < 4; k++) {
+        const j = await api('/api/core/oss/v1/report/get-detail-by-status', { hub_id: id, order_type: st, view_mode: 'CLIENT', status: _stStatus[st] });
+        if (j && j.data && !Array.isArray(j.data) && Array.isArray(j.data.detail_backlog_types)) {
+          const o = { moi: 0, ton: 0 };
+          j.data.detail_backlog_types.forEach(t => (t.details || []).forEach(d => { if (/\|TTS\|/.test(d.code)) { o.moi += _sumBk(d.order_inventories, _MOI); o.ton += _sumBk(d.order_inventories, _TON_N1); } }));
+          return o;
+        }
+        await sleep(500 * (k + 1));
+      }
+      throw new Error('API rỗng/lỗi get-detail-by-status (' + st + ')');
+    }
     async function hangMoiFor(h) {
       const id = String(h.id);
       let live = 0, tonLive = 0;
@@ -383,12 +398,15 @@ async function pool(items, n, fn) {
         const gi = await api('/api/core/oss/v1/report/get-general-info', { hub_ids: [id], view_mode: 'CLIENT', order_type: st });
         (((gi.data || [])[0] || {}).general_infos || []).forEach(g => { if (/^DELIVER/.test(g.order_type)) { live += _sumBk(g.order_inventories, _MOI); tonLive += _sumBk(g.order_inventories, _TON_N1); } });
       }
+      let ttsLive = null; // {live, tonLive} của TTS; lỗi → null (giữ số lần trước)
+      try { let lT = 0, tT = 0; for (const st of STATES3) { const o = await ttsInv(id, st); lT += o.moi; tT += o.ton; } ttsLive = { live: lT, tonLive: tT }; } catch (e) { if (e.auth) throw e; ttsLive = null; }
       const seen = new Set(prevSameDay && prevHm.seen && prevHm.seen.hubs ? dec8(prevHm.seen.hubs[id]) : []);
+      const seenT = new Set(prevSameDay && prevHm.seen && prevHm.seen.hubsT ? dec8(prevHm.seen.hubsT[id]) : []);
       if (HOUR >= 7) {
         const buckets = HOUR >= 14 ? ['0_6', '6_12'] : ['0_6'];
         for (const st of STATES3) for (const ty of _stTypes[st]) for (const bk of buckets) {
           const j = await api('/api/core/oss/v1/report/get-detail-by-code', { code: `${id}|${ty}|${bk}`, view_mode: 'CLIENT', order_type: st });
-          ((j.data || {}).order_codes || []).forEach(c => seen.add(k8(c)));
+          ((j.data || {}).order_codes || []).forEach(c => { seen.add(k8(c)); if (String(c).startsWith('VNGH')) seenT.add(k8(c)); });
         }
       }
       const prevH = prevSameDay ? (prevHm.hubs || []).find(x => x.hubId === id) : null;
@@ -406,16 +424,34 @@ async function pool(items, n, fn) {
       const ca1 = (at9 != null) ? at9 : donMoi;                                   // <9h: ca1 chạy realtime
       const ca2 = (at15 != null) ? (at15 - at9) : (at9 != null ? donMoi - at9 : 0); // 9h–15h: ca2 chạy realtime
       const ca3 = (at15 != null) ? (donMoi - at15) : 0;                            // ≥15h: ca3 chạy realtime (tham khảo)
-      return { name: h.name, hubId: id, am: h.am, tinh: h.tinh, donMoi, live, tonN1, tonFrozen, caSnap: { at9, at15 }, ca1, ca2, ca3, _seen: HOUR >= 7 ? [...seen].join('') : (prevSameDay && prevHm.seen && prevHm.seen.hubs ? (prevHm.seen.hubs[id] || '') : '') };
+      // --- TTS: cùng logic Tổng (tồn chụp cứng lần quét đầu 7h–12h; ca1/2/3 chốt ở 9h & 15h) ---
+      const prevT = prevH && prevH.tts ? prevH.tts : null;
+      let tts = prevT; // lỗi API → giữ số lần trước cùng ngày
+      if (ttsLive) {
+        const donMoiT = HOUR >= 7 ? Math.max(ttsLive.live, seenT.size, prevT ? prevT.donMoi || 0 : 0) : Math.max(ttsLive.live, prevT ? prevT.donMoi || 0 : 0);
+        let tonN1T, tonFrozenT;
+        if (prevT && prevT.tonFrozen) { tonN1T = prevT.tonN1; tonFrozenT = true; }
+        else if (HOUR >= 7 && HOUR < 12) { tonN1T = ttsLive.tonLive; tonFrozenT = true; }
+        else if (HOUR < 7) { tonN1T = ttsLive.tonLive; tonFrozenT = false; }
+        else { tonN1T = null; tonFrozenT = false; } // sau 12h mà chưa chụp được tồn đầu ngày → không có số (không lấy tồn cuối ngày thay)
+        const _pt = (prevT && prevT.caSnap) || {};
+        let t9 = (_pt.at9 != null) ? _pt.at9 : null, t15 = (_pt.at15 != null) ? _pt.at15 : null;
+        if (HOUR >= 9 && t9 == null) t9 = donMoiT;
+        if (HOUR >= 15 && t15 == null) t15 = donMoiT;
+        const valid = accFromT <= 8;
+        const c1 = (t9 != null) ? t9 : donMoiT, c2 = (t15 != null) ? (t15 - t9) : (t9 != null ? donMoiT - t9 : 0), c3 = (t15 != null) ? (donMoiT - t15) : 0;
+        tts = { donMoi: donMoiT, live: ttsLive.live, tonN1: tonN1T, tonFrozen: tonFrozenT, caSnap: { at9: t9, at15: t15 }, valid, ca1: valid ? c1 : null, ca2: valid ? c2 : null, ca3: valid ? c3 : null };
+      }
+      return { name: h.name, hubId: id, am: h.am, tinh: h.tinh, donMoi, live, tonN1, tonFrozen, caSnap: { at9, at15 }, ca1, ca2, ca3, tts, _seenT: HOUR >= 7 ? [...seenT].join('') : (prevSameDay && prevHm.seen && prevHm.seen.hubsT ? (prevHm.seen.hubsT[id] || '') : ''), _seen: HOUR >= 7 ? [...seen].join('') : (prevSameDay && prevHm.seen && prevHm.seen.hubs ? (prevHm.seen.hubs[id] || '') : '') };
     }
-    const hmRes = await pool(HM_HUBS, 4, async (h) => { try { return await hangMoiFor(h); } catch (e) { if (e.auth) throw e; const prevH = prevSameDay ? (prevHm.hubs || []).find(x => x.hubId === String(h.id)) : null; return { name: h.name, hubId: String(h.id), am: h.am, tinh: h.tinh, donMoi: prevH ? prevH.donMoi || 0 : null, live: null, tonN1: prevH ? (prevH.tonN1 || 0) : null, tonFrozen: prevH ? !!prevH.tonFrozen : false, caSnap: prevH ? (prevH.caSnap || {}) : {}, ca1: prevH ? (prevH.ca1 != null ? prevH.ca1 : null) : null, ca2: prevH ? (prevH.ca2 != null ? prevH.ca2 : null) : null, ca3: prevH ? (prevH.ca3 != null ? prevH.ca3 : null) : null, err: String((e && e.message) || e), _seen: prevSameDay && prevHm.seen && prevHm.seen.hubs ? (prevHm.seen.hubs[String(h.id)] || '') : '' }; } });
-    const seenHm = { date: TODAY, hubs: {} };
-    hmRes.forEach(h => { seenHm.hubs[h.hubId] = h._seen || ''; delete h._seen; });
+    const hmRes = await pool(HM_HUBS, 4, async (h) => { try { return await hangMoiFor(h); } catch (e) { if (e.auth) throw e; const prevH = prevSameDay ? (prevHm.hubs || []).find(x => x.hubId === String(h.id)) : null; return { name: h.name, hubId: String(h.id), am: h.am, tinh: h.tinh, donMoi: prevH ? prevH.donMoi || 0 : null, live: null, tonN1: prevH ? (prevH.tonN1 || 0) : null, tonFrozen: prevH ? !!prevH.tonFrozen : false, caSnap: prevH ? (prevH.caSnap || {}) : {}, ca1: prevH ? (prevH.ca1 != null ? prevH.ca1 : null) : null, ca2: prevH ? (prevH.ca2 != null ? prevH.ca2 : null) : null, ca3: prevH ? (prevH.ca3 != null ? prevH.ca3 : null) : null, tts: prevH ? (prevH.tts || null) : null, _seenT: prevSameDay && prevHm.seen && prevHm.seen.hubsT ? (prevHm.seen.hubsT[String(h.id)] || '') : '', err: String((e && e.message) || e), _seen: prevSameDay && prevHm.seen && prevHm.seen.hubs ? (prevHm.seen.hubs[String(h.id)] || '') : '' }; } });
+    const seenHm = { date: TODAY, hubs: {}, hubsT: {} };
+    hmRes.forEach(h => { seenHm.hubs[h.hubId] = h._seen || ''; seenHm.hubsT[h.hubId] = h._seenT || ''; delete h._seen; delete h._seenT; });
     // giá trị CUỐI ngày hôm qua (đo realtime) — chốt khi sang ngày mới, giữ nguyên cả ngày
     let yest = (prevHm && prevHm.yesterday) || null;
     if (prevHm && prevHm.date && prevHm.date !== TODAY) yest = { date: prevHm.date, mode: prevHm.moiMode, hubs: Object.fromEntries((prevHm.hubs || []).filter(x => x.donMoi != null).map(x => [x.name, x.donMoi])) };
     const accFrom = (prevSameDay && prevHm.accFrom != null) ? prevHm.accFrom : HOUR; // giờ bắt đầu tích lũy mã đơn trong ngày (<=7 là đủ cả ngày)
-    out.hangMoi = { generatedAt: out.updatedAt, date: TODAY, hourVN: HOUR, moiMode: HOUR >= 14 ? '0-12h' : '0-6h', accFrom, hubs: hmRes, yesterday: yest, seen: seenHm };
+    out.hangMoi = { generatedAt: out.updatedAt, date: TODAY, hourVN: HOUR, moiMode: HOUR >= 14 ? '0-12h' : '0-6h', accFrom, accFromT, hubs: hmRes, yesterday: yest, seen: seenHm };
     console.log(`[hangmoi] ${hmRes.length} hub, tổng đơn mới ${hmRes.reduce((s2, x) => s2 + (x.donMoi || 0), 0)} (mốc ${out.hangMoi.moiMode}), lỗi ${hmRes.filter(x => x.err).length}`);
   } catch (e) { if (e && e.auth) throw e; out.hangMoi = { err: String((e && e.message) || e) }; }
 
