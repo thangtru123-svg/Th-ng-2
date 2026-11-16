@@ -7950,10 +7950,11 @@ async function buildRotLCPage(){
   // ==== LTC - AM: Volume + %LTC (lấy) + %LC (luân chuyển) — bổ sung tổng quan Vùng + tỉ lệ rớt/LTC theo AM ====
   const nrm=s=>(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/đ/g,'d').replace(/\s+/g,' ').trim();
   const dmy2iso=s=>{const m=/(\d{1,2})\/(\d{1,2})\/(\d{4})/.exec(s||'');return m?`${m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`:'';};
-  let ltcOv=null, ltcOvDay=null, ltcByAM={};
+  let ltcOv=null, ltcOvDay=null, ltcByAM={}, ltcErr=null, ltcRowsN=0, ltcDaysAll=[];
   try{
    const lr=await fetchSheet('LTC - AM');
    const ld=(lr||[]).slice(1).filter(r=>r.length>6 && isoD(r[1]));
+   ltcRowsN=(lr||[]).length; ltcDaysAll=[...new Set(ld.map(r=>isoD(r[1])))].sort().reverse();   // để báo ĐÚNG nguyên nhân khi không ghép được ngày
    const isoD0=dmy2iso(d0);
    const last7Iso=new Set(last7.map(dmy2iso).filter(Boolean));
    const P=v=>parseFloat(v)||0;
@@ -7970,7 +7971,7 @@ async function buildRotLCPage(){
    if(grandByIso[isoD0]){ ltcOv=grandByIso[isoD0]; ltcOvDay=d0; }
    else{ const av=[...last7Iso].filter(x=>grandByIso[x]).sort().reverse(); if(av[0]){ ltcOv=grandByIso[av[0]]; ltcOvDay=last7.find(s=>dmy2iso(s)===av[0])||null; } }
    ltcByAM=amByIso[ltcOvDay?dmy2iso(ltcOvDay):isoD0]||{};
-  }catch(e){ console.warn('[RotLC] LTC-AM lỗi:',e&&e.message); }
+  }catch(e){ ltcErr=(e&&e.message)||String(e); console.warn('[RotLC] LTC-AM lỗi:',ltcErr); }
   window._rotlc={last7,d0,d1,dhdr,T,TTS,ltcOv,ltcOvDay,ltcByAM};
   // ==== 1 bảng ====
   function tbl(arr,label,withAM,tid,st,kind,ltcMap){
@@ -8073,7 +8074,12 @@ async function buildRotLCPage(){
      <div style="margin-top:10px;color:var(--text-sub);font-size:12px">* Đã lấy = Volume × %LTC · Đã LC = Volume × %LC (nguồn sheet <b>LTC - AM</b>). Rớt LC là số đơn rớt luân chuyển (nguồn Data rớt LC), thống kê riêng nên không cộng thẳng vào Volume.</div>
    </div>`;
   }else{
-   ovLC=`<div class="card" id="rotlcOvLC" style="margin-bottom:16px"><div style="padding:4px 2px;color:var(--text-sub);font-size:13px">🚚 <b>Tổng quan Lấy & Luân chuyển:</b> chưa có dữ liệu LTC cho ${dhdr(d0)} (sheet <b>LTC - AM</b> có thể cập nhật trễ).</div></div>`;
+   // Báo đúng nguyên nhân: (a) đọc sheet lỗi · (b) đọc được nhưng không có dòng Tổng của 7 ngày gần nhất (thường do BỘ LỌC trên sheet làm thiếu dòng) — KHÔNG đổ cho "sheet cập nhật trễ" khi chưa kiểm
+   const _fd=iso=>iso?iso.split('-').reverse().join('/'):'—';
+   const why=ltcErr?`không đọc được sheet <b>LTC - AM</b> (lỗi: ${String(ltcErr).replace(/</g,'&lt;')}).`
+    :(!ltcRowsN?`sheet <b>LTC - AM</b> trả về rỗng.`
+    :`đọc được sheet <b>LTC - AM</b> (${ltcRowsN} dòng, ngày mới nhất trong dữ liệu đọc được: <b>${_fd(ltcDaysAll[0])}</b>) nhưng không có dòng <i>Tổng</i> (AM trống) của 7 ngày gần nhất. Nếu sheet đang bật <b>bộ lọc</b> (biểu tượng phễu ở cột Ngày) thì đường đọc CSV chỉ trả các dòng đang lọc — hãy tắt bộ lọc.`);
+   ovLC=`<div class="card" id="rotlcOvLC" style="margin-bottom:16px"><div style="padding:4px 2px;color:var(--text-sub);font-size:13px;line-height:1.7">🚚 <b>Tổng quan Lấy & Luân chuyển:</b> chưa hiển thị được số LTC cho ${dhdr(d0)} — ${why} <button style="margin-left:6px;background:#16A34A;color:#fff;border:1px solid #16A34A;border-radius:8px;padding:3px 10px;font-size:12px;font-weight:700;cursor:pointer" onclick="buildRotLCPage()">🔄 Tải lại</button></div></div>`;
   }
   const head=`<div class="page-header"><div class="page-title">📉 Rớt LC theo ngày — XBG</div><div class="page-meta"><span style="color:var(--text-sub);font-size:12px">Nguồn: Data rớt LC các ngày · 7 ngày gần nhất (mới → cũ)</span></div></div>`;
   el.innerHTML=head+ovLC+ov
