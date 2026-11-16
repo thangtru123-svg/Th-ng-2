@@ -4701,7 +4701,7 @@ async function sendTargetToTelegram(){
    Mỗi BC "kéo vùng" = mức thiếu/vượt so với target × tỉ trọng sản lượng của BC trong Vùng:
      pull = |target − tỉ lệ BC| × SL_BC ÷ ΣSL_Vùng   (GTC/ODR/OPR: cao hơn là tốt · FD: thấp hơn là tốt)
    Nguồn: window._D (GTC/ODR/OPR theo Bưu Cục) + window._FD (FD theo Bưu Cục), ngày mới nhất trong sheet. */
-const KV_TAGS={'Nguyễn Phú Hưởng':'@NguyenphuHuongz3sz3','Cao Xuân Minh':'@CaoXuanMinh','Chu Mạnh Dũng':'@DUNG_AM','Cao Văn Đức':'@Duc_QN','Hạ Thị Lan Anh':'@mslananh8x','Lê Văn Lâm':'@lailalamday','Phạm Đức Thắng':'@thangquada'}; // AM chưa có tag (Vi Văn Trịnh, Trần Thu Ba) → hiện tên
+const KV_TAGS=Object.fromEntries(Object.entries(AM_TG).map(([n,h])=>[n,'@'+h])); // 1 NGUỒN DUY NHẤT: bảng AM_TG ở đầu file (đại nhân cấp 15/11) — thêm/đổi @ AM chỉ sửa AM_TG
 const KV_MIN_PULL=0.5; // BC đưa vào danh sách khi kéo vùng ≥ 0,5 điểm % (tối thiểu 3 — FD tối thiểu 5, tối đa 8 BC)
 function _kvSpecs(){
  const D=window._D||{},FD=window._FD||{};
