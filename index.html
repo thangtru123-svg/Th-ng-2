@@ -2411,7 +2411,7 @@ async function _fdSendAll(){
  capOv+=`⚠️ Nhóm bất ổn (${boN.n} BC): <b>${P(boN.fd)}</b>${dtxt(boN.fd,boP.fd)}\n\n📝 <b>Nhận định:</b>\n`;
  if(boN.fd!=null&&odN.fd!=null){const gap=boN.fd-odN.fd,ratio=odN.fd>0?boN.fd/odN.fd:0;capOv+=`• Nhóm bất ổn cao hơn ổn định ${gap.toFixed(2)} điểm %${ratio>=1.3?` (gấp ~${ratio.toFixed(1)} lần)`:''}.\n`;}
  if(boN.fd!=null&&boP.fd!=null){const d=boN.fd-boP.fd;capOv+=d>0.05?`• Nhóm bất ổn ĐANG XẤU ĐI (▲ ${d.toFixed(2)} điểm %) — cần can thiệp.\n`:d<-0.05?`• Nhóm bất ổn cải thiện (▼ ${Math.abs(d).toFixed(2)} điểm %).\n`:`• Nhóm bất ổn gần như đứng yên so N-1.\n`;}
- if(vT.fd!=null)capOv+=`• Mục tiêu toàn Vùng ≤ 8% — hiện ${P(vT.fd)}${vT.fd>8?' (VƯỢT mục tiêu).':' (đạt).'}\n`;
+ if(vT.fd!=null)capOv+=`• Mục tiêu toàn Vùng ≤ ${FD_VUNG_TARGET}% — hiện ${P(vT.fd)}${vT.fd>FD_VUNG_TARGET?' (VƯỢT mục tiêu).':' (đạt).'}\n`;
  capOv=trimCap(capOv);
  const bd=_gd(fd.totalBC,latest);
  const bList=Object.entries(bd).filter(([n])=>_isB(n)&&bd[n].fd!=null).map(([n,v])=>({n,fd:v.fd})).sort((a,b)=>b.fd-a.fd);
@@ -2436,8 +2436,7 @@ async function _fdSendAll(){
  };
  await sendCard('p3-card-overview',capOv,920);
  await sendCard('p3-card-am',capAM,980);
- await sendCard('p3-card-bc-baton',capBaton,1200);
- await sendCard('p3-card-bc-ondinh',capOndinh,1200,15);
+ try{ await _fdSendBCTables(); }catch(e){ console.warn('TG FD bảng BC:',e&&e.message); }
  // Bắn kèm TỔNG QUAN TUẦN (đại nhân yêu cầu 27/09)
  try{ await _fdSendWeekOverview(); }catch(e){ console.warn('TG FD tuần:',e&&e.message); }
 }
@@ -2485,8 +2484,94 @@ async function _fdSendWeekOverview(){
   try{const img=await _captureEl('tg-fdwkbc-tmp',1,true);let res=await _tgSendPhoto(TG_AGING_CHAT,TG_FD_THREAD,img,`${icon} <b>${title} — Tỉ lệ trả TUẦN ${sel2.join(' vs ')}</b> (kèm Δ so target)`);if(!res||!res.ok)await _tgSendDoc(TG_AGING_CHAT,TG_FD_THREAD,img,`${icon} ${title} — Tuần ${sel2[0]}`);}catch(e){console.warn('TG FD tuần BC:',e&&e.message);}finally{t2.remove();}
   await new Promise(r=>setTimeout(r,800));
  };
- try{ /* đại nhân chốt 06/11: BỎ ảnh "BƯU CỤC BẤT ỔN" khỏi bắn Tỉ lệ trả */ await sendWkBC('BƯU CỤC ỔN ĐỊNH','✅',n=>!isB(n),30); }catch(e){ console.warn('TG FD tuần BC:',e&&e.message); }
+ /* đại nhân chốt 16/11: KHÔNG bắn bảng Tỉ lệ trả TUẦN kèm target (sendWkBC) nữa — chỉ giữ ảnh Tổng quan tuần ở trên */
 }
+// ===== TG Tỉ lệ trả: (1) 1 bảng Bưu Cục GỘP ổn định + bất ổn (BC bất ổn có note) · (2) bảng BC KÉO TỈ LỆ TRẢ VÙNG + mức cần đạt để Vùng về target =====
+const FD_VUNG_TARGET=7; // mục tiêu FD Total toàn Vùng (Sếp 29/10: ≤7%; tên topic cũ ghi 8%)
+async function _fdSendBCTables(){
+ const fd=window._FD; if(!fd||!fd.totalBC||fd.totalBC.length<2)return;
+ const baton=window._BC_BATON||new Set(); const isB=n=>baton.has((n||'').trim());
+ const esc=t=>String(t==null?'':t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+ const allD=[...new Set(fd.totalBC.slice(1).map(r=>isoD(r[1])).filter(Boolean))].sort((a,b)=>b.localeCompare(a));
+ const latest=allD[0], prev=allD[1]; if(!latest)return;
+ const fD=d=>{const p=(d||'').split('-');return p.length===3?`${p[2]}/${p[1]}/${p[0]}`:d;};
+ const P2=x=>x==null?'—':x.toFixed(2)+'%';
+ const _gd=(sheet,dd)=>{const res={};(sheet||[]).slice(1).forEach(r=>{if(isoD(r[1])!==dd)return;const n=(r[0]||'').trim();if(!n||n.toLowerCase().includes('grand total'))return;res[n]={vol:parsePct(r[2]),fd:parsePct(r[3])};});return res;};
+ const cur=_gd(fd.totalBC,latest);
+ const grpFd=(pred)=>{let sv=0,sf=0,c=0;Object.entries(cur).forEach(([n,v])=>{if(pred&&!pred(n))return;if(v.fd==null||!(v.vol>0))return;sv+=v.vol;sf+=v.fd*v.vol;c++;});return{fd:sv?sf/sv:null,n:c,vol:sv};};
+ const send=async(id,html,width,cap)=>{
+  const tmp=document.createElement('div');tmp.id=id;tmp.style.cssText='position:fixed;top:-9999px;left:0;z-index:-1;width:'+width+'px;padding:0;background:#fff';
+  tmp.appendChild(html);document.body.appendChild(tmp);
+  await new Promise(r=>setTimeout(r,350));
+  try{const img=await _captureEl(id);if(!img||!img.size)throw new Error('ảnh rỗng');const res=await _tgSendPhoto(TG_AGING_CHAT,TG_FD_THREAD,img,cap);if(!res||!res.ok)throw new Error((res&&res.description)||'?');}
+  catch(e){console.warn('TG FD bảng BC:',e&&e.message);}finally{tmp.remove();}
+  await new Promise(r=>setTimeout(r,800));
+ };
+ const trimCap=s=>s.length>1020?s.slice(0,1017)+'...':s;
+ // ---------- (1) Bảng Bưu Cục GỘP (bất ổn đánh dấu ⚠️) ----------
+ try{
+  const bcAM={};const cm=window._CC_BCAM||{};Object.keys(cm).forEach(bc=>bcAM[bc]=(cm[bc]||[]).join(', '));
+  const dates=[latest,prev].filter(Boolean);
+  const wrap=document.createElement('div');
+  wrap.innerHTML=buildFDDayTable([fd.totalBC,fd.smeBC,fd.ttsBC,fd.codBC,fd.shopeeBC],['Total','SME','TTS','TTS COD','Shopee'],dates,'Bưu Cục',window._GTC_MAP_BC,bcAM,null);
+  wrap.querySelectorAll('.analysis-box').forEach(e=>e.remove());
+  wrap.querySelectorAll('thead,th').forEach(el=>{el.style.position='';el.style.top='';el.style.zIndex='';});
+  const tb=wrap.querySelector('table tbody'); let kept=0,nB=0;
+  if(tb){[...tb.querySelectorAll('tr:not(.tot)')].forEach(tr=>{
+   const nm=((tr.children[1]||{}).textContent||'').trim(); const b=isB(nm);
+   if(kept>=16&&!b){tr.remove();return;}
+   kept++;
+   if(b){nB++;[...tr.children].slice(0,3).forEach(td=>{td.style.background='#FFFBEB';});tr.children[1].insertAdjacentHTML('beforeend',' <span style="color:#B91C1C;font-size:10px;font-weight:800;white-space:nowrap">⚠️ BC bất ổn</span>');}
+   tr.querySelectorAll('td').forEach(td=>{td.style.position='static';});
+  });
+  wrap.querySelectorAll('td,th').forEach(el=>{if(el.style.position==='sticky')el.style.position='static';});}
+  const box=document.createElement('div');
+  box.innerHTML=`<div style="background:#FFF200;text-align:center;font-weight:800;font-size:16px;padding:7px;border:1px solid #333">📊 BƯU CỤC — TỈ LỆ TRẢ ${fD(latest)}${prev?' vs '+fD(prev):''} · Top ${kept} BC cao nhất (⚠️ = Bưu Cục bất ổn)</div>`;
+  box.appendChild(wrap);
+  const od=grpFd(n=>!isB(n)), bo=grpFd(isB), all=grpFd(null);
+  const topL=Object.entries(cur).filter(([,v])=>v.fd!=null).sort((a,b)=>b[1].fd-a[1].fd).slice(0,5).map(([n,v],i)=>`${i+1}. ${n}${isB(n)?' ⚠️':''}: ${v.fd.toFixed(2)}%`);
+  const cap=trimCap(`📊 <b>BƯU CỤC — TỈ LỆ TRẢ ${fD(latest)}</b> (gộp ổn định + bất ổn)\nToàn Vùng: <b>${P2(all.fd)}</b> · Nhóm ổn định (${od.n} BC): ${P2(od.fd)} · Nhóm bất ổn (${bo.n} BC): ${P2(bo.fd)}\n⚠️ = Bưu Cục bất ổn\n\n📝 Top FD cao nhất:\n`+topL.join('\n'));
+  await send('tg-fd-bcmerged',box,1250,cap);
+ }catch(e){console.warn('TG FD bảng BC gộp:',e&&e.message);}
+ // ---------- (2) Bảng BC KÉO VÙNG — nếu đạt bao nhiêu thì Vùng về target ----------
+ try{
+  const T=FD_VUNG_TARGET;
+  const rows=Object.entries(cur).filter(([,v])=>v.fd!=null&&v.vol>0).map(([n,v])=>({n,fd:v.fd,w:v.vol}));
+  const SW=rows.reduce((s,x)=>s+x.w,0); if(!SW)return;
+  const V=rows.reduce((s,x)=>s+x.fd*x.w,0)/SW, gap=V-T;
+  if(gap<=0){
+   await _tgSend(TG_AGING_CHAT,TG_FD_THREAD,`🎯 <b>BƯU CỤC KÉO TỈ LỆ TRẢ VÙNG — ${fD(latest)}</b>\nToàn Vùng Total <b>${P2(V)}</b> — đã đạt target ≤ ${T}%, không cần Bưu Cục nào phải kéo xuống.`);
+   return;
+  }
+  // 1) xếp theo mức kéo (fd−T)×tỉ trọng; lấy ít BC nhất để nếu cùng về đúng target thì Vùng về target
+  const above=rows.filter(x=>x.fd>T).map(x=>({...x,pull:(x.fd-T)*x.w/SW})).sort((a,b)=>b.pull-a.pull);
+  let cum=0,k=0; for(const x of above){cum+=x.pull;k++;if(cum>=gap-1e-9)break;}
+  const S=above.slice(0,k).sort((a,b)=>b.fd-a.fd);
+  // 2) mức cần đạt chung r: các BC cao hơn r cùng giảm về r thì Vùng = T (water-filling trong nhóm)
+  const G=gap*SW; let m=S.length, r=null;
+  for(let i=1;i<=S.length;i++){
+   const sw=S.slice(0,i).reduce((s,x)=>s+x.w,0), sf=S.slice(0,i).reduce((s,x)=>s+x.w*x.fd,0), rr=(sf-G)/sw, nxt=S[i]?S[i].fd:-Infinity;
+   if(rr>=nxt-1e-9){m=i;r=rr;break;}
+  }
+  if(r==null){m=S.length;const sw=S.reduce((s,x)=>s+x.w,0),sf=S.reduce((s,x)=>s+x.w*x.fd,0);r=(sf-G)/sw;}
+  const rF=Math.floor(r*100)/100;   // làm tròn xuống để chắc chắn đạt
+  const list=S.slice(0,m).sort((a,b)=>b.pull-a.pull);
+  const bcAM2={};const cm2=window._CC_BCAM||{};Object.keys(cm2).forEach(bc=>bcAM2[bc]=(cm2[bc]||[]).join(', '));
+  const sumPull=list.reduce((s,x)=>s+x.pull,0), sumW=list.reduce((s,x)=>s+x.w,0), grpF=list.reduce((s,x)=>s+x.fd*x.w,0)/sumW;
+  const TD='style="padding:5px 9px;font-size:12.5px;text-align:center;border:1px solid #E5E7EB;white-space:nowrap"', TDL='style="padding:5px 9px;font-size:12.5px;text-align:left;border:1px solid #E5E7EB;white-space:nowrap;font-weight:600"';
+  const TH='style="background:#1F3864;color:#fff;padding:6px 9px;font-size:12px;font-weight:700;text-align:center;border:1px solid #fff;line-height:1.3"';
+  const body=list.map((x,i)=>`<tr><td ${TD}>${i+1}</td><td ${TDL}>${esc(x.n)}${isB(x.n)?' <span style="color:#B91C1C;font-size:10px;font-weight:800">⚠️ BC bất ổn</span>':''}</td><td ${TDL}>${esc(bcAM2[x.n]||'—')}</td><td ${TD}>${(x.w/SW*100).toFixed(1)}%</td><td ${TD}><b style="color:#DC2626">${x.fd.toFixed(2)}%</b></td><td ${TD}>+${x.pull.toFixed(2)}</td><td ${TD} ><b style="color:#15803D">≤ ${rF.toFixed(2)}%</b></td><td ${TD}>−${(x.fd-rF).toFixed(2)}</td></tr>`).join('');
+  const box=document.createElement('div');
+  box.innerHTML=`<div style="background:#FFF200;text-align:center;font-weight:800;font-size:16px;padding:7px;border:1px solid #333">🎯 BƯU CỤC KÉO TỈ LỆ TRẢ VÙNG — ${fD(latest)} · Vùng ${P2(V)} → target ≤ ${T}%</div>
+   <table style="border-collapse:collapse;margin-top:8px"><thead><tr><th ${TH}>STT</th><th ${TH}>Bưu Cục</th><th ${TH}>AM</th><th ${TH}>Tỉ trọng vol<br>trong Vùng</th><th ${TH}>%Trả hiện tại<br>(Total)</th><th ${TH}>Kéo Vùng lên<br>(điểm %)</th><th ${TH}>Cần đạt để<br>Vùng về ${T}%</th><th ${TH}>Cần giảm<br>(điểm %)</th></tr></thead><tbody>${body}
+   <tr style="background:#F1F5F9;font-weight:800"><td ${TD}></td><td ${TDL}>NHÓM ${list.length} BC</td><td ${TD}></td><td ${TD}>${(sumW/SW*100).toFixed(1)}%</td><td ${TD}>${grpF.toFixed(2)}%</td><td ${TD}>+${sumPull.toFixed(2)}</td><td ${TD}>≤ ${rF.toFixed(2)}%</td><td ${TD}>−${(grpF-rF).toFixed(2)}</td></tr></tbody></table>
+   <div style="font-size:12.5px;line-height:1.7;margin-top:8px;padding:8px 10px;border-left:3px solid #C8461A;background:#FFF7ED">Vùng hiện <b>${P2(V)}</b> (vượt target ${T}% là ${gap.toFixed(2)} điểm %).<br>Nếu ${list.length} Bưu Cục trên cùng về ≤ <b>${rF.toFixed(2)}%</b> thì Vùng về đúng <b>${T}%</b>.</div>`;
+  const names=list.map(x=>x.n.replace(/^\((QNI|LSO)\)\s*/,'')).join(', ');
+  const cap=trimCap(`🎯 <b>BƯU CỤC KÉO TỈ LỆ TRẢ VÙNG — ${fD(latest)}</b>\nToàn Vùng Total <b>${P2(V)}</b> — vượt target ≤ ${T}% là <b>${gap.toFixed(2)} điểm %</b>.\n• <b>${list.length} BC</b> kéo Vùng nhiều nhất (chiếm ${(sumW/SW*100).toFixed(1)}% vol, kéo Vùng lên +${sumPull.toFixed(2)} điểm %): ${names}.\n• Nếu ${list.length} BC này cùng về <b>≤ ${rF.toFixed(2)}%</b> (hiện ${grpF.toFixed(2)}%) thì Vùng về đúng <b>${T}%</b>.`);
+  await send('tg-fd-keovung',box,1100,cap);
+ }catch(e){console.warn('TG FD kéo Vùng:',e&&e.message);}
+}
+
 async function sendTLTToTelegram(){
  const fd=window._FD;
  if(!fd?.totalAM||fd.totalAM.length<2){alert('Chưa có dữ liệu TLT! Vui lòng chờ trang tải xong.');return;}
@@ -2540,7 +2625,7 @@ async function sendTLTToTelegram(){
   capOv+=`⚠️ Nhóm bất ổn (${boN.n} BC): <b>${P(boN.fd)}</b>${dtxt(boN.fd,boP.fd)}\n\n📝 <b>Nhận định:</b>\n`;
   if(boN.fd!=null&&odN.fd!=null){const gap=boN.fd-odN.fd,ratio=odN.fd>0?boN.fd/odN.fd:0;capOv+=`• Nhóm bất ổn cao hơn ổn định ${gap.toFixed(2)} điểm %${ratio>=1.3?` (gấp ~${ratio.toFixed(1)} lần)`:''}.\n`;}
   if(boN.fd!=null&&boP.fd!=null){const d=boN.fd-boP.fd;capOv+=d>0.05?`• Nhóm bất ổn ĐANG XẤU ĐI (▲ ${d.toFixed(2)} điểm %) — cần can thiệp.\n`:d<-0.05?`• Nhóm bất ổn cải thiện (▼ ${Math.abs(d).toFixed(2)} điểm %).\n`:`• Nhóm bất ổn gần như đứng yên so N-1.\n`;}
-  if(vT.fd!=null)capOv+=`• Mục tiêu toàn Vùng ≤ 8% — hiện ${P(vT.fd)}${vT.fd>8?' (VƯỢT mục tiêu).':' (đạt).'}\n`;
+  if(vT.fd!=null)capOv+=`• Mục tiêu toàn Vùng ≤ ${FD_VUNG_TARGET}% — hiện ${P(vT.fd)}${vT.fd>FD_VUNG_TARGET?' (VƯỢT mục tiêu).':' (đạt).'}\n`;
   capOv=trimCap(capOv);
   const bd=_gd(fd.totalBC,latest);
   const bList=Object.entries(bd).filter(([n])=>_isB(n)&&bd[n].fd!=null).map(([n,v])=>({n,fd:v.fd})).sort((a,b)=>b.fd-a.fd);
@@ -2561,8 +2646,7 @@ async function sendTLTToTelegram(){
   };
   await sendCard('p3-card-overview',capOv,920);
   await sendCard('p3-card-am',capFD('am'),980);
-  await sendCard('p3-card-bc-baton',capBaton,1200);
-  await sendCard('p3-card-bc-ondinh',capOndinh,1200,15);
+  try{ await _fdSendBCTables(); }catch(e){ console.warn('TG FD bảng BC:',e&&e.message); }
   try{ await _fdSendWeekOverview(); }catch(e){ console.warn('TG FD tuần:',e&&e.message); }
   if(btn){btn.disabled=false;btn.textContent='✅ Đã gửi!';btn.style.background='rgba(34,197,94,0.15)';btn.style.borderColor='rgba(34,197,94,0.4)';btn.style.color='#4ade80';setTimeout(()=>{btn.textContent='📤 Bắn TLT Ngày TG';btn.style.background='';btn.style.borderColor='';btn.style.color='';},3000);}
  }catch(e){
