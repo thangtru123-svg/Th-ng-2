@@ -27,3 +27,7 @@
 - gviz đọc theo trạng thái lọc (basic filter) của tab; Sheets API v4 (`/api/sheet`, `/api/n1`) thì không. Khi dữ liệu đọc bằng gviz bỗng thiếu dòng: soi tab có đang lọc không, báo đại nhân tắt lọc / dùng "Filter views". Luôn đếm số dòng theo ngày trước khi tin dữ liệu gviz.
 
 _Các bài học chi tiết khác xem bảng "Lỗi đã gặp & cách xử lý" trong CLAUDE.md. File này append sau mỗi incident mới._
+
+## 2026-11-16 — Token GHN trong Action chết → số 0 giả bị ghi đè
+- GHN trả token hỏng bằng HTTP **400** `{code:1003 "Token is not alive" | 1004 | 401, data:null}` (KHÔNG phải 401/403) → `api()` cũ coi là rỗng → toàn Vùng ra GTC=0 và bot commit số 0. Đã thêm guard `AUTH_BAD/AUTH_OK` trong scripts/pull_gtc.js: mọi phản hồi là lỗi quyền → exit 2, không ghi đè. Token đại nhân cập nhật 13:22 VN chỉ sống ~6 phút (khác token trong Chrome vẫn sống) → cần tìm cách lấy token bền.
+- `api()` trả `{data:[]}` khi lỗi nên "rỗng" ≠ "0 đơn": mọi khối mới phải kiểm phản hồi hợp lệ + thử lại, lỗi thì ghi err (xem khối tonLC).
