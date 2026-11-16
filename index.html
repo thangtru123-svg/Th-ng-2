@@ -3006,7 +3006,7 @@ async function sendAllToTelegram(){
    ttsHid.forEach(tr=>tr.style.display='');
   }
 
-  /* --- P55: Tồn LC - Tồn trả Shop (3 ảnh: Vùng + AM + BC, kèm nhận định) → Aging/Backlog thread --- */
+  /* --- P55: Tồn LC - Tồn trả Shop (2 ảnh: AM + BC, kèm nhận định; KHÔNG bắn bảng Vùng) → Aging/Backlog thread --- */
   try{
    if(btn)btn.innerHTML='⏳ Đang gửi: Tồn LC - Tồn trả Shop...';
    await navTo('p55');
@@ -5935,7 +5935,7 @@ async function buildTonLCPage(){
   el.innerHTML=HEAD+'<div class="analysis-box">Không tải được dữ liệu: '+esc(e&&e.message||e)+'</div>';
  }
 }
-// Bắn 3 ảnh (Vùng · AM · Bưu Cục) kèm nhận định → nhóm XBG, topic "Aging/ Backlog" (TG_AGING_THREAD)
+// Bắn 2 ảnh (AM · Bưu Cục) kèm nhận định → nhóm XBG, topic "Aging/ Backlog" (TG_AGING_THREAD)
 async function sendTonLCToTelegram(silent){
  const T=window._TONLC; const btn=document.getElementById('tgInpage_p55'); let ok=true,err='';
  if(!T){ if(!silent)alert('Chưa có dữ liệu Tồn LC - Tồn trả Shop.'); return {ok:false,err:'chưa có dữ liệu'}; }
@@ -5944,10 +5944,12 @@ async function sendTonLCToTelegram(silent){
  const clean=s=>s.replace(/<span[^>]*>|<\/span>/g,'').replace(/<b [^>]*>/g,'<b>');
  const amL=T.amRows.filter(a=>a.tot>0).slice(0,5).map((a,i)=>`${i+1}. ${a.name.replace(/&/g,'&amp;')} — <b>${nf(a.tot)} đơn</b> (LC ${nf(a.lc)} · trả Shop ${nf(a.s)})`);
  const bcL=T.bcRows.filter(b=>b.tot>0).slice(0,5).map((b,i)=>`${i+1}. ${b.bc.replace(/&/g,'&amp;')} — <b>${nf(b.tot)} đơn</b> (LC ${nf(b.lc)} · trả Shop ${nf(b.s)})`);
+ // đại nhân chốt 16/11: KHÔNG bắn bảng Vùng, chỉ bắn 2 bảng AM + Bưu Cục (bảng Vùng chỉ xem trên web). Số tổng toàn Vùng gộp vào chú thích ảnh AM.
+ const LL=T.L.map(clean);
+ const lineBc0=LL.find(x=>x.startsWith('🟢 Bưu Cục')), lineBad=LL.find(x=>x.startsWith('⚠️'));
  const parts=[
-  ['tonlcCardVung','tonlc_vung.png',1100,'🔁 <b>TỒN LC - TỒN TRẢ SHOP — TỔNG QUAN VÙNG</b> ('+T.updStr+')\n'+T.L.map(clean).join('\n')],
-  ['tonlcCardAM','tonlc_theo_am.png',1100,'👤 <b>TỒN LC - TỒN TRẢ SHOP — THEO AM</b> (cao → thấp)\n'+(amL.length?'Top AM tồn nhiều:\n'+amL.join('\n'):'Không có AM nào tồn.')],
-  ['tonlcCardBC','tonlc_theo_bc.png',1250,'🏪 <b>TỒN LC - TỒN TRẢ SHOP — THEO BƯU CỤC</b> (cao → thấp)\n'+(bcL.length?'Top BC tồn nhiều:\n'+bcL.join('\n'):'Không có BC nào tồn.')]
+  ['tonlcCardAM','tonlc_theo_am.png',1100,'👤 <b>TỒN LC - TỒN TRẢ SHOP — THEO AM</b> (cao → thấp, '+T.updStr+')\n'+LL[0]+'\n'+LL[1]+'\n'+(amL.length?'Top AM tồn nhiều:\n'+amL.join('\n'):'Không có AM nào tồn.')],
+  ['tonlcCardBC','tonlc_theo_bc.png',1250,'🏪 <b>TỒN LC - TỒN TRẢ SHOP — THEO BƯU CỤC</b> (cao → thấp)\n'+(bcL.length?'Top BC tồn nhiều:\n'+bcL.join('\n'):'Không có BC nào tồn.')+(lineBc0?'\n'+lineBc0:'')+(lineBad?'\n'+lineBad:'')]
  ];
  try{
   for(const [cid,fn,w,cap0] of parts){
