@@ -303,7 +303,7 @@ async function pool(items, n, fn) {
     }
     // get-backlog-transport-info × 3 packing_type (đã/chưa/không cần đóng kiện): LC giao/trả >36h
     let lcGiao36 = 0, lcTra36 = 0;
-    for (const pt of ['NOT_PACKED', 'PACKED', 'NO_NEED_TO_PACK']) {
+    for (const pt of ['UNPACKED', 'PACKED', 'NO_NEED_TO_PACK']) {
       const j = await api('/api/core/oss/v1/report/get-backlog-transport-info', { hub_ids: [id], packing_type: pt });
       const infos = (((j.data || [])[0] || {}).general_infos) || [];
       infos.forEach(g => { const s = _sumBk(g.order_inventories, _GE36); if (g.order_type === 'TRANSPORT_DELIVERY') lcGiao36 += s; else if (g.order_type === 'TRANSPORT_RETURN') lcTra36 += s; });
@@ -405,7 +405,7 @@ async function pool(items, n, fn) {
 
   // ===== TỒN LC - TỒN TRẢ SHOP (p55) — 32 BC Lạng Sơn + Quảng Ninh =====
   // Nguồn 1 (nhanh.ghn.vn/lastmile/report/backlog-rotation): Luân chuyển GIAO + Luân chuyển TRẢ, từ mốc 36-48h trở lên → get-backlog-transport-info × 3 kiểu đóng kiện
-  //   (chưa đóng kiện + đã đóng kiện + không cần đóng kiện, cộng cả 3 — cùng cách tính LC>36h của Báo cáo 2 BC).
+  //   (chưa đóng kiện = UNPACKED, đã đóng kiện = PACKED, không cần đóng kiện = NO_NEED_TO_PACK; cộng cả 3 — cùng cách tính LC>36h của Báo cáo 2 BC).
   // Nguồn 2 (nhanh.ghn.vn/lastmile/report/backlog-lgt): đơn TRẢ (trả Shop), từ mốc 48-72h trở lên → get-general-info × 3 trạng thái chuyến
   //   (chưa có chuyến + đã có chuyến + đang có chuyến, cộng cả 3 — cùng cách tính hàng trả Shop>48h của Báo cáo 2 BC).
   // ⚠️ api() trả {data:[]} khi lỗi/hết lần thử → KHÔNG được coi là 0 đơn: phản hồi rỗng phải gọi lại, vẫn rỗng thì hub đó ghi err (frontend hiển thị "Chưa có", không bịa số 0).
@@ -428,7 +428,7 @@ async function pool(items, n, fn) {
     async function tonLcFor(h) {
       const id = String(h.id);
       let lcGiao = LC_B.map(() => 0), lcTra = LC_B.map(() => 0), traShop = TRA_B.map(() => 0);
-      for (const pt of ['NOT_PACKED', 'PACKED', 'NO_NEED_TO_PACK']) {
+      for (const pt of ['UNPACKED', 'PACKED', 'NO_NEED_TO_PACK']) {
         const j = await okApi('/api/core/oss/v1/report/get-backlog-transport-info', { hub_ids: [id], packing_type: pt });
         ((j.data[0] || {}).general_infos || []).forEach(g => {
           if (g.order_type === 'TRANSPORT_DELIVERY') lcGiao = addArr(lcGiao, bkArr(g.order_inventories, LC_B));
