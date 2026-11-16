@@ -38,7 +38,7 @@ async function api(p, body, tries = 5) {
       if (r.status === 429) { await sleep(500 * (k + 1)); continue; }
       const jj = await r.json();
       // token hết hạn/hỏng: GHN trả HTTP 400 {code:1004|401, data:null} (KHÔNG phải 401/403) → đếm để cuối bước quét biết, tránh ghi đè số thật bằng số 0
-      if (jj && (jj.code === 1004 || jj.code === 401) && (jj.data === null || jj.data === undefined)) AUTH_BAD++;
+      if (jj && (jj.code === 1003 || jj.code === 1004 || jj.code === 401) && (jj.data === null || jj.data === undefined)) AUTH_BAD++; // 1003 = "Token is not alive", 1004/401 = không có quyền
       else if (jj && jj.data != null) AUTH_OK++;
       return jj;
     } catch (e) {
