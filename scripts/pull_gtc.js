@@ -397,6 +397,48 @@ async function pool(items, n, fn) {
     console.log(`[hangmoi] ${hmRes.length} hub, tổng đơn mới ${hmRes.reduce((s2, x) => s2 + (x.donMoi || 0), 0)} (mốc ${out.hangMoi.moiMode}), lỗi ${hmRes.filter(x => x.err).length}`);
   } catch (e) { if (e && e.auth) throw e; out.hangMoi = { err: String((e && e.message) || e) }; }
 
+  // ===== TỒN LC - TỒN TRẢ SHOP (p55) — 32 BC Lạng Sơn + Quảng Ninh =====
+  // Nguồn 1 (nhanh.ghn.vn/lastmile/report/backlog-rotation): Luân chuyển GIAO + Luân chuyển TRẢ, từ mốc 36-48h trở lên → get-backlog-transport-info × 3 kiểu đóng kiện
+  //   (chưa đóng kiện + đã đóng kiện + không cần đóng kiện, cộng cả 3 — cùng cách tính LC>36h của Báo cáo 2 BC).
+  // Nguồn 2 (nhanh.ghn.vn/lastmile/report/backlog-lgt): đơn TRẢ (trả Shop), từ mốc 48-72h trở lên → get-general-info × 3 trạng thái chuyến
+  //   (chưa có chuyến + đã có chuyến + đang có chuyến, cộng cả 3 — cùng cách tính hàng trả Shop>48h của Báo cáo 2 BC).
+  // ⚠️ api() trả {data:[]} khi lỗi/hết lần thử → KHÔNG được coi là 0 đơn: phản hồi rỗng phải gọi lại, vẫn rỗng thì hub đó ghi err (frontend hiển thị "Chưa có", không bịa số 0).
+  try {
+    const LC_B = ['36_48', '48_72', '72_96', '96_120', '120_192', '192'];
+    const TRA_B = ['48_72', '72_96', '96_120', '120_192', '192'];
+    const bkArr = (inv, list) => list.map(b => (inv || []).filter(x => x.duration === b).reduce((s2, x) => s2 + (x.total_order || 0), 0));
+    const addArr = (a, b) => a.map((v, i) => v + b[i]);
+    const okApi = async (p, body) => {
+      for (let k = 0; k < 4; k++) {
+        const j = await api(p, body);
+        if (j && Array.isArray(j.data) && j.data.length) return j;
+        await sleep(600 * (k + 1));
+      }
+      throw new Error('API rỗng/lỗi: ' + p.split('/').pop());
+    };
+    const TL_HUBS = HUBS.filter(h => COD_TINH.includes(h.tinh));
+    async function tonLcFor(h) {
+      const id = String(h.id);
+      let lcGiao = LC_B.map(() => 0), lcTra = LC_B.map(() => 0), traShop = TRA_B.map(() => 0);
+      for (const pt of ['NOT_PACKED', 'PACKED', 'NO_NEED_TO_PACK']) {
+        const j = await okApi('/api/core/oss/v1/report/get-backlog-transport-info', { hub_ids: [id], packing_type: pt });
+        ((j.data[0] || {}).general_infos || []).forEach(g => {
+          if (g.order_type === 'TRANSPORT_DELIVERY') lcGiao = addArr(lcGiao, bkArr(g.order_inventories, LC_B));
+          else if (g.order_type === 'TRANSPORT_RETURN') lcTra = addArr(lcTra, bkArr(g.order_inventories, LC_B));
+        });
+      }
+      for (const st of STATES3) {
+        const j = await okApi('/api/core/oss/v1/report/get-general-info', { hub_ids: [id], view_mode: 'CLIENT', order_type: st });
+        ((j.data[0] || {}).general_infos || []).forEach(g => { if (/^RETURN/.test(g.order_type)) traShop = addArr(traShop, bkArr(g.order_inventories, TRA_B)); });
+      }
+      return { name: h.name, hubId: id, am: h.am, tinh: h.tinh, lcGiao, lcTra, traShop };
+    }
+    const tlRes = await pool(TL_HUBS, 4, async (h) => { try { return await tonLcFor(h); } catch (e) { if (e.auth) throw e; return { name: h.name, hubId: String(h.id), am: h.am, tinh: h.tinh, lcGiao: null, lcTra: null, traShop: null, err: String((e && e.message) || e) }; } });
+    out.tonLC = { generatedAt: out.updatedAt, date: TODAY, hourVN: HOUR, buckets: { lc: LC_B, tra: TRA_B }, hubs: tlRes };
+    const _sm = (k) => tlRes.reduce((s2, x) => s2 + (x[k] ? x[k].reduce((a, b) => a + b, 0) : 0), 0);
+    console.log(`[tonlc] ${tlRes.length} hub — LC giao ≥36h ${_sm('lcGiao')} · LC trả ≥36h ${_sm('lcTra')} · Trả Shop ≥48h ${_sm('traShop')} · lỗi ${tlRes.filter(x => x.err).length}`);
+  } catch (e) { if (e && e.auth) throw e; out.tonLC = { err: String((e && e.message) || e) }; }
+
   fs.writeFileSync(path.join(ROOT, 'gtc_live.json'), JSON.stringify(out));
   console.log(`[pull] OK hubsOk=${hubs.length} err=${errN} GTC=${vung.gtc} daGan=${vung.daGan} canGiao=${vung.canGiao} COD soDon=${out.cod.vung.soDon} tongCod=${codTong} TTS<50k soDon=${out.ttsCod.soDon}`);
 
