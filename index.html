@@ -6257,10 +6257,10 @@ async function buildGTCRealtimePage(){
   const am=[...(d.am||[])].sort((a,b)=>_sortKey(b)-_sortKey(a));
   const bc=[...(d.bc||[])].sort((a,b)=>_sortKey(b)-_sortKey(a));
   const kpi=(t,v,s,c)=>`<div style="background:#fff;border:1px solid var(--border);border-radius:14px;padding:14px 16px;min-width:160px;box-shadow:var(--shadow-sm)"><div style="font-size:12px;color:var(--text-sub);font-weight:600">${t}</div><div style="font-size:24px;font-weight:800;color:${c||'var(--text-main)'};margin-top:2px">${v}</div><div style="font-size:11.5px;color:var(--text-sub)">${s}</div></div>`;
-  const TH='style="background:#1F3864;color:#fff;padding:7px 7px;font-size:12px;font-weight:700;white-space:nowrap;text-align:center"';
-  const TH3='style="background:#415A86;color:#fff;padding:7px 7px;font-size:12px;font-weight:700;white-space:nowrap;text-align:center"';
-  const tdC='style="text-align:center;padding:6px 7px;font-size:12.5px;border-bottom:1px solid var(--border);white-space:nowrap"';
-  const tdL='style="text-align:left;padding:6px 9px;font-size:12.5px;border-bottom:1px solid var(--border);white-space:nowrap"';
+  const TH='style="background:#1F3864;color:#fff;padding:7px 5px;font-size:12px;font-weight:700;white-space:nowrap;text-align:center"';
+  const TH3='style="background:#415A86;color:#fff;padding:7px 5px;font-size:12px;font-weight:700;white-space:nowrap;text-align:center"';
+  const tdC='style="text-align:center;padding:6px 5px;font-size:12.5px;border-bottom:1px solid var(--border);white-space:nowrap"';
+  const tdL='style="text-align:left;padding:6px 8px;font-size:12.5px;border-bottom:1px solid var(--border);white-space:nowrap"';
   const _na='<span style="color:#9CA3AF;font-style:italic">chưa có</span>';
   const cHM=v=>v==null?_na:_grtVN(v);
   const c3=v=>v==null?_na:('<span style="color:#64748B">'+_grtVN(v)+'</span>');   // ca3 làm nhạt (tham khảo)
@@ -6278,10 +6278,10 @@ async function buildGTCRealtimePage(){
   const bcTot=`<tr style="background:#EEF2F7;font-weight:800"><td ${tdC}></td><td ${tdL}><b>TỔNG CỘNG (${bc.length} BC)</b></td><td ${tdL}></td>${rowCells(V)}</tr>`;
   const _colHead=`<th ${TH}>Tồn N-1</th><th ${TH}>Mới ca 1<br><span style="font-weight:500;font-size:10px">0h→9h</span></th><th ${TH}>Mới ca 2<br><span style="font-weight:500;font-size:10px">9h→15h</span></th><th ${TH3}>Mới ca 3<br><span style="font-weight:500;font-size:10px">15h→24h · TK</span></th><th ${TH}>Tổng cần giao<br><span style="font-weight:500;font-size:10px">chưa gán + đã gán</span></th><th ${TH}>Đã gán</th><th ${TH}>% Gán<br><span style="font-weight:500;font-size:10px">/ tổng cần giao</span></th><th ${TH}>GTC</th><th ${TH}>% GTC<br><span style="font-weight:500;font-size:10px">/ tổng cần giao</span></th>`;
   // ===== Bảng TTS (đơn mã VNGH — TikTok Shop) song song với bảng Tổng: cùng thứ tự dòng để đối chiếu =====
-  const _tcell=(x,extra)=>`<td style="text-align:center;padding:6px 7px;font-size:12.5px;border-bottom:1px solid var(--border);white-space:nowrap;${extra||''}">${x}</td>`;
+  const _tcell=(x,extra)=>`<td style="text-align:center;padding:6px 5px;font-size:12.5px;border-bottom:1px solid var(--border);white-space:nowrap;${extra||''}">${x}</td>`;
   const tCells=r=>{ const t=r._t;
    const head=_tcell(cHM(r._tTon))+_tcell(cHM(r._tCa1))+_tcell(cHM(r._tCa2))+_tcell(c3(r._tCa3),'background:#F8FAFC');
-   if(!t)return head+`<td colspan="5" style="text-align:center;padding:6px 7px;font-size:12.5px;border-bottom:1px solid var(--border)">${_na}</td>`;
+   if(!t)return head+`<td colspan="5" style="text-align:center;padding:6px 5px;font-size:12.5px;border-bottom:1px solid var(--border)">${_na}</td>`;
    return head+_tcell(_grtVN(t.cg),'font-weight:700')+_tcell(_grtVN(t.da))+_tcell(_pD(t.da,t.cg),'color:#C8461A;font-weight:700')+_tcell(_grtVN(t.gtc),'font-weight:800;color:#C8461A')+_tcell(_pD(t.gtc,t.cg),'font-weight:700;color:#DC2626'); };
   const amRowsT=am.map((r,i)=>`<tr data-grt="${_grtStrip(r.am)}"><td ${tdC}>${i+1}</td><td ${tdL}>${r.am}${r._t&&r._tMiss?` <span title="${r._tMiss} BC chưa có số TTS" style="color:#B45309">†</span>`:''}</td>${tCells(r)}</tr>`).join('');
   const bcRowsT=bc.map((r,i)=>`<tr data-grt="${_grtStrip(r.bc+' '+r.am)}"><td ${tdC}>${i+1}</td><td ${tdL}>${r.bc}</td>${tCells(r)}</tr>`).join('');
@@ -6305,7 +6305,7 @@ async function buildGTCRealtimePage(){
    <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start;margin-bottom:22px">
     <div>
      ${_hd(`<span style="font-size:14px;font-weight:800;color:var(--text-main)">📋 Theo AM (${am.length}) — Tổng đơn</span>`)}
-     <div class="table-wrap"><table style="border-collapse:collapse;display:inline-block;min-width:880px">
+     <div class="table-wrap"><table style="border-collapse:collapse;display:inline-block">
       <thead><tr><th ${TH}>STT</th><th ${TH} style="text-align:left">AM</th>${_colHead}</tr></thead>
       <tbody>${amRows}${amTot}</tbody></table></div>
     </div>
@@ -6319,7 +6319,7 @@ async function buildGTCRealtimePage(){
    <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start">
     <div>
      ${_hd(`<span style="font-size:14px;font-weight:800;color:var(--text-main)">🏢 Theo Bưu Cục (${bc.length}) — Tổng đơn</span><input type="text" placeholder="🔎 Tìm Bưu Cục / AM…" oninput="grtFilter(this.value)" style="padding:5px 10px;border:1px solid var(--border);border-radius:8px;font-size:12.5px;min-width:200px">`)}
-     <div class="table-wrap"><table style="border-collapse:collapse;display:inline-block;min-width:980px">
+     <div class="table-wrap"><table style="border-collapse:collapse;display:inline-block">
       <thead><tr><th ${TH}>STT</th><th ${TH} style="text-align:left">Bưu Cục</th><th ${TH} style="text-align:left">AM</th>${_colHead}</tr></thead>
       <tbody>${bcRows}${bcTot}</tbody></table></div>
     </div>
