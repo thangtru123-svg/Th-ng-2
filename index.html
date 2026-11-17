@@ -5270,19 +5270,19 @@ function _thLines(r,nl){
   out.push({l:'Khâu Gán → Giao',v:'không có dữ liệu %Gán'});
  }else{
   const kemGan=r.pgan<TH_GAN_CHUAN, kemGiao=a.giao<a.giaoChuan;
-  const kl=kemGan&&kemGiao?'🔴 Kém cả 2 khâu: chưa gán đủ <b>và</b> đã gán mà giao chưa xong'
-   :kemGan?'🔴 Chủ yếu do <b>chưa gán đủ</b> đơn (chuẩn &gt;'+TH_GAN_CHUAN+'%)'
-   :kemGiao?'🔴 Chủ yếu do <b>đã gán mà giao chưa xong</b> (cần ≥'+pc(a.giaoChuan)+')'
-   :'✅ Cả 2 khâu đạt chuẩn';
+  const kl=kemGan&&kemGiao?'Kém cả 2 khâu: chưa gán đủ <b>và</b> đã gán mà giao chưa xong'
+   :kemGan?'Chủ yếu do <b>chưa gán đủ</b> đơn (chuẩn &gt;'+TH_GAN_CHUAN+'%)'
+   :kemGiao?'Chủ yếu do <b>đã gán mà giao chưa xong</b> (cần ≥'+pc(a.giaoChuan)+')'
+   :'Cả 2 khâu đạt chuẩn';
   out.push({l:'Khâu Gán → Giao',v:'%Gán <b>'+pc(r.pgan)+'</b> ('+vn(a.daGan)+'/'+vn(r.vol)+' đơn) · GTC/đã gán <b>'+pc(a.giao)+'</b> ('+vn(r.gtc)+'/'+vn(a.daGan)+' đơn)'+nl+kl});
  }
  // ② Gap về ngưỡng
  if(a.need<=0){
-  out.push({l:'Gap để về '+TINHHINH_NGUONG+'%',v:'✅ Đã đạt (dư <b>'+vn(-a.need)+' đơn</b> so với mức cần)'});
+  out.push({l:'Điều kiện để đạt GTC '+TINHHINH_NGUONG+'%',v:'Đã đạt (dư <b>'+vn(-a.need)+' đơn</b> so với mức cần)'});
  }else if(a.nsKv==null){
-  out.push({l:'Gap để về '+TINHHINH_NGUONG+'%',v:'Cần thêm <b>'+vn(a.need)+' đơn GTC</b> · không có dữ liệu số NV để quy ra nhân sự'});
+  out.push({l:'Điều kiện để đạt GTC '+TINHHINH_NGUONG+'%',v:'Cần thêm <b>'+vn(a.need)+' đơn GTC</b> · không có dữ liệu số NV để quy ra nhân sự'});
  }else{
-  out.push({l:'Gap để về '+TINHHINH_NGUONG+'%',v:'Cần thêm <b>'+vn(a.need)+' đơn GTC</b> ('+vn(Math.ceil(TINHHINH_NGUONG/100*r.vol))+'/'+vn(r.vol)+' đơn)'
+  out.push({l:'Điều kiện để đạt GTC '+TINHHINH_NGUONG+'%',v:'Cần thêm <b>'+vn(a.need)+' đơn GTC</b> ('+vn(Math.ceil(TINHHINH_NGUONG/100*r.vol))+'/'+vn(r.vol)+' đơn)'
    +nl+'≈ <b>'+a.nvThem+' NV</b> nữa (NS kỳ vọng '+vn(a.nsKv)+' đơn/NV) hoặc mỗi NV hiện có giao thêm ≈ <b>+'+vn(a.perNV)+' đơn</b>'});
  }
  // ③ NV dưới ngưỡng NS theo volume
@@ -5366,7 +5366,7 @@ async function buildTinhHinhBCPage(){
    </div>`;
   });
   h+='</div>';
-  h+=`<div class="analysis-box" style="margin-top:14px;line-height:1.9">Nguồn: sheet GTC Total theo Bưu Cục (cần giao = Vol, GTC, %GTC) + Data_Voltotal (Hàng Tồn) + Năng suất NV (số NV có GTC &gt; 1 đơn; NV thấp nhất = ít GTC nhất trong nhóm đó).<br>NS TB = đơn GTC ÷ số NV có GTC &gt; 1 đơn · Tồn = dòng "Hàng Tồn" của Data_Voltotal.<br>Khâu Gán→Giao: %Gán lấy từ sheet, đã gán = Vol × %Gán, GTC/đã gán = %GTC ÷ %Gán (chuẩn gán &gt;95%; giao cần ≥ ${TINHHINH_NGUONG}÷95).<br>Gap = ceil(${TINHHINH_NGUONG}% × Vol − GTC); quy NV theo NS kỳ vọng = (Vol ÷ số NV) × 70%, tối đa 70 đơn → BC ít hàng không bị đòi NS cao, BC nhiều hàng không được đặt NS thấp. NV dưới ngưỡng = NV có GTC thấp hơn NS kỳ vọng đó.<br>Chỉ bắn Telegram các BC có %GTC Total N-1 &lt; ${TINHHINH_NGUONG}%.</div>`;
+  h+=`<div class="analysis-box" style="margin-top:14px;line-height:1.9">Nguồn: sheet GTC Total theo Bưu Cục (cần giao = Vol, GTC, %GTC) + Data_Voltotal (Hàng Tồn) + Năng suất NV (số NV có GTC &gt; 1 đơn; NV thấp nhất = ít GTC nhất trong nhóm đó).<br>NS TB = đơn GTC ÷ số NV có GTC &gt; 1 đơn · Tồn = dòng "Hàng Tồn" của Data_Voltotal.<br>Khâu Gán→Giao: %Gán lấy từ sheet, đã gán = Vol × %Gán, GTC/đã gán = %GTC ÷ %Gán (chuẩn gán &gt;95%; giao cần ≥ ${TINHHINH_NGUONG}÷95).<br>Điều kiện đạt GTC ${TINHHINH_NGUONG}% = ceil(${TINHHINH_NGUONG}% × Vol − GTC); quy NV theo NS kỳ vọng = (Vol ÷ số NV) × 70%, tối đa 70 đơn → BC ít hàng không bị đòi NS cao, BC nhiều hàng không được đặt NS thấp. NV dưới ngưỡng = NV có GTC thấp hơn NS kỳ vọng đó.<br>Chỉ bắn Telegram các BC có %GTC Total N-1 &lt; ${TINHHINH_NGUONG}%.</div>`;
   el.innerHTML=h;
  }catch(e){el.innerHTML='<div class="page-header"><div class="page-title">📋 Tình hình Bưu Cục (N-1)</div></div><div class="analysis-box">Lỗi: '+esc(e&&e.message||e)+'</div>';console.error('p51:',e);}
 }
