@@ -5291,7 +5291,7 @@ function _thLines(r,nl){
  }else if(!a.kem.length){
   out.push({l:'NV giao kém',v:'Không có NV nào giao xong dưới <b>'+pc(a.giaoChuan)+'</b> số đơn được gán'});
  }else{
-  const top=a.kem.slice(0,6).map(x=>esc(x.name)+' — GTC '+vn(x.gtc)+'/'+vn(x.gan)+' đơn gán (<b>'+pc(x.rate)+'</b>) · chưa giao '+vn(x.ton));
+  const top=a.kem.slice(0,6).map(x=>esc(x.name)+' — GTC '+vn(x.gtc)+'/'+vn(x.gan)+' đơn gán (<b>'+pc(x.rate)+'</b>) · giao thất bại '+vn(x.ton));
   const more=a.kem.length>6?'… và '+(a.kem.length-6)+' NV khác':'';
   out.push({l:'NV giao kém',v:'<b>'+a.kem.length+'/'+r.nv+' NV</b> giao xong dưới <b>'+pc(a.giaoChuan)+'</b> số đơn được gán'+nl+top.join(nl)+(more?nl+more:'')});
  }
@@ -5367,7 +5367,7 @@ async function buildTinhHinhBCPage(){
    </div>`;
   });
   h+='</div>';
-  h+=`<div class="analysis-box" style="margin-top:14px;line-height:1.9">Nguồn: sheet GTC Total theo Bưu Cục (cần giao = Vol, GTC, %GTC) + Data_Voltotal (Hàng Tồn) + Năng suất NV (số NV có GTC &gt; 1 đơn; NV thấp nhất = ít GTC nhất trong nhóm đó).<br>NS TB = đơn GTC ÷ số NV có GTC &gt; 1 đơn · Tồn = dòng "Hàng Tồn" của Data_Voltotal.<br>Khâu Gán→Giao: %Gán lấy từ sheet, đã gán = Vol × %Gán, GTC/đã gán = %GTC ÷ %Gán (chuẩn gán &gt;95%; giao cần ≥ ${TINHHINH_NGUONG}÷95).<br>Điều kiện đạt GTC ${TINHHINH_NGUONG}% = ceil(${TINHHINH_NGUONG}% × Vol − GTC); quy NV theo NS kỳ vọng = (Vol ÷ số NV) × 70%, tối đa 70 đơn → BC ít hàng không bị đòi NS cao, BC nhiều hàng không được đặt NS thấp. NV giao kém = NV giao xong dưới ${(TINHHINH_NGUONG/95*100).toFixed(1).replace('.',',')}% số đơn được gán (xếp theo số đơn gán chưa giao); không phạt NV chỉ vì được gán ít.<br>Chỉ bắn Telegram các BC có %GTC Total N-1 &lt; ${TINHHINH_NGUONG}%.</div>`;
+  h+=`<div class="analysis-box" style="margin-top:14px;line-height:1.9">Nguồn: sheet GTC Total theo Bưu Cục (cần giao = Vol, GTC, %GTC) + Data_Voltotal (Hàng Tồn) + Năng suất NV (số NV có GTC &gt; 1 đơn; NV thấp nhất = ít GTC nhất trong nhóm đó).<br>NS TB = đơn GTC ÷ số NV có GTC &gt; 1 đơn · Tồn = dòng "Hàng Tồn" của Data_Voltotal.<br>Khâu Gán→Giao: %Gán lấy từ sheet, đã gán = Vol × %Gán, GTC/đã gán = %GTC ÷ %Gán (chuẩn gán &gt;95%; giao cần ≥ ${TINHHINH_NGUONG}÷95).<br>Điều kiện đạt GTC ${TINHHINH_NGUONG}% = ceil(${TINHHINH_NGUONG}% × Vol − GTC); quy NV theo NS kỳ vọng = (Vol ÷ số NV) × 70%, tối đa 70 đơn → BC ít hàng không bị đòi NS cao, BC nhiều hàng không được đặt NS thấp. NV giao kém = NV giao xong dưới ${(TINHHINH_NGUONG/95*100).toFixed(1).replace('.',',')}% số đơn được gán (xếp theo số đơn giao thất bại); không phạt NV chỉ vì được gán ít.<br>Chỉ bắn Telegram các BC có %GTC Total N-1 &lt; ${TINHHINH_NGUONG}%.</div>`;
   el.innerHTML=h;
  }catch(e){el.innerHTML='<div class="page-header"><div class="page-title">📋 Tình hình Bưu Cục (N-1)</div></div><div class="analysis-box">Lỗi: '+esc(e&&e.message||e)+'</div>';console.error('p51:',e);}
 }
