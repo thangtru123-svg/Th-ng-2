@@ -316,14 +316,14 @@ async function pool(items, n, fn) {
     // get-general-info × 3 trạng thái chuyến (Chưa có chuyến / Đã có chuyến / Đang có chuyến):
     //  chưa gán = NONE · đơn mới = Giao + Ưu tiên giao mốc 0-6h (chiều +6-12h) Σ3 trạng thái · hàng trả Shop>48h = Trả Σ3.
     //  ⚠️ Tên loại đổi theo trạng thái: NONE/COMPLETED = DELIVER·DELIVER_PRIORITY·RETURN; IN_PROGRESS = DELIVERING·DELIVERING_PRIORITY·RETURNING → khớp bằng regex.
-    let chuaGan = 0, donMoi = 0, returnShop48 = 0;
+    let chuaGan = 0, donMoi = 0, returnShop48 = 0, ganChuaGiao = 0; // ganChuaGiao = đơn giao ĐÃ GÁN chuyến mà CHƯA giao xong (Đã có chuyến + Đang có chuyến) — số tồn hiện tại, KHÔNG phải tổng đã gán trong ngày
     for (const st of STATES3) {
       const gi = await api('/api/core/oss/v1/report/get-general-info', { hub_ids: [id], view_mode: 'CLIENT', order_type: st });
       const infos = (((gi.data || [])[0] || {}).general_infos) || [];
       infos.forEach(g => {
         if (/^DELIVER/.test(g.order_type)) {
           donMoi += _sumBk(g.order_inventories, _MOI);
-          if (st === 'DAILY_TRIP_NONE') chuaGan += g.total_order || 0;
+          if (st === 'DAILY_TRIP_NONE') chuaGan += g.total_order || 0; else ganChuaGiao += g.total_order || 0;
         } else if (/^RETURN/.test(g.order_type)) returnShop48 += _sumBk(g.order_inventories, _GE48);
       });
     }
@@ -337,6 +337,12 @@ async function pool(items, n, fn) {
         if (isT) ttsDonMoi += _sumBk(d.order_inventories, _MOI);
         if (st === 'DAILY_TRIP_NONE') { cg48 += _sumBk(d.order_inventories, _GE48); if (isT) { cg48tts += _sumBk(d.order_inventories, _GE48); ttsChuaGan += d.total_order || 0; } }
       }));
+    }
+    // TTS đã gán chưa giao xong = nhóm |TTS| ở trạng thái Đã có chuyến + Đang có chuyến (get-detail-by-status, không cần API chuyến đi)
+    let ttsGanChuaGiao = 0;
+    for (const st of ['DAILY_TRIP_COMPLETED', 'DAILY_TRIP_IN_PROGRESS']) {
+      const j = await api('/api/core/oss/v1/report/get-detail-by-status', { hub_id: id, order_type: st, view_mode: 'CLIENT', status: _stTypes[st] });
+      (((j.data || {}).detail_backlog_types) || []).forEach(t => (t.details || []).forEach(d => { if (/\|TTS\|/.test(d.code)) ttsGanChuaGiao += d.total_order || 0; }));
     }
     // ---- đơn mới lũy kế trong ngày (mã đơn mốc 0-6h, chiều +6-12h) ----
     const seenPrev = (prevBc && prevBc.seen && prevBc.seen.date === TODAY && prevBc.seen.hubs && prevBc.seen.hubs[id]) || [];
@@ -399,9 +405,9 @@ async function pool(items, n, fn) {
     const ttsCan = TRIP_BLOCKED ? null : ttsDaGan + ttsChuaGan;
     return {
       name: cfg.name, hubId: id, dinhBien: cfg.dinhBien,
-      canGiao, daGan, chuaGan, pctGan: _pctOrNull(daGan, canGiao),
+      canGiao, daGan, chuaGan, ganChuaGiao, pctGan: _pctOrNull(daGan, canGiao),
       donMoi, donTon: canGiao == null ? null : Math.max(0, canGiao - donMoi), nvPhat,
-      tts: { canGiao: ttsCan, daGan: ttsDaGan, chuaGan: ttsChuaGan, pctGan: _pctOrNull(ttsDaGan, ttsCan), donMoi: ttsDonMoi, donTon: ttsCan == null ? null : Math.max(0, ttsCan - ttsDonMoi) },
+      tts: { canGiao: ttsCan, daGan: ttsDaGan, chuaGan: ttsChuaGan, ganChuaGiao: ttsGanChuaGiao, pctGan: _pctOrNull(ttsDaGan, ttsCan), donMoi: ttsDonMoi, donTon: ttsCan == null ? null : Math.max(0, ttsCan - ttsDonMoi) },
       bc2: { cg48, cg48tts, lcGiao36, lcTra36, returnShop48 },
       tripBlocked: TRIP_BLOCKED,
       _seen: HOUR >= 7 ? [...seen] : []
