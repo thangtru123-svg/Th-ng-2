@@ -6190,7 +6190,7 @@ async function sendTonLCToTelegram(silent){
 /* ===== p48/p49 — Báo Cáo Vận Hành 2 Bưu Cục (Đông Kinh · Bình Gia) — tách 2 trang (bắn khác giờ) ===== */
 const BCREP_NAMES=['(LSO) Đông Kinh','(LSO) Bình Gia'];
 function _bcPct(v){return v==null?'—':(Math.round(v*10)/10).toLocaleString('vi-VN',{minimumFractionDigits:1,maximumFractionDigits:1})+'%';}
-function _bcN(v){return (+v||0).toLocaleString('vi-VN');}
+function _bcN(v){return v==null?'—':(+v||0).toLocaleString('vi-VN');}
 let _bcCache=null;
 async function _bcLoad(force){
  if(_bcCache&&!force&&(Date.now()-_bcCache.t)<60000)return _bcCache;
@@ -6208,16 +6208,18 @@ function _bcTbl(hubs,S,isTts,gt){
  const THL='style="background:#1F3864;color:#fff;padding:7px 9px;font-size:12px;font-weight:700;white-space:normal;line-height:1.25;text-align:left;width:120px;border:1px solid #cfd6e4"';
  const tc='style="text-align:center;padding:7px 9px;font-size:13px;border:1px solid var(--border);white-space:nowrap"';
  const tl='style="text-align:left;padding:7px 9px;font-size:13px;border:1px solid var(--border);white-space:nowrap;font-weight:700"';
- let sum={canGiao:0,donMoi:0,donTon:0,daGan:0,chuaGan:0};
+ let sum={canGiao:0,donMoi:0,donTon:0,daGan:0,chuaGan:0}; let sumNA=false; // true nếu có BC thiếu canGiao/daGan/donTon (API chuyến đi đang bị khoá reqsig) → không cộng dồn thành số giả
  let head=`<tr><th ${THL}>Tên Bưu Cục</th><th ${TH}>%GTC Ngày N-1</th><th ${TH}>Tổng đơn ngày N</th><th ${TH}>Tổng đơn mới ngày N</th><th ${TH}>Đơn tồn ngày N-1</th><th ${TH}>Tổng gán</th><th ${TH}>%Gán</th><th ${TH}>Tổng chưa gán</th>${isTts?'':'<th '+TH+'>SL NVPTTT / Định biên</th>'}</tr>`;
  let body='';
  hubs.forEach(h=>{ const o=isTts?h.tts:h; const s=S(h.name); const gtcN1=isTts?s.gtcN1Tts:s.gtcN1;
-  sum.canGiao+=o.canGiao||0;sum.donMoi+=o.donMoi||0;sum.donTon+=o.donTon||0;sum.daGan+=o.daGan||0;sum.chuaGan+=o.chuaGan||0;
-  body+=`<tr><td ${tl}>${h.name}</td><td ${tc} style="background:#FFF7ED;font-weight:700">${_bcPct(gtcN1)}</td><td ${tc} style="font-weight:700">${_bcN(o.canGiao)}</td><td ${tc}>${_bcN(o.donMoi)}</td><td ${tc}>${_bcN(o.donTon)}</td><td ${tc}>${_bcN(o.daGan)}</td><td ${tc} style="font-weight:700;color:${(o.pctGan||0)>=95?'#15803D':'#DC2626'}">${_bcPct(o.pctGan)}</td><td ${tc} style="color:#DC2626;font-weight:700">${_bcN(o.chuaGan)}</td>${isTts?'':`<td ${tc} style="font-weight:700;white-space:normal;line-height:1.25;width:74px">${h.nvPhat}NVPTTT/${h.dinhBien}NVPTTT</td>`}</tr>`;
+  if(o.canGiao==null||o.daGan==null||o.donTon==null) sumNA=true; else { sum.canGiao+=o.canGiao; sum.daGan+=o.daGan; sum.donTon+=o.donTon; }
+  sum.donMoi+=o.donMoi||0;sum.chuaGan+=o.chuaGan||0;
+  const pctColor=o.pctGan==null?'var(--text-sub)':(o.pctGan>=95?'#15803D':'#DC2626');
+  body+=`<tr><td ${tl}>${h.name}</td><td ${tc} style="background:#FFF7ED;font-weight:700">${_bcPct(gtcN1)}</td><td ${tc} style="font-weight:700">${_bcN(o.canGiao)}</td><td ${tc}>${_bcN(o.donMoi)}</td><td ${tc}>${_bcN(o.donTon)}</td><td ${tc}>${_bcN(o.daGan)}</td><td ${tc} style="font-weight:700;color:${pctColor}">${_bcPct(o.pctGan)}</td><td ${tc} style="color:#DC2626;font-weight:700">${_bcN(o.chuaGan)}</td>${isTts?'':`<td ${tc} style="font-weight:700;white-space:normal;line-height:1.25;width:74px">${h.nvPhat==null?'—':h.nvPhat}NVPTTT/${h.dinhBien}NVPTTT</td>`}</tr>`;
  });
- const pg=sum.canGiao?Math.round(sum.daGan/sum.canGiao*1000)/10:null;
+ const pg=sumNA?null:(sum.canGiao?Math.round(sum.daGan/sum.canGiao*1000)/10:null);
  const gtPctN1=gt?(isTts?gt.gtcN1Tts:gt.gtcN1):null;
- body+=`<tr style="background:#FFF7ED;font-weight:800"><td ${tl}>Grand Total</td><td ${tc} style="background:#FDEBD0">${_bcPct(gtPctN1)}</td><td ${tc}>${_bcN(sum.canGiao)}</td><td ${tc}>${_bcN(sum.donMoi)}</td><td ${tc}>${_bcN(sum.donTon)}</td><td ${tc}>${_bcN(sum.daGan)}</td><td ${tc}>${_bcPct(pg)}</td><td ${tc}>${_bcN(sum.chuaGan)}</td>${isTts?'':`<td ${tc}></td>`}</tr>`;
+ body+=`<tr style="background:#FFF7ED;font-weight:800"><td ${tl}>Grand Total</td><td ${tc} style="background:#FDEBD0">${_bcPct(gtPctN1)}</td><td ${tc}>${sumNA?'—':_bcN(sum.canGiao)}</td><td ${tc}>${_bcN(sum.donMoi)}</td><td ${tc}>${sumNA?'—':_bcN(sum.donTon)}</td><td ${tc}>${sumNA?'—':_bcN(sum.daGan)}</td><td ${tc}>${_bcPct(pg)}</td><td ${tc}>${_bcN(sum.chuaGan)}</td>${isTts?'':`<td ${tc}></td>`}</tr>`;
  return `<div class="table-wrap" style="overflow-x:auto"><table style="border-collapse:collapse;min-width:${isTts?560:680}px"><thead>${head}</thead><tbody>${body}</tbody></table></div>`;
 }
 // ===== BÁO CÁO 1 — p48 (2 bảng cần giao, bắn thành ẢNH) =====
@@ -6229,10 +6231,12 @@ async function buildBcRep1Page(){
   const {rep,sheet,serr,gt,H}=C;
   if(!rep||!rep.hubs||!rep.hubs.length||rep.err){ el.innerHTML='<div class="page-header"><div class="page-title">📋 Báo Cáo 1 — Cần giao</div></div><div class="analysis-box">Chưa có dữ liệu bcReport'+(rep&&rep.err?' ('+rep.err+')':'')+' — chờ quét (30 phút) hoặc bấm <b>Cập nhật dữ liệu</b>.</div>'; return; }
   const S=n=>(sheet&&sheet[n])||{}; const hubs=_bcHubs(rep);
+  const tripNA=hubs.some(h=>h.tripBlocked);
   el.innerHTML=`<div class="page-header"><div class="page-title">📋 Báo Cáo 1 — Các đơn cần phải giao</div>
    <div class="page-meta"><span style="color:var(--text-sub);font-size:13px"><b>(LSO) Đông Kinh</b> · <b>(LSO) Bình Gia</b> — Total + TTS. Đơn mới: ${rep.moiMode==='0-12h'?'0-6h+6-12h (chiều)':'0-6h (sáng)'}.</span>${_bcMetaChip(rep,H)}
    <button class="tg-inpage-btn" style="background:#16A34A;border-color:#16A34A" onclick="window._bcRep1Render&&window._bcRep1Render()">🔄 Tải lại</button>
    <button class="tg-inpage-btn" onclick="sendBcRep1TG(this)">📤 Bắn Báo cáo 1 (bảng → @thangquada)</button>${serr?`<span style="color:#DC2626;font-size:12px">⚠️ Sheet lỗi: ${serr}</span>`:''}</div></div>
+   ${tripNA?'<div class="analysis-box" style="margin-bottom:12px">⚠️ GHN đang khoá chữ ký API chuyến đi (reqsig) — cột <b>Tổng gán / %Gán / Đơn tồn ngày N-1 / SL NVPTTT</b> tạm thời "không có dữ liệu" (—). Chưa gán và Đơn mới vẫn cập nhật bình thường.</div>':''}
    <div id="bcrep1Capture" style="background:#fff;padding:6px 4px">
     <div style="font-weight:800;font-size:15px;color:var(--orange-dark);margin:6px 2px 7px">① Total các đơn cần phải giao</div>${_bcTbl(hubs,S,false,gt)}
     <div style="font-weight:800;font-size:15px;color:var(--orange-dark);margin:16px 2px 7px">② Total các đơn TTS cần phải giao</div>${_bcTbl(hubs,S,true,gt)}

@@ -35,8 +35,13 @@ async function api(p, body, tries = 5) {
         body: JSON.stringify(body)
       });
       if (r.status === 401 || r.status === 403) {
-        let bt = ''; try { bt = (await r.text()).replace(/\s+/g, ' ').slice(0, 200); } catch (e) {}
-        console.error(`[auth-debug] HTTP ${r.status} path=${p} body=${bt} | secret len=${SES.length} hasSpace=${/\s/.test(SES)} hasQuote=${/["']/.test(SES)} parts=${SES.split('.').length}`);
+        let bt = ''; let bj = null; try { bt = await r.text(); bj = JSON.parse(bt); } catch (e) {}
+        // GHN thêm lớp chống truy cập tự động (reqsig) riêng cho /api/lastmile/trip/* — KHÁC với token hết hạn/hỏng.
+        // Phân biệt để không coi "bị khoá reqsig" là "token chết" (tránh dừng toàn bộ script oan khi token vẫn sống).
+        if (bj && typeof bj.code === 'string' && /reqsig/i.test(bj.code)) {
+          throw Object.assign(new Error('REQSIG'), { reqsig: true });
+        }
+        console.error(`[auth-debug] HTTP ${r.status} path=${p} body=${bt.replace(/\s+/g, ' ').slice(0, 200)} | secret len=${SES.length} hasSpace=${/\s/.test(SES)} hasQuote=${/["']/.test(SES)} parts=${SES.split('.').length}`);
         throw Object.assign(new Error('AUTH'), { auth: true });
       }
       if (r.status === 429) { await sleep(500 * (k + 1)); continue; }
@@ -46,7 +51,7 @@ async function api(p, body, tries = 5) {
       else if (jj && jj.data != null) AUTH_OK++;
       return jj;
     } catch (e) {
-      if (e.auth) throw e;
+      if (e.auth || e.reqsig) throw e;
       await sleep(300 * (k + 1));
     }
   }
@@ -176,13 +181,35 @@ async function pool(items, n, fn) {
     if (mins >= 23 * 60 + 15 && mins < 23 * 60 + 30) { const waitMs = ((23 * 60 + 30) - mins) * 60000 - v.getUTCSeconds() * 1000; console.log(`[chot] chờ ${Math.round(waitMs / 1000)}s tới 23h30`); await sleep(waitMs); }
   }
   console.log(`[pull] today=${TODAY} hourVN=${HOUR} excl06=${EXCL06} hubs=${HUBS.length}`);
+
+  // ----- Dò sớm: API /lastmile/trip/* (chuyến đi) có đang bị GHN khoá chữ ký (reqsig_missing) không? -----
+  // 1 lần gọi thử thay vì để 104 BC × 2 API đều lần lượt fail (tốn thời gian + quota). Nếu bị khoá:
+  // KHÔNG quét phần phụ thuộc chuyến đi (GTC/đã gán/NV/COD) — giữ nguyên số lần quét gần nhất (KHÔNG bịa 0),
+  // chỉ cập nhật phần không cần chuyến đi (Báo cáo 1 mục chưa gán+đơn mới, Báo cáo 2, hangMoi, tonLC).
+  let TRIP_BLOCKED = false;
+  try {
+    await api('/api/lastmile/trip/get-trip-list-by-hub', { hub_id: String(HUBS[0].id), status: 'FINISHED', is_ready: 0, offset: 0, limit: 1, reverse: 1, page: 1, size: 1 });
+  } catch (e) {
+    if (e.reqsig) TRIP_BLOCKED = true;
+    else if (e.auth) { console.error('TOKEN GHN het han / khong hop le — can cap nhat GHN_SESSION'); process.exit(2); }
+  }
+  if (TRIP_BLOCKED && COD_ONLY) { console.error('REQSIG: API chuyen di dang bi khoa chu ky, khong the chot COD (khong co nguon thay the) — dung, khong ghi de bang 0.'); process.exit(2); }
+  if (TRIP_BLOCKED) console.error('[reqsig] API /lastmile/trip/* dang bi khoa chu ky (reqsig_missing) — giu nguyen GTC/da gan/COD lan quet gan nhat, chi cap nhat phan khong can chuyen di.');
+
+  let out, hubs, errN;
+  if (TRIP_BLOCKED) {
+    let prevOut = null; try { prevOut = JSON.parse(fs.readFileSync(path.join(ROOT, 'gtc_live.json'), 'utf8')); } catch (e) {}
+    if (!prevOut) { console.error('LOI: reqsig bi khoa va khong doc duoc gtc_live.json cu de giu so — dung, khong ghi de bang du lieu rong.'); process.exit(2); }
+    out = { ...prevOut, updatedAt: new Date().toISOString(), excl06: EXCL06, hourVN: HOUR, tripBlocked: true, tripBlockedNote: 'API chuyen di (reqsig) dang bi khoa — GTC/da gan/COD giu nguyen so lan quet gan nhat (xem updatedAt cu trong note nay khong co, chi co o cap hub/bc/am).' };
+    hubs = []; errN = 0; // không quét lại — chỉ để các đoạn log phía dưới không vỡ
+  } else {
   let res;
   try { res = await pool(HUBS, 10, proc); }
   catch (e) { if (e.auth) { console.error('TOKEN GHN het han / khong hop le — can cap nhat GHN_SESSION'); process.exit(2); } throw e; }
 
   if (AUTH_BAD > 0 && AUTH_OK === 0) { console.error(`TOKEN GHN het han: ${AUTH_BAD} phan hoi "Khong co quyen truy cap" (code 1004/401), 0 phan hoi hop le — KHONG ghi de du lieu. Can cap nhat GHN_SESSION.`); process.exit(2); }
-  const hubs = res.filter(r => !r.err);
-  const errN = res.length - hubs.length;
+  hubs = res.filter(r => !r.err);
+  errN = res.length - hubs.length;
   // tổng hợp
   const amM = {}, bcL = [];
   let sum = { chuaGan: 0, daGan: 0, gtc: 0, nTripToday: 0, nChuaXong: 0, carry: 0, wPick: 0, wDeliver: 0, wReturn: 0, oPick: 0, oReturn: 0, canGiaoSnap: 0, dGiao5: 0, dGiao8: 0, dTra48: 0 };
@@ -209,7 +236,7 @@ async function pool(items, n, fn) {
     oLay: sum.oPick, oGiao: sum.canGiaoSnap, oTra: sum.oReturn,
     dGiao5: sum.dGiao5, dGiao8: sum.dGiao8, dTra48: sum.dTra48, hang: hangTotal
   };
-  const out = {
+  out = {
     updatedAt: new Date().toISOString(), excl06: EXCL06, hourVN: HOUR, hubsOk: hubs.length, hubsErr: errN,
     note: 'Realtime GTC trong ngay - chuyen tao hom nay, bo carry',
     vung,
@@ -236,26 +263,30 @@ async function pool(items, n, fn) {
   const pendOrders = [...pendMap.values()].sort((a, b) => b.cod - a.cod);
   const pendAgg = (keyFn) => { const m = {}; pendOrders.forEach(o => { const k = keyFn(o); const g = m[k] || (m[k] = { key: k, soDon: 0, tongCod: 0 }); g.soDon++; g.tongCod += o.cod; }); return Object.values(m).sort((a, b) => b.tongCod - a.tongCod); };
   out.codPending = { nguong: 1000000, soDon: pendOrders.length, tongCod: pendOrders.reduce((s, o) => s + o.cod, 0), byTinh: pendAgg(o => o.tinh), byAM: pendAgg(o => o.am), byBC: pendAgg(o => o.bc), orders: pendOrders };
+  }
   if (COD_ONLY) {
     fs.writeFileSync(path.join(ROOT, 'cod_chot.json'), JSON.stringify({ updatedAt: out.updatedAt, hourVN: HOUR, today: TODAY, hubsOk: hubs.length, hubsErr: errN, cod: out.cod, codPending: out.codPending }));
-    console.log(`[chot] OK hubsOk=${hubs.length} err=${errN} GTB=${out.cod.vung.soDon} (${out.cod.vung.tongCod}d) chuaChot=${pendOrders.length} (${out.codPending.tongCod}d)`);
+    console.log(`[chot] OK hubsOk=${hubs.length} err=${errN} GTB=${out.cod.vung.soDon} (${out.cod.vung.tongCod}d) chuaChot=${out.codPending.soDon} (${out.codPending.tongCod}d)`);
     return;
   }
 
   // ===== Đơn TTS (mã VNGH) có COD < 50k — LSO+QNI, mọi trạng thái (dedup theo mã, ưu tiên: thành công > đang giao > thất bại) =====
-  const _stPri = { 'Giao thành công': 3, 'Đang giao': 2, 'Giao thất bại': 1 };
-  const ttsMap = new Map();
-  for (const h of hubs) (h.ttsCod || []).forEach(o => {
-    const ex = ttsMap.get(o.ma);
-    if (!ex || (_stPri[o.st] || 0) > (_stPri[ex.st] || 0)) ttsMap.set(o.ma, { ma: o.ma, cod: o.cod, st: o.st, nv: o.nv, idnv: o.idnv, bc: h.name, tinh: h.tinh });
-  });
-  const ttsOrders = [...ttsMap.values()].sort((a, b) => b.cod - a.cod);
-  const ttsStCount = {}; ttsOrders.forEach(o => { ttsStCount[o.st] = (ttsStCount[o.st] || 0) + 1; });
-  out.ttsCod = {
-    nguong: 50000, hubsOk: hubs.length,
-    soDon: ttsOrders.length, tongCod: ttsOrders.reduce((s, o) => s + o.cod, 0), byStatus: ttsStCount,
-    orders: ttsOrders
-  };
+  // reqsig khoá /lastmile/trip/* → không có h.ttsCod mới: giữ nguyên out.ttsCod đã carry-forward từ gtc_live.json cũ (set ở nhánh TRIP_BLOCKED phía trên).
+  if (!TRIP_BLOCKED) {
+    const _stPri = { 'Giao thành công': 3, 'Đang giao': 2, 'Giao thất bại': 1 };
+    const ttsMap = new Map();
+    for (const h of hubs) (h.ttsCod || []).forEach(o => {
+      const ex = ttsMap.get(o.ma);
+      if (!ex || (_stPri[o.st] || 0) > (_stPri[ex.st] || 0)) ttsMap.set(o.ma, { ma: o.ma, cod: o.cod, st: o.st, nv: o.nv, idnv: o.idnv, bc: h.name, tinh: h.tinh });
+    });
+    const ttsOrders = [...ttsMap.values()].sort((a, b) => b.cod - a.cod);
+    const ttsStCount = {}; ttsOrders.forEach(o => { ttsStCount[o.st] = (ttsStCount[o.st] || 0) + 1; });
+    out.ttsCod = {
+      nguong: 50000, hubsOk: hubs.length,
+      soDon: ttsOrders.length, tongCod: ttsOrders.reduce((s, o) => s + o.cod, 0), byStatus: ttsStCount,
+      orders: ttsOrders
+    };
+  }
 
   // ===== BÁO CÁO VẬN HÀNH 2 BƯU CỤC (Đông Kinh + Bình Gia) — realtime chi tiết =====
   // Báo cáo 1 (cần giao Total + TTS) + Báo cáo 2 realtime (48h chưa gán, LC giao/trả>36h, hàng trả Shop>48h).
@@ -329,36 +360,46 @@ async function pool(items, n, fn) {
       infos.forEach(g => { const s = _sumBk(g.order_inventories, _GE36); if (g.order_type === 'TRANSPORT_DELIVERY') lcGiao36 += s; else if (g.order_type === 'TRANSPORT_RETURN') lcTra36 += s; });
     }
     // đã gán + NV thực đi phát: chuyến giao TẠO HÔM NAY ở cả FINISHED + ON_TRIP (sáng sớm chuyến còn ON_TRIP — bản cũ chỉ quét FINISHED nên ra 0)
-    let daGan = 0; const drv = new Set(); const tripCodes = [];
-    for (const st of ['FINISHED', 'ON_TRIP']) {
-      for (let pg = 1; pg <= 40; pg++) {
-        const j = await api('/api/lastmile/trip/get-trip-list-by-hub', { hub_id: id, status: st, is_ready: 0, offset: (pg - 1) * 100, limit: 100, reverse: 1, page: pg, size: 100 });
-        const a = j.data || []; if (!a.length) break; let allOld = true;
-        a.forEach(x => {
-          if (x.createDateIndex === TODAY) { const dc = x.deliverCount || 0; daGan += dc; if (dc > 0) { tripCodes.push(x.tripCode); if (x.driverName) drv.add(x.driverName); } }
-          if (x.createDateIndex >= YD || x.endDateIndex >= TODAY) allOld = false;
-        });
-        if (a.length < 100 || (st === 'FINISHED' && allOld)) break;
+    // reqsig khoá /lastmile/trip/* → bỏ qua (TRIP_BLOCKED), không bịa 0: daGan/canGiao/%Gán/đơn tồn/NVPTTT = null ("không có dữ liệu" ở frontend).
+    let daGan = null; let nvPhat = null; const tripCodes = [];
+    if (!TRIP_BLOCKED) {
+      daGan = 0; const drv = new Set();
+      for (const st of ['FINISHED', 'ON_TRIP']) {
+        for (let pg = 1; pg <= 40; pg++) {
+          const j = await api('/api/lastmile/trip/get-trip-list-by-hub', { hub_id: id, status: st, is_ready: 0, offset: (pg - 1) * 100, limit: 100, reverse: 1, page: pg, size: 100 });
+          const a = j.data || []; if (!a.length) break; let allOld = true;
+          a.forEach(x => {
+            if (x.createDateIndex === TODAY) { const dc = x.deliverCount || 0; daGan += dc; if (dc > 0) { tripCodes.push(x.tripCode); if (x.driverName) drv.add(x.driverName); } }
+            if (x.createDateIndex >= YD || x.endDateIndex >= TODAY) allOld = false;
+          });
+          if (a.length < 100 || (st === 'FINISHED' && allOld)) break;
+        }
       }
+      nvPhat = drv.size;
     }
     // TTS đã gán = đơn mã VNGH trong các chuyến giao hôm nay (kể cả đã giao xong) — dedup theo mã
     const ttsAssigned = new Set();
-    for (const c of tripCodes) {
-      for (let pg = 1; pg <= 15; pg++) {
-        const j = await api('/api/lastmile/trip/get-trip-items', { trip_code: c, tripCode: c, typeList: ['DELIVER'], offset: (pg - 1) * 100, limit: 100, page: pg, size: 100 });
-        const a = j.data || []; if (!a.length) break;
-        a.forEach(it => { if (String(it.orderCode || '').startsWith('VNGH')) ttsAssigned.add(it.orderCode); });
-        if (a.length < 100) break;
+    if (!TRIP_BLOCKED) {
+      for (const c of tripCodes) {
+        for (let pg = 1; pg <= 15; pg++) {
+          const j = await api('/api/lastmile/trip/get-trip-items', { trip_code: c, tripCode: c, typeList: ['DELIVER'], offset: (pg - 1) * 100, limit: 100, page: pg, size: 100 });
+          const a = j.data || []; if (!a.length) break;
+          a.forEach(it => { if (String(it.orderCode || '').startsWith('VNGH')) ttsAssigned.add(it.orderCode); });
+          if (a.length < 100) break;
+        }
       }
     }
-    const canGiao = daGan + chuaGan;
-    const ttsDaGan = ttsAssigned.size; const ttsCan = ttsDaGan + ttsChuaGan;
+    const _pctOrNull = (a, b) => (a == null || b == null) ? null : (b ? Math.round(a / b * 1000) / 10 : 0);
+    const canGiao = TRIP_BLOCKED ? null : daGan + chuaGan;
+    const ttsDaGan = TRIP_BLOCKED ? null : ttsAssigned.size;
+    const ttsCan = TRIP_BLOCKED ? null : ttsDaGan + ttsChuaGan;
     return {
       name: cfg.name, hubId: id, dinhBien: cfg.dinhBien,
-      canGiao, daGan, chuaGan, pctGan: canGiao ? Math.round(daGan / canGiao * 1000) / 10 : 0,
-      donMoi, donTon: Math.max(0, canGiao - donMoi), nvPhat: drv.size,
-      tts: { canGiao: ttsCan, daGan: ttsDaGan, chuaGan: ttsChuaGan, pctGan: ttsCan ? Math.round(ttsDaGan / ttsCan * 1000) / 10 : 0, donMoi: ttsDonMoi, donTon: Math.max(0, ttsCan - ttsDonMoi) },
+      canGiao, daGan, chuaGan, pctGan: _pctOrNull(daGan, canGiao),
+      donMoi, donTon: canGiao == null ? null : Math.max(0, canGiao - donMoi), nvPhat,
+      tts: { canGiao: ttsCan, daGan: ttsDaGan, chuaGan: ttsChuaGan, pctGan: _pctOrNull(ttsDaGan, ttsCan), donMoi: ttsDonMoi, donTon: ttsCan == null ? null : Math.max(0, ttsCan - ttsDonMoi) },
       bc2: { cg48, cg48tts, lcGiao36, lcTra36, returnShop48 },
+      tripBlocked: TRIP_BLOCKED,
       _seen: HOUR >= 7 ? [...seen] : []
     };
   }
@@ -504,13 +545,16 @@ async function pool(items, n, fn) {
   } catch (e) { if (e && e.auth) throw e; out.tonLC = { err: String((e && e.message) || e) }; }
 
   fs.writeFileSync(path.join(ROOT, 'gtc_live.json'), JSON.stringify(out));
-  console.log(`[pull] OK hubsOk=${hubs.length} err=${errN} GTC=${vung.gtc} daGan=${vung.daGan} canGiao=${vung.canGiao} COD soDon=${out.cod.vung.soDon} tongCod=${codTong} TTS<50k soDon=${out.ttsCod.soDon}`);
+  console.log(`[pull] OK hubsOk=${hubs.length} err=${errN} tripBlocked=${TRIP_BLOCKED} GTC=${out.vung.gtc} daGan=${out.vung.daGan} canGiao=${out.vung.canGiao} COD soDon=${out.cod.vung.soDon} tongCod=${out.cod.vung.tongCod} TTS<50k soDon=${out.ttsCod.soDon}`);
 
-  // nối lịch sử (giữ 14 ngày gần nhất) để so cùng giờ hôm qua
-  const hp = path.join(ROOT, 'gtc_history.json');
-  let hist = []; try { hist = JSON.parse(fs.readFileSync(hp, 'utf8')); } catch (e) { hist = []; }
-  hist.push({ t: out.updatedAt, hourVN: HOUR, gtc: vung.gtc, daGan: vung.daGan, canGiao: vung.canGiao });
-  const cutoff = Date.now() - 15 * 86400000;
-  hist = hist.filter(x => new Date(x.t).getTime() >= cutoff);
-  fs.writeFileSync(hp, JSON.stringify(hist));
+  // nối lịch sử (giữ 14 ngày gần nhất) để so cùng giờ hôm qua — bỏ qua khi TRIP_BLOCKED (số GTC/đã gán là số CŨ giữ lại,
+  // không phải quan sát mới tại giờ này, ghi vào history sẽ làm sai lệch so sánh cùng giờ hôm qua)
+  if (!TRIP_BLOCKED) {
+    const hp = path.join(ROOT, 'gtc_history.json');
+    let hist = []; try { hist = JSON.parse(fs.readFileSync(hp, 'utf8')); } catch (e) { hist = []; }
+    hist.push({ t: out.updatedAt, hourVN: HOUR, gtc: out.vung.gtc, daGan: out.vung.daGan, canGiao: out.vung.canGiao });
+    const cutoff = Date.now() - 15 * 86400000;
+    hist = hist.filter(x => new Date(x.t).getTime() >= cutoff);
+    fs.writeFileSync(hp, JSON.stringify(hist));
+  }
 })().catch(e => { console.error('LOI:', e && e.message || e); process.exit(1); });
