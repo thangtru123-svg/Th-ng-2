@@ -3162,13 +3162,20 @@ async function sendAllToTelegram(){
   }catch(_e){console.warn('TG p45 lỗi:',_e&&_e.message);_tgFail('Bưu Cục Bất Ổn (Vùng)');}
   await new Promise(r=>setTimeout(r,700));
 
-  /* --- P51: Tình hình BC (N-1) → DM @anhthuvu123, chỉ BC %GTC Total N-1 < 60% --- */
-  let _p51Res=null;
+  /* --- Thư Vũ (@anhthuvu123): Tin 1 "BÁO CÁO GTC 9H" (10 BC GTC thấp nhất Vùng) + Tin 2 "Báo cáo năng suất 10h" (BC diện chị <60%) ---
+     Đại nhân chốt 19/11: THAY cho các tin p51 riêng lẻ từng BC (trang p51 + nút bắn tay từng BC vẫn giữ). */
+  let _tv1Res=null,_tv2Res=null;
   try{
-   if(btn)btn.innerHTML='⏳ Đang gửi: Tình hình BC (N-1)...';
-   if(!TG_ANHTHU_ID)console.warn('p51: chưa có chat_id @anhthuvu123 — bỏ qua bước này');
-   else{ if(!window._TINHHINH)await buildTinhHinhBCPage(); _p51Res=await sendTinhHinhBCToTelegram(null,true); }
-  }catch(_e){console.warn('TG p51 lỗi:',_e&&_e.message);_tgFail('Tình hình BC N-1 (@anhthuvu123)');}
+   if(btn)btn.innerHTML='⏳ Đang gửi: Tin 1 GTC 9h (Thư Vũ)...';
+   if(!TG_ANHTHU_ID)console.warn('Tin 1: chưa có chat_id @anhthuvu123 — bỏ qua bước này');
+   else _tv1Res=await sendTin1ThuVu(null,true);
+  }catch(_e){console.warn('TG Tin 1 lỗi:',_e&&_e.message);_tgFail('Tin 1 — GTC 9h (@anhthuvu123)');}
+  await new Promise(r=>setTimeout(r,700));
+  try{
+   if(btn)btn.innerHTML='⏳ Đang gửi: Tin 2 Năng suất 10h (Thư Vũ)...';
+   if(!TG_ANHTHU_ID)console.warn('Tin 2: chưa có chat_id @anhthuvu123 — bỏ qua bước này');
+   else _tv2Res=await sendTin2ThuVu(null,true);
+  }catch(_e){console.warn('TG Tin 2 lỗi:',_e&&_e.message);_tgFail('Tin 2 — Năng suất 10h (@anhthuvu123)');}
   await new Promise(r=>setTimeout(r,700));
 
   /* --- KD: 3 bảng "Doanh thu theo AM" (ngày/tuần/tháng) + phân tích → topic Kinh doanh --- */
@@ -3194,10 +3201,10 @@ async function sendAllToTelegram(){
    if(btn){btn.innerHTML='✅ Đã gửi xong!';setTimeout(()=>{btn.innerHTML='<span id="tgSidebarIcon">📤</span> Bắn dữ liệu lên Telegram';btn.disabled=false;},3000);}
   }
   // Đại nhân dặn (06/11): bắn đồng loạt xong mà ĐÃ bắn báo cáo cho @anhthuvu123 → nhắn riêng @thangquada xác nhận
-  if(_p51Res&&_p51Res.n>0){
+  if((_tv1Res&&_tv1Res.n>0)||(_tv2Res&&_tv2Res.n>0)){
    try{
-    const _bn=((window._TINHHINH&&window._TINHHINH.rows)||[]).filter(r=>!r.noData&&r.send).map(r=>r.bc);
-    await _tgSend(GK_TG,undefined,`Đã bắn xong báo cáo Tình hình Bưu Cục (N-1) cho Thư Vũ (@anhthuvu123): ${_p51Res.n} BC — ${_bn.join(', ')}.`);
+    const _t2n=((window._TINHHINH&&window._TINHHINH.rows)||[]).filter(r=>!r.noData&&r.send).map(r=>r.bc);
+    await _tgSend(GK_TG,undefined,`Đã bắn xong cho Thư Vũ (@anhthuvu123):\n• Tin 1 — GTC 9h: ${_tv1Res&&_tv1Res.n>0?_tv1Res.n+' BC diện chị nằm trong top 10 GTC N-1 thấp nhất Vùng':'không có BC diện chị nào trong top 10 thấp nhất Vùng nên không bắn'}\n• Tin 2 — Năng suất 10h: ${_tv2Res&&_tv2Res.n>0?_tv2Res.n+' BC — '+_t2n.join(', '):'không có BC nào <'+TINHHINH_NGUONG+'% nên không bắn'}.`);
    }catch(_e){console.warn('Nhắn xác nhận @thangquada lỗi:',_e&&_e.message);}
   }
  }catch(e){
@@ -5271,7 +5278,7 @@ function _thAnalyze(r){
  return o;
 }
 /* Trả về mảng {l,v}; nl = ký tự xuống dòng trong 1 ý ('<br>' web · '\n' Telegram). Chỉ dùng <b>, không dùng thẻ khác (Telegram HTML). */
-function _thLines(r,nl){
+function _thLines(r,nl,maxKem){
  const esc=t=>String(t==null?'':t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
  const pc=v=>v==null?'—':v.toFixed(1).replace('.',',')+'%';
  const vn=v=>Math.round(v).toLocaleString('vi-VN');
@@ -5302,11 +5309,27 @@ function _thLines(r,nl){
  }else if(!a.kem.length){
   out.push({l:'NV giao kém',v:'Không có NV nào giao xong dưới <b>'+pc(a.giaoChuan)+'</b> số đơn được gán'});
  }else{
-  const top=a.kem.slice(0,6).map(x=>esc(x.name)+' — GTC '+vn(x.gtc)+'/'+vn(x.gan)+' đơn gán (<b>'+pc(x.rate)+'</b>) · giao thất bại '+vn(x.ton));
-  const more=a.kem.length>6?'… và '+(a.kem.length-6)+' NV khác':'';
+  const KM=maxKem||6;
+  const top=a.kem.slice(0,KM).map(x=>esc(x.name)+' — GTC '+vn(x.gtc)+'/'+vn(x.gan)+' đơn gán (<b>'+pc(x.rate)+'</b>) · giao thất bại '+vn(x.ton));
+  const more=a.kem.length>KM?'… và '+(a.kem.length-KM)+' NV khác':'';
   out.push({l:'NV giao kém',v:'<b>'+a.kem.length+'/'+r.nv+' NV</b> giao xong dưới <b>'+pc(a.giaoChuan)+'</b> số đơn được gán'+nl+top.join(nl)+(more?nl+more:'')});
  }
  return out;
+}
+/* Đọc định biên HRBP → map norm(tên BC) → {dinhBien,hienCo,thieu,upd,stale}. Lỗi → map rỗng (không làm hỏng trang gọi). */
+async function _thLoadDinhBien(){
+ const norm=t=>String(t||'').toLowerCase().normalize('NFC').replace(/\s+/g,' ').trim();
+ const dbMap={}; let dbUpd=null,dbStale=false;
+ try{
+  const dbRes=await fetch(`https://docs.google.com/spreadsheets/d/${DINHBIEN_HR_ID}/gviz/tq?tqx=out:csv&gid=${DINHBIEN_HR_GID}&_=${Date.now()}`);
+  if(!dbRes.ok)throw new Error('HTTP '+dbRes.status);
+  const DB=parseCSV(await dbRes.text());
+  const mUpd=String((DB[0]||[]).join(' ')).match(/cập nhật ngày\s*(\d{1,2})\/(\d{1,2})\/(\d{4})/i);
+  if(mUpd){dbUpd=mUpd[1]+'/'+mUpd[2]+'/'+mUpd[3]; const dd=new Date(+mUpd[3],+mUpd[2]-1,+mUpd[1]); dbStale=(Date.now()-dd.getTime())>7*86400000;}
+  DB.slice(1).forEach(r=>{const nm0=String(r[0]||'').replace(/^\s*\d+\s*-\s*/,''); const dbz=parseFloat(r[4]),hc=parseFloat(r[5]); if(!nm0||isNaN(dbz)||isNaN(hc))return;
+   dbMap[norm(nm0)]={dinhBien:dbz,hienCo:hc,thieu:Math.max(0,parseFloat(r[6])||0),upd:dbUpd,stale:dbStale};});
+ }catch(e){console.warn('[p51] định biên HRBP:',e&&e.message);}
+ return dbMap;
 }
 async function buildTinhHinhBCPage(){
  const el=document.getElementById('p51'); if(!el)return;
@@ -5322,17 +5345,8 @@ async function buildTinhHinhBCPage(){
   const nsRes=await fetch(`https://docs.google.com/spreadsheets/d/${SID}/gviz/tq?tqx=out:csv&gid=1723871284&_=${Date.now()}`);
   if(!nsRes.ok)throw new Error('Năng suất NV HTTP '+nsRes.status);
   const NS=parseCSV(await nsRes.text()).slice(1).filter(r=>r[0]&&r[2]);
-  // Định biên nhân sự (HRBP): lỗi/không đọc được → để null ("không có dữ liệu"), KHÔNG làm hỏng cả trang
-  const dbMap={}; let dbUpd=null,dbStale=false;
-  try{
-   const dbRes=await fetch(`https://docs.google.com/spreadsheets/d/${DINHBIEN_HR_ID}/gviz/tq?tqx=out:csv&gid=${DINHBIEN_HR_GID}&_=${Date.now()}`);
-   if(!dbRes.ok)throw new Error('HTTP '+dbRes.status);
-   const DB=parseCSV(await dbRes.text());
-   const mUpd=String((DB[0]||[]).join(' ')).match(/cập nhật ngày\s*(\d{1,2})\/(\d{1,2})\/(\d{4})/i);
-   if(mUpd){dbUpd=mUpd[1]+'/'+mUpd[2]+'/'+mUpd[3]; const dd=new Date(+mUpd[3],+mUpd[2]-1,+mUpd[1]); dbStale=(Date.now()-dd.getTime())>7*86400000;}
-   DB.slice(1).forEach(r=>{const nm0=String(r[0]||'').replace(/^\s*\d+\s*-\s*/,''); const dbz=parseFloat(r[4]),hc=parseFloat(r[5]); if(!nm0||isNaN(dbz)||isNaN(hc))return;
-    dbMap[norm(nm0)]={dinhBien:dbz,hienCo:hc,thieu:Math.max(0,parseFloat(r[6])||0),upd:dbUpd,stale:dbStale};});
-  }catch(e){console.warn('[p51] định biên HRBP:',e&&e.message);}
+  // Định biên nhân sự (HRBP): lỗi/không đọc được → null ("không có dữ liệu"), KHÔNG làm hỏng cả trang — dùng chung với Tin 1 Thư Vũ
+  const dbMap=await _thLoadDinhBien();
   // Data_Voltotal: Hàng Tồn theo BC/ngày (BC=col1, Loại hàng=col2, Ngày=col4, Volume=col5; gộp mọi Nhóm hàng)
   const VR=_vwParseCSV(await _getVolCSV());
   const tonMap={};
@@ -5365,6 +5379,7 @@ async function buildTinhHinhBCPage(){
   const kpi=(l,v,c)=>`<div style="flex:1;min-width:140px;background:var(--card);border:1px solid var(--border);border-top:3px solid ${c};border-radius:12px;padding:12px 14px;text-align:center"><div style="font-size:11px;font-weight:700;color:var(--text-sub);text-transform:uppercase;letter-spacing:.4px">${l}</div><div style="font-size:26px;font-weight:800;color:${c};line-height:1.1;margin-top:3px">${v}</div></div>`;
   let h=`<div class="page-header"><div class="page-title">📋 Tình hình Bưu Cục (N-1)</div><div class="page-meta"><span class="tag tag-orange">📅 N-1 = ${fD(latest)}</span><span class="tag" style="background:#FEE2E2;color:#B91C1C;font-weight:700">Chỉ bắn BC có %GTC Total &lt; ${TINHHINH_NGUONG}% (bấm tay khi không có BC nào &lt; ${TINHHINH_NGUONG}% → bắn toàn bộ)</span><button class="tg-inpage-btn" style="background:#16A34A;border-color:#16A34A" onclick="buildTinhHinhBCPage()">🔄 Tải lại</button><button class="tg-inpage-btn" onclick="sendTinhHinhBCToTelegram(this)">📤 Bắn TG @anhthuvu123</button></div></div>`;
   h+=`<div style="display:flex;gap:11px;flex-wrap:wrap;margin-bottom:16px">${kpi('BC theo dõi',rows.length,'#1F3864')}${kpi('Sẽ bắn (&lt;'+TINHHINH_NGUONG+'%)',nSend,'var(--red)')}${kpi('Không bắn (≥'+TINHHINH_NGUONG+'%)',rows.length-nSend,'#16A34A')}</div>`;
+  h+=_tvPanelHtml();
   const line=(l,v)=>`<div style="padding:5px 0;border-bottom:1px dashed var(--border);font-size:13px;line-height:1.5"><span style="color:var(--text-sub)">• ${l}:</span> ${v}</div>`;
   const fill='<span style="color:#9CA3AF;font-style:italic">( Tự điền )</span>';
   h+='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(400px,1fr));gap:14px">';
@@ -5393,6 +5408,164 @@ async function buildTinhHinhBCPage(){
   h+=`<div class="analysis-box" style="margin-top:14px;line-height:1.9">Nguồn: sheet GTC Total theo Bưu Cục (cần giao = Vol, GTC, %GTC) + sheet HRBP "Dữ liệu tuyển dụng" (Định biên · Hiện có · Thiếu) + Data_Voltotal (Hàng Tồn) + Năng suất NV (số NV có GTC &gt; 1 đơn; NV thấp nhất = ít GTC nhất trong nhóm đó).<br>NS TB = đơn GTC ÷ số NV có GTC &gt; 1 đơn · Tồn = dòng "Hàng Tồn" của Data_Voltotal.<br>Khâu Gán→Giao: %Gán lấy từ sheet, đã gán = Vol × %Gán, GTC/đã gán = %GTC ÷ %Gán (chuẩn gán &gt;95%; giao cần ≥ ${TINHHINH_NGUONG}÷95).<br>Điều kiện đạt GTC ${TINHHINH_NGUONG}% = ceil(${TINHHINH_NGUONG}% × Vol − GTC); quy NV theo NS kỳ vọng = (Vol ÷ số NV) × 70%, tối đa 70 đơn → BC ít hàng không bị đòi NS cao, BC nhiều hàng không được đặt NS thấp. NV giao kém = NV giao xong dưới ${(TINHHINH_NGUONG/95*100).toFixed(1).replace('.',',')}% số đơn được gán (xếp theo số đơn giao thất bại); không phạt NV chỉ vì được gán ít.<br>Chỉ bắn Telegram các BC có %GTC Total N-1 &lt; ${TINHHINH_NGUONG}%.</div>`;
   el.innerHTML=h;
  }catch(e){el.innerHTML='<div class="page-header"><div class="page-title">📋 Tình hình Bưu Cục (N-1)</div></div><div class="analysis-box">Lỗi: '+esc(e&&e.message||e)+'</div>';console.error('p51:',e);}
+}
+/* ===== THƯ VŨ — TIN 1 "BÁO CÁO GTC 9H" + TIN 2 "Báo cáo năng suất 10h" (đại nhân chốt 19/11) =====
+   · Luồng bắn giữ nguyên (nút "Bắn tất cả"); 9h/10h chỉ là nhãn giờ chị Thư gửi báo cáo, KHÔNG phải giờ tự bắn.
+   · Tin 1: lấy 10 BC có %GTC Total N-1 THẤP NHẤT toàn Vùng (window._D.gtcTotalBC đã lọc LSO+QNI), rồi CHỈ GIỮ những BC thuộc diện chị Thư
+     (TINHHINH_BCS). VD 10 BC thấp nhất có 3 BC của chị → bắn 3 BC. Không có BC nào của chị trong top 10 → không bắn.
+     "Biến động nhân sự / Nguyên nhân thiếu / Phương án xử lý" để TRỐNG cho chị tự điền (không có nguồn số NV nghỉ).
+   · Tin 2: BC thuộc TINHHINH_BCS có %GTC N-1 < TINHHINH_NGUONG (đúng điều kiện send của p51), gộp thành 1 tin đánh số; phân tích sâu tái dùng _thAnalyze/_thLines.
+   · Tin dài > TV_MAX ký tự tự chia nhiều tin, KHÔNG cắt giữa một khối BC. Không có số liệu → ghi "không có dữ liệu", không bịa. */
+const TV_NS_MUCTIEU=65, TV_MAX=3800;
+function _tvEsc(t){return String(t==null?'':t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function _tvPc(v){return v==null?'—':v.toFixed(1).replace('.',',')+'%';}
+function _tvVn(v){return Math.round(v).toLocaleString('vi-VN');}
+function _tvFD(iso){const p=(iso||'').split('-');return p.length===3?`${p[2]}/${p[1]}`:'—';}
+function _tvToday(){const d=new Date(Date.now()+7*3600*1000);return String(d.getUTCDate()).padStart(2,'0')+'/'+String(d.getUTCMonth()+1).padStart(2,'0');}
+/* Chia danh sách khối → các tin ≤ TV_MAX ký tự; header chỉ ở tin đầu; không cắt giữa 1 khối. */
+function _tvChunk(header,blocks){
+ const out=[]; let cur=header;
+ blocks.forEach(b=>{
+  const add=(cur?cur+'\n\n':'')+b;
+  if(cur&&add.length>TV_MAX){out.push(cur);cur=b;}else cur=add;
+ });
+ if(cur)out.push(cur);
+ return out;
+}
+/* Dữ liệu Tin 1: mọi BC Vùng ở N-1 (ngày mới nhất của sheet), bỏ BC thiếu %GTC/Vol → xếp %GTC tăng dần → 10 thấp nhất → giữ BC diện chị Thư. */
+async function _tvLoadTop10(){
+ const dt=x=>(String(x==null?'':x).match(/\d{4}-\d{2}-\d{2}/)||[''])[0];
+ const P=v=>{const n=parseFloat(String(v==null?'':v).replace(/,/g,''));return isNaN(n)?0:n;};
+ const norm=t=>String(t||'').toLowerCase().normalize('NFC').replace(/\s+/g,' ').trim();
+ const G=(window._D&&window._D.gtcTotalBC||[]).slice(1);
+ if(!G.length)throw new Error('chưa có dữ liệu GTC Total theo Bưu Cục');
+ const latest=G.map(r=>dt(r[2])).filter(Boolean).sort().pop();
+ const m={};
+ G.forEach(r=>{const bc=(r[1]||'').trim(),d=dt(r[2]); if(!bc||!d||/grand total/i.test(bc))return;
+  if(String(r[5]==null?'':r[5]).trim()==='')return;              // thiếu %GTC → không xếp hạng (tránh coi như 0%)
+  const vol=P(r[3]); if(!(vol>0))return;
+  (m[bc]=m[bc]||{})[d]={vol,pg:P(r[5])*100,gtc:P(r[6])};});
+ const dbMap=await _thLoadDinhBien();
+ const mine=new Set(TINHHINH_BCS.map(norm));
+ const rows=[];
+ Object.keys(m).forEach(bc=>{const byD=m[bc],A=byD[latest]; if(!A)return;
+  const d0=Object.keys(byD).sort().filter(d=>d<latest).pop(), B=d0?byD[d0]:null;
+  rows.push({bc,d1:latest,d0,vol:A.vol,gtc:A.gtc,pg:A.pg,pgPrev:B?B.pg:null,db:dbMap[norm(bc)]||null,mine:mine.has(norm(bc))});});
+ rows.sort((a,b)=>a.pg-b.pg||a.bc.localeCompare(b.bc,'vi'));
+ const top=rows.slice(0,10).map((r,i)=>Object.assign({rank:i+1},r));
+ return {day:latest,total:rows.length,top,keep:top.filter(r=>r.mine)};
+}
+function _tvTin1Msgs(T){
+ if(!T||!T.keep.length)return [];
+ const blocks=T.keep.map((r,i)=>{
+  const dlt=r.pgPrev==null?null:r.pg-r.pgPrev;
+  const cmp=dlt==null?`${_tvPc(r.pg)} (không có dữ liệu ngày N-2)`:`${_tvPc(r.pg)} ${dlt<0?'Giảm':'Tăng'} ${Math.abs(dlt).toFixed(1).replace('.',',')}%`;
+  const dbz=(r.db&&r.db.dinhBien!=null)?_tvVn(r.db.dinhBien):'?';
+  return `${i+1}. <b>${_tvEsc(r.bc)}</b> (thấp thứ ${r.rank}/10 Vùng)\n`
+   +`Tình hình bưu cục ngày N-1 (${_tvFD(r.d1)}):\n`
+   +`• Tổng đơn cần giao: ${_tvVn(r.vol)} đơn\n`
+   +`• % GTC ngày N-1 so với ngày N-2: ${cmp}\n`
+   +`• Biến động nhân sự: ?/${dbz} NV thực tế đi làm, trong đó có ? nhân viên nghỉ\n`
+   +`• Nguyên nhân thiếu: ( Để trống, tự điền)\n`
+   +`• Phương án xử lý: ( Để trống, tự điền)`;
+ });
+ const header=`<b>BÁO CÁO GTC 9H - NGÀY ${_tvToday()}</b>\nTrong 10 Bưu Cục có %GTC Total ngày N-1 (${_tvFD(T.day)}) thấp nhất Vùng, có ${T.keep.length} BC diện quản lý:`;
+ return _tvChunk(header,blocks);
+}
+function _tvTin2Msgs(rows){
+ const list=(rows||[]).filter(r=>!r.noData&&r.send);
+ if(!list.length)return [];
+ const blocks=list.map((r,i)=>{
+  const dlt=r.pgPrev==null?null:r.pg-r.pgPrev;
+  const cmp=dlt==null?'không có dữ liệu ngày N-2':`${dlt<0?'Giảm':'Tăng'} ${Math.abs(dlt).toFixed(1).replace('.',',')}% (${_tvPc(r.pg)} so với ${_tvPc(r.pgPrev)})`;
+  const nsq=r.ns==null?'không có dữ liệu':`${_tvVn(r.ns)} đơn - ${r.ns<TV_NS_MUCTIEU?'chưa đạt':r.ns===TV_NS_MUCTIEU?'đạt':'vượt'} năng suất mục tiêu`;
+  const nvBd=r.nvPrev==null?'':` (ngày N-2: ${r.nvPrev} NV)`;
+  const a=_thAnalyze(r);
+  let ganL;
+  if(r.pgan==null)ganL='• %Gán: không có dữ liệu';
+  else{
+   const kemGan=r.pgan<TH_GAN_CHUAN, kemGiao=a.giao!=null&&a.giao<a.giaoChuan;
+   ganL=`• %Gán ${_tvPc(r.pgan)} - ${kemGan?'chưa đạt mục tiêu gán':'đạt mục tiêu gán'}\n`
+    +(a.giao==null?'':(kemGan&&kemGiao?'Kém cả 2 khâu: chưa gán đủ đơn và đã gán mà giao chưa xong':kemGan?'Chủ yếu do chưa gán đủ đơn':kemGiao?'Chủ yếu do đã gán mà giao chưa xong':'Cả 2 khâu gán và giao đạt chuẩn'));
+  }
+  // Action chiều sâu: NS còn thiếu bao nhiêu (số thật = mục tiêu − NS hiện tại, × số NV có GTC > 1) + điều kiện đạt GTC 60% + NV giao kém (top 3) — tái dùng _thLines
+  const nsGap=(r.ns!=null&&r.ns<TV_NS_MUCTIEU&&r.nv>0)?`\n• Để đạt NS mục tiêu ${TV_NS_MUCTIEU}: mỗi NV cần giao thêm ≈ ${_tvVn(TV_NS_MUCTIEU-r.ns)} đơn (≈ ${_tvVn((TV_NS_MUCTIEU-r.ns)*r.nv)} đơn GTC toàn BC)`:'';
+  const deep=_thLines(r,'\n',3).slice(1).map(x=>`\n• ${x.l}: ${x.v}`).join('');
+  return `${i+1}. <b>${_tvEsc(r.bc)}</b>\n`
+   +`Tình hình bưu cục ngày N-1 (${_tvFD(r.d1)}):\n`
+   +`• Tổng đơn cần giao: ${_tvVn(r.vol)} đơn\n`
+   +`• NS TB / nhân viên ngày N-1: ${nsq}\n`
+   +`• % GTC ngày N-1 so với ngày N-2: ${cmp}\n`
+   +`• Biến động nhân sự: ${r.nv} NV thực tế có phát sinh lương${nvBd}\n`
+   +`• NV năng suất thấp nhất: ${r.low?_tvEsc(r.low.name)+' — GTC '+_tvVn(r.low.gtc)+' đơn (gán '+_tvVn(r.low.gan)+' đơn)':'không có dữ liệu'}\n`
+   +ganL+nsGap+deep;
+ });
+ const header=`<b>Báo cáo năng suất 10h ngày ${_tvToday()}</b>\n• Năng suất mục tiêu: ${TV_NS_MUCTIEU}đ/NV\n• BC có tỉ lệ GTC <${TINHHINH_NGUONG}%:`;
+ return _tvChunk(header,blocks);
+}
+async function _tvSendMsgs(msgs,chatId){
+ for(const m of msgs){
+  const res=await _tgSend(chatId,undefined,m);
+  if(!res||!res.ok)throw new Error((res&&res.description)||'TG lỗi');
+  await new Promise(r=>setTimeout(r,650));
+ }
+}
+/* Tin 1/2: chatId mặc định = Thư Vũ; truyền GK_TG để GỬI THỬ cho @thangquada. silent=true: dùng cho "Bắn tất cả" (ném lỗi, không alert). */
+async function sendTin1ThuVu(btn,silent,chatId){
+ const _t=btn?btn.textContent:''; if(btn){btn.disabled=true;btn.textContent='⏳ Đang bắn...';}
+ try{
+  const dest=chatId||TG_ANHTHU_ID; if(!dest)throw new Error('Chưa có chat_id người nhận.');
+  const T=await _tvLoadTop10(); const msgs=_tvTin1Msgs(T);
+  if(!msgs.length){if(silent)return {ok:true,n:0}; alert('Không có BC diện chị Thư nào nằm trong 10 BC GTC N-1 thấp nhất Vùng — không bắn Tin 1.');return {ok:true,n:0};}
+  await _tvSendMsgs(msgs,dest);
+  if(!silent)alert('✅ Đã bắn Tin 1 ('+T.keep.length+' BC, '+msgs.length+' tin) cho '+(dest===TG_ANHTHU_ID?'@anhthuvu123':'@thangquada (gửi thử)')+'.');
+  return {ok:true,n:T.keep.length,msgs:msgs.length};
+ }catch(e){ if(silent)throw e; alert('Lỗi bắn Tin 1: '+(e&&e.message||e)); }
+ finally{ if(btn){btn.disabled=false;btn.textContent=_t;} }
+}
+async function sendTin2ThuVu(btn,silent,chatId){
+ const _t=btn?btn.textContent:''; if(btn){btn.disabled=true;btn.textContent='⏳ Đang bắn...';}
+ try{
+  const dest=chatId||TG_ANHTHU_ID; if(!dest)throw new Error('Chưa có chat_id người nhận.');
+  if(!window._TINHHINH)await buildTinhHinhBCPage();
+  if(!window._TINHHINH)throw new Error('chưa tải xong dữ liệu Tình hình BC');
+  const msgs=_tvTin2Msgs(window._TINHHINH.rows);
+  if(!msgs.length){if(silent)return {ok:true,n:0}; alert('Không có BC nào có %GTC N-1 < '+TINHHINH_NGUONG+'% — không bắn Tin 2.');return {ok:true,n:0};}
+  await _tvSendMsgs(msgs,dest);
+  const n=window._TINHHINH.rows.filter(r=>!r.noData&&r.send).length;
+  if(!silent)alert('✅ Đã bắn Tin 2 ('+n+' BC, '+msgs.length+' tin) cho '+(dest===TG_ANHTHU_ID?'@anhthuvu123':'@thangquada (gửi thử)')+'.');
+  return {ok:true,n,msgs:msgs.length};
+ }catch(e){ if(silent)throw e; alert('Lỗi bắn Tin 2: '+(e&&e.message||e)); }
+ finally{ if(btn){btn.disabled=false;btn.textContent=_t;} }
+}
+/* Xem trước trên trang p51 (text thuần, bỏ thẻ <b>) */
+async function previewTinThuVu(which,btn){
+ const box=document.getElementById('tvPreview'+which); if(!box)return;
+ const _t=btn?btn.textContent:''; if(btn){btn.disabled=true;btn.textContent='⏳ …';}
+ try{
+  let msgs;
+  if(which===1)msgs=_tvTin1Msgs(await _tvLoadTop10());
+  else{ if(!window._TINHHINH)await buildTinhHinhBCPage(); msgs=_tvTin2Msgs(window._TINHHINH&&window._TINHHINH.rows); }
+  const plain=t=>t.replace(/<\/?b>/g,'').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&amp;/g,'&');
+  box.textContent=msgs.length?msgs.map((m,i)=>(msgs.length>1?`──── tin ${i+1}/${msgs.length} ────\n`:'')+plain(m)).join('\n\n'):(which===1?'Không có BC diện chị Thư nào nằm trong 10 BC GTC N-1 thấp nhất Vùng → Tin 1 sẽ không được bắn.':'Không có BC nào có %GTC N-1 < '+TINHHINH_NGUONG+'% → Tin 2 sẽ không được bắn.');
+  box.style.display='block';
+ }catch(e){ box.textContent='Lỗi: '+(e&&e.message||e); box.style.display='block'; }
+ finally{ if(btn){btn.disabled=false;btn.textContent=_t;} }
+}
+function _tvPanelHtml(){
+ const card=(n,title,sub)=>`<div class="card" style="flex:1;min-width:300px;padding:14px 16px">
+  <div style="font-weight:800;color:#1F3864;font-size:14px">${title}</div>
+  <div style="color:var(--text-sub);font-size:12px;margin:3px 0 9px;line-height:1.5">${sub}</div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap">
+   <button class="tg-inpage-btn" style="background:#475569;border-color:#475569" onclick="previewTinThuVu(${n},this)">👁 Xem trước</button>
+   <button class="tg-inpage-btn" style="background:#16A34A;border-color:#16A34A" onclick="sendTin${n}ThuVu(this,false,GK_TG)">🧪 Gửi thử @thangquada</button>
+   <button class="tg-inpage-btn" onclick="if(confirm('Bắn Tin ${n} cho Thư Vũ (@anhthuvu123)?'))sendTin${n}ThuVu(this,false)">📤 Bắn @anhthuvu123</button>
+  </div>
+  <pre id="tvPreview${n}" style="display:none;white-space:pre-wrap;font-family:inherit;font-size:12.5px;line-height:1.6;background:#F8FAFC;border:1px dashed var(--border);border-radius:8px;padding:10px 12px;margin:10px 0 0;max-height:420px;overflow:auto"></pre>
+ </div>`;
+ return `<div style="margin:0 0 16px"><div style="font-weight:800;color:var(--orange-dark);margin-bottom:8px">📨 2 tin gửi Thư Vũ — thay các tin p51 riêng lẻ trong "Bắn tất cả"</div>
+  <div style="display:flex;gap:14px;flex-wrap:wrap">${card(1,'Tin 1 — BÁO CÁO GTC 9H','Lấy 10 BC có %GTC Total N-1 thấp nhất cả Vùng, chỉ giữ BC diện chị Thư quản lý; phần nhân sự / nguyên nhân / phương án để trống cho chị tự điền.')}
+  ${card(2,'Tin 2 — Báo cáo năng suất 10h','BC diện chị Thư có %GTC N-1 &lt; '+TINHHINH_NGUONG+'%, gộp 1 tin đánh số: NS so mục tiêu '+TV_NS_MUCTIEU+'đ/NV, %Gán, NV thấp nhất, điều kiện đạt '+TINHHINH_NGUONG+'%, NV giao kém.')}</div></div>`;
 }
 /* ===== p52 — BÁO CÁO HÀNG VỀ REALTIME (Lạng Sơn + Quảng Ninh) =====
    Volume hàng mới theo ngày của TUẦN HIỆN TẠI (T2→CN) + cột TB tuần N-1.
