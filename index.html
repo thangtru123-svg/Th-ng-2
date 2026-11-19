@@ -5500,7 +5500,7 @@ function _tvTin2Msgs(rows){
    +`• NV năng suất thấp nhất: ${r.low?_tvEsc(r.low.name)+' — GTC '+_tvVn(r.low.gtc)+' đơn (gán '+_tvVn(r.low.gan)+' đơn)':'không có dữ liệu'}\n`
    +ganL+nsGap+deep;
  });
- const header=`<b>Báo cáo năng suất 10h ngày ${_tvToday()}</b>\n• Năng suất mục tiêu: ${TV_NS_MUCTIEU}đ/NV\n• BC có tỉ lệ GTC <${TINHHINH_NGUONG}%:`;
+ const header=`<b>Báo cáo năng suất 10h ngày ${_tvToday()}</b>\n• Năng suất mục tiêu: ${TV_NS_MUCTIEU}đ/NV\n• BC có tỉ lệ GTC &lt;${TINHHINH_NGUONG}%:`;
  return _tvChunk(header,blocks);
 }
 async function _tvSendMsgs(msgs,chatId){
