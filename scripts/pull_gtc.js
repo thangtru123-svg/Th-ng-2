@@ -34,7 +34,11 @@ async function api(p, body, tries = 5) {
         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + SES },
         body: JSON.stringify(body)
       });
-      if (r.status === 401 || r.status === 403) { throw Object.assign(new Error('AUTH'), { auth: true }); }
+      if (r.status === 401 || r.status === 403) {
+        let bt = ''; try { bt = (await r.text()).replace(/\s+/g, ' ').slice(0, 200); } catch (e) {}
+        console.error(`[auth-debug] HTTP ${r.status} path=${p} body=${bt} | secret len=${SES.length} hasSpace=${/\s/.test(SES)} hasQuote=${/["']/.test(SES)} parts=${SES.split('.').length}`);
+        throw Object.assign(new Error('AUTH'), { auth: true });
+      }
       if (r.status === 429) { await sleep(500 * (k + 1)); continue; }
       const jj = await r.json();
       // token hết hạn/hỏng: GHN trả HTTP 400 {code:1004|401, data:null} (KHÔNG phải 401/403) → đếm để cuối bước quét biết, tránh ghi đè số thật bằng số 0
