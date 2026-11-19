@@ -5245,6 +5245,18 @@ const TG_ANHTHU_ID=5420832446;       // chat_id DM @anhthuvu123 (đại nhân c�
    · Gap = ceil(NGUONG% × Vol − GTC). Quy NV: ÷ NS kỳ vọng (theo volume); hoặc chia đều cho số NV hiện có.
    · NS kỳ vọng = L × 70% (L = Vol ÷ số NV = số đơn cần giao BQ mỗi NV), tối đa 70 đơn (mục tiêu NS của Sếp).
      VD: L=60 → 42 · L=50 → 35 · L=30 → 21 · L≥100 → 70. BC ít hàng không bị đòi NS cao, BC nhiều hàng không được đặt NS thấp. */
+/* ===== p51 — ĐỊNH BIÊN NHÂN SỰ (sheet HRBP "GHN XBG - Dữ liệu tuyển dụng team HRBP", gid 739577481) =====
+   Cột: [0]="mã - (Vùng) Tên BC" · [2]=AM · [4]=Định biên · [5]=Hiện có · [6]=Thiếu. Ô A1 có câu "cập nhật ngày dd/mm/yyyy". */
+const DINHBIEN_HR_ID='1UWpoJkp19URHvRh6sWn2Cda5dpCe5tPJu69voHS20do', DINHBIEN_HR_GID=739577481;
+function _dbLine(db){
+ if(!db)return 'không có dữ liệu';
+ let t=db.hienCo+'/'+db.dinhBien;
+ if(db.thieu>0)t+=' - Thiếu '+db.thieu+' nhân sự - cần tuyển dụng lấp vào';
+ else if(db.hienCo>db.dinhBien)t+=' - Vượt định biên '+(db.hienCo-db.dinhBien)+' nhân sự';
+ else t+=' - Đủ định biên';
+ if(db.stale)t+=' (nguồn HRBP cập nhật '+db.upd+')';
+ return t;
+}
 const TH_GAN_CHUAN=95, TH_NS_RATIO=0.7, TH_NS_CAP=70;
 function _thAnalyze(r){
  const o={};
@@ -5311,6 +5323,17 @@ async function buildTinhHinhBCPage(){
   const nsRes=await fetch(`https://docs.google.com/spreadsheets/d/${SID}/gviz/tq?tqx=out:csv&gid=1723871284&_=${Date.now()}`);
   if(!nsRes.ok)throw new Error('Năng suất NV HTTP '+nsRes.status);
   const NS=parseCSV(await nsRes.text()).slice(1).filter(r=>r[0]&&r[2]);
+  // Định biên nhân sự (HRBP): lỗi/không đọc được → để null ("không có dữ liệu"), KHÔNG làm hỏng cả trang
+  const dbMap={}; let dbUpd=null,dbStale=false;
+  try{
+   const dbRes=await fetch(`https://docs.google.com/spreadsheets/d/${DINHBIEN_HR_ID}/gviz/tq?tqx=out:csv&gid=${DINHBIEN_HR_GID}&_=${Date.now()}`);
+   if(!dbRes.ok)throw new Error('HTTP '+dbRes.status);
+   const DB=parseCSV(await dbRes.text());
+   const mUpd=String((DB[0]||[]).join(' ')).match(/cập nhật ngày\s*(\d{1,2})\/(\d{1,2})\/(\d{4})/i);
+   if(mUpd){dbUpd=mUpd[1]+'/'+mUpd[2]+'/'+mUpd[3]; const dd=new Date(+mUpd[3],+mUpd[2]-1,+mUpd[1]); dbStale=(Date.now()-dd.getTime())>7*86400000;}
+   DB.slice(1).forEach(r=>{const nm0=String(r[0]||'').replace(/^\s*\d+\s*-\s*/,''); const dbz=parseFloat(r[4]),hc=parseFloat(r[5]); if(!nm0||isNaN(dbz)||isNaN(hc))return;
+    dbMap[norm(nm0)]={dinhBien:dbz,hienCo:hc,thieu:Math.max(0,parseFloat(r[6])||0),upd:dbUpd,stale:dbStale};});
+  }catch(e){console.warn('[p51] định biên HRBP:',e&&e.message);}
   // Data_Voltotal: Hàng Tồn theo BC/ngày (BC=col1, Loại hàng=col2, Ngày=col4, Volume=col5; gộp mọi Nhóm hàng)
   const VR=_vwParseCSV(await _getVolCSV());
   const tonMap={};
@@ -5331,7 +5354,7 @@ async function buildTinhHinhBCPage(){
    const nm=n=>{const i=n.indexOf('_');return (i>=0?n.slice(i+1):n).replace(/\s+/g,' ').trim();};
    rows.push({bc,d1,d0,vol:A.vol,gtc:A.gtc,ton:(tonMap[k+'|'+d1]!=null?Math.round(tonMap[k+'|'+d1]):null),pg:A.pg,pgPrev:B?B.pg:null,
     nv:nv1.length,nvPrev:nv0?nv0.length:null,ns:nv1.length?Math.round(A.gtc/nv1.length):null,
-    pgan:A.pgan, nvList:nv1.map(o=>({name:nm(o.nv),gtc:o.gtc,gan:o.gan})),
+    db:dbMap[k]||null, pgan:A.pgan, nvList:nv1.map(o=>({name:nm(o.nv),gtc:o.gtc,gan:o.gan})),
     low:low?{name:nm(low.nv),gtc:low.gtc,gan:low.gan}:null, send:A.pg<TINHHINH_NGUONG});
   });
   window._TINHHINH={day:latest,rows};
@@ -5358,7 +5381,8 @@ async function buildTinhHinhBCPage(){
     ${line('Vol đơn GTC ngày N-1','<b>'+vn(r.gtc)+' đơn</b>')}
     ${line('Số đơn tồn ngày N-1',r.ton==null?'không có dữ liệu (Data_Voltotal chưa có ngày '+fD(r.d1)+')':'<b>'+vn(r.ton)+' đơn</b> <span style="color:var(--text-sub);font-size:11px">(Hàng Tồn — Data_Voltotal)</span>')}
     ${line('% GTC ngày N-1 so với ngày N-2',cmp)}
-    ${line('Biến động nhân sự','<b>'+r.nv+' NV</b> thực tế có phát sinh lương'+nvBd)}
+    ${line('Định biên nhân sự','<b>'+esc(_dbLine(r.db))+'</b>')}
+    ${line('Nhân sự đi làm','<b>'+r.nv+' NV</b> thực tế có phát sinh lương'+nvBd)}
     ${line('Nguyên nhân thiếu',fill)}
     ${line('NV năng suất thấp nhất',r.low?'<b>'+esc(r.low.name)+'</b> — GTC '+vn(r.low.gtc)+' đơn (gán '+vn(r.low.gan)+' đơn)':'không có dữ liệu')}
     ${_thLines(r,'<br>').map(x=>line(x.l,x.v)).join('')}
@@ -5367,7 +5391,7 @@ async function buildTinhHinhBCPage(){
    </div>`;
   });
   h+='</div>';
-  h+=`<div class="analysis-box" style="margin-top:14px;line-height:1.9">Nguồn: sheet GTC Total theo Bưu Cục (cần giao = Vol, GTC, %GTC) + Data_Voltotal (Hàng Tồn) + Năng suất NV (số NV có GTC &gt; 1 đơn; NV thấp nhất = ít GTC nhất trong nhóm đó).<br>NS TB = đơn GTC ÷ số NV có GTC &gt; 1 đơn · Tồn = dòng "Hàng Tồn" của Data_Voltotal.<br>Khâu Gán→Giao: %Gán lấy từ sheet, đã gán = Vol × %Gán, GTC/đã gán = %GTC ÷ %Gán (chuẩn gán &gt;95%; giao cần ≥ ${TINHHINH_NGUONG}÷95).<br>Điều kiện đạt GTC ${TINHHINH_NGUONG}% = ceil(${TINHHINH_NGUONG}% × Vol − GTC); quy NV theo NS kỳ vọng = (Vol ÷ số NV) × 70%, tối đa 70 đơn → BC ít hàng không bị đòi NS cao, BC nhiều hàng không được đặt NS thấp. NV giao kém = NV giao xong dưới ${(TINHHINH_NGUONG/95*100).toFixed(1).replace('.',',')}% số đơn được gán (xếp theo số đơn giao thất bại); không phạt NV chỉ vì được gán ít.<br>Chỉ bắn Telegram các BC có %GTC Total N-1 &lt; ${TINHHINH_NGUONG}%.</div>`;
+  h+=`<div class="analysis-box" style="margin-top:14px;line-height:1.9">Nguồn: sheet GTC Total theo Bưu Cục (cần giao = Vol, GTC, %GTC) + sheet HRBP "Dữ liệu tuyển dụng" (Định biên · Hiện có · Thiếu) + Data_Voltotal (Hàng Tồn) + Năng suất NV (số NV có GTC &gt; 1 đơn; NV thấp nhất = ít GTC nhất trong nhóm đó).<br>NS TB = đơn GTC ÷ số NV có GTC &gt; 1 đơn · Tồn = dòng "Hàng Tồn" của Data_Voltotal.<br>Khâu Gán→Giao: %Gán lấy từ sheet, đã gán = Vol × %Gán, GTC/đã gán = %GTC ÷ %Gán (chuẩn gán &gt;95%; giao cần ≥ ${TINHHINH_NGUONG}÷95).<br>Điều kiện đạt GTC ${TINHHINH_NGUONG}% = ceil(${TINHHINH_NGUONG}% × Vol − GTC); quy NV theo NS kỳ vọng = (Vol ÷ số NV) × 70%, tối đa 70 đơn → BC ít hàng không bị đòi NS cao, BC nhiều hàng không được đặt NS thấp. NV giao kém = NV giao xong dưới ${(TINHHINH_NGUONG/95*100).toFixed(1).replace('.',',')}% số đơn được gán (xếp theo số đơn giao thất bại); không phạt NV chỉ vì được gán ít.<br>Chỉ bắn Telegram các BC có %GTC Total N-1 &lt; ${TINHHINH_NGUONG}%.</div>`;
   el.innerHTML=h;
  }catch(e){el.innerHTML='<div class="page-header"><div class="page-title">📋 Tình hình Bưu Cục (N-1)</div></div><div class="analysis-box">Lỗi: '+esc(e&&e.message||e)+'</div>';console.error('p51:',e);}
 }
@@ -5555,7 +5579,8 @@ function _tinhHinhMsgForRow(r){
   +`• Vol đơn GTC ngày N-1: ${vn(r.gtc)} đơn\n`
   +`• Số đơn tồn ngày N-1: ${r.ton==null?'không có dữ liệu':vn(r.ton)+' đơn'}\n`
   +`• % GTC ngày N-1 so với ngày N-2: ${cmp}\n`
-  +`• Biến động nhân sự: ${r.nv} NV thực tế có phát sinh lương${nvBd}\n`
+  +`• Định biên nhân sự: ${esc(_dbLine(r.db))}\n`
+  +`• Nhân sự đi làm: ${r.nv} NV thực tế có phát sinh lương${nvBd}\n`
   +`• Nguyên nhân thiếu: ( Tự điền)\n`
   +`• NV năng suất thấp nhất: ${r.low?esc(r.low.name)+' — GTC '+vn(r.low.gtc)+' đơn (gán '+vn(r.low.gan)+' đơn)':'không có dữ liệu'}\n`
   +_thLines(r,'\n').map(x=>`• ${x.l}: ${x.v}\n`).join('')

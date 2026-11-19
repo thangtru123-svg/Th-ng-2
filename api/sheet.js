@@ -19,6 +19,7 @@ const ALLOW_IDS = new Set([
   '18-oZRCYgehTY84K9ylQAkVU3DzDl9yyfQ6eUSI9139M', // Báo cáo Tồn/LC/48H
   '1kDVp2soHOAgp_AhhTddSlocXCUjB07kbLi1EHcCqay8', // Truy thu LC
   '1nAtrYVZUHTOlp695fDPeFTDwN94jeCo8-pPrb3HXYko', // Data đơn N-1 (Đơn fail ODR TTS, p54)
+  '1UWpoJkp19URHvRh6sWn2Cda5dpCe5tPJu69voHS20do', // Định biên & hiện có nhân sự theo BC (HRBP) — p51
   '1w4Ufjf6_P46bfK5LxW0ORqUhr__q1ghNqfGZ3_w6KQ0'  // Whitelist (nếu còn dùng)
 ]);
 
