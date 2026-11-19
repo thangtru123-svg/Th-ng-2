@@ -5254,7 +5254,6 @@ function _dbLine(db){
  if(db.thieu>0)t+=' - Thiếu '+db.thieu+' nhân sự - cần tuyển dụng lấp vào';
  else if(db.hienCo>db.dinhBien)t+=' - Vượt định biên '+(db.hienCo-db.dinhBien)+' nhân sự';
  else t+=' - Đủ định biên';
- if(db.stale)t+=' (nguồn HRBP cập nhật '+db.upd+')';
  return t;
 }
 const TH_GAN_CHUAN=95, TH_NS_RATIO=0.7, TH_NS_CAP=70;
