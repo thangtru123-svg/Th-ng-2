@@ -5413,7 +5413,7 @@ async function buildTinhHinhBCPage(){
    · Luồng bắn giữ nguyên (nút "Bắn tất cả"); 9h/10h chỉ là nhãn giờ chị Thư gửi báo cáo, KHÔNG phải giờ tự bắn.
    · Tin 1: lấy 10 BC có %GTC Total N-1 THẤP NHẤT toàn Vùng (window._D.gtcTotalBC đã lọc LSO+QNI), rồi CHỈ GIỮ những BC thuộc diện chị Thư
      (TINHHINH_BCS). VD 10 BC thấp nhất có 3 BC của chị → bắn 3 BC. Không có BC nào của chị trong top 10 → không bắn.
-     "Biến động nhân sự / Nguyên nhân thiếu / Phương án xử lý" để TRỐNG cho chị tự điền (không có nguồn số NV nghỉ).
+     "Biến động nhân sự" tự tính (đi làm = NV có GTC>1 N-1; hiện có = HRBP; nghỉ = hiện có − đi làm); "Nguyên nhân thiếu / Phương án xử lý" để TRỐNG cho chị tự điền.
    · Tin 2: BC thuộc TINHHINH_BCS có %GTC N-1 < TINHHINH_NGUONG (đúng điều kiện send của p51), gộp thành 1 tin đánh số; phân tích sâu tái dùng _thAnalyze/_thLines.
    · Tin dài > TV_MAX ký tự tự chia nhiều tin, KHÔNG cắt giữa một khối BC. Không có số liệu → ghi "không có dữ liệu", không bịa. */
 const TV_NS_MUCTIEU=65, TV_MAX=3800;
@@ -5453,19 +5453,29 @@ async function _tvLoadTop10(){
   rows.push({bc,d1:latest,d0,vol:A.vol,gtc:A.gtc,pg:A.pg,pgPrev:B?B.pg:null,db:dbMap[norm(bc)]||null,mine:mine.has(norm(bc))});});
  rows.sort((a,b)=>a.pg-b.pg||a.bc.localeCompare(b.bc,'vi'));
  const top=rows.slice(0,10).map((r,i)=>Object.assign({rank:i+1},r));
- return {day:latest,total:rows.length,top,keep:top.filter(r=>r.mine)};
+ const keep=top.filter(r=>r.mine);
+ // Số NV thực tế đi làm N-1 = số NV có GTC > 1 đơn (sheet Năng suất NV gid 1723871284: BC0 NV1 Ngày2 Gán3 GTC4) — cùng định nghĩa p51/p20. Không đọc được → null ("?")
+ let NS=null;
+ try{ const nsRes=await fetch(`https://docs.google.com/spreadsheets/d/${SID}/gviz/tq?tqx=out:csv&gid=1723871284&_=${Date.now()}`); if(!nsRes.ok)throw new Error('HTTP '+nsRes.status); NS=parseCSV(await nsRes.text()).slice(1).filter(r=>r[0]&&r[2]); }
+ catch(e){console.warn('[Tin 1] Năng suất NV:',e&&e.message);}
+ keep.forEach(r=>{ r.nv=null; if(!NS)return; const k=norm(r.bc), g={}; let any=false;
+  NS.forEach(x=>{ if(norm(x[0])!==k||dt(x[2])!==latest)return; any=true; const nv=(x[1]||'').trim(); if(nv)g[nv]=(g[nv]||0)+P(x[4]); });
+  r.nv=any?Object.values(g).filter(v=>v>1).length:null; });
+ return {day:latest,total:rows.length,top,keep};
 }
 function _tvTin1Msgs(T){
  if(!T||!T.keep.length)return [];
  const blocks=T.keep.map((r,i)=>{
   const dlt=r.pgPrev==null?null:r.pg-r.pgPrev;
   const cmp=dlt==null?`${_tvPc(r.pg)} (không có dữ liệu ngày N-2)`:`${_tvPc(r.pg)} ${dlt<0?'Giảm':'Tăng'} ${Math.abs(dlt).toFixed(1).replace('.',',')}%`;
-  const dbz=(r.db&&r.db.dinhBien!=null)?_tvVn(r.db.dinhBien):'?';
+  // Biến động nhân sự = [NV có GTC>1 N-1] / [Hiện có theo HRBP] NV thực tế đi làm, trong đó [Hiện có − đi làm] NV nghỉ (không âm). Thiếu nguồn → "?"
+  const hc=(r.db&&r.db.hienCo!=null)?r.db.hienCo:null, di=r.nv;
+  const nghi=(hc!=null&&di!=null)?Math.max(0,hc-di):null;
   return `${i+1}. <b>${_tvEsc(r.bc)}</b> (thấp thứ ${r.rank}/10 Vùng)\n`
    +`Tình hình bưu cục ngày N-1 (${_tvFD(r.d1)}):\n`
    +`• Tổng đơn cần giao: ${_tvVn(r.vol)} đơn\n`
    +`• % GTC ngày N-1 so với ngày N-2: ${cmp}\n`
-   +`• Biến động nhân sự: ?/${dbz} NV thực tế đi làm, trong đó có ? nhân viên nghỉ\n`
+   +`• Biến động nhân sự: ${di==null?'?':di}/${hc==null?'?':_tvVn(hc)} NV thực tế đi làm, trong đó có ${nghi==null?'?':nghi} nhân viên nghỉ\n`
    +`• Nguyên nhân thiếu: ( Để trống, tự điền)\n`
    +`• Phương án xử lý: ( Để trống, tự điền)`;
  });
@@ -5564,7 +5574,7 @@ function _tvPanelHtml(){
   <pre id="tvPreview${n}" style="display:none;white-space:pre-wrap;font-family:inherit;font-size:12.5px;line-height:1.6;background:#F8FAFC;border:1px dashed var(--border);border-radius:8px;padding:10px 12px;margin:10px 0 0;max-height:420px;overflow:auto"></pre>
  </div>`;
  return `<div style="margin:0 0 16px"><div style="font-weight:800;color:var(--orange-dark);margin-bottom:8px">📨 2 tin gửi Thư Vũ — thay các tin p51 riêng lẻ trong "Bắn tất cả"</div>
-  <div style="display:flex;gap:14px;flex-wrap:wrap">${card(1,'Tin 1 — BÁO CÁO GTC 9H','Lấy 10 BC có %GTC Total N-1 thấp nhất cả Vùng, chỉ giữ BC diện chị Thư quản lý; phần nhân sự / nguyên nhân / phương án để trống cho chị tự điền.')}
+  <div style="display:flex;gap:14px;flex-wrap:wrap">${card(1,'Tin 1 — BÁO CÁO GTC 9H','Lấy 10 BC có %GTC Total N-1 thấp nhất cả Vùng, chỉ giữ BC diện chị Thư quản lý; số NV đi làm / nghỉ tự tính, nguyên nhân + phương án để trống cho chị tự điền.')}
   ${card(2,'Tin 2 — Báo cáo năng suất 10h','BC diện chị Thư có %GTC N-1 &lt; '+TINHHINH_NGUONG+'%, gộp 1 tin đánh số: NS so mục tiêu '+TV_NS_MUCTIEU+'đ/NV, %Gán, NV thấp nhất, điều kiện đạt '+TINHHINH_NGUONG+'%, NV giao kém.')}</div></div>`;
 }
 /* ===== p52 — BÁO CÁO HÀNG VỀ REALTIME (Lạng Sơn + Quảng Ninh) =====
