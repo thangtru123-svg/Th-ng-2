@@ -186,6 +186,7 @@ async function pool(items, n, fn) {
   // 1 lần gọi thử thay vì để 104 BC × 2 API đều lần lượt fail (tốn thời gian + quota). Nếu bị khoá:
   // KHÔNG quét phần phụ thuộc chuyến đi (GTC/đã gán/NV/COD) — giữ nguyên số lần quét gần nhất (KHÔNG bịa 0),
   // chỉ cập nhật phần không cần chuyến đi (Báo cáo 1 mục chưa gán+đơn mới, Báo cáo 2, hangMoi, tonLC).
+  const NOW_ISO = new Date().toISOString();
   let TRIP_BLOCKED = false;
   try {
     await api('/api/lastmile/trip/get-trip-list-by-hub', { hub_id: String(HUBS[0].id), status: 'FINISHED', is_ready: 0, offset: 0, limit: 1, reverse: 1, page: 1, size: 1 });
@@ -200,7 +201,10 @@ async function pool(items, n, fn) {
   if (TRIP_BLOCKED) {
     let prevOut = null; try { prevOut = JSON.parse(fs.readFileSync(path.join(ROOT, 'gtc_live.json'), 'utf8')); } catch (e) {}
     if (!prevOut) { console.error('LOI: reqsig bi khoa va khong doc duoc gtc_live.json cu de giu so — dung, khong ghi de bang du lieu rong.'); process.exit(2); }
-    out = { ...prevOut, updatedAt: new Date().toISOString(), excl06: EXCL06, hourVN: HOUR, tripBlocked: true, tripBlockedNote: 'API chuyen di (reqsig) dang bi khoa — GTC/da gan/COD giu nguyen so lan quet gan nhat (xem updatedAt cu trong note nay khong co, chi co o cap hub/bc/am).' };
+    // updatedAt GIỮ NGUYÊN mốc quét chuyến đi thật gần nhất (tripDataAt) — trang p41... hiển thị "cập nhật lúc" theo trường này, không được giả vờ số cũ là mới.
+    // Các khối cập nhật thật (bcReport/hangMoi/tonLC) có generatedAt riêng = NOW_ISO.
+    const _tripAt = prevOut.tripDataAt || prevOut.updatedAt;
+    out = { ...prevOut, updatedAt: _tripAt, tripDataAt: _tripAt, refreshedAt: NOW_ISO, tripBlocked: true, tripBlockedNote: 'API chuyen di (reqsig) dang bi khoa — GTC/da gan/COD giu nguyen so lan quet chuyen di gan nhat (tripDataAt).' };
     hubs = []; errN = 0; // không quét lại — chỉ để các đoạn log phía dưới không vỡ
   } else {
   let res;
@@ -408,7 +412,7 @@ async function pool(items, n, fn) {
     for (const cfg of BC_REPORT_HUBS) { try { rep.push(await bcReportFor(cfg)); } catch (e) { rep.push({ name: cfg.name, hubId: cfg.id, dinhBien: cfg.dinhBien, err: String((e && e.message) || e) }); } }
     const seenOut = { date: TODAY, hubs: {} };
     rep.forEach(h => { if (h._seen) { seenOut.hubs[h.hubId] = h._seen; delete h._seen; } else if (h.err && prevBc && prevBc.seen && prevBc.seen.date === TODAY && prevBc.seen.hubs && prevBc.seen.hubs[h.hubId]) seenOut.hubs[h.hubId] = prevBc.seen.hubs[h.hubId]; }); // lỗi 1 hub → giữ nguyên mã đã lưu
-    out.bcReport = { generatedAt: out.updatedAt, date: TODAY, hourVN: HOUR, moiMode: HOUR >= 14 ? '0-12h' : '0-6h', hubs: rep, seen: seenOut };
+    out.bcReport = { generatedAt: NOW_ISO, date: TODAY, hourVN: HOUR, moiMode: HOUR >= 14 ? '0-12h' : '0-6h', hubs: rep, seen: seenOut };
   } catch (e) { out.bcReport = { err: String((e && e.message) || e) }; }
 
   // ===== HÀNG VỀ REALTIME (p52 "Báo cáo hàng về Realtime") — TỔNG ĐƠN MỚI NGÀY N của 32 BC Lạng Sơn + Quảng Ninh =====
@@ -496,7 +500,7 @@ async function pool(items, n, fn) {
     let yest = (prevHm && prevHm.yesterday) || null;
     if (prevHm && prevHm.date && prevHm.date !== TODAY) yest = { date: prevHm.date, mode: prevHm.moiMode, hubs: Object.fromEntries((prevHm.hubs || []).filter(x => x.donMoi != null).map(x => [x.name, x.donMoi])) };
     const accFrom = (prevSameDay && prevHm.accFrom != null) ? prevHm.accFrom : HOUR; // giờ bắt đầu tích lũy mã đơn trong ngày (<=7 là đủ cả ngày)
-    out.hangMoi = { generatedAt: out.updatedAt, date: TODAY, hourVN: HOUR, moiMode: HOUR >= 14 ? '0-12h' : '0-6h', accFrom, accFromT, hubs: hmRes, yesterday: yest, seen: seenHm };
+    out.hangMoi = { generatedAt: NOW_ISO, date: TODAY, hourVN: HOUR, moiMode: HOUR >= 14 ? '0-12h' : '0-6h', accFrom, accFromT, hubs: hmRes, yesterday: yest, seen: seenHm };
     console.log(`[hangmoi] ${hmRes.length} hub, tổng đơn mới ${hmRes.reduce((s2, x) => s2 + (x.donMoi || 0), 0)} (mốc ${out.hangMoi.moiMode}), lỗi ${hmRes.filter(x => x.err).length}`);
   } catch (e) { if (e && e.auth) throw e; out.hangMoi = { err: String((e && e.message) || e) }; }
 
@@ -539,7 +543,7 @@ async function pool(items, n, fn) {
       return { name: h.name, hubId: id, am: h.am, tinh: h.tinh, lcGiao, lcTra, traShop };
     }
     const tlRes = await pool(TL_HUBS, 4, async (h) => { try { return await tonLcFor(h); } catch (e) { if (e.auth) throw e; return { name: h.name, hubId: String(h.id), am: h.am, tinh: h.tinh, lcGiao: null, lcTra: null, traShop: null, err: String((e && e.message) || e) }; } });
-    out.tonLC = { generatedAt: out.updatedAt, date: TODAY, hourVN: HOUR, buckets: { lc: LC_B, tra: TRA_B }, hubs: tlRes };
+    out.tonLC = { generatedAt: NOW_ISO, date: TODAY, hourVN: HOUR, buckets: { lc: LC_B, tra: TRA_B }, hubs: tlRes };
     const _sm = (k) => tlRes.reduce((s2, x) => s2 + (x[k] ? x[k].reduce((a, b) => a + b, 0) : 0), 0);
     console.log(`[tonlc] ${tlRes.length} hub — LC giao ≥36h ${_sm('lcGiao')} · LC trả ≥36h ${_sm('lcTra')} · Trả Shop ≥48h ${_sm('traShop')} · lỗi ${tlRes.filter(x => x.err).length}`);
   } catch (e) { if (e && e.auth) throw e; out.tonLC = { err: String((e && e.message) || e) }; }
