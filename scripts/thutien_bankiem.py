@@ -43,6 +43,7 @@ BK = float(os.environ.get('THUTIEN_BACKOFF_SCALE') or 1)   # hệ số thời gi
 DEADLINE = time.time() + float(os.environ.get('THUTIEN_MAX_SEC') or 900)   # tổng thời gian quét tối đa 15' → GHN chặn mãi thì vẫn kịp báo cáo trong khung 23h (BC lỗi ghi rõ)
 
 class AuthErr(Exception): pass
+class ReqsigErr(Exception): pass   # GHN thêm chữ ký request (reqsig) cho /api/lastmile/* — KHÁC token hết hạn
 def call(hub_id, offset, limit=100):
     # GHN hay trả HTTP 429 (giới hạn tốc độ) — nhất là lúc ~23h khi chốt COD + gtc-live chạy cùng token → chờ theo Retry-After / lùi mũ, thử tới 8 lần
     body = json.dumps({'hub_id': str(hub_id), 'paging': {'offset': offset, 'limit': limit}, 'hubId': str(hub_id)}).encode()
@@ -55,7 +56,11 @@ def call(hub_id, offset, limit=100):
             if isinstance(j.get('data'), dict) and (j['data'].get('data') is None or isinstance(j['data'].get('data'), list)): return j   # BC đã xong hết → data.data = null, total = 0
             last = f"code {j.get('code')} {str(j.get('message'))[:60]}"; time.sleep((1 + k) * BK)
         except urllib.error.HTTPError as e:
-            if e.code in (401, 403): raise AuthErr()
+            if e.code in (401, 403):
+                try: _b = e.read().decode('utf-8', 'ignore')
+                except Exception: _b = ''
+                if 'reqsig' in _b.lower(): raise ReqsigErr()
+                raise AuthErr()
             last = f'HTTP {e.code}'
             if e.code == 429:
                 try: ra = float(e.headers.get('Retry-After') or 0)
@@ -98,6 +103,8 @@ try:
         for i in bad:
             if time.time() > DEADLINE: break
             HUBROWS[i] = work(HUBS[i]); time.sleep(1.2 * BK)
+except ReqsigErr:
+    print('REQSIG: API get-collect-scan-orders dang bi GHN khoa chu ky request (reqsig_missing) — KHONG phai token het han; khong co nguon thay the nen khong quet duoc Thu tien - Ban kiem.'); sys.exit(2)
 except AuthErr:
     print('TOKEN GHN het han / khong hop le — can cap nhat GHN_SESSION'); sys.exit(2)
 
