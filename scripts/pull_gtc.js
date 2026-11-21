@@ -274,7 +274,7 @@ async function pool(items, n, fn) {
   // KHÔNG quét phần phụ thuộc chuyến đi (GTC/đã gán/NV/COD) — giữ nguyên số lần quét gần nhất (KHÔNG bịa 0),
   // chỉ cập nhật phần không cần chuyến đi (Báo cáo 1 mục chưa gán+đơn mới, Báo cáo 2, hangMoi, tonLC).
   const NOW_ISO = new Date().toISOString();
-  if (DATA_TOKEN) {   // nguồn chính thức: Data API
+  if (DATA_TOKEN && !COD_ONLY) {   // nguồn chính thức: Data API (CHỐT COD không dùng: COD trong kho không đầy đủ → thà báo lỗi còn hơn chốt sai tiền)
     try {
       DA = await loadTripDataFromApi();
       HUBS = HUBS.filter(h => COD_TINH.includes(h.tinh));   // token chỉ thấy Vùng XBG; dashboard vốn đã lọc 2 tỉnh LSO+QNI
@@ -362,6 +362,13 @@ async function pool(items, n, fn) {
   const pendOrders = [...pendMap.values()].sort((a, b) => b.cod - a.cod);
   const pendAgg = (keyFn) => { const m = {}; pendOrders.forEach(o => { const k = keyFn(o); const g = m[k] || (m[k] = { key: k, soDon: 0, tongCod: 0 }); g.soDon++; g.tongCod += o.cod; }); return Object.values(m).sort((a, b) => b.tongCod - a.tongCod); };
   out.codPending = { nguong: 1000000, soDon: pendOrders.length, tongCod: pendOrders.reduce((s, o) => s + o.cod, 0), byTinh: pendAgg(o => o.tinh), byAM: pendAgg(o => o.am), byBC: pendAgg(o => o.bc), orders: pendOrders };
+  // ⚠️ COD trong kho Data API KHÔNG đầy đủ (cột COD chỉ có ở ~913/36.000 đơn giao; đơn TTS luôn 0): API cũ cuối ngày 18/11 báo 579 đơn GTB ≥1tr/1,2 tỷ (32 BC),
+  // kho chỉ ~86–109 đơn/ngày. Công bố số thiếu = đối soát tiền hàng sai → KHÔNG ghi số, ghi err để các trang hiện "chưa có dữ liệu" (không bịa, không số 0).
+  if (DA) {
+    const _codErr = 'Kho Data API không có COD đầy đủ (thiếu ~85% đơn so với API cũ) — chưa thể kiểm COD giá trị cao; cần xin bảng đơn hàng có tiền thu hộ';
+    out.cod = { nguong: 1000000, err: _codErr };
+    out.codPending = null;
+  }
   }
   if (COD_ONLY) {
     fs.writeFileSync(path.join(ROOT, 'cod_chot.json'), JSON.stringify({ updatedAt: out.updatedAt, hourVN: HOUR, today: TODAY, hubsOk: hubs.length, hubsErr: errN, cod: out.cod, codPending: out.codPending }));
@@ -655,7 +662,7 @@ async function pool(items, n, fn) {
   } catch (e) { if (e && e.auth) throw e; out.tonLC = { err: String((e && e.message) || e) }; }
 
   fs.writeFileSync(path.join(ROOT, 'gtc_live.json'), JSON.stringify(out));
-  console.log(`[pull] OK hubsOk=${hubs.length} err=${errN} tripBlocked=${TRIP_BLOCKED} GTC=${out.vung.gtc} daGan=${out.vung.daGan} canGiao=${out.vung.canGiao} COD soDon=${out.cod.vung.soDon} tongCod=${out.cod.vung.tongCod} TTS<50k soDon=${out.ttsCod.soDon}`);
+  console.log(`[pull] OK hubsOk=${hubs.length} err=${errN} tripBlocked=${TRIP_BLOCKED} GTC=${out.vung.gtc} daGan=${out.vung.daGan} canGiao=${out.vung.canGiao} COD soDon=${out.cod.vung ? out.cod.vung.soDon : 'n/a (cod.err)'} tongCod=${out.cod.vung ? out.cod.vung.tongCod : 'n/a'} TTS<50k soDon=${out.ttsCod.soDon}`);
 
   // nối lịch sử (giữ 14 ngày gần nhất) để so cùng giờ hôm qua — bỏ qua khi TRIP_BLOCKED (số GTC/đã gán là số CŨ giữ lại,
   // không phải quan sát mới tại giờ này, ghi vào history sẽ làm sai lệch so sánh cùng giờ hôm qua)
