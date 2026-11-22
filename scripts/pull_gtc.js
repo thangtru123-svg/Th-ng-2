@@ -60,9 +60,9 @@ async function api(p, body, tries = 5) {
 
 /* ===== DATA API (kho dữ liệu GHN, SQL StarRocks) — nguồn chuyến đi CHÍNH THỨC thay API /lastmile/trip/* bị khoá reqsig =====
    · Token: biến môi trường DATA_API_TOKEN (GitHub Secret) — KHÔNG ghi vào mã nguồn, KHÔNG in ra log.
-   · Mỗi lần quét dùng 2 câu SQL (2 request trừ quota; /next không tính): ① tổng hợp theo hub × tài xế  ② đơn COD ≥ 1tr + chuyến treo qua ngày.
+   · Mỗi lần quét dùng 2 câu SQL (2 request trừ quota; /next không tính): ① tổng hợp theo hub × tài xế  ② đơn COD ≥ 1tr + đơn TTS COD<50k + chuyến treo qua ngày.
    · Phạm vi token: 35 hub Vùng XBG (gồm đủ 32 BC Lạng Sơn + Quảng Ninh). Dữ liệu trễ ~30 phút so với thực tế.
-   · Kho KHÔNG có COD của đơn TTS (cột COD của mã VNGH = 0) → mục "Đơn TTS COD < 50k" không dựng lại được từ nguồn này. */
+   · COD lấy từ cột collect_amount (varchar → CAST DOUBLE). ⚠️ Trước 22/11 cột này TRỐNG (chỉ contact_have_to_collect_amount ~3% đơn → thiếu ~85%); Data Team đã nạp đủ (cả lịch sử) ngày 22/11 — nếu số COD tụt bất thường (<~400 GTB≥1tr/ngày) hãy kiểm lại cột này trước. */
 const DATA_TOKEN = (process.env.DATA_API_TOKEN || '').trim();
 const DATA_BASE = (process.env.DATA_API_BASE || 'https://data-api-provider.ghn.vn').replace(/\/+$/, '');
 const TODAY_ISO = `${String(TODAY).slice(0, 4)}-${String(TODAY).slice(4, 6)}-${String(TODAY).slice(6, 8)}`;
@@ -109,15 +109,19 @@ async function loadTripDataFromApi() {
 FROM ${T} t LEFT JOIN ${I} i ON i.trip_code = t.trip_code AND i.dt = t.dt
 WHERE t.dt = '${TODAY_ISO}' AND t.status IN ('FINISHED','ON_TRIP')
 GROUP BY t.hub_id, t.driver_id, t.driver_name`;
-  const q2 = `SELECT 'cod' AS kind, t.hub_id AS hub_id, t.driver_id AS driver_id, t.driver_name AS driver_name, i.order_code AS code, CAST(i.contact_have_to_collect_amount AS DOUBLE) AS cod, CAST(i.is_updated AS INT) AS upd, CAST(i.is_succeeded AS INT) AS ok, i.fail_code AS fail_code, i.fail_note AS fail_note, CAST(t.dt AS VARCHAR) AS d
+  const q2 = `SELECT 'cod' AS kind, t.hub_id AS hub_id, t.driver_id AS driver_id, t.driver_name AS driver_name, i.order_code AS code, CAST(i.collect_amount AS DOUBLE) AS cod, CAST(i.is_updated AS INT) AS upd, CAST(i.is_succeeded AS INT) AS ok, i.fail_code AS fail_code, i.fail_note AS fail_note, CAST(t.dt AS VARCHAR) AS d
 FROM ${I} i JOIN ${T} t ON i.trip_code = t.trip_code AND i.dt = t.dt
-WHERE t.dt = '${TODAY_ISO}' AND t.status IN ('FINISHED','ON_TRIP') AND i.type = 'DELIVER' AND i.contact_have_to_collect_amount >= 1000000
+WHERE t.dt = '${TODAY_ISO}' AND t.status IN ('FINISHED','ON_TRIP') AND i.type = 'DELIVER' AND CAST(i.collect_amount AS DOUBLE) >= 1000000
+UNION ALL
+SELECT 'tts' AS kind, t.hub_id AS hub_id, t.driver_id AS driver_id, t.driver_name AS driver_name, i.order_code AS code, CAST(i.collect_amount AS DOUBLE) AS cod, CAST(i.is_updated AS INT) AS upd, CAST(i.is_succeeded AS INT) AS ok, i.fail_code AS fail_code, i.fail_note AS fail_note, CAST(t.dt AS VARCHAR) AS d
+FROM ${I} i JOIN ${T} t ON i.trip_code = t.trip_code AND i.dt = t.dt
+WHERE t.dt = '${TODAY_ISO}' AND t.status IN ('FINISHED','ON_TRIP') AND i.type = 'DELIVER' AND i.order_code LIKE 'VNGH%' AND CAST(i.collect_amount AS DOUBLE) > 0 AND CAST(i.collect_amount AS DOUBLE) < 50000
 UNION ALL
 SELECT 'hang' AS kind, hub_id, driver_id, driver_name, trip_code AS code, CAST(0 AS DOUBLE) AS cod, CAST(0 AS INT) AS upd, CAST(0 AS INT) AS ok, CAST(NULL AS VARCHAR) AS fail_code, CAST(NULL AS VARCHAR) AS fail_note, CAST(dt AS VARCHAR) AS d
 FROM ${T} WHERE status = 'ON_TRIP' AND dt < '${TODAY_ISO}' AND dt >= '${d0}'`;
   const r1 = await dataApiQuery(q1);
   const r2 = await dataApiQuery(q2);
-  const drivers = {}, cod = {}, hang = {};
+  const drivers = {}, cod = {}, hang = {}, tts = {};
   r1.rows.forEach(r => {
     const h = String(r.hub_id);
     (drivers[h] = drivers[h] || []).push({ id: String(r.driver_id || ''), name: r.driver_name || '', nTrip: +r.n_trip || 0, nChuaXong: +r.n_chua_xong || 0,
@@ -126,9 +130,10 @@ FROM ${T} WHERE status = 'ON_TRIP' AND dt < '${TODAY_ISO}' AND dt >= '${d0}'`;
   r2.rows.forEach(r => {
     const h = String(r.hub_id);
     if (r.kind === 'cod') (cod[h] = cod[h] || []).push({ ma: r.code, cod: +r.cod || 0, ok: +r.ok === 1, failCode: r.fail_code || '', failNote: r.fail_note || '', nv: r.driver_name || '', idnv: String(r.driver_id || '') });
+    else if (r.kind === 'tts') (tts[h] = tts[h] || []).push({ ma: r.code, cod: +r.cod || 0, ok: +r.ok === 1, failCode: r.fail_code || '', nv: r.driver_name || '', idnv: String(r.driver_id || '') });
     else if (r.kind === 'hang') (hang[h] = hang[h] || []).push({ nv: r.driver_name || '(không rõ)', code: r.code, cd: +String(r.d).replace(/-/g, '') });
   });
-  return { drivers, cod, hang, quota: r2.quota, nHubs: Object.keys(drivers).length, nDriverRows: r1.rows.length, nCod: r2.rows.filter(r => r.kind === 'cod').length, nHang: r2.rows.filter(r => r.kind === 'hang').length };
+  return { drivers, cod, hang, tts, quota: r2.quota, nHubs: Object.keys(drivers).length, nDriverRows: r1.rows.length, nCod: r2.rows.filter(r => r.kind === 'cod').length, nTts: r2.rows.filter(r => r.kind === 'tts').length, nHang: r2.rows.filter(r => r.kind === 'hang').length };
 }
 
 async function proc(h) {
@@ -244,6 +249,7 @@ async function proc(h) {
       if (o.failCode || o.failNote) codFail.push({ ma: o.ma, cod: o.cod, nv: o.nv, idnv: o.idnv, note: o.failNote || String(o.failCode) });
       else codPend.push({ ma: o.ma, cod: o.cod, nv: o.nv, idnv: o.idnv });
     });
+    if (wantTts) (DA.tts[hub] || []).forEach(o => { ttsCod.push({ ma: o.ma, cod: o.cod, st: o.ok ? 'Giao thành công' : (o.failCode ? 'Giao thất bại' : 'Đang giao'), nv: o.nv, idnv: o.idnv }); });
     (DA.hang[hub] || []).forEach(t => { hangM[t.code] = { nv: t.nv, ngay: fmtCd(t.cd), cd: t.cd }; });
   }
   const nv = Object.values(nvM).filter(n => n.ganGiao > 0 || n.ganLay > 0 || n.gtc > 0)
@@ -274,11 +280,11 @@ async function pool(items, n, fn) {
   // KHÔNG quét phần phụ thuộc chuyến đi (GTC/đã gán/NV/COD) — giữ nguyên số lần quét gần nhất (KHÔNG bịa 0),
   // chỉ cập nhật phần không cần chuyến đi (Báo cáo 1 mục chưa gán+đơn mới, Báo cáo 2, hangMoi, tonLC).
   const NOW_ISO = new Date().toISOString();
-  if (DATA_TOKEN && !COD_ONLY) {   // nguồn chính thức: Data API (CHỐT COD không dùng: COD trong kho không đầy đủ → thà báo lỗi còn hơn chốt sai tiền)
+  if (DATA_TOKEN) {   // nguồn chính thức: Data API (cả chốt COD 23h30)
     try {
       DA = await loadTripDataFromApi();
       HUBS = HUBS.filter(h => COD_TINH.includes(h.tinh));   // token chỉ thấy Vùng XBG; dashboard vốn đã lọc 2 tỉnh LSO+QNI
-      console.log(`[data-api] OK — ${DA.nHubs} hub · ${DA.nDriverRows} dòng tài xế · ${DA.nCod} đơn COD≥1tr · ${DA.nHang} chuyến treo · quota còn lại ${DA.quota}`);
+      console.log(`[data-api] OK — ${DA.nHubs} hub · ${DA.nDriverRows} dòng tài xế · ${DA.nCod} đơn COD≥1tr · ${DA.nTts} đơn TTS COD<50k · ${DA.nHang} chuyến treo · quota còn lại ${DA.quota}`);
     } catch (e) { console.error('[data-api] LỖI → dùng đường cũ / giữ số lần quét trước:', String((e && e.message) || e).slice(0, 200)); DA = null; }
   } else console.log('[data-api] chưa có DATA_API_TOKEN — dùng đường cũ');
   let TRIP_BLOCKED = false;
@@ -362,13 +368,6 @@ async function pool(items, n, fn) {
   const pendOrders = [...pendMap.values()].sort((a, b) => b.cod - a.cod);
   const pendAgg = (keyFn) => { const m = {}; pendOrders.forEach(o => { const k = keyFn(o); const g = m[k] || (m[k] = { key: k, soDon: 0, tongCod: 0 }); g.soDon++; g.tongCod += o.cod; }); return Object.values(m).sort((a, b) => b.tongCod - a.tongCod); };
   out.codPending = { nguong: 1000000, soDon: pendOrders.length, tongCod: pendOrders.reduce((s, o) => s + o.cod, 0), byTinh: pendAgg(o => o.tinh), byAM: pendAgg(o => o.am), byBC: pendAgg(o => o.bc), orders: pendOrders };
-  // ⚠️ COD trong kho Data API KHÔNG đầy đủ (cột COD chỉ có ở ~913/36.000 đơn giao; đơn TTS luôn 0): API cũ cuối ngày 18/11 báo 579 đơn GTB ≥1tr/1,2 tỷ (32 BC),
-  // kho chỉ ~86–109 đơn/ngày. Công bố số thiếu = đối soát tiền hàng sai → KHÔNG ghi số, ghi err để các trang hiện "chưa có dữ liệu" (không bịa, không số 0).
-  if (DA) {
-    const _codErr = 'Kho Data API không có COD đầy đủ (thiếu ~85% đơn so với API cũ) — chưa thể kiểm COD giá trị cao; cần xin bảng đơn hàng có tiền thu hộ';
-    out.cod = { nguong: 1000000, err: _codErr };
-    out.codPending = null;
-  }
   }
   if (COD_ONLY) {
     fs.writeFileSync(path.join(ROOT, 'cod_chot.json'), JSON.stringify({ updatedAt: out.updatedAt, hourVN: HOUR, today: TODAY, hubsOk: hubs.length, hubsErr: errN, cod: out.cod, codPending: out.codPending }));
@@ -378,9 +377,7 @@ async function pool(items, n, fn) {
 
   // ===== Đơn TTS (mã VNGH) có COD < 50k — LSO+QNI, mọi trạng thái (dedup theo mã, ưu tiên: thành công > đang giao > thất bại) =====
   // reqsig khoá /lastmile/trip/* → không có h.ttsCod mới: giữ nguyên out.ttsCod đã carry-forward từ gtc_live.json cũ (set ở nhánh TRIP_BLOCKED phía trên).
-  if (DA) {
-    out.ttsCod = { nguong: 50000, err: 'Kho Data API không có COD của đơn TTS (mã VNGH) — cần xin quyền bảng đơn hàng' };
-  } else if (!TRIP_BLOCKED) {
+  if (!TRIP_BLOCKED) {
     const _stPri = { 'Giao thành công': 3, 'Đang giao': 2, 'Giao thất bại': 1 };
     const ttsMap = new Map();
     for (const h of hubs) (h.ttsCod || []).forEach(o => {
