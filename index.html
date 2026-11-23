@@ -8269,8 +8269,8 @@ async function buildRotLCPage(){
     const q=byIso[iso]||(byIso[iso]={vol:0,pick:0,lc:0,am:{},bc:{}});
     q.vol+=vol; q.pick+=pick; q.lc+=lc;
     const ka=nrm(r[0]), kb=nrm(r[1]);
-    if(ka){ const a=q.am[ka]||(q.am[ka]={ltc:0,pick:0,vol:0}); a.ltc+=lc; a.pick+=pick; a.vol+=vol; }
-    const b=q.bc[kb]||(q.bc[kb]={ltc:0,pick:0,vol:0}); b.ltc+=lc; b.pick+=pick; b.vol+=vol;
+    if(ka){ const a=q.am[ka]||(q.am[ka]={ltc:0,pick:0,vol:0}); a.ltc+=pick; a.pick+=pick; a.vol+=vol; }   // ltc = mẫu số Rớt/LTC = đơn đã lấy thành công (Volume×%LTC) cộng Hàng tồn + Hàng mới Ca 1
+    const b=q.bc[kb]||(q.bc[kb]={ltc:0,pick:0,vol:0}); b.ltc+=pick; b.pick+=pick; b.vol+=vol;
    });
    const isoWant=dmy2iso(ltcOvDay||d0);
    const isoUse=byIso[isoWant]?isoWant:[...last7Iso2].filter(x=>byIso[x]).sort().reverse()[0];
@@ -8323,7 +8323,7 @@ async function buildRotLCPage(){
     const top=rk.slice(0,3).map(x=>`<b>${x.name}</b> (${x.ratio.toFixed(1)}% · rớt ${fmt(x.rot)}/LTC ${fmt(x.ltc)})`).join(' · ');
     ratioLine=`<br>• 🔺 <b>${withAM?'Bưu Cục':'AM'} có tỉ lệ Rớt/Đơn LTC${kind==='TTS'?' TTS':''} ngày ${dhdr(d0)} cao nhất</b> — rớt lớn so lượng đã luân chuyển, cần soát tải & chốt LC: ${top||'—'}.`
       +(regRatio!=null?`<br>• Tỉ lệ Rớt/LTC${kind==='TTS'?' TTS':''} toàn Vùng ngày ${dhdr(d0)}: <b>${regRatio.toFixed(1)}%</b> (${fmt(grandD0)} rớt / ${fmt(regLTC)} đơn LTC).`:'')
-      +(kind==='TTS'?`<br><span style="font-size:11px;color:var(--text-sub)">* Đơn LTC TTS = Volume × %LC (sheet LTC_TTS, Hàng mới Ca 1 + Hàng tồn) ${ttsDay?'ngày '+dhdr(ttsDay):'ngày gần nhất'}; rớt TTS = đơn rớt có Loại khách hàng = TTS (nguồn Data rớt LC).</span>`:`<br><span style="font-size:11px;color:var(--text-sub)">* Đơn LTC = Volume × %LC ngày gần nhất (đã luân chuyển). AM gộp trong sheet LTC (VD "Lê Đắc Vinh, Bùi Xuân Quang") dùng chung số LTC nên tỉ lệ mang tính tương đối.</span>`);
+      +(kind==='TTS'?`<br><span style="font-size:11px;color:var(--text-sub)">* Đơn LTC TTS = đơn đã lấy thành công = Volume × %LTC, cộng Hàng mới Ca 1 + Hàng tồn (sheet LTC_TTS) ${ttsDay?'ngày '+dhdr(ttsDay):'ngày gần nhất'}; rớt TTS = đơn rớt có Loại khách hàng = TTS (nguồn Data rớt LC).</span>`:`<br><span style="font-size:11px;color:var(--text-sub)">* Đơn LTC = Volume × %LC ngày gần nhất (đã luân chuyển). AM gộp trong sheet LTC (VD "Lê Đắc Vinh, Bùi Xuân Quang") dùng chung số LTC nên tỉ lệ mang tính tương đối.</span>`);
    }
    const ana=`<div class="analysis-box"><b>📌 Nhận định:</b><br>
      • Tổng rớt LC ${kind} ngày <b>${dhdr(d0)}</b>: <b>${fmt(st.c0)} đơn</b>${d1?` — ${st.up?'tăng':'giảm'} ${fmt(Math.abs(st.delta))} đơn (${st.up?'+':''}${st.pctD.toFixed(1)}%) so ${dhdr(d1)}`:''}.<br>
@@ -8393,7 +8393,7 @@ async function buildRotLCPage(){
   // ==== Box tổng quan Lấy & Luân chuyển riêng đơn TTS (nguồn LTC_TTS) — cùng 4 tile như box Total ====
   let ovTTS='';
   if(ttsOv){
-   const dd=ttsDay||d0, rotT=TTS.c0, ratio=ttsOv.ltc>0?rotT/ttsOv.ltc*100:null, share=(ltcOv&&ltcOv.vol>0)?ttsOv.vol/ltcOv.vol*100:null;
+   const dd=ttsDay||d0, rotT=TTS.c0, ratio=ttsOv.pick>0?rotT/ttsOv.pick*100:null, share=(ltcOv&&ltcOv.vol>0)?ttsOv.vol/ltcOv.vol*100:null;
    const tile2=(bg,bd,lab,big,bigc,sub)=>`<div style="flex:1;min-width:180px;background:${bg};border-left:4px solid ${bd};border-radius:10px;padding:14px 16px"><div style="color:var(--text-sub);font-size:12px">${lab}</div><div style="font-size:28px;font-weight:800;color:${bigc}">${big}</div><div style="font-size:12px;color:var(--text-sub);margin-top:2px">${sub}</div></div>`;
    ovTTS=`<div class="card" id="rotlcOvTTS" style="margin-bottom:16px">
      <div style="font-weight:800;font-size:16px;margin-bottom:12px">📦 Tổng quan Lấy & Luân chuyển — Đơn TTS <span style="font-size:12px;color:var(--text-sub);font-weight:500">(ngày ${dhdr(dd)}${dmy2iso(dd)!==dmy2iso(d0)?' — LTC_TTS mới nhất':''})</span></div>
@@ -8401,9 +8401,9 @@ async function buildRotLCPage(){
       ${tile2('#F4F6FA','#6B7EA6','Tổng đơn TTS cần LC (Volume)',`${fmt(ttsOv.vol)} <span style="font-size:13px;font-weight:600">đơn</span>`,'#1F3864',share!=null?`Chiếm <b>${share.toFixed(1)}%</b> Volume Total`:'Hàng mới Ca 1 + Hàng tồn')}
       ${tile2('#EEF6F1','#4C9A6A','Đã lấy thành công (LTC) — TTS',`${fmt(ttsOv.pick)} <span style="font-size:13px;font-weight:600">đơn</span>`,'#2F7D50',`%LTC (lấy TC): <b>${(ttsOv.pLTC*100).toFixed(1)}%</b>${ltcOv?` · Total ${(ltcOv.pLTC*100).toFixed(1)}%`:''}`)}
       ${tile2('#EAF3FB','#3D6FB4','Đã LC (Luân chuyển) &amp; % Ontime LC — TTS',`${fmt(ttsOv.ltc)} <span style="font-size:13px;font-weight:600">đơn</span>`,'#2B5FA0',`% Đã LC (Ontime LC): <b style="color:#2B5FA0">${(ttsOv.pLC*100).toFixed(1)}%</b>${ltcOv?` · Total ${(ltcOv.pLC*100).toFixed(1)}%`:''}`)}
-      ${tile2('#FBF1E9','#C56B4E','Rớt LC TTS (ngày '+dhdr(d0).slice(0,5)+')',`${fmt(rotT)} <span style="font-size:13px;font-weight:600">đơn</span>`,'#B4552F',ratio!=null?`Rớt/LTC TTS: <b>${ratio.toFixed(1)}%</b>${(ltcOv&&ltcOv.vol>0)?` · Total ${(T.c0/Math.round(ltcOv.vol*ltcOv.pLC)*100).toFixed(1)}%`:''}`:'—')}
+      ${tile2('#FBF1E9','#C56B4E','Rớt LC TTS (ngày '+dhdr(d0).slice(0,5)+')',`${fmt(rotT)} <span style="font-size:13px;font-weight:600">đơn</span>`,'#B4552F',ratio!=null?`Rớt/LTC TTS: <b>${ratio.toFixed(1)}%</b> (${fmt(rotT)} rớt / ${fmt(ttsOv.pick)} đơn LTC)`:'—')}
      </div>
-     <div style="margin-top:10px;color:var(--text-sub);font-size:12px">* Đã lấy = Volume × %LTC · Đã LC = Volume × %LC (nguồn sheet <b>LTC_TTS</b>, cộng Hàng mới Ca 1 + Hàng tồn, 32 Bưu Cục). Rớt LC TTS = đơn rớt có Loại khách hàng = TTS (nguồn Data rớt LC), thống kê riêng nên không cộng thẳng vào Volume.</div>
+     <div style="margin-top:10px;color:var(--text-sub);font-size:12px">* Đã lấy (LTC) = Volume × %LTC · Đã LC = Volume × %LC (nguồn sheet <b>LTC_TTS</b>, cộng Hàng mới Ca 1 + Hàng tồn, 32 Bưu Cục). Rớt/LTC TTS = rớt TTS ÷ đơn đã lấy thành công (cộng cả 2 loại hàng). Rớt LC TTS = đơn rớt có Loại khách hàng = TTS (nguồn Data rớt LC).</div>
    </div>`;
   }else{
    ovTTS=`<div class="card" id="rotlcOvTTS" style="margin-bottom:16px"><div style="padding:4px 2px;color:var(--text-sub);font-size:13px;line-height:1.7">📦 <b>Tổng quan Lấy & Luân chuyển — Đơn TTS:</b> chưa hiển thị được — ${String(ttsErr||'không có dữ liệu').replace(/</g,'&lt;')} <button style="margin-left:6px;background:#16A34A;color:#fff;border:1px solid #16A34A;border-radius:8px;padding:3px 10px;font-size:12px;font-weight:700;cursor:pointer" onclick="buildRotLCPage()">🔄 Tải lại</button></div></div>`;
@@ -8412,8 +8412,8 @@ async function buildRotLCPage(){
   el.innerHTML=head+ovLC+ovTTS+ov
    +tbl(T.arrAM,'Bảng 1 — Rớt LC Total theo AM',false,'rotlcT1',T,'Total',ltcByAM)
    +tbl(T.arrBC,'Bảng 2 — Rớt LC Total theo Bưu Cục',true,'rotlcT2',T,'Total')
-   +tbl(TTS.arrAM,'Bảng 3 — Rớt LC TTS theo AM',false,'rotlcT3',TTS,'TTS',ttsOv?ttsByAM:null,ttsOv?ttsOv.ltc:null)
-   +tbl(TTS.arrBC,'Bảng 4 — Rớt LC TTS theo Bưu Cục',true,'rotlcT4',TTS,'TTS',ttsOv?ttsByBC:null,ttsOv?ttsOv.ltc:null);
+   +tbl(TTS.arrAM,'Bảng 3 — Rớt LC TTS theo AM',false,'rotlcT3',TTS,'TTS',ttsOv?ttsByAM:null,ttsOv?ttsOv.pick:null)
+   +tbl(TTS.arrBC,'Bảng 4 — Rớt LC TTS theo Bưu Cục',true,'rotlcT4',TTS,'TTS',ttsOv?ttsByBC:null,ttsOv?ttsOv.pick:null);
   injectTgBtn('p27',()=>sendRotLCToTelegram(),'Bắn Rớt LC TG');
  }catch(e){ el.innerHTML=`<div class="card"><p style="padding:16px;color:#DC2626">Lỗi tải dữ liệu rớt LC: ${e.message}</p></div>`; }
 }
@@ -8443,7 +8443,7 @@ async function sendRotLCToTelegram(silent){
    ot+=`• Tổng đơn TTS cần LC (Volume): <b>${f(O.vol)} đơn</b>${R.ltcOv&&R.ltcOv.vol>0?` — ${(O.vol/R.ltcOv.vol*100).toFixed(1)}% Volume Total`:''}\n`;
    ot+=`• Đã lấy thành công (LTC): <b>${f(O.pick)} đơn</b> — %LTC ${(O.pLTC*100).toFixed(1)}%\n`;
    ot+=`• Đã LC (luân chuyển): <b>${f(O.ltc)} đơn</b> — % Ontime LC <b>${(O.pLC*100).toFixed(1)}%</b>\n`;
-   ot+=`• Rớt LC TTS: <b>${f(R.TTS.c0)} đơn</b>${O.ltc>0?` — Rớt/LTC <b>${(R.TTS.c0/O.ltc*100).toFixed(1)}%</b>`:''}${R.d1?` · ${R.TTS.up?'▲ +':'▼ '}${f(Math.abs(R.TTS.delta))} (${R.TTS.up?'+':''}${R.TTS.pctD.toFixed(1)}%) so ${R.dhdr(R.d1)}`:''}`;
+   ot+=`• Rớt LC TTS: <b>${f(R.TTS.c0)} đơn</b>${O.pick>0?` — Rớt/LTC <b>${(R.TTS.c0/O.pick*100).toFixed(1)}%</b> (${f(R.TTS.c0)}/${f(O.pick)} đơn LTC)`:''}${R.d1?` · ${R.TTS.up?'▲ +':'▼ '}${f(Math.abs(R.TTS.delta))} (${R.TTS.up?'+':''}${R.TTS.pctD.toFixed(1)}%) so ${R.dhdr(R.d1)}`:''}`;
    await _tgSend(CHAT,TH,ot);
    const elT=document.getElementById('rotlcOvTTS');
    if(elT){ try{ const img=await _captureEl('rotlcOvTTS'); await _tgSendPhoto(CHAT,TH,img,'📦 Tổng quan Lấy & Luân chuyển — Đơn TTS ('+dd+')'); }catch(e){ console.warn('[RotLC] chụp tổng quan TTS lỗi',e&&e.message); } }
