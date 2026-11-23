@@ -13,7 +13,8 @@ import re, base64, threading, functools, http.server
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SES = os.environ.get('GHN_SESSION')
-if not SES and not os.environ.get('THUTIEN_FIXTURE'): print('THIEU env GHN_SESSION'); sys.exit(1)
+INPUT = os.environ.get('THUTIEN_INPUT')   # dữ liệu đã quét bằng Chrome (đọc trang Thu tiền - bắn kiểm đã đăng nhập) khi API bị GHN khoá reqsig → bỏ qua bước gọi API
+if not SES and not os.environ.get('THUTIEN_FIXTURE') and not INPUT: print('THIEU env GHN_SESSION (hoac THUTIEN_INPUT)'); sys.exit(1)
 TG_TOKEN = os.environ.get('TG_TOKEN') or '7471088067:AAGje2KrjUTzlkIiU05h1bm21IUkB0J2J0s'
 TG_GROUP = int(os.environ.get('TG_CHAT') or -1003802272887)   # nhóm XBG; topic "Vấn đề chung" = General → không kèm thread
 TG_ADMIN = 1747498029                                          # @thangquada
@@ -72,7 +73,15 @@ def call(hub_id, offset, limit=100):
     raise RuntimeError(last or 'lỗi')
 
 FIX = json.load(open(os.environ['THUTIEN_FIXTURE'], encoding='utf-8')) if os.environ.get('THUTIEN_FIXTURE') else None   # chỉ để thử bố cục ảnh bằng dữ liệu giả — KHÔNG dùng khi chạy thật
+INP = json.load(open(INPUT, encoding='utf-8')) if INPUT else None   # {hubId: {ok, total, rows:[{id,nv,don,tien,luu,scan,dl}]}}
+def scan_input(h):
+    x = INP.get(str(h['id']))
+    if not x or not x.get('ok'): raise RuntimeError('không có dữ liệu quét Chrome cho BC này')
+    if x.get('total', -1) != len(x['rows']): raise RuntimeError(f"số dòng đọc được {len(x['rows'])} ≠ tổng {x.get('total')}")
+    return [{'idnv': str(r.get('id', '')), 'nv': r.get('nv') or '(không rõ)', 'trip': '', 'phieuThu': {'don': int(r.get('don') or 0), 'tien': int(r.get('tien') or 0)},
+             'banKiem': {'luuKho': int(r.get('luu') or 0), 'canBan': int(r.get('scan') or 0)}, 'deadline': r.get('dl', '')} for r in x['rows']]
 def scan(h):
+    if INP is not None: return scan_input(h)
     rows = []; off = 0; total = None
     while FIX is None:
         j = call(h['id'], off); d = j.get('data') or {}
@@ -135,6 +144,7 @@ PT.sort(key=lambda x: (x['am'], -x['tien'])); BK.sort(key=lambda x: (x['am'], -(
 
 PUB = [{**h, 'rows': [{k: v for k, v in r.items() if k not in ('idnv', 'nv', 'trip')} for r in h['rows']]} for h in HUBROWS]   # file json công khai trên web → bỏ tên/mã NV, chỉ giữ số đơn + số tiền
 doc = {'date': DAY, 'updatedAt': datetime.datetime.utcnow().replace(microsecond=0).isoformat() + 'Z', 'scope': 'LSO+QNI', 'hubsTotal': len(HUBROWS), 'hubsOk': hubs_ok,
+       'source': 'chrome' if INP is not None else 'api',
        'hubs': [h for h in PUB if h['rows'] or h.get('err')], 'allHubs': [{'name': h['name'], 'am': h['am'], 'tinh': h['tinh']} for h in HUBROWS]}
 if DRY: json.dump(doc, open(os.path.join(OUT, 'thutien_bankiem.json'), 'w', encoding='utf-8'), ensure_ascii=False, separators=(',', ':'))
 if not DRY:
