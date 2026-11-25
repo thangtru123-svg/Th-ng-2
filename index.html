@@ -5498,7 +5498,12 @@ function _tvTin1Msgs(T){
    +`• Nguyên nhân thiếu: ( Để trống, tự điền)\n`
    +`• Phương án xử lý: ( Để trống, tự điền)`;
  });
- const header=`<b>BÁO CÁO GTC 9H - NGÀY ${_tvToday()}</b>\nTrong 10 Bưu Cục có %GTC Total ngày N-1 (${_tvFD(T.day)}) thấp nhất Vùng, có ${T.keep.length} BC diện quản lý:`;
+ // Cảnh báo nguồn HRBP cũ: ngày "cập nhật" ghi ở ô A1 sheet; quá 7 ngày → báo rõ để không hiểu nhầm "hiện có"
+ const stl=T.keep.map(r=>r.db).find(d=>d&&d.stale&&d.upd);
+ let stNote='';
+ if(stl){const m=stl.upd.split('/').map(Number), days=Math.floor((Date.now()-new Date(m[2],m[1]-1,m[0]).getTime())/86400000);
+  stNote=`\n⚠️ Lưu ý: số "hiện có theo HRBP" lấy từ sheet định biên cập nhật lần cuối ngày ${stl.upd} (đã ${days} ngày), có thể không còn đúng thực tế.`;}
+ const header=`<b>BÁO CÁO GTC 9H - NGÀY ${_tvToday()}</b>\nTrong 10 Bưu Cục có %GTC Total ngày N-1 (${_tvFD(T.day)}) thấp nhất Vùng, có ${T.keep.length} BC diện quản lý:${stNote}`;
  return _tvChunk(header,blocks);
 }
 function _tvTin2Msgs(rows){
