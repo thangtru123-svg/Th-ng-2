@@ -5129,21 +5129,25 @@ async function buildDieuHanhPage(){
 }
 
 /* ===== p57 — THEO DÕI 5 BC VẬN HÀNH TỆ NHẤT (đại nhân đặt 26/11/2026) =====
-   · Mỗi ngày D xếp hạng 32 BC theo ĐIỂM TỆ (0-100, càng cao càng tệ) = trung bình "độ tệ" của 6 chỉ số:
-     %GTC Total · FD Total · ODR TTS · Aging >5 ngày · Backlog LC (giao+trả ≥36h) · Tồn trả Shop ≥48h.
+   · Mỗi ngày D xếp hạng 32 BC theo ĐIỂM TỆ (0-100, càng cao càng tệ) = trung bình "độ tệ" của 5 chỉ số (đại nhân chốt):
+     %GTC Total · FD Total · FD TTS · FD TTS có COD · ODR TTS. Aging >5 ngày · Backlog LC · Tồn trả Shop chỉ ĐI KÈM (không tính điểm).
      Độ tệ 1 chỉ số = (số BC tốt hơn) ÷ (n−1) → BC tệ nhất = 1, tốt nhất = 0 (đồng hạng tốt nhất = 0, nên chỉ số toàn 0 như Trả Shop không làm loãng điểm).
      BC cần ≥ 3 chỉ số có số mới được xếp; ODR bỏ BC có < 30 đơn (mẫu nhỏ).
    · 5 BC tệ nhất ngày D = danh sách theo dõi. Hôm sau (D+1) so lại: BC nào THOÁT (ra khỏi top 5), VẪN Ở LẠI, và BC MỚI vào; mỗi BC có chỉ số tốt lên hay tệ đi (Δ so ngày D).
    · Nguồn: sheet SID (GTC/FD/ODR theo BC, theo ngày) + Aging (_agingRows) + Backlog: lịch sử chụp mỗi sáng ≥9h VN (tonlc_hist_seed.json + gtc_live.json.tonLCHist).
      Backlog của ngày dữ liệu D = ảnh chụp sáng D+1 (tồn đầu ngày D+1 ≈ cuối ngày D). Thiếu ảnh chụp → chỉ số đó bỏ, điểm tính trên các chỉ số còn lại (có ghi chú). */
 const WL_N=5, WL_MINMET=3, WL_ODR_MINVOL=30;
-const WL_MET=[
+const WL_RANK=[            // 5 chỉ số TÍNH ĐIỂM TỆ (đại nhân chốt 26/11)
  {k:'gtc',lab:'%GTC<br>Total',hi:true,t:70,pct:true},
  {k:'fd',lab:'FD<br>Total',hi:false,t:7,pct:true,fd:true},
- {k:'odr',lab:'ODR<br>TTS',hi:true,t:94,pct:true,strict:true},
+ {k:'fdt',lab:'FD<br>TTS',hi:false,t:4.5,pct:true,fd:true,strict:true},
+ {k:'fdc',lab:'FD TTS<br>có COD',hi:false,t:5,pct:true,fd:true,strict:true},
+ {k:'odr',lab:'ODR<br>TTS',hi:true,t:94,pct:true,strict:true}];
+const WL_INFO=[            // 3 chỉ số ĐI KÈM — chỉ hiển thị sau khi đã chọn 5 BC, KHÔNG tính điểm
  {k:'ag5',lab:'Aging<br>&gt; 5 ngày',hi:false,t:null},
  {k:'lc',lab:'Backlog LC<br>giao+trả ≥36h',hi:false,t:null},
  {k:'ts',lab:'Tồn trả<br>Shop ≥48h',hi:false,t:null}];
+const WL_MET=[...WL_RANK,...WL_INFO];
 async function buildWatchPage(selDay){
  const el=document.getElementById('p57'); if(!el)return;
  const seq=(window._wlSeq=(window._wlSeq||0)+1);
@@ -5162,6 +5166,9 @@ async function buildWatchPage(selDay){
   D.gtcTotalBC.slice(1).forEach(r=>{const bc=(r[1]||'').trim(),d=dt(r[2]);if(!bc||!d||/grand total/i.test(bc))return;const vol=P(r[3]),p=P(r[5]);if(p==null||!(vol>0))return;(gtcM[bc]=gtcM[bc]||{})[d]={v:p*100,w:vol};});
   (D.odrBC||[]).slice(1).forEach(r=>{const bc=(r[1]||'').trim(),d=dt(r[2]);if(!bc||!d||/grand total/i.test(bc))return;const vol=P(r[3]),p=P(r[4]);if(p==null||!(vol>0))return;(odrM[bc]=odrM[bc]||{})[d]={v:p*100,w:vol};});
   (FD.totalBC||[]).slice(1).forEach(r=>{const bc=(r[0]||'').trim(),d=dt(r[1]);if(!bc||!d||/grand total/i.test(bc))return;const v=P(r[3]);if(v==null)return;(fdM[bc]=fdM[bc]||{})[d]={v:v*100};});
+  const fdtM={},fdcM={};
+  const fdRead=(rows,m)=>(rows||[]).slice(1).forEach(r=>{const bc=(r[0]||'').trim(),d=dt(r[1]);if(!bc||!d||/grand total/i.test(bc))return;const v=P(r[3]);if(v==null)return;(m[bc]=m[bc]||{})[d]={v:v*100};});
+  fdRead(FD.ttsBC,fdtM);fdRead(FD.codBC,fdcM);
   const ag=window._agingRows||[],agM={},agDays=new Set();
   ag.forEach(r=>{const d=dt(r[11]),bc=(r[2]||'').trim();if(!d||!bc)return;agDays.add(d);const o=(agM[bc]=agM[bc]||{});o[d]=(o[d]||0)+1;});
   const allDays=[...new Set(Object.values(gtcM).flatMap(o=>Object.keys(o)))].sort();
@@ -5188,12 +5195,13 @@ async function buildWatchPage(selDay){
    const bl=blOf(d), haveAg=agDays.has(d);
    const rows=bcs.map(bc=>{const o={bc,am:(cc[bc]&&cc[bc].length)?cc[bc].join(', '):'—',vals:{}};
     o.vals.gtc=gtcM[bc][d].v; o.vals.fd=fdM[bc]&&fdM[bc][d]?fdM[bc][d].v:null;
+    o.vals.fdt=fdtM[bc]&&fdtM[bc][d]?fdtM[bc][d].v:null; o.vals.fdc=fdcM[bc]&&fdcM[bc][d]?fdcM[bc][d].v:null;
     const od=odrM[bc]&&odrM[bc][d]; o.vals.odr=(od&&od.w>=WL_ODR_MINVOL)?od.v:null;
     o.vals.ag5=haveAg?((agM[bc]&&agM[bc][d])||0):null;
     const h=bl&&bl.hubs[bc]; o.vals.lc=h?h.g+h.t:null; o.vals.ts=h?h.s:null; return o;});
-   WL_MET.forEach(M=>{const arr=rows.filter(r=>r.vals[M.k]!=null);const n=arr.length;
+   WL_RANK.forEach(M=>{const arr=rows.filter(r=>r.vals[M.k]!=null);const n=arr.length;
     arr.forEach(r=>{let c=0;arr.forEach(q=>{if(M.hi?q.vals[M.k]>r.vals[M.k]:q.vals[M.k]<r.vals[M.k])c++;});(r.w=r.w||{})[M.k]=n>1?c/(n-1):0;});});
-   rows.forEach(r=>{const ks=WL_MET.filter(M=>r.vals[M.k]!=null);r.nMet=ks.length;r.score=ks.length>=WL_MINMET?ks.reduce((s,M)=>s+r.w[M.k],0)/ks.length*100:null;});
+   rows.forEach(r=>{const ks=WL_RANK.filter(M=>r.vals[M.k]!=null);r.nMet=ks.length;r.score=ks.length>=WL_MINMET?ks.reduce((s,M)=>s+r.w[M.k],0)/ks.length*100:null;});
    const ranked=rows.filter(r=>r.score!=null).sort((a,b)=>b.score-a.score||a.vals.gtc-b.vals.gtc||a.bc.localeCompare(b.bc,'vi'));
    ranked.forEach((r,i)=>{r.rank=i+1;});
    return {day:d,rows:ranked,all:rows,blSrc:bl?bl.src:null,haveAg,n:ranked.length,top:ranked.slice(0,WL_N)};};
@@ -5203,6 +5211,7 @@ async function buildWatchPage(selDay){
   const prevBy={};if(prev)prev.rows.forEach(r=>{prevBy[r.bc]=r;});
   // ---- định dạng ----
   const TH='style="background:#1F3864;color:#fff;padding:7px 8px;font-size:12px;font-weight:700;text-align:center;line-height:1.35;border:1px solid #fff"';
+  const THG='style="background:#64748B;color:#fff;padding:7px 8px;font-size:12px;font-weight:700;text-align:center;line-height:1.35;border:1px solid #fff"';
   const THR='style="background:#B91C1C;color:#fff;padding:7px 8px;font-size:12px;font-weight:700;text-align:center;line-height:1.35;border:1px solid #fff"';
   const TDL='text-align:left;padding:6px 10px;font-size:12.5px;border-bottom:1px solid var(--border);white-space:nowrap;font-weight:600;';
   const TDN='text-align:center;padding:6px 8px;font-size:12.5px;border-bottom:1px solid var(--border);white-space:nowrap;min-width:78px;';
@@ -5217,7 +5226,7 @@ async function buildWatchPage(selDay){
   const scoreCell=(r,pr)=>{const dl=(pr&&pr.score!=null)?Math.round(r.score-pr.score):null;return `<td style="${TDN}font-weight:800;background:#FFF4EC;color:#C8461A">${Math.round(r.score)}${dl==null?'':`<div style="font-size:10.5px;font-weight:700;color:${dl===0?'#9CA3AF':dl>0?'#B91C1C':'#15803D'}">${dl===0?'=':(dl>0?'▲ ':'▼ ')+Math.abs(dl)}</div>`}</td>`;};
   const rankCell=(r,pr)=>{const dl=pr?pr.rank-r.rank:null;return `<td style="${TDN}font-weight:700">${r.rank}<span style="color:var(--text-sub);font-weight:500">/${cur.n}</span>${dl==null?'':`<div style="font-size:10.5px;font-weight:700;color:${dl===0?'#9CA3AF':dl>0?'#B91C1C':'#15803D'}">${dl===0?'=':(dl>0?'▲ ':'▼ ')+Math.abs(dl)+' bậc'}</div>`}</td>`;};
   const stt=i=>`<td style="${TDN}min-width:40px;color:var(--text-sub);font-size:12px">${i+1}</td>`;
-  const head=(extra)=>`<thead><tr><th ${TH}>STT</th><th ${TH}>Bưu Cục</th><th ${TH}>AM</th>${extra||''}<th ${THR}>ĐIỂM TỆ<br>(0-100)</th><th ${TH}>Hạng tệ<br>/${cur.n} BC</th>${WL_MET.map(M=>`<th ${TH}>${M.lab}</th>`).join('')}</tr></thead>`;
+  const head=(extra)=>`<thead><tr><th ${TH}>STT</th><th ${TH}>Bưu Cục</th><th ${TH}>AM</th>${extra||''}<th ${THR}>ĐIỂM TỆ<br>(0-100)</th><th ${TH}>Hạng tệ<br>/${cur.n} BC</th>${WL_RANK.map(M=>`<th ${TH}>${M.lab}</th>`).join('')}${WL_INFO.map(M=>`<th ${THG}>${M.lab}</th>`).join('')}</tr></thead>`;
   const tag=(txt,bg,fg)=>`<td style="${TDN}background:${bg};color:${fg};font-weight:800">${txt}</td>`;
   // Bảng ①: 5 BC theo dõi hôm qua → hôm nay
   const rowFollow=(p0,i)=>{const r=curBy[p0.bc];const stay=curTopSet.has(p0.bc);
@@ -5252,16 +5261,15 @@ async function buildWatchPage(selDay){
   }else L.push('• Chưa có ngày liền trước để so sánh.');
   L.push(`• Danh sách theo dõi cho ngày kế tiếp (5 BC tệ nhất ${fD(day)}): ${cur.top.map(nm).join(' · ')}.`);
   const notes=[];
-  if(!cur.blSrc)notes.push(`chưa có ảnh chụp Backlog sáng ${fD(addDay(day,1))} nên 2 chỉ số Backlog tạm bỏ khỏi điểm ngày ${fD(day)}`);
+  if(!cur.blSrc)notes.push(`chưa có ảnh chụp Backlog sáng ${fD(addDay(day,1))} nên cột Backlog LC / Trả Shop ngày ${fD(day)} chưa có số (chỉ đi kèm, không ảnh hưởng điểm)`);
   else if(cur.blSrc==='live')notes.push(`Backlog ngày ${fD(day)} đang lấy từ lần quét mới nhất (chưa tới ảnh chụp chốt sáng ≥9h)`);
-  if(!cur.haveAg)notes.push(`chưa có dữ liệu Aging ngày ${fD(day)} nên chỉ số Aging tạm bỏ`);
-  if(prev&&!prev.blSrc)notes.push(`ngày ${fD(dPrev)} thiếu Backlog → điểm ${fD(dPrev)} tính trên các chỉ số còn lại, so sánh điểm chỉ mang tính tương đối`);
+  if(!cur.haveAg)notes.push(`chưa có dữ liệu Aging ngày ${fD(day)} nên cột Aging chưa có số (chỉ đi kèm, không ảnh hưởng điểm)`);
   if(notes.length)L.push(`<span style="color:#B45309">⚠️ ${notes.map(esc).join(' · ')}.</span>`);
-  const legend=`<div style="font-size:11.5px;color:var(--text-sub);margin:0 2px 14px;line-height:1.7"><b>Điểm tệ (0-100)</b> = trung bình "độ tệ" của 6 chỉ số (%GTC Total · FD Total · ODR TTS · Aging &gt;5 ngày · Backlog LC giao+trả ≥36h · Tồn trả Shop ≥48h); mỗi chỉ số độ tệ = số BC tốt hơn ÷ (n−1), tệ nhất = 100. Mũi tên xanh = tốt lên, đỏ = tệ đi so với ngày liền trước. Ô đỏ = không đạt mục tiêu (GTC ≥70 · FD ≤7 · ODR &gt;94 · Aging &gt;${BATTHUONG_AGING_NGUONG} đơn). ODR bỏ BC &lt;${WL_ODR_MINVOL} đơn. Backlog ngày D = ảnh chụp sáng D+1 (≥9h). FD hiển thị cắt 1 số lẻ.</div>`;
+  const legend=`<div style="font-size:11.5px;color:var(--text-sub);margin:0 2px 14px;line-height:1.7"><b>Điểm tệ (0-100)</b> = trung bình "độ tệ" của <b>5 chỉ số</b> (%GTC Total · FD Total · FD TTS · FD TTS có COD · ODR TTS); mỗi chỉ số độ tệ = số BC tốt hơn ÷ (n−1), tệ nhất = 100. <b>3 cột xám (Aging &gt;5 ngày · Backlog LC · Tồn trả Shop) chỉ đi kèm để theo dõi, KHÔNG tính vào điểm.</b> Mũi tên xanh = tốt lên, đỏ = tệ đi so với ngày liền trước. Ô đỏ = không đạt mục tiêu (GTC ≥70 · FD ≤7 · FD TTS &lt;4,5 · FD COD &lt;5 · ODR &gt;94 · Aging &gt;${BATTHUONG_AGING_NGUONG} đơn). ODR bỏ BC &lt;${WL_ODR_MINVOL} đơn. Backlog ngày D = ảnh chụp sáng D+1 (≥9h). FD hiển thị cắt 1 số lẻ.</div>`;
   const card=(ic,tt,body)=>`<div class="card" style="margin-bottom:18px"><div class="card-header"><div class="card-title"><div class="card-icon">${ic}</div>${tt}</div></div><div class="table-wrap" style="overflow-x:auto">${body}</div></div>`;
   const opts=days.map(d=>`<option value="${d}"${d===day?' selected':''}>${fD(d)}</option>`).join('');
   el.innerHTML=`<div class="page-header"><div class="page-title">🎯 Theo dõi 5 BC vận hành tệ nhất</div><div class="page-meta">
-    <span style="background:var(--orange-light);color:var(--orange-dark);padding:3px 10px;border-radius:20px;font-size:12px;font-weight:700">Toàn Vùng ${cur.n} BC · 6 chỉ số</span>
+    <span style="background:var(--orange-light);color:var(--orange-dark);padding:3px 10px;border-radius:20px;font-size:12px;font-weight:700">Toàn Vùng ${cur.n} BC · điểm tệ từ 5 chỉ số</span>
     <label style="font-size:12px;color:var(--text-sub)">Ngày dữ liệu <select onchange="buildWatchPage(this.value)" style="padding:3px 8px;border:1px solid var(--border);border-radius:8px;font-size:12.5px">${opts}</select></label>
     <button style="background:#16A34A;color:#fff;border:1px solid #16A34A;border-radius:8px;padding:5px 12px;font-size:12px;font-weight:700;cursor:pointer" onclick="buildWatchPage(document.querySelector('#p57 select').value)">🔄 Tải lại</button></div></div>
    <div class="analysis-box" style="margin-bottom:16px;line-height:1.8">${L.join('<br>')}</div>${legend}
