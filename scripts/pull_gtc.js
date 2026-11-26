@@ -658,6 +658,19 @@ async function pool(items, n, fn) {
     console.log(`[tonlc] ${tlRes.length} hub — LC giao ≥36h ${_sm('lcGiao')} · LC trả ≥36h ${_sm('lcTra')} · Trả Shop ≥48h ${_sm('traShop')} · lỗi ${tlRes.filter(x => x.err).length}`);
   } catch (e) { if (e && e.auth) throw e; out.tonLC = { err: String((e && e.message) || e) }; }
 
+  // LỊCH SỬ BACKLOG THEO NGÀY (đại nhân đặt 26/11 — theo dõi 5 BC tệ nhất mỗi ngày): chụp tonLC của lần quét ĐẦU TIÊN mỗi ngày từ 9h VN
+  // (tổng theo BC: g = LC giao ≥36h, t = LC trả ≥36h, s = Trả Shop ≥48h), giữ 60 ngày. Lưu ngay trong gtc_live.json vì workflow chỉ commit gtc_live.json + gtc_history.json.
+  // Hub lỗi/thiếu số KHÔNG ghi (không coi rỗng là 0); chỉ ghi khi ≥28/32 hub có số để tránh ảnh chụp thiếu.
+  try {
+    let prevH = {}; try { prevH = JSON.parse(fs.readFileSync(path.join(ROOT, 'gtc_live.json'), 'utf8')).tonLCHist || {}; } catch (e) { prevH = {}; }
+    if (HOUR >= 9 && !prevH[TODAY_ISO] && out.tonLC && !out.tonLC.err && Array.isArray(out.tonLC.hubs)) {
+      const hh = {}; const sm = (a) => a.reduce((x, y) => x + y, 0);
+      out.tonLC.hubs.forEach(x => { if (!x.err && x.lcGiao && x.lcTra && x.traShop) hh[x.name] = { g: sm(x.lcGiao), t: sm(x.lcTra), s: sm(x.traShop) }; });
+      if (Object.keys(hh).length >= 28) { prevH[TODAY_ISO] = { at: out.tonLC.generatedAt, hubs: hh }; console.log('[tonlc-hist] chụp backlog ngày ' + TODAY_ISO + ' (' + Object.keys(hh).length + ' hub)'); }
+    }
+    Object.keys(prevH).sort().slice(0, Math.max(0, Object.keys(prevH).length - 60)).forEach(k => { delete prevH[k]; });
+    out.tonLCHist = prevH;
+  } catch (e) { console.warn('[tonlc-hist] lỗi: ' + ((e && e.message) || e)); }
   fs.writeFileSync(path.join(ROOT, 'gtc_live.json'), JSON.stringify(out));
   console.log(`[pull] OK hubsOk=${hubs.length} err=${errN} tripBlocked=${TRIP_BLOCKED} GTC=${out.vung.gtc} daGan=${out.vung.daGan} canGiao=${out.vung.canGiao} COD soDon=${out.cod.vung ? out.cod.vung.soDon : 'n/a (cod.err)'} tongCod=${out.cod.vung ? out.cod.vung.tongCod : 'n/a'} TTS<50k soDon=${out.ttsCod.soDon}`);
 

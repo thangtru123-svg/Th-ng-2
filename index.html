@@ -222,6 +222,7 @@ tr.tot td{background:#FFF0EB!important;font-weight:800!important;border-top:2px 
  <button class="nav-item active" onclick="show('p0',this)"><span class="icon">📊</span>Dashboard Tổng Quan</button>
  <button class="nav-item" onclick="show('p43',this)" style="background:linear-gradient(135deg,rgba(22,101,52,0.16),rgba(34,197,94,0.1));border:1px solid rgba(22,101,52,0.35);font-weight:700"><span class="icon">🎯</span>Tổng Quan Target</button>
  <button class="nav-item" onclick="show('p56',this)" style="background:linear-gradient(135deg,rgba(241,93,41,0.22),rgba(251,146,60,0.12));border:1px solid rgba(241,93,41,0.5);font-weight:700"><span class="icon">🎯</span>Điều hành 6 Bưu Cục</button>
+ <button class="nav-item" onclick="show('p57',this)" style="background:linear-gradient(135deg,rgba(185,28,28,0.24),rgba(241,93,41,0.12));border:1px solid rgba(185,28,28,0.45);font-weight:700"><span class="icon">🎯</span>Theo dõi 5 BC tệ nhất</button>
  <button class="nav-item" onclick="show('p50',this)" style="background:linear-gradient(135deg,rgba(22,101,52,0.16),rgba(34,197,94,0.1));border:1px solid rgba(22,101,52,0.35);font-weight:700"><span class="icon">📉</span>Phân tích kéo vùng</button>
  <button class="nav-item" onclick="show('p44',this)" style="background:linear-gradient(135deg,rgba(220,38,38,0.2),rgba(241,93,41,0.1));border:1px solid rgba(220,38,38,0.4);font-weight:700"><span class="icon">🚨</span>Bưu Cục làm kém bất thường</button>
  <button class="nav-item" onclick="show('p45',this)" style="background:linear-gradient(135deg,rgba(185,28,28,0.24),rgba(241,93,41,0.12));border:1px solid rgba(185,28,28,0.45);font-weight:700"><span class="icon">⚠️</span>Bưu Cục Bất Ổn (Vùng)</button>
@@ -276,6 +277,7 @@ tr.tot td{background:#FFF0EB!important;font-weight:800!important;border-top:2px 
  <div class="page active" id="p0"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
 <div class="page" id="p43"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
 <div class="page" id="p56"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
+<div class="page" id="p57"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
 <div class="page" id="p44"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
 <div class="page" id="p45"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
 <div class="page" id="p46"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
@@ -5126,6 +5128,151 @@ async function buildDieuHanhPage(){
  }
 }
 
+/* ===== p57 — THEO DÕI 5 BC VẬN HÀNH TỆ NHẤT (đại nhân đặt 26/11/2026) =====
+   · Mỗi ngày D xếp hạng 32 BC theo ĐIỂM TỆ (0-100, càng cao càng tệ) = trung bình "độ tệ" của 6 chỉ số:
+     %GTC Total · FD Total · ODR TTS · Aging >5 ngày · Backlog LC (giao+trả ≥36h) · Tồn trả Shop ≥48h.
+     Độ tệ 1 chỉ số = (số BC tốt hơn) ÷ (n−1) → BC tệ nhất = 1, tốt nhất = 0 (đồng hạng tốt nhất = 0, nên chỉ số toàn 0 như Trả Shop không làm loãng điểm).
+     BC cần ≥ 3 chỉ số có số mới được xếp; ODR bỏ BC có < 30 đơn (mẫu nhỏ).
+   · 5 BC tệ nhất ngày D = danh sách theo dõi. Hôm sau (D+1) so lại: BC nào THOÁT (ra khỏi top 5), VẪN Ở LẠI, và BC MỚI vào; mỗi BC có chỉ số tốt lên hay tệ đi (Δ so ngày D).
+   · Nguồn: sheet SID (GTC/FD/ODR theo BC, theo ngày) + Aging (_agingRows) + Backlog: lịch sử chụp mỗi sáng ≥9h VN (tonlc_hist_seed.json + gtc_live.json.tonLCHist).
+     Backlog của ngày dữ liệu D = ảnh chụp sáng D+1 (tồn đầu ngày D+1 ≈ cuối ngày D). Thiếu ảnh chụp → chỉ số đó bỏ, điểm tính trên các chỉ số còn lại (có ghi chú). */
+const WL_N=5, WL_MINMET=3, WL_ODR_MINVOL=30;
+const WL_MET=[
+ {k:'gtc',lab:'%GTC<br>Total',hi:true,t:70,pct:true},
+ {k:'fd',lab:'FD<br>Total',hi:false,t:7,pct:true,fd:true},
+ {k:'odr',lab:'ODR<br>TTS',hi:true,t:94,pct:true,strict:true},
+ {k:'ag5',lab:'Aging<br>&gt; 5 ngày',hi:false,t:null},
+ {k:'lc',lab:'Backlog LC<br>giao+trả ≥36h',hi:false,t:null},
+ {k:'ts',lab:'Tồn trả<br>Shop ≥48h',hi:false,t:null}];
+async function buildWatchPage(selDay){
+ const el=document.getElementById('p57'); if(!el)return;
+ const seq=(window._wlSeq=(window._wlSeq||0)+1);
+ const esc=t=>String(t==null?'':t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+ const HEAD='<div class="page-header"><div class="page-title">🎯 Theo dõi 5 BC vận hành tệ nhất</div></div>';
+ try{
+  const dt=s=>(String(s==null?'':s).match(/\d{4}-\d{2}-\d{2}/)||[''])[0];
+  const P=v=>{const n=parseFloat(String(v==null?'':v).replace(/,/g,''));return isNaN(n)?null:n;};
+  const nf=n=>Math.round(n).toLocaleString('vi-VN');
+  const fD=iso=>{const p=(iso||'').split('-');return p.length===3?`${p[2]}/${p[1]}`:'—';};
+  const addDay=(iso,n)=>{const d=new Date(iso+'T00:00:00Z');d.setUTCDate(d.getUTCDate()+n);return d.toISOString().slice(0,10);};
+  const D=window._D||{},FD=window._FD||{};
+  if(!D.gtcTotalBC||D.gtcTotalBC.length<2)throw new Error('chưa có dữ liệu GTC Total theo Bưu Cục (chờ trang tải xong rồi bấm Tải lại)');
+  // ---- chuỗi theo ngày ----
+  const gtcM={},odrM={},fdM={};
+  D.gtcTotalBC.slice(1).forEach(r=>{const bc=(r[1]||'').trim(),d=dt(r[2]);if(!bc||!d||/grand total/i.test(bc))return;const vol=P(r[3]),p=P(r[5]);if(p==null||!(vol>0))return;(gtcM[bc]=gtcM[bc]||{})[d]={v:p*100,w:vol};});
+  (D.odrBC||[]).slice(1).forEach(r=>{const bc=(r[1]||'').trim(),d=dt(r[2]);if(!bc||!d||/grand total/i.test(bc))return;const vol=P(r[3]),p=P(r[4]);if(p==null||!(vol>0))return;(odrM[bc]=odrM[bc]||{})[d]={v:p*100,w:vol};});
+  (FD.totalBC||[]).slice(1).forEach(r=>{const bc=(r[0]||'').trim(),d=dt(r[1]);if(!bc||!d||/grand total/i.test(bc))return;const v=P(r[3]);if(v==null)return;(fdM[bc]=fdM[bc]||{})[d]={v:v*100};});
+  const ag=window._agingRows||[],agM={},agDays=new Set();
+  ag.forEach(r=>{const d=dt(r[11]),bc=(r[2]||'').trim();if(!d||!bc)return;agDays.add(d);const o=(agM[bc]=agM[bc]||{});o[d]=(o[d]||0)+1;});
+  const allDays=[...new Set(Object.values(gtcM).flatMap(o=>Object.keys(o)))].sort();
+  if(allDays.length<2)throw new Error('chưa đủ 2 ngày dữ liệu GTC');
+  const days=allDays.slice(-14).reverse();     // mới → cũ
+  const day=days.includes(selDay)?selDay:days[0];
+  const dPrev=allDays[allDays.indexOf(day)-1]||null;
+  // ---- backlog lịch sử: seed (git) + gtc_live.tonLCHist; ngày dữ liệu D ↔ ảnh chụp sáng D+1 ----
+  let live=null,seed={};
+  try{const r=await fetch('gtc_live.json?t='+Date.now());if(r.ok)live=await r.json();}catch(_){}
+  try{const r=await fetch('tonlc_hist_seed.json?t='+Date.now());if(r.ok)seed=await r.json();}catch(_){}
+  if(seq!==window._wlSeq)return;
+  const hist=Object.assign({},seed,(live&&live.tonLCHist)||{});
+  const liveTL=live&&live.tonLC&&!live.tonLC.err&&Array.isArray(live.tonLC.hubs)?live.tonLC:null;
+  const liveIso=liveTL&&String(liveTL.date).length===8?`${String(liveTL.date).slice(0,4)}-${String(liveTL.date).slice(4,6)}-${String(liveTL.date).slice(6,8)}`:null;
+  const blOf=(d)=>{const k=addDay(d,1);
+   if(hist[k])return {src:'snap',hubs:hist[k].hubs};
+   if(liveTL&&liveIso===k){const h={};liveTL.hubs.forEach(x=>{if(!x.err&&x.lcGiao&&x.lcTra&&x.traShop){const s=a=>a.reduce((p,q)=>p+q,0);h[x.name]={g:s(x.lcGiao),t:s(x.lcTra),s:s(x.traShop)};}});return Object.keys(h).length>=28?{src:'live',hubs:h}:null;}
+   return null;};
+  const cc=window._CC_BCAM||{};
+  // ---- xếp hạng 1 ngày ----
+  const rankDay=(d)=>{
+   const bcs=Object.keys(gtcM).filter(b=>gtcM[b][d]);
+   const bl=blOf(d), haveAg=agDays.has(d);
+   const rows=bcs.map(bc=>{const o={bc,am:(cc[bc]&&cc[bc].length)?cc[bc].join(', '):'—',vals:{}};
+    o.vals.gtc=gtcM[bc][d].v; o.vals.fd=fdM[bc]&&fdM[bc][d]?fdM[bc][d].v:null;
+    const od=odrM[bc]&&odrM[bc][d]; o.vals.odr=(od&&od.w>=WL_ODR_MINVOL)?od.v:null;
+    o.vals.ag5=haveAg?((agM[bc]&&agM[bc][d])||0):null;
+    const h=bl&&bl.hubs[bc]; o.vals.lc=h?h.g+h.t:null; o.vals.ts=h?h.s:null; return o;});
+   WL_MET.forEach(M=>{const arr=rows.filter(r=>r.vals[M.k]!=null);const n=arr.length;
+    arr.forEach(r=>{let c=0;arr.forEach(q=>{if(M.hi?q.vals[M.k]>r.vals[M.k]:q.vals[M.k]<r.vals[M.k])c++;});(r.w=r.w||{})[M.k]=n>1?c/(n-1):0;});});
+   rows.forEach(r=>{const ks=WL_MET.filter(M=>r.vals[M.k]!=null);r.nMet=ks.length;r.score=ks.length>=WL_MINMET?ks.reduce((s,M)=>s+r.w[M.k],0)/ks.length*100:null;});
+   const ranked=rows.filter(r=>r.score!=null).sort((a,b)=>b.score-a.score||a.vals.gtc-b.vals.gtc||a.bc.localeCompare(b.bc,'vi'));
+   ranked.forEach((r,i)=>{r.rank=i+1;});
+   return {day:d,rows:ranked,all:rows,blSrc:bl?bl.src:null,haveAg,n:ranked.length,top:ranked.slice(0,WL_N)};};
+  const cur=rankDay(day), prev=dPrev?rankDay(dPrev):null;
+  const curBy={};cur.rows.forEach(r=>{curBy[r.bc]=r;});
+  const prevTopSet=new Set(prev?prev.top.map(r=>r.bc):[]), curTopSet=new Set(cur.top.map(r=>r.bc));
+  const prevBy={};if(prev)prev.rows.forEach(r=>{prevBy[r.bc]=r;});
+  // ---- định dạng ----
+  const TH='style="background:#1F3864;color:#fff;padding:7px 8px;font-size:12px;font-weight:700;text-align:center;line-height:1.35;border:1px solid #fff"';
+  const THR='style="background:#B91C1C;color:#fff;padding:7px 8px;font-size:12px;font-weight:700;text-align:center;line-height:1.35;border:1px solid #fff"';
+  const TDL='text-align:left;padding:6px 10px;font-size:12.5px;border-bottom:1px solid var(--border);white-space:nowrap;font-weight:600;';
+  const TDN='text-align:center;padding:6px 8px;font-size:12.5px;border-bottom:1px solid var(--border);white-space:nowrap;min-width:78px;';
+  const fl1=v=>Math.floor(v*10+1e-9)/10;
+  const dv=(M,v)=>v==null?null:(M.pct?(M.fd?fl1(v):Math.round(v*10)/10):Math.round(v));
+  const fmtV=(M,x)=>x==null?'—':(M.pct?x.toFixed(1).replace('.',',')+'%':nf(x));
+  const failM=(M,v)=>{if(v==null)return false;if(M.pct&&M.t!=null)return M.hi?(M.strict?v<=M.t:v<M.t):(M.strict?v>=M.t:v>M.t);if(M.k==='ag5')return v>BATTHUONG_AGING_NGUONG;return false;};
+  const mcell=(M,r,pr)=>{const v=r.vals[M.k];if(v==null)return `<td style="${TDN}color:var(--text-sub)">—</td>`;
+   const bad=failM(M,v),a=dv(M,v),b=(pr&&pr.vals[M.k]!=null)?dv(M,pr.vals[M.k]):null,dl=b==null?null:Math.round((a-b)*10)/10;
+   const worse=dl==null||dl===0?false:(M.hi?dl<0:dl>0);
+   return `<td style="${TDN}${bad?'background:#FEF2F2;':''}"><b style="color:${bad?'#B91C1C':'var(--text-main)'}">${fmtV(M,a)}</b>${dl==null?'':`<div style="font-size:10.5px;font-weight:700;color:${dl===0?'#9CA3AF':worse?'#B91C1C':'#15803D'}">${dl===0?'=':(dl>0?'▲ ':'▼ ')+(M.pct?Math.abs(dl).toFixed(1).replace('.',','):nf(Math.abs(dl)))}</div>`}</td>`;};
+  const scoreCell=(r,pr)=>{const dl=(pr&&pr.score!=null)?Math.round(r.score-pr.score):null;return `<td style="${TDN}font-weight:800;background:#FFF4EC;color:#C8461A">${Math.round(r.score)}${dl==null?'':`<div style="font-size:10.5px;font-weight:700;color:${dl===0?'#9CA3AF':dl>0?'#B91C1C':'#15803D'}">${dl===0?'=':(dl>0?'▲ ':'▼ ')+Math.abs(dl)}</div>`}</td>`;};
+  const rankCell=(r,pr)=>{const dl=pr?pr.rank-r.rank:null;return `<td style="${TDN}font-weight:700">${r.rank}<span style="color:var(--text-sub);font-weight:500">/${cur.n}</span>${dl==null?'':`<div style="font-size:10.5px;font-weight:700;color:${dl===0?'#9CA3AF':dl>0?'#B91C1C':'#15803D'}">${dl===0?'=':(dl>0?'▲ ':'▼ ')+Math.abs(dl)+' bậc'}</div>`}</td>`;};
+  const stt=i=>`<td style="${TDN}min-width:40px;color:var(--text-sub);font-size:12px">${i+1}</td>`;
+  const head=(extra)=>`<thead><tr><th ${TH}>STT</th><th ${TH}>Bưu Cục</th><th ${TH}>AM</th>${extra||''}<th ${THR}>ĐIỂM TỆ<br>(0-100)</th><th ${TH}>Hạng tệ<br>/${cur.n} BC</th>${WL_MET.map(M=>`<th ${TH}>${M.lab}</th>`).join('')}</tr></thead>`;
+  const tag=(txt,bg,fg)=>`<td style="${TDN}background:${bg};color:${fg};font-weight:800">${txt}</td>`;
+  // Bảng ①: 5 BC theo dõi hôm qua → hôm nay
+  const rowFollow=(p0,i)=>{const r=curBy[p0.bc];const stay=curTopSet.has(p0.bc);
+   const st=!r?tag('Không có số','#F3F4F6','#6B7280'):stay?tag('🔴 Vẫn ở lại','#FEE2E2','#B91C1C'):tag('🟢 Thoát','#DCFCE7','#15803D');
+   if(!r)return `<tr>${stt(i)}<td style="${TDL}">${esc(p0.bc)}</td><td style="${TDL}font-weight:500;color:var(--text-sub)">${esc(p0.am)}</td>${st}${'<td style="'+TDN+'color:var(--text-sub)">—</td>'.repeat(2+WL_MET.length)}</tr>`;
+   return `<tr>${stt(i)}<td style="${TDL}">${esc(r.bc)}</td><td style="${TDL}font-weight:500;color:var(--text-sub)">${esc(r.am)}</td>${st}${scoreCell(r,p0)}${rankCell(r,p0)}${WL_MET.map(M=>mcell(M,r,p0)).join('')}</tr>`;};
+  const tblFollow=prev?`<table style="border-collapse:collapse;display:inline-block">${head('<th '+TH+'>Tình trạng</th>')}<tbody>${prev.top.map(rowFollow).join('')}</tbody></table>`:'<div class="analysis-box">Chưa có ngày liền trước để so sánh.</div>';
+  // Bảng ②: BC mới vào
+  const entrants=cur.top.filter(r=>!prevTopSet.has(r.bc));
+  const rowNew=(r,i)=>{const pr=prevBy[r.bc];return `<tr>${stt(i)}<td style="${TDL}">${esc(r.bc)}</td><td style="${TDL}font-weight:500;color:var(--text-sub)">${esc(r.am)}</td>${tag('🆕 Mới vào','#FEF3C7','#B45309')}${scoreCell(r,pr)}${rankCell(r,pr)}${WL_MET.map(M=>mcell(M,r,pr)).join('')}</tr>`;};
+  const tblNew=entrants.length?`<table style="border-collapse:collapse;display:inline-block">${head('<th '+TH+'>Tình trạng</th>')}<tbody>${entrants.map(rowNew).join('')}</tbody></table>`:'<div class="analysis-box">🎉 Không có BC mới nào vào top 5 — 5 BC tệ nhất vẫn là nhóm đang theo dõi.</div>';
+  // Bảng ③: top 5 hôm nay = danh sách theo dõi cho ngày kế tiếp
+  const rowTop=(r,i)=>{const pr=prevBy[r.bc];return `<tr>${stt(i)}<td style="${TDL}">${esc(r.bc)}</td><td style="${TDL}font-weight:500;color:var(--text-sub)">${esc(r.am)}</td>${scoreCell(r,pr)}${rankCell(r,pr)}${WL_MET.map(M=>mcell(M,r,pr)).join('')}</tr>`;};
+  const tblTop=`<table style="border-collapse:collapse;display:inline-block">${head('').replace('<th '+TH+'>AM</th>','<th '+TH+'>AM</th>')}<tbody>${cur.top.map(rowTop).join('')}</tbody></table>`;
+  // ---- nhận định (mỗi ý 1 dòng) ----
+  const L=[];
+  const nm=r=>`<b>${esc(r.bc)}</b>`;
+  L.push(`<b>Ngày dữ liệu ${fD(day)}${prev?` so với ${fD(dPrev)}`:''}:</b>`);
+  if(prev){
+   L.push(`• Danh sách theo dõi (5 BC tệ nhất ${fD(dPrev)}): ${prev.top.map(nm).join(' · ')}.`);
+   const out=prev.top.filter(r=>!curTopSet.has(r.bc)), stay=prev.top.filter(r=>curTopSet.has(r.bc));
+   L.push(`🟢 <b>Thoát</b> khỏi top 5 (${out.length} BC): ${out.length?out.map(r=>{const c=curBy[r.bc];return c?`${nm(r)} (hạng ${r.rank}→${c.rank}/${cur.n})`:nm(r);}).join(' · '):'không có'}.`);
+   L.push(`🔴 <b>Vẫn ở lại</b> (${stay.length} BC): ${stay.length?stay.map(r=>{const c=curBy[r.bc];return `${nm(r)} (hạng ${r.rank}→${c.rank}, điểm ${Math.round(r.score)}→${Math.round(c.score)})`;}).join(' · '):'không có'}.`);
+   L.push(`🆕 <b>Mới vào</b> (${entrants.length} BC): ${entrants.length?entrants.map(r=>`${nm(r)} (hạng ${prevBy[r.bc]?prevBy[r.bc].rank:'—'}→${r.rank})`).join(' · '):'không có'}.`);
+   const dl=prev.top.map(r=>({r,c:curBy[r.bc]})).filter(x=>x.c).map(x=>({bc:x.r.bc,d:x.c.score-x.r.score}));
+   const imp=dl.filter(x=>x.d<-0.5).length, wor=dl.filter(x=>x.d>0.5).length;
+   L.push(`• Trong 5 BC theo dõi: <b>${imp} BC cải thiện</b> (điểm tệ giảm) · <b>${wor} BC tệ đi</b> (điểm tệ tăng) · ${dl.length-imp-wor} BC gần như không đổi.`);
+   if(dl.length){const bi=dl.slice().sort((a,b)=>a.d-b.d)[0],bw=dl.slice().sort((a,b)=>b.d-a.d)[0];
+    L.push(`🟢 Cải thiện nhất: <b>${esc(bi.bc)}</b> (điểm tệ ${bi.d>0?'+':''}${bi.d.toFixed(0)}) · 🔴 Tệ đi nhiều nhất: <b>${esc(bw.bc)}</b> (điểm tệ ${bw.d>0?'+':''}${bw.d.toFixed(0)}).`);}
+  }else L.push('• Chưa có ngày liền trước để so sánh.');
+  L.push(`• Danh sách theo dõi cho ngày kế tiếp (5 BC tệ nhất ${fD(day)}): ${cur.top.map(nm).join(' · ')}.`);
+  const notes=[];
+  if(!cur.blSrc)notes.push(`chưa có ảnh chụp Backlog sáng ${fD(addDay(day,1))} nên 2 chỉ số Backlog tạm bỏ khỏi điểm ngày ${fD(day)}`);
+  else if(cur.blSrc==='live')notes.push(`Backlog ngày ${fD(day)} đang lấy từ lần quét mới nhất (chưa tới ảnh chụp chốt sáng ≥9h)`);
+  if(!cur.haveAg)notes.push(`chưa có dữ liệu Aging ngày ${fD(day)} nên chỉ số Aging tạm bỏ`);
+  if(prev&&!prev.blSrc)notes.push(`ngày ${fD(dPrev)} thiếu Backlog → điểm ${fD(dPrev)} tính trên các chỉ số còn lại, so sánh điểm chỉ mang tính tương đối`);
+  if(notes.length)L.push(`<span style="color:#B45309">⚠️ ${notes.map(esc).join(' · ')}.</span>`);
+  const legend=`<div style="font-size:11.5px;color:var(--text-sub);margin:0 2px 14px;line-height:1.7"><b>Điểm tệ (0-100)</b> = trung bình "độ tệ" của 6 chỉ số (%GTC Total · FD Total · ODR TTS · Aging &gt;5 ngày · Backlog LC giao+trả ≥36h · Tồn trả Shop ≥48h); mỗi chỉ số độ tệ = số BC tốt hơn ÷ (n−1), tệ nhất = 100. Mũi tên xanh = tốt lên, đỏ = tệ đi so với ngày liền trước. Ô đỏ = không đạt mục tiêu (GTC ≥70 · FD ≤7 · ODR &gt;94 · Aging &gt;${BATTHUONG_AGING_NGUONG} đơn). ODR bỏ BC &lt;${WL_ODR_MINVOL} đơn. Backlog ngày D = ảnh chụp sáng D+1 (≥9h). FD hiển thị cắt 1 số lẻ.</div>`;
+  const card=(ic,tt,body)=>`<div class="card" style="margin-bottom:18px"><div class="card-header"><div class="card-title"><div class="card-icon">${ic}</div>${tt}</div></div><div class="table-wrap" style="overflow-x:auto">${body}</div></div>`;
+  const opts=days.map(d=>`<option value="${d}"${d===day?' selected':''}>${fD(d)}</option>`).join('');
+  el.innerHTML=`<div class="page-header"><div class="page-title">🎯 Theo dõi 5 BC vận hành tệ nhất</div><div class="page-meta">
+    <span style="background:var(--orange-light);color:var(--orange-dark);padding:3px 10px;border-radius:20px;font-size:12px;font-weight:700">Toàn Vùng ${cur.n} BC · 6 chỉ số</span>
+    <label style="font-size:12px;color:var(--text-sub)">Ngày dữ liệu <select onchange="buildWatchPage(this.value)" style="padding:3px 8px;border:1px solid var(--border);border-radius:8px;font-size:12.5px">${opts}</select></label>
+    <button style="background:#16A34A;color:#fff;border:1px solid #16A34A;border-radius:8px;padding:5px 12px;font-size:12px;font-weight:700;cursor:pointer" onclick="buildWatchPage(document.querySelector('#p57 select').value)">🔄 Tải lại</button></div></div>
+   <div class="analysis-box" style="margin-bottom:16px;line-height:1.8">${L.join('<br>')}</div>${legend}
+   ${card('🔎',`① 5 BC theo dõi từ ${prev?fD(dPrev):'—'} — hôm nay (${fD(day)}) thoát hay ở lại`,tblFollow)}
+   ${card('🆕',`② BC mới vào top 5 tệ nhất (${fD(day)})`,tblNew)}
+   ${card('🚨',`③ 5 BC tệ nhất ${fD(day)} — danh sách theo dõi ngày kế tiếp`,tblTop)}`;
+  window._WL={day,dPrev,cur:cur.top.map(r=>r.bc),prev:prev?prev.top.map(r=>r.bc):null};
+ }catch(e){
+  if(seq!==window._wlSeq)return;
+  el.innerHTML=HEAD+'<div class="analysis-box">Không tải được dữ liệu: '+esc(e&&e.message||e)+'</div>';
+ }
+}
+
 const BATTHUONG_AGING_NGUONG=20;   // p44 ③: BC có Aging > 5 ngày vượt ngưỡng này (đơn) bị liệt kê — đại nhân đặt 20 đơn (09/11)
 async function buildBatThuongPage(){
  const el=document.getElementById('p44'); if(!el)return;
@@ -7154,6 +7301,8 @@ async function init(){
  // p44 — Bưu Cục làm kém bất thường (cần _D/_FD + _agingRows)
  // p56 — Điều hành 6 Bưu Cục (cần _D/_FD + _agingRows + _CC_BCAM + gtc_live.json)
  buildDieuHanhPage().catch(e=>console.warn('Điều hành 6 BC:',e&&e.message||e));
+ // p57 — Theo dõi 5 BC vận hành tệ nhất (cần _D/_FD + _agingRows + _CC_BCAM + tonlc_hist_seed.json/gtc_live.json)
+ buildWatchPage().catch(e=>console.warn('Theo dõi 5 BC tệ nhất:',e&&e.message||e));
  buildBatThuongPage().catch(e=>console.warn('BC bất thường:',e&&e.message||e));
  // p45 — Bưu Cục Bất Ổn (Vùng tự set %GTC Total<60%) (cần _D/_FD + _agingRows + _CC_BCAM)
  buildBatOnVungPage().catch(e=>console.warn('BC bất ổn Vùng:',e&&e.message||e));
