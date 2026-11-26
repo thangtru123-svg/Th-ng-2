@@ -5012,6 +5012,7 @@ async function buildDieuHanhPage(){
   // ---- realtime (gtc_live.json) ----
   let live=null,liveErr='';
   try{const r=await fetch('gtc_live.json?t='+Date.now());if(!r.ok)throw new Error('HTTP '+r.status);live=await r.json();}catch(e){liveErr=(e&&e.message)||String(e);}
+  let HAN=null,hanErr='';try{HAN=await _hanLoad();}catch(e){hanErr=(e&&e.message)||String(e);}
   if(seq!==window._dhSeq)return;
   const sum=a=>(a||[]).reduce((x,y)=>x+y,0);
   const TL=live&&live.tonLC&&!live.tonLC.err&&Array.isArray(live.tonLC.hubs)?live.tonLC:null;
@@ -5060,6 +5061,12 @@ async function buildDieuHanhPage(){
   const updLive=live&&live.updatedAt?new Date(live.updatedAt):null;
   const updStr=updLive&&!isNaN(updLive)?updLive.toLocaleString('vi-VN',{hour:'2-digit',minute:'2-digit',day:'2-digit',month:'2-digit'}):'chưa có';
   const tbl3=live?`<table style="border-collapse:collapse;display:inline-block"><thead><tr><th ${TH}>Bưu Cục</th><th ${TH}>AM</th><th ${TH}>Đơn cần giao<br>hôm nay</th><th ${TH}>Đã gán</th><th ${TH}>%Gán</th><th ${TH}>GTC<br>đến giờ</th><th ${TH}>%GTC<br>đến giờ</th></tr></thead><tbody>${DH_BCS.map(row3).join('')}</tbody></table>`:`<div class="analysis-box">Chưa đọc được gtc_live.json (${esc(liveErr||'không có dữ liệu')}). Không có dữ liệu thì không hiển thị số.</div>`;
+  // ================= Đơn TTS còn hạn giao (sheet Data, ~1h/lần) =================
+  let tblH='',han6=null;
+  if(HAN){const l6=DH_BCS.map(bc=>HAN.byBC[bc]).filter(Boolean); const t6={name:'TỔNG 6 BC',am:'',hn:0,c2:0,c3:0,g3:0,tot:0};l6.forEach(o=>{t6.hn+=o.hn;t6.c2+=o.c2;t6.c3+=o.c3;t6.g3+=o.g3;t6.tot+=o.tot;});han6=t6;
+   const miss=DH_BCS.filter(bc=>!HAN.byBC[bc]);
+   tblH=_hanTable(l6,'Bưu Cục',true,t6)+_hanNote(HAN)+(miss.length?`<div style="font-size:11.5px;color:#B45309;margin-top:4px">⚠️ Không thấy trong sheet: ${miss.map(esc).join(', ')} (không có đơn còn hạn hoặc chưa có dữ liệu).</div>`:'')+`<div style="font-size:11.5px;color:var(--text-sub);margin-top:4px">Toàn Vùng: ${nf(HAN.T.hn)} đơn hết hạn hôm nay / ${nf(HAN.T.tot)} đơn còn hạn.</div>`;}
+  else tblH=`<div class="analysis-box">Chưa đọc được sheet Đơn TTS còn hạn giao (${esc(hanErr||'không có dữ liệu')}). Không có dữ liệu thì không hiển thị số.</div>`;
   // ================= BC NGOÀI 6 BC kéo Vùng =================
   const set6=new Set(DH_BCS.map(norm));
   const others=[...allBC].filter(b=>!set6.has(norm(b)));
@@ -5094,6 +5101,7 @@ async function buildDieuHanhPage(){
   if(wF)L.push(`🔴 FD Total cao nhất: <b>${esc(wF.bc)}</b> ${fmtP(dv(MET[2],wF.v))}.`);
   if(wO)L.push(`🔴 ODR TTS thấp nhất: <b>${esc(wO.bc)}</b> ${fmtP(dv(MET[7],wO.v))}.`);
   if(TL){const wb=DH_BCS.filter(bc=>bl[bc]).map(bc=>({bc,t:bl[bc].g+bl[bc].t+bl[bc].s})).sort((a,b)=>b.t-a.t)[0];if(wb&&wb.t>0)L.push(`🔴 Backlog nhiều nhất trong 6 BC: <b>${esc(wb.bc)}</b> ${nf(wb.t)} đơn.`);}
+  if(han6)L.push(`• Đơn TTS còn hạn giao 6 BC: <b>${nf(han6.tot)} đơn</b>, trong đó <b>${nf(han6.hn)} đơn hết hạn trong hôm nay</b> (Vùng ${nf(HAN.T.hn)} đơn) — snapshot ${esc(_hanFmtRun(HAN.run))}.`);
   L.push(`⚠️ Ngoài 6 BC có <b>${oList.length}</b> Bưu Cục kéo Vùng xấu (bảng bên dưới) — cần làm việc với AM liên quan.`);
   const missing=DH_BCS.filter(bc=>!allBC.has(bc));
   if(missing.length)L.push(`<span style="color:#B45309">⚠️ Không thấy dữ liệu sheet cho: ${missing.map(esc).join(', ')}.</span>`);
@@ -5107,6 +5115,7 @@ async function buildDieuHanhPage(){
    ${card('📊','① Chỉ số vận hành ngày N-1 — 6 Bưu Cục so Vùng',tbl1)}
    ${card('🔁','② Backlog LC giao / LC trả / Trả Shop + Aging — 6 Bưu Cục',tbl2)}
    ${card('⏱️','③ Realtime hôm nay — 6 Bưu Cục',tbl3)}
+   ${card('⏳','③b Đơn TTS còn hạn giao theo hạn — 6 Bưu Cục',tblH)}
    ${card('🚨','④ Bưu Cục NGOÀI 6 BC đang kéo Vùng xấu — cần xử lý với AM',tblO,`<div class="analysis-box" style="margin-top:12px;font-size:12px;line-height:1.7">Cách chọn: %GTC Total / FD Total / ODR — kéo Vùng = |mục tiêu − tỉ lệ BC| × tỉ trọng của BC (như trang Phân tích kéo vùng), lấy BC kéo ≥ ${DH_KEO_MIN.toString().replace('.',',')} điểm % (tối đa ${DH_KEO_MAX} BC mỗi chỉ số). Backlog LC giao / LC trả / Trả Shop — BC chiếm ≥ ${DH_BL_SHARE}% tổng Vùng và ≥ ${DH_BL_MIN} đơn.</div>`)}
 `;
   window._DH={bcs:DH_BCS,flagged,oList,keoAll:KM.map(M=>({k:M.k,top:others.map(bc=>({bc,k:keoOf(M,bc)})).filter(x=>x.k!=null).sort((a,b)=>b.k-a.k).slice(0,8)}))};
@@ -6664,6 +6673,56 @@ async function sendBcRep2TG(btn){
  }catch(e){ alert('Lỗi bắn TG: '+(e&&e.message||e)); }
  finally{ if(btn){btn.disabled=false;btn.innerHTML=btn.dataset.t||'📤 Bắn Báo cáo 2 (gộp → @thangquada)';} }
 }
+/* ===== ĐƠN TTS CÒN HẠN GIAO (đại nhân bổ sung 26/11) — sheet "Đơn TTS còn hạn giao" (file ODRFAIL_SHEET_ID, gid 1471152378; Data team cập nhật ~1 giờ/lần) =====
+   Mỗi dòng = 1 đơn TTS còn hạn giao tại thời điểm snapshot (cột run_datetime). "Nhóm hạn": 2_hom_nay (hết hạn trong ngày) · 3_con_2 · 4_con_3 · 5_con_gt3 · 0_hoan_hoac_khac (hoàn/khác — KHÔNG tính còn hạn).
+   Đơn ĐÃ TRỄ HẠN: sheet KHÔNG chứa (giờ còn lại nhỏ nhất 14h) → chưa có nguồn, không ước tính. */
+const HAN_GID=1471152378;
+const HAN_GROUPS=[{k:'2_hom_nay',key:'hn',lab:'Hết hạn<br>hôm nay'},{k:'3_con_2',key:'c2',lab:'Còn<br>2 ngày'},{k:'4_con_3',key:'c3',lab:'Còn<br>3 ngày'},{k:'5_con_gt3',key:'g3',lab:'Còn<br>&gt; 3 ngày'}];
+async function _hanLoad(force){
+ const c=window._HAN; if(!force&&c&&Date.now()-c.at<180000)return c.data;
+ const res=await fetch(`https://docs.google.com/spreadsheets/d/${ODRFAIL_SHEET_ID}/gviz/tq?tqx=out:csv&gid=${HAN_GID}&_=${Date.now()}`);
+ if(!res.ok)throw new Error('sheet Đơn TTS còn hạn giao: HTTP '+res.status);
+ const rows=parseCSV(await res.text()); if(rows.length<2)throw new Error('sheet Đơn TTS còn hạn giao trả về rỗng');
+ const H=rows[0].map(x=>String(x||'').trim()), iB=H.indexOf('Bưu Cục'), iA=H.indexOf('AM'), iN=H.indexOf('Nhóm hạn'), iR=H.indexOf('run_datetime');
+ if(iB<0||iA<0||iN<0)throw new Error('sheet Đơn TTS còn hạn giao đổi cấu trúc cột (không thấy Bưu Cục/AM/Nhóm hạn)');
+ const mk=(name,am)=>({name,am,hn:0,c2:0,c3:0,g3:0,other:0,tot:0}), byBC={}, byAM={}, T=mk('TỔNG','');
+ const kOf={}; HAN_GROUPS.forEach(g=>{kOf[g.k]=g.key;});
+ let n=0;
+ rows.slice(1).forEach(r=>{const bc=String(r[iB]||'').trim(); if(!bc)return; n++;
+  const am=String(r[iA]||'').trim()||'(chưa map AM)', key=kOf[String(r[iN]||'').trim()];
+  const b=byBC[bc]||(byBC[bc]=mk(bc,am)), a=byAM[am]||(byAM[am]=mk(am,''));
+  [b,a,T].forEach(o=>{ if(key){o[key]++;o.tot++;} else o.other++; });});
+ const run=iR>=0?String((rows[1]||[])[iR]||'').trim():'';
+ const data={run,n,byBC,byAM,T};
+ window._HAN={at:Date.now(),data}; return data;
+}
+function _hanFmtRun(run){const m=String(run||'').match(/(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})/);return m?`${m[4]}:${m[5]} ${m[3]}/${m[2]}`:'không rõ';}
+function _hanTable(list,first,withAM,tot){
+ const TH='style="background:#1F3864;color:#fff;padding:7px 8px;font-size:12px;font-weight:700;text-align:center;line-height:1.35;border:1px solid #fff"';
+ const THO='style="background:#C8461A;color:#fff;padding:7px 8px;font-size:12px;font-weight:700;text-align:center;line-height:1.35;border:1px solid #fff"';
+ const TDL='text-align:left;padding:6px 10px;font-size:12.5px;border-bottom:1px solid var(--border);white-space:nowrap;font-weight:600;';
+ const TDN='text-align:center;padding:6px 8px;font-size:12.5px;border-bottom:1px solid var(--border);white-space:nowrap;min-width:74px;';
+ const nf=v=>Math.round(v).toLocaleString('vi-VN');
+ const mx=Math.max(1,...list.map(o=>o.hn));
+ const heat=v=>v>0?`background:rgba(234,88,12,${(0.08+0.4*v/mx).toFixed(2)});`:'';
+ const num=(v,st)=>`<td style="${TDN}${st||''}${v===0?'color:#9CA3AF;':''}">${v===0?'–':nf(v)}</td>`;
+ const pct=o=>o.tot>0?(o.hn/o.tot*100).toFixed(1).replace('.',',')+'%':'—';
+ const row=(o,i,isTot)=>`<tr${isTot?' style="background:#F1F5F9"':''}><td style="${TDN}min-width:40px;color:var(--text-sub);font-size:12px">${isTot?'':i+1}</td><td style="${TDL}${isTot?'font-weight:800;':''}">${(isTot?o.name:o.name).replace(/&/g,'&amp;').replace(/</g,'&lt;')}</td>${withAM?`<td style="${TDL}font-weight:500;color:var(--text-sub)">${String(o.am||'').replace(/&/g,'&amp;').replace(/</g,'&lt;')}</td>`:''}${num(o.hn,isTot?'font-weight:800;':heat(o.hn)+'font-weight:700;')}${num(o.c2)}${num(o.c3)}${num(o.g3)}<td style="${TDN}font-weight:800;background:#FFF4EC;color:#C8461A">${nf(o.tot)}</td><td style="${TDN}">${pct(o)}</td></tr>`;
+ return `<table style="border-collapse:collapse;display:inline-block"><thead><tr><th ${TH}>STT</th><th ${TH}>${first}</th>${withAM?`<th ${TH}>AM</th>`:''}${HAN_GROUPS.map(g=>`<th ${TH}>${g.lab}</th>`).join('')}<th ${THO}>TỔNG<br>CÒN HẠN</th><th ${TH}>% hết hạn<br>hôm nay</th></tr></thead><tbody>${list.map((o,i)=>row(o,i,false)).join('')}${row(tot,0,true)}</tbody></table>`;
+}
+function _hanNote(H){return `<div style="font-size:11.5px;color:var(--text-sub);margin-top:8px;line-height:1.7">Snapshot sheet lúc <b>${_hanFmtRun(H.run)}</b> (Data team cập nhật ~1 giờ/lần, KHÔNG realtime từng phút). "Hết hạn hôm nay" = hạn giao trong ngày (23:59:59) — nếu không giao xong hôm nay sẽ thành đơn trễ hạn. ${H.T.other?H.T.other+' đơn hoàn/khác không tính vào còn hạn. ':''}<b>Đơn đã trễ hạn: chưa có số</b> (sheet này chỉ chứa đơn còn hạn).</div>`;}
+async function _grtRenderHan(force){
+ const box=document.getElementById('grtHan'); if(!box)return;
+ try{
+  const H=await _hanLoad(force); if(!document.getElementById('grtHan'))return;
+  const srt=a=>Object.values(a).sort((x,y)=>y.hn-x.hn||y.tot-x.tot||x.name.localeCompare(y.name,'vi'));
+  box.innerHTML=`<div style="display:flex;align-items:center;gap:10px;margin:6px 2px"><span style="font-size:15px;font-weight:800;color:#B45309">⏳ Đơn TTS còn hạn giao — theo hạn giao</span><button class="tg-inpage-btn" style="background:#16A34A;border-color:#16A34A" onclick="_grtRenderHan(true)">🔄 Tải lại</button></div>
+   <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start">
+    <div><div style="font-size:13px;font-weight:800;margin:4px 2px">👤 Theo AM (${Object.keys(H.byAM).length})</div><div class="table-wrap">${_hanTable(srt(H.byAM),'AM',false,H.T)}</div></div>
+    <div><div style="font-size:13px;font-weight:800;margin:4px 2px">🏢 Theo Bưu Cục (${Object.keys(H.byBC).length})</div><div class="table-wrap">${_hanTable(srt(H.byBC),'Bưu Cục',true,H.T)}</div></div>
+   </div>${_hanNote(H)}`;
+ }catch(e){box.innerHTML=`<div class="analysis-box">⏳ <b>Đơn TTS còn hạn giao:</b> chưa hiển thị được — ${String((e&&e.message)||e).replace(/</g,'&lt;')}. Không có dữ liệu thì không hiển thị số. <button class="tg-inpage-btn" style="background:#16A34A;border-color:#16A34A" onclick="_grtRenderHan(true)">🔄 Tải lại</button></div>`;}
+}
 async function buildGTCRealtimePage(){
  const el=document.getElementById('p41');
  el.innerHTML='<div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải GTC realtime…</div></div>';
@@ -6789,6 +6848,7 @@ async function buildGTCRealtimePage(){
       <tbody>${bcRowsT}${bcTotT}</tbody></table></div>
     </div>
    </div>
+   <div id="grtHan" style="margin:8px 0 22px"><div class="analysis-box">⏳ Đang tải đơn TTS còn hạn giao…</div></div>
    <div class="analysis-box" style="margin-top:16px;padding:12px 14px;font-size:12.5px;line-height:1.7">
     <b>Cách tính:</b><br>
     • <b>Hàng tồn N-1</b> = đơn Giao + Ưu tiên giao ở mốc tuổi hàng ≥ 6–12h, <b>chụp cứng lúc ~7h sáng</b> rồi giữ nguyên cả ngày.<br>
@@ -6800,6 +6860,7 @@ async function buildGTCRealtimePage(){
     • <b>Bảng Đơn TTS</b> (bên phải, cùng thứ tự dòng với bảng Tổng) = đơn TikTok Shop (mã VNGH), cùng cách tính các cột như bảng Tổng: <b>Tổng cần giao</b> = TTS chưa gán + TTS đã gán · <b>Đã gán / GTC</b> = đơn TTS trong chuyến giao tạo hôm nay · <b>Tồn N-1 / Mới ca 1-2-3</b> = tồn đầu ngày chụp 7h và hàng mới TTS cộng dồn theo mã, chốt 9h/15h/24h. Cột Tồn/Mới ca của TTS bắt đầu tích lũy từ 16/11 ~20h nên <b>ngày 16/11 ghi "chưa có"</b>, từ 17/11 đủ số. † = AM có BC chưa quét được số TTS (không tính vào tổng).<br>
     • Realtime qua nhanh.ghn.vn, Action quét 30'/lần (mốc chốt lệch ~±30'). Ca 1/2/3 chỉ đủ chuẩn từ ngày triển khai trở đi; ô "chưa có" = nhịp quét chưa sinh đủ dữ liệu.
    </div>`;
+  _grtRenderHan().catch(()=>{});
  }catch(e){el.innerHTML=(typeof errPage==='function'?errPage('Không tải được GTC realtime: '+(e&&e.message||e)):'<div style="padding:20px;color:#b91c1c">Lỗi: '+(e&&e.message||e)+'</div>');}
 }
 async function buildGKPage(){
