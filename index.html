@@ -8395,10 +8395,10 @@ async function buildRotLCPage(){
      <div style="display:flex;gap:14px;flex-wrap:wrap">
       ${tile('#F4F6FA','#6B7EA6','Tổng đơn cần LC (Volume)',`${fmt(vol)} <span style="font-size:13px;font-weight:600">đơn</span>`,'#1F3864','Tổng đơn vào luân chuyển trong ngày')}
       ${tile('#EEF6F1','#4C9A6A','Đã lấy thành công (LTC)',`${fmt(daPick)} <span style="font-size:13px;font-weight:600">đơn</span>`,'#2F7D50',`%LTC (lấy TC): <b>${pLTC.toFixed(1)}%</b>`)}
-      ${tile('#EAF3FB','#3D6FB4','Đã LC (Luân chuyển) &amp; % Ontime LC',`${fmt(daLC)} <span style="font-size:13px;font-weight:600">đơn</span>`,'#2B5FA0',`% Đã LC (Ontime LC): <b style="color:#2B5FA0">${pLC.toFixed(1)}%</b>`)}
+      ${tile('#EAF3FB','#3D6FB4','Đã LC (Luân chuyển) &amp; % Ontime LC',`${fmt(daLC)} <span style="font-size:13px;font-weight:600">đơn</span>`,'#2B5FA0',`% Ontime LC (đã LC ÷ đã lấy): <b style="color:#2B5FA0">${daPick>0?(daLC/daPick*100).toFixed(1):'—'}%</b> <span style="font-size:11px">(${fmt(daLC)}/${fmt(daPick)})</span>`)}
       ${tile('#FBF1E9','#C56B4E','Rớt LC (ngày '+dhdr(d0).slice(0,5)+')',`${fmt(T.c0)} <span style="font-size:13px;font-weight:600">đơn</span>`,'#B4552F',`Trong đó TTS: <b>${fmt(TTS.c0)} đơn</b>`)}
      </div>
-     <div style="margin-top:10px;color:var(--text-sub);font-size:12px">* Đã lấy = Volume × %LTC · Đã LC = Volume × %LC (nguồn sheet <b>LTC - AM</b>). Rớt LC là số đơn rớt luân chuyển (nguồn Data rớt LC), thống kê riêng nên không cộng thẳng vào Volume.</div>
+     <div style="margin-top:10px;color:var(--text-sub);font-size:12px">* Đã lấy = Volume × %LTC · Đã LC = Volume × %LC · <b>% Ontime LC = Đã LC ÷ Đã lấy thành công</b> (nguồn sheet <b>LTC - AM</b>). Rớt LC là số đơn rớt luân chuyển (nguồn Data rớt LC), thống kê riêng nên không cộng thẳng vào Volume.</div>
    </div>`;
   }else{
    // Báo đúng nguyên nhân: (a) đọc sheet lỗi · (b) đọc được nhưng không có dòng Tổng của 7 ngày gần nhất (thường do BỘ LỌC trên sheet làm thiếu dòng) — KHÔNG đổ cho "sheet cập nhật trễ" khi chưa kiểm
@@ -8418,10 +8418,10 @@ async function buildRotLCPage(){
      <div style="display:flex;gap:14px;flex-wrap:wrap">
       ${tile2('#F4F6FA','#6B7EA6','Tổng đơn TTS cần LC (Volume)',`${fmt(ttsOv.vol)} <span style="font-size:13px;font-weight:600">đơn</span>`,'#1F3864',share!=null?`Chiếm <b>${share.toFixed(1)}%</b> Volume Total`:'Hàng mới Ca 1 + Hàng tồn')}
       ${tile2('#EEF6F1','#4C9A6A','Đã lấy thành công (LTC) — TTS',`${fmt(ttsOv.pick)} <span style="font-size:13px;font-weight:600">đơn</span>`,'#2F7D50',`%LTC (lấy TC): <b>${(ttsOv.pLTC*100).toFixed(1)}%</b>${ltcOv?` · Total ${(ltcOv.pLTC*100).toFixed(1)}%`:''}`)}
-      ${tile2('#EAF3FB','#3D6FB4','Đã LC (Luân chuyển) &amp; % Ontime LC — TTS',`${fmt(ttsOv.ltc)} <span style="font-size:13px;font-weight:600">đơn</span>`,'#2B5FA0',`% Đã LC (Ontime LC): <b style="color:#2B5FA0">${(ttsOv.pLC*100).toFixed(1)}%</b>${ltcOv?` · Total ${(ltcOv.pLC*100).toFixed(1)}%`:''}`)}
+      ${tile2('#EAF3FB','#3D6FB4','Đã LC (Luân chuyển) &amp; % Ontime LC — TTS',`${fmt(ttsOv.ltc)} <span style="font-size:13px;font-weight:600">đơn</span>`,'#2B5FA0',`% Ontime LC (đã LC ÷ đã lấy): <b style="color:#2B5FA0">${ttsOv.pick>0?(ttsOv.ltc/ttsOv.pick*100).toFixed(1):'—'}%</b> <span style="font-size:11px">(${fmt(ttsOv.ltc)}/${fmt(ttsOv.pick)})</span>${ltcOv&&ltcOv.pLTC>0?` · Total ${(ltcOv.pLC/ltcOv.pLTC*100).toFixed(1)}%`:''}`)}
       ${tile2('#FBF1E9','#C56B4E','Rớt LC TTS (ngày '+dhdr(d0).slice(0,5)+')',`${fmt(rotT)} <span style="font-size:13px;font-weight:600">đơn</span>`,'#B4552F',ratio!=null?`Rớt/LTC TTS: <b>${ratio.toFixed(1)}%</b> (${fmt(rotT)} rớt / ${fmt(ttsOv.pick)} đơn LTC)`:'—')}
      </div>
-     <div style="margin-top:10px;color:var(--text-sub);font-size:12px">* Đã lấy (LTC) = Volume × %LTC · Đã LC = Volume × %LC (nguồn sheet <b>LTC_TTS</b>, cộng Hàng mới Ca 1 + Hàng tồn, 32 Bưu Cục). Rớt/LTC TTS = rớt TTS ÷ đơn đã lấy thành công (cộng cả 2 loại hàng). Rớt LC TTS = đơn rớt có Loại khách hàng = TTS (nguồn Data rớt LC).</div>
+     <div style="margin-top:10px;color:var(--text-sub);font-size:12px">* Đã lấy (LTC) = Volume × %LTC · Đã LC = Volume × %LC · <b>% Ontime LC = Đã LC ÷ Đã lấy thành công</b> (nguồn sheet <b>LTC_TTS</b>, cộng Hàng mới Ca 1 + Hàng tồn, 32 Bưu Cục). Rớt/LTC TTS = rớt TTS ÷ đơn đã lấy thành công (cộng cả 2 loại hàng). Rớt LC TTS = đơn rớt có Loại khách hàng = TTS (nguồn Data rớt LC).</div>
    </div>`;
   }else{
    ovTTS=`<div class="card" id="rotlcOvTTS" style="margin-bottom:16px"><div style="padding:4px 2px;color:var(--text-sub);font-size:13px;line-height:1.7">📦 <b>Tổng quan Lấy & Luân chuyển — Đơn TTS:</b> chưa hiển thị được — ${String(ttsErr||'không có dữ liệu').replace(/</g,'&lt;')} <button style="margin-left:6px;background:#16A34A;color:#fff;border:1px solid #16A34A;border-radius:8px;padding:3px 10px;font-size:12px;font-weight:700;cursor:pointer" onclick="buildRotLCPage()">🔄 Tải lại</button></div></div>`;
@@ -8448,7 +8448,7 @@ async function sendRotLCToTelegram(silent){
    let ot=`🚚 <b>TỔNG QUAN LẤY &amp; LUÂN CHUYỂN — VÙNG XBG</b> (${ovDay})\n`;
    ot+=`• Tổng đơn cần LC (Volume): <b>${f(vol)} đơn</b>\n`;
    ot+=`• Đã lấy thành công (LTC): <b>${f(daPick)} đơn</b> — %LTC ${(O.pLTC*100).toFixed(1)}%\n`;
-   ot+=`• Đã LC (luân chuyển): <b>${f(daLC)} đơn</b> — % Ontime LC <b>${(O.pLC*100).toFixed(1)}%</b>\n`;
+   ot+=`• Đã LC (luân chuyển): <b>${f(daLC)} đơn</b> — % Ontime LC <b>${daPick>0?(daLC/daPick*100).toFixed(1):'—'}%</b> (${f(daLC)}/${f(daPick)} đơn đã lấy)\n`;
    ot+=`• Rớt LC: <b>${f(R.T.c0)} đơn</b> (TTS ${f(R.TTS.c0)})${R.d1?` — ${R.T.up?'▲ +':'▼ '}${f(Math.abs(R.T.delta))} (${R.T.up?'+':''}${R.T.pctD.toFixed(1)}%) so ${R.dhdr(R.d1)}`:''}`;
    await _tgSend(CHAT,TH,ot);
    const elOv=document.getElementById('rotlcOvLC');
@@ -8460,7 +8460,7 @@ async function sendRotLCToTelegram(silent){
    let ot=`📦 <b>TỔNG QUAN LẤY &amp; LUÂN CHUYỂN — ĐƠN TTS</b> (${dd})\n`;
    ot+=`• Tổng đơn TTS cần LC (Volume): <b>${f(O.vol)} đơn</b>${R.ltcOv&&R.ltcOv.vol>0?` — ${(O.vol/R.ltcOv.vol*100).toFixed(1)}% Volume Total`:''}\n`;
    ot+=`• Đã lấy thành công (LTC): <b>${f(O.pick)} đơn</b> — %LTC ${(O.pLTC*100).toFixed(1)}%\n`;
-   ot+=`• Đã LC (luân chuyển): <b>${f(O.ltc)} đơn</b> — % Ontime LC <b>${(O.pLC*100).toFixed(1)}%</b>\n`;
+   ot+=`• Đã LC (luân chuyển): <b>${f(O.ltc)} đơn</b> — % Ontime LC <b>${O.pick>0?(O.ltc/O.pick*100).toFixed(1):'—'}%</b> (${f(O.ltc)}/${f(O.pick)} đơn đã lấy)\n`;
    ot+=`• Rớt LC TTS: <b>${f(R.TTS.c0)} đơn</b>${O.pick>0?` — Rớt/LTC <b>${(R.TTS.c0/O.pick*100).toFixed(1)}%</b> (${f(R.TTS.c0)}/${f(O.pick)} đơn LTC)`:''}${R.d1?` · ${R.TTS.up?'▲ +':'▼ '}${f(Math.abs(R.TTS.delta))} (${R.TTS.up?'+':''}${R.TTS.pctD.toFixed(1)}%) so ${R.dhdr(R.d1)}`:''}`;
    await _tgSend(CHAT,TH,ot);
    const elT=document.getElementById('rotlcOvTTS');
