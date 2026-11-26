@@ -5245,8 +5245,10 @@ async function buildWatchPage(selDay){
    const dl=prev.top.map(r=>({r,c:curBy[r.bc]})).filter(x=>x.c).map(x=>({bc:x.r.bc,d:x.c.score-x.r.score}));
    const imp=dl.filter(x=>x.d<-0.5).length, wor=dl.filter(x=>x.d>0.5).length;
    L.push(`• Trong 5 BC theo dõi: <b>${imp} BC cải thiện</b> (điểm tệ giảm) · <b>${wor} BC tệ đi</b> (điểm tệ tăng) · ${dl.length-imp-wor} BC gần như không đổi.`);
-   if(dl.length){const bi=dl.slice().sort((a,b)=>a.d-b.d)[0],bw=dl.slice().sort((a,b)=>b.d-a.d)[0];
-    L.push(`🟢 Cải thiện nhất: <b>${esc(bi.bc)}</b> (điểm tệ ${bi.d>0?'+':''}${bi.d.toFixed(0)}) · 🔴 Tệ đi nhiều nhất: <b>${esc(bw.bc)}</b> (điểm tệ ${bw.d>0?'+':''}${bw.d.toFixed(0)}).`);}
+   if(dl.length){const bi=dl.slice().sort((a,b)=>a.d-b.d)[0],bw=dl.slice().sort((a,b)=>b.d-a.d)[0],pp=[];
+    if(bi.d<-0.5)pp.push(`🟢 Cải thiện nhất: <b>${esc(bi.bc)}</b> (điểm tệ ${bi.d.toFixed(0)})`);
+    if(bw.d>0.5)pp.push(`🔴 Tệ đi nhiều nhất: <b>${esc(bw.bc)}</b> (điểm tệ +${bw.d.toFixed(0)})`);
+    if(pp.length)L.push(pp.join(' · ')+'.');}
   }else L.push('• Chưa có ngày liền trước để so sánh.');
   L.push(`• Danh sách theo dõi cho ngày kế tiếp (5 BC tệ nhất ${fD(day)}): ${cur.top.map(nm).join(' · ')}.`);
   const notes=[];
