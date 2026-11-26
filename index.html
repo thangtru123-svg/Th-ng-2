@@ -221,6 +221,7 @@ tr.tot td{background:#FFF0EB!important;font-weight:800!important;border-top:2px 
  <div class="nav-section">Tổng Quan</div>
  <button class="nav-item active" onclick="show('p0',this)"><span class="icon">📊</span>Dashboard Tổng Quan</button>
  <button class="nav-item" onclick="show('p43',this)" style="background:linear-gradient(135deg,rgba(22,101,52,0.16),rgba(34,197,94,0.1));border:1px solid rgba(22,101,52,0.35);font-weight:700"><span class="icon">🎯</span>Tổng Quan Target</button>
+ <button class="nav-item" onclick="show('p56',this)" style="background:linear-gradient(135deg,rgba(241,93,41,0.22),rgba(251,146,60,0.12));border:1px solid rgba(241,93,41,0.5);font-weight:700"><span class="icon">🎯</span>Điều hành 6 Bưu Cục</button>
  <button class="nav-item" onclick="show('p50',this)" style="background:linear-gradient(135deg,rgba(22,101,52,0.16),rgba(34,197,94,0.1));border:1px solid rgba(22,101,52,0.35);font-weight:700"><span class="icon">📉</span>Phân tích kéo vùng</button>
  <button class="nav-item" onclick="show('p44',this)" style="background:linear-gradient(135deg,rgba(220,38,38,0.2),rgba(241,93,41,0.1));border:1px solid rgba(220,38,38,0.4);font-weight:700"><span class="icon">🚨</span>Bưu Cục làm kém bất thường</button>
  <button class="nav-item" onclick="show('p45',this)" style="background:linear-gradient(135deg,rgba(185,28,28,0.24),rgba(241,93,41,0.12));border:1px solid rgba(185,28,28,0.45);font-weight:700"><span class="icon">⚠️</span>Bưu Cục Bất Ổn (Vùng)</button>
@@ -274,6 +275,7 @@ tr.tot td{background:#FFF0EB!important;font-weight:800!important;border-top:2px 
 <main class="main">
  <div class="page active" id="p0"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
 <div class="page" id="p43"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
+<div class="page" id="p56"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
 <div class="page" id="p44"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
 <div class="page" id="p45"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
 <div class="page" id="p46"><div class="loading"><div class="spinner"></div><div class="loading-text">Đang tải dữ liệu...</div></div></div>
@@ -4954,6 +4956,166 @@ async function buildKeoVungPage(){
  }catch(e){ el.innerHTML='<div class="page-header"><div class="page-title">📉 Phân tích kéo vùng</div></div><div class="analysis-box">Lỗi: '+(e&&e.message||e)+'</div>'; console.error('Kéo vùng:',e); }
 }
 /* ===== p44 — BƯU CỤC LÀM KÉM BẤT THƯỜNG ===== */
+/* ===== p56 — ĐIỀU HÀNH 6 BƯU CỤC (đại nhân trực tiếp điều hành từ 26/11/2026) =====
+   · 6 BC: Cô Tô 1 · Vân Đồn 1 · Quảng Yên · Hạ Long · Hữu Lũng · Hồng Gai. Mục tiêu điều hành: FD, %GTC, ODR, Backlog LC giao/trả, Backlog trả Shop.
+   · Nguồn thật (không bịa): sheet SID (GTC/FD/ODR/OPR theo BC, N-1 = ngày mới nhất của từng sheet, N-2 = ngày liền trước) + Aging (_agingRows) + Năng suất NV
+     + gtc_live.json (realtime hôm nay: tonLC LC giao/trả/trả Shop, bc[] cần giao/đã gán/GTC).
+   · BC NGOÀI 6 BC nhưng kéo Vùng xấu → bảng riêng để đại nhân xử lý với AM: kéo Vùng = |target − tỉ lệ BC| × tỉ trọng (công thức như p50), ngưỡng DH_KEO_MIN điểm %;
+     Backlog: chiếm ≥ DH_BL_SHARE% tổng Vùng và ≥ DH_BL_MIN đơn. */
+const DH_BCS=['(QNI) Cô Tô 1','(QNI) Vân Đồn 1','(QNI) Quảng Yên','(QNI) Hạ Long','(LSO) Hữu Lũng','(QNI) Hồng Gai'];
+const DH_TGT={gtc:70,fd:7,sme:9,tts:4.5,cod:5,odr:94,opr:80};   // mục tiêu Sếp (p43)
+const DH_KEO_MIN=0.1, DH_KEO_MAX=5, DH_BL_SHARE=10, DH_BL_MIN=10;
+async function buildDieuHanhPage(){
+ const el=document.getElementById('p56'); if(!el)return;
+ const seq=(window._dhSeq=(window._dhSeq||0)+1);
+ const esc=t=>String(t==null?'':t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+ const HEAD='<div class="page-header"><div class="page-title">🎯 Điều hành 6 Bưu Cục</div></div>';
+ try{
+  const dt=s=>(String(s==null?'':s).match(/\d{4}-\d{2}-\d{2}/)||[''])[0];
+  const P=v=>{const n=parseFloat(String(v==null?'':v).replace(/,/g,''));return isNaN(n)?null:n;};
+  const norm=t=>String(t||'').toLowerCase().normalize('NFC').replace(/\s+/g,' ').trim();
+  const nf=n=>Math.round(n).toLocaleString('vi-VN');
+  const D=window._D||{},FD=window._FD||{};
+  if(!D.gtcTotalBC||D.gtcTotalBC.length<2)throw new Error('chưa có dữ liệu GTC Total theo Bưu Cục (chờ trang tải xong rồi bấm Tải lại)');
+  const datesOf=m=>{const s=new Set();Object.values(m).forEach(o=>Object.keys(o).forEach(d=>s.add(d)));return [...s].sort();};
+  // ---- tỉ lệ có đơn đếm (GTC/ODR/OPR): BC[bcC] Ngày[dC] Vol[vC] %[pC fraction] đếm[nC] ----
+  const rateMap=(rows,bcC,dC,vC,pC,nC)=>{const m={};(rows||[]).slice(1).forEach(r=>{const bc=(r[bcC]||'').trim();if(!bc||/grand total/i.test(bc))return;const d=dt(r[dC]);if(!d)return;const vol=P(r[vC]),p=P(r[pC]);if(p==null||!(vol>0))return;const n=P(r[nC]);(m[bc]=m[bc]||{})[d]={w:vol,v:p*100,n:n==null?p*vol:n};});return m;};
+  // ---- FD (BC0 Ngày1 %Vol2 %FD3, fraction) ----
+  const fdMap=rows=>{const m={};(rows||[]).slice(1).forEach(r=>{const bc=(r[0]||'').trim();if(!bc||/grand total/i.test(bc))return;const d=dt(r[1]);if(!d)return;const w=P(r[2]),v=P(r[3]);if(v==null||w==null)return;(m[bc]=m[bc]||{})[d]={w,v:v*100,n:v*w};});return m;};
+  const MET=[
+   {k:'gtc',lab:'%GTC Total',m:rateMap(D.gtcTotalBC,1,2,3,5,6),t:DH_TGT.gtc,hi:true,strict:false,tl:'≥ 70%'},
+   {k:'gtcT',lab:'%GTC TTS',m:rateMap(D.gtcTTSBC,1,2,3,5,6),t:null,hi:true,tl:'—'},
+   {k:'fd',lab:'FD Total',m:fdMap(FD.totalBC),t:DH_TGT.fd,hi:false,strict:false,fd:true,tl:'≤ 7%'},
+   {k:'sme',lab:'FD SME',m:fdMap(FD.smeBC),t:DH_TGT.sme,hi:false,strict:true,fd:true,tl:'&lt; 9%'},
+   {k:'tts',lab:'FD TTS',m:fdMap(FD.ttsBC),t:DH_TGT.tts,hi:false,strict:true,fd:true,tl:'&lt; 4,5%'},
+   {k:'cod',lab:'FD TTS<br>có COD',m:fdMap(FD.codBC),t:DH_TGT.cod,hi:false,strict:true,fd:true,tl:'&lt; 5%'},
+   {k:'shp',lab:'FD Shopee',m:fdMap(FD.shopeeBC),t:null,hi:false,fd:true,tl:'—'},
+   {k:'odr',lab:'ODR TTS',m:rateMap(D.odrBC,1,2,3,4,5),t:DH_TGT.odr,hi:true,strict:true,tl:'&gt; 94%'},
+   {k:'opr',lab:'OPR TTS',m:rateMap(D.oprBC,1,2,3,4,5),t:DH_TGT.opr,hi:true,strict:true,tl:'&gt; 80%'}
+  ];
+  MET.forEach(M=>{const ds=datesOf(M.m);M.l=ds[ds.length-1];M.p=ds[ds.length-2];});
+  const get=(M,bc,d)=>(M.m[bc]&&d)?M.m[bc][d]||null:null;
+  const fail=(M,v)=>(M.t==null||v==null)?false:(M.hi?(M.strict?v<=M.t:v<M.t):(M.strict?v>=M.t:v>M.t));
+  const vung=(M,d)=>{let sn=0,sw=0;Object.values(M.m).forEach(o=>{const x=o[d];if(x){sn+=x.n;sw+=x.w;}});return sw>0?sn/sw*100:null;};
+  const fl1=v=>Math.floor(v*10+1e-9)/10;                       // FD hiển thị CẮT 1 số lẻ, không làm tròn
+  const dv=(M,v)=>v==null?null:(M.fd?fl1(v):Math.round(v*10)/10);   // số đem hiển thị
+  const fmtP=x=>x==null?'—':x.toFixed(1).replace('.',',')+'%';
+  // ---- Aging + NS ----
+  const ag=window._agingRows||[];
+  const agD=[...new Set(ag.map(r=>dt(r[11])).filter(Boolean))].sort(),agL=agD[agD.length-1];
+  const ag5={},ag8={};ag.forEach(r=>{if(dt(r[11])!==agL)return;const bc=(r[2]||'').trim();if(!bc)return;ag5[bc]=(ag5[bc]||0)+1;if(typeof _lowAgGe8==='function'&&_lowAgGe8(r))ag8[bc]=(ag8[bc]||0)+1;});
+  let nsRaw=window._nsRaw;
+  if(!nsRaw){try{const res=await fetch(`https://docs.google.com/spreadsheets/d/${SID}/gviz/tq?tqx=out:csv&gid=1723871284`);nsRaw=parseCSV(await res.text()).slice(1).filter(r=>r[0]&&r[2]&&r[3]);window._nsRaw=nsRaw;}catch(_){nsRaw=[];}}
+  const nsAgg={};nsRaw.forEach(r=>{const bc=(r[0]||'').trim(),d=dt(r[2]);if(!bc||!d)return;const g=P(r[4])||0,nv=(r[1]||'').trim();const o=(nsAgg[bc]=nsAgg[bc]||{});const e=o[d]||(o[d]={g:0,nvs:new Set()});e.g+=g;if(g>0&&nv)e.nvs.add(nv);});
+  const nsD=datesOf(nsAgg),nsL=nsD[nsD.length-1],nsP=nsD[nsD.length-2];
+  const nsOf=(bc,d)=>{const e=nsAgg[bc]&&nsAgg[bc][d];return e&&e.nvs.size>0?e.g/e.nvs.size:null;};
+  // ---- realtime (gtc_live.json) ----
+  let live=null,liveErr='';
+  try{const r=await fetch('gtc_live.json?t='+Date.now());if(!r.ok)throw new Error('HTTP '+r.status);live=await r.json();}catch(e){liveErr=(e&&e.message)||String(e);}
+  if(seq!==window._dhSeq)return;
+  const sum=a=>(a||[]).reduce((x,y)=>x+y,0);
+  const TL=live&&live.tonLC&&!live.tonLC.err&&Array.isArray(live.tonLC.hubs)?live.tonLC:null;
+  const bl={};if(TL)TL.hubs.forEach(h=>{if(h.err||!h.lcGiao||!h.lcTra||!h.traShop)return;bl[h.name]={g:sum(h.lcGiao),t:sum(h.lcTra),s:sum(h.traShop),old:sum(h.lcGiao.slice(3))+sum(h.lcTra.slice(3))+sum(h.traShop.slice(2))};});
+  const lv={};if(live&&Array.isArray(live.bc))live.bc.forEach(b=>{lv[b.bc]=b;});
+  const cc=window._CC_BCAM||{};
+  const amOf=bc=>(cc[bc]&&cc[bc].length?cc[bc].join(', '):((lv[bc]&&lv[bc].am)||'—'));
+  const allBC=new Set();MET.forEach(M=>Object.keys(M.m).forEach(b=>allBC.add(b)));
+  // ---- style ----
+  const TH='style="background:#1F3864;color:#fff;padding:7px 8px;font-size:12px;font-weight:700;text-align:center;line-height:1.35;border:1px solid #fff"';
+  const THR='style="background:#B91C1C;color:#fff;padding:7px 8px;font-size:12px;font-weight:700;text-align:center;line-height:1.35;border:1px solid #fff"';
+  const TDL='text-align:left;padding:6px 10px;font-size:12.5px;border-bottom:1px solid var(--border);white-space:nowrap;font-weight:600;';
+  const TDN='text-align:center;padding:6px 8px;font-size:12.5px;border-bottom:1px solid var(--border);white-space:nowrap;min-width:74px;';
+  const nodata='<td style="'+'text-align:center;padding:6px 8px;font-size:12px;border-bottom:1px solid var(--border);color:var(--text-sub)">—</td>';
+  // ô tỉ lệ: giá trị (đỏ nếu không đạt target) + Δ so N-2 (▼/▲, tính từ số đã hiển thị; xấu = đỏ)
+  const rcell=(M,bc)=>{
+   const a=get(M,bc,M.l); if(!a)return nodata; const b=get(M,bc,M.p);
+   const bad=fail(M,a.v), d1=dv(M,a.v), d0=b?dv(M,b.v):null, dl=(d0==null)?null:Math.round((d1-d0)*10)/10;
+   const worse=dl==null||dl===0?false:(M.hi?dl<0:dl>0);
+   return `<td style="${TDN}${bad?'background:#FEF2F2;':''}"><b style="color:${bad?'#B91C1C':'var(--text-main)'}">${fmtP(d1)}</b>${dl==null?'':`<div style="font-size:10.5px;font-weight:700;color:${dl===0?'#9CA3AF':worse?'#B91C1C':'#15803D'}">${dl===0?'=':(dl>0?'▲ ':'▼ ')+Math.abs(dl).toFixed(1).replace('.',',')}</div>`}</td>`;};
+  const vcell=(M,d)=>{const v=vung(M,d);if(v==null)return nodata;const bad=fail(M,v);return `<td style="${TDN}background:#F1F5F9;font-weight:800;color:${bad?'#B91C1C':'#1F3864'}">${fmtP(dv(M,v))}</td>`;};
+  const ncell=(v,red)=>v==null?nodata:`<td style="${TDN}${red?'background:#FEF2F2;color:#B91C1C;font-weight:800;':(v===0?'color:#9CA3AF;':'font-weight:600;')}">${v===0?'–':nf(v)}</td>`;
+  const get1=(M,bc)=>get(M,bc,M.l);
+  // ================= BẢNG 1: chỉ số vận hành N-1 của 6 BC =================
+  const M0=MET[0];
+  const volOf=bc=>{const a=get1(M0,bc);return a?a.w:null;};
+  const nsCell=bc=>{const a=nsOf(bc,nsL),b=nsOf(bc,nsP);if(a==null)return nodata;const bad=a<70,dl=b==null?null:Math.round(a)-Math.round(b);return `<td style="${TDN}${bad?'background:#FEF2F2;':''}"><b style="color:${bad?'#B91C1C':'var(--text-main)'}">${nf(a)}</b>${dl==null?'':`<div style="font-size:10.5px;font-weight:700;color:${dl===0?'#9CA3AF':dl<0?'#B91C1C':'#15803D'}">${dl===0?'=':(dl>0?'▲ ':'▼ ')+Math.abs(dl)}</div>`}</td>`;};
+  const row1=bc=>`<tr><td style="${TDL}">${esc(bc)}</td><td style="${TDL}font-weight:500;color:var(--text-sub)">${esc(amOf(bc))}</td>${ncell(volOf(bc),false)}${MET.map(M=>rcell(M,bc)).join('')}${nsCell(bc)}</tr>`;
+  let nsV=null;{let g=0,s=0;Object.keys(nsAgg).forEach(bc=>{const e=nsAgg[bc][nsL];if(e){g+=e.g;e.nvs.forEach(()=>{s++;});}});nsV=s>0?g/s:null;}
+  const vol0=(()=>{let s=0;Object.values(M0.m).forEach(o=>{if(o[M0.l])s+=o[M0.l].w;});return s;})();
+  const tbl1=`<table style="border-collapse:collapse;display:inline-block"><thead><tr><th ${TH}>Bưu Cục</th><th ${TH}>AM</th><th ${TH}>Đơn cần giao<br>N-1</th>${MET.map(M=>`<th ${TH}>${M.lab}</th>`).join('')}<th ${TH}>NS TB/NV</th></tr></thead><tbody>
+   ${DH_BCS.map(row1).join('')}
+   <tr style="background:#F1F5F9"><td style="${TDL}font-weight:800">VÙNG (${Object.values(M0.m).filter(o=>o[M0.l]).length} BC)</td><td style="${TDL}"></td>${ncell(vol0,false).replace('<td style="','<td style="background:#F1F5F9;font-weight:800;')}${MET.map(M=>vcell(M,M.l)).join('')}${nsV==null?nodata:`<td style="${TDN}background:#F1F5F9;font-weight:800;color:${nsV<70?'#B91C1C':'#1F3864'}">${nf(nsV)}</td>`}</tr>
+   <tr style="background:#FFF7ED"><td style="${TDL}color:#C8461A">Mục tiêu</td><td style="${TDL}"></td><td style="${TDN}"></td>${MET.map(M=>`<td style="${TDN}font-weight:700;color:#C8461A">${M.tl}</td>`).join('')}<td style="${TDN}font-weight:700;color:#C8461A">&gt; 70 đơn</td></tr></tbody></table>`;
+  // ================= BẢNG 2: Backlog + Aging =================
+  const bTot=bc=>bl[bc]?bl[bc].g+bl[bc].t+bl[bc].s:null;
+  const row2=bc=>{const b=bl[bc];return `<tr><td style="${TDL}">${esc(bc)}</td><td style="${TDL}font-weight:500;color:var(--text-sub)">${esc(amOf(bc))}</td>${b?ncell(b.g,false)+ncell(b.t,false)+ncell(b.g+b.t,false)+ncell(b.s,false)+`<td style="${TDN}font-weight:800;background:#FFF4EC;color:#C8461A">${b.g+b.t+b.s===0?'–':nf(b.g+b.t+b.s)}</td>`+ncell(b.old,b.old>0):nodata.repeat(6)}${agL?ncell(ag5[bc]||0,false)+ncell(ag8[bc]||0,(ag8[bc]||0)>0):nodata+nodata}</tr>`;};
+  const BV={g:0,t:0,s:0,old:0,n:0};Object.values(bl).forEach(b=>{BV.g+=b.g;BV.t+=b.t;BV.s+=b.s;BV.old+=b.old;BV.n++;});
+  const ag5V=Object.values(ag5).reduce((x,y)=>x+y,0),ag8V=Object.values(ag8).reduce((x,y)=>x+y,0);
+  const tbl2=`<table style="border-collapse:collapse;display:inline-block"><thead><tr><th ${TH}>Bưu Cục</th><th ${TH}>AM</th><th ${TH}>LC giao<br>≥ 36h</th><th ${TH}>LC trả<br>≥ 36h</th><th ${TH}>Tổng LC</th><th ${TH}>Trả Shop<br>≥ 48h</th><th ${THR}>TỔNG<br>BACKLOG</th><th ${TH}>Trong đó<br>≥ 96h</th><th ${TH}>Aging<br>&gt; 5 ngày</th><th ${TH}>Aging<br>&gt; 8 ngày</th></tr></thead><tbody>
+   ${DH_BCS.map(row2).join('')}
+   <tr style="background:#F1F5F9"><td style="${TDL}font-weight:800">VÙNG (${BV.n} BC có số)</td><td style="${TDL}"></td>${TL?[BV.g,BV.t,BV.g+BV.t,BV.s,BV.g+BV.t+BV.s,BV.old].map(v=>`<td style="${TDN}font-weight:800;background:#F1F5F9">${nf(v)}</td>`).join(''):nodata.repeat(6)}${agL?`<td style="${TDN}font-weight:800;background:#F1F5F9;color:${ag5V>=100?'#B91C1C':'#1F3864'}">${nf(ag5V)}</td><td style="${TDN}font-weight:800;background:#F1F5F9;color:${ag8V>0?'#B91C1C':'#1F3864'}">${nf(ag8V)}</td>`:nodata+nodata}</tr>
+   <tr style="background:#FFF7ED"><td style="${TDL}color:#C8461A">Mục tiêu</td><td style="${TDL}"></td><td colspan="6" style="${TDN}color:#C8461A;font-weight:700">càng thấp càng tốt (không có mục tiêu cố định)</td><td style="${TDN}font-weight:700;color:#C8461A">Vùng &lt; 100</td><td style="${TDN}font-weight:700;color:#C8461A">= 0</td></tr></tbody></table>`;
+  // ================= BẢNG 3: realtime hôm nay =================
+  const row3=bc=>{const b=lv[bc];if(!b)return `<tr><td style="${TDL}">${esc(bc)}</td><td style="${TDL}"></td>${nodata.repeat(5)}</tr>`;const pg=b.canGiao>0?b.daGan/b.canGiao*100:null,pt=b.canGiao>0?b.gtc/b.canGiao*100:null;return `<tr><td style="${TDL}">${esc(bc)}</td><td style="${TDL}font-weight:500;color:var(--text-sub)">${esc(amOf(bc))}</td>${ncell(b.canGiao,false)}${ncell(b.daGan,false)}<td style="${TDN}">${fmtP(pg==null?null:Math.round(pg*10)/10)}</td>${ncell(b.gtc,false)}<td style="${TDN}font-weight:800">${fmtP(pt==null?null:Math.round(pt*10)/10)}</td></tr>`;};
+  const updLive=live&&live.updatedAt?new Date(live.updatedAt):null;
+  const updStr=updLive&&!isNaN(updLive)?updLive.toLocaleString('vi-VN',{hour:'2-digit',minute:'2-digit',day:'2-digit',month:'2-digit'}):'chưa có';
+  const tbl3=live?`<table style="border-collapse:collapse;display:inline-block"><thead><tr><th ${TH}>Bưu Cục</th><th ${TH}>AM</th><th ${TH}>Đơn cần giao<br>hôm nay</th><th ${TH}>Đã gán</th><th ${TH}>%Gán</th><th ${TH}>GTC<br>đến giờ</th><th ${TH}>%GTC<br>đến giờ</th></tr></thead><tbody>${DH_BCS.map(row3).join('')}</tbody></table>`:`<div class="analysis-box">Chưa đọc được gtc_live.json (${esc(liveErr||'không có dữ liệu')}). Không có dữ liệu thì không hiển thị số.</div>`;
+  // ================= BC NGOÀI 6 BC kéo Vùng =================
+  const set6=new Set(DH_BCS.map(norm));
+  const others=[...allBC].filter(b=>!set6.has(norm(b)));
+  const keoOf=(M,bc)=>{const a=get1(M,bc);if(!a||M.t==null)return null;let sw=0;Object.values(M.m).forEach(o=>{if(o[M.l])sw+=o[M.l].w;});if(!(sw>0))return null;const gap=M.hi?(M.t-a.v):(a.v-M.t);return gap>0?gap*a.w/sw:0;};
+  const KM=[MET[0],MET[2],MET[7]];     // %GTC Total · FD Total · ODR (điểm kéo Vùng)
+  const flagged={};
+  KM.forEach(M=>{const l=others.map(bc=>({bc,k:keoOf(M,bc)})).filter(x=>x.k!=null&&x.k>=DH_KEO_MIN).sort((a,b)=>b.k-a.k).slice(0,DH_KEO_MAX);l.forEach(x=>{(flagged[x.bc]=flagged[x.bc]||{})[M.k]=x.k;});});
+  const BLM=[{k:'g',lab:'LC giao'},{k:'t',lab:'LC trả'},{k:'s',lab:'Trả Shop'}];
+  BLM.forEach(m=>{const tot=BV[m.k];if(!(tot>0))return;const l=others.filter(bc=>bl[bc]).map(bc=>({bc,v:bl[bc][m.k],sh:bl[bc][m.k]/tot*100})).filter(x=>x.v>=DH_BL_MIN&&x.sh>=DH_BL_SHARE).sort((a,b)=>b.v-a.v).slice(0,DH_KEO_MAX);l.forEach(x=>{(flagged[x.bc]=flagged[x.bc]||{})['bl_'+m.k]=x.sh;});});
+  const oList=Object.keys(flagged).map(bc=>({bc,f:flagged[bc],n:Object.keys(flagged[bc]).length,keo:KM.reduce((s,M)=>s+(flagged[bc][M.k]||0),0)})).sort((a,b)=>b.n-a.n||b.keo-a.keo||a.bc.localeCompare(b.bc,'vi'));
+  const kcell=(M,bc,f)=>{const a=get1(M,bc);if(!a)return nodata;const k=f[M.k];const bad=k!=null;return `<td style="${TDN}${bad?'background:#FEF2F2;':''}"><b style="color:${bad?'#B91C1C':'var(--text-main)'}">${fmtP(dv(M,a.v))}</b>${bad?`<div style="font-size:10.5px;font-weight:700;color:#B91C1C">kéo Vùng ${k.toFixed(2).replace('.',',')} đ%</div>`:''}</td>`;};
+  const bcell=(bc,key,f)=>{const b=bl[bc];if(!b)return nodata;const sh=f['bl_'+key];const bad=sh!=null;return `<td style="${TDN}${bad?'background:#FEF2F2;':''}"><b style="color:${bad?'#B91C1C':(b[key]===0?'#9CA3AF':'var(--text-main)')}">${b[key]===0?'–':nf(b[key])}</b>${bad?`<div style="font-size:10.5px;font-weight:700;color:#B91C1C">${sh.toFixed(0)}% Vùng</div>`:''}</td>`;};
+  const rowO=r=>`<tr><td style="${TDL}">${esc(r.bc)}</td><td style="${TDL}font-weight:500;color:var(--text-sub)">${esc(amOf(r.bc))}</td>${kcell(MET[0],r.bc,r.f)}${kcell(MET[2],r.bc,r.f)}${kcell(MET[7],r.bc,r.f)}${bcell(r.bc,'g',r.f)}${bcell(r.bc,'t',r.f)}${bcell(r.bc,'s',r.f)}</tr>`;
+  const tblO=oList.length?`<table style="border-collapse:collapse;display:inline-block"><thead><tr><th ${TH}>Bưu Cục</th><th ${TH}>AM cần xử lý</th><th ${TH}>%GTC Total<br>N-1</th><th ${TH}>FD Total<br>N-1</th><th ${TH}>ODR TTS<br>N-1</th><th ${TH}>LC giao<br>≥ 36h</th><th ${TH}>LC trả<br>≥ 36h</th><th ${TH}>Trả Shop<br>≥ 48h</th></tr></thead><tbody>${oList.map(rowO).join('')}</tbody></table>`:'<div class="analysis-box">🎉 Không có Bưu Cục nào ngoài 6 BC kéo Vùng xấu theo các ngưỡng hiện tại.</div>';
+  // ================= NHẬN ĐỊNH (mỗi ý 1 dòng) =================
+  const agg=(M,d)=>{let sn=0,sw=0;DH_BCS.forEach(bc=>{const a=get(M,bc,d);if(a){sn+=a.n;sw+=a.w;}});return sw>0?sn/sw*100:null;};
+  const L=[];
+  const fD=iso=>{const p=(iso||'').split('-');return p.length===3?`${p[2]}/${p[1]}`:'—';};
+  L.push(`<b>Tổng thể 6 BC (N-1 = ${fD(M0.l)} · N-2 = ${fD(M0.p)}):</b>`);
+  [[MET[0],'%GTC Total'],[MET[2],'FD Total'],[MET[7],'ODR TTS']].forEach(([M,n])=>{
+   const a=agg(M,M.l),b=agg(M,M.p),v=vung(M,M.l);
+   if(a==null){L.push(`• ${n}: không có dữ liệu.`);return;}
+   const da=dv(M,a),db=b==null?null:dv(M,b),dl=db==null?null:Math.round((da-db)*10)/10;
+   L.push(`• ${n} gộp 6 BC: <b>${fmtP(da)}</b>${dl==null?'':` — ${dl===0?'không đổi':(dl>0?'tăng ':'giảm ')+Math.abs(dl).toFixed(1).replace('.',',')+' đ%'} so ${fD(M.p)}`} · Vùng ${fmtP(v==null?null:dv(M,v))}${M.t!=null?` · mục tiêu ${M.tl}`:''}.`);});
+  if(TL){const t6=DH_BCS.reduce((s,bc)=>s+(bl[bc]?bl[bc].g+bl[bc].t+bl[bc].s:0),0),tV=BV.g+BV.t+BV.s;
+   L.push(`• Backlog (LC giao + LC trả ≥36h + Trả Shop ≥48h) 6 BC: <b>${nf(t6)} đơn</b> / Vùng ${nf(tV)} đơn (${tV>0?(t6/tV*100).toFixed(1).replace('.',','):'0'}%) — quét lúc ${esc(new Date(TL.generatedAt).toLocaleString('vi-VN',{hour:'2-digit',minute:'2-digit',day:'2-digit',month:'2-digit'}))}.`);}
+  else L.push('• Backlog: chưa có dữ liệu tồn LC từ gtc_live.json.');
+  const worst=(M,hiBad)=>{let w=null;DH_BCS.forEach(bc=>{const a=get1(M,bc);if(!a)return;if(!w||(hiBad?a.v>w.v:a.v<w.v))w={bc,v:a.v};});return w;};
+  const wG=worst(MET[0],false),wF=worst(MET[2],true),wO=worst(MET[7],false);
+  const bestG=(()=>{let w=null;DH_BCS.forEach(bc=>{const a=get1(MET[0],bc);if(a&&(!w||a.v>w.v))w={bc,v:a.v};});return w;})();
+  if(bestG&&wG)L.push(`🟢 %GTC tốt nhất: <b>${esc(bestG.bc)}</b> ${fmtP(dv(MET[0],bestG.v))} · 🔴 thấp nhất: <b>${esc(wG.bc)}</b> ${fmtP(dv(MET[0],wG.v))}.`);
+  if(wF)L.push(`🔴 FD Total cao nhất: <b>${esc(wF.bc)}</b> ${fmtP(dv(MET[2],wF.v))}.`);
+  if(wO)L.push(`🔴 ODR TTS thấp nhất: <b>${esc(wO.bc)}</b> ${fmtP(dv(MET[7],wO.v))}.`);
+  if(TL){const wb=DH_BCS.filter(bc=>bl[bc]).map(bc=>({bc,t:bl[bc].g+bl[bc].t+bl[bc].s})).sort((a,b)=>b.t-a.t)[0];if(wb&&wb.t>0)L.push(`🔴 Backlog nhiều nhất trong 6 BC: <b>${esc(wb.bc)}</b> ${nf(wb.t)} đơn.`);}
+  L.push(`⚠️ Ngoài 6 BC có <b>${oList.length}</b> Bưu Cục kéo Vùng xấu (bảng bên dưới) — cần làm việc với AM liên quan.`);
+  const missing=DH_BCS.filter(bc=>!allBC.has(bc));
+  if(missing.length)L.push(`<span style="color:#B45309">⚠️ Không thấy dữ liệu sheet cho: ${missing.map(esc).join(', ')}.</span>`);
+  const note=`<div style="font-size:11.5px;color:var(--text-sub);margin:0 2px 14px;line-height:1.7">Ô đỏ = không đạt mục tiêu Sếp (GTC ≥70 · FD Total ≤7 · SME &lt;9 · TTS &lt;4,5 · TTS COD &lt;5 · ODR &gt;94 · OPR &gt;80 · NS &gt;70). Mũi tên = so với ngày liền trước (N-2), tính từ số đã hiển thị; FD hiển thị cắt 1 số lẻ. Ngày dữ liệu: ${MET.filter(M=>M.k==='gtc'||M.k==='fd'||M.k==='odr'||M.k==='opr').map(M=>M.lab.replace('<br>',' ')+' '+fD(M.l)).join(' · ')}. Backlog là số tại thời điểm quét (không phải N-1). Aging ngày ${fD(agL)}. NS = GTC ÷ số NV có GTC (ngày ${fD(nsL)}).</div>`;
+  const card=(ic,tt,body,extra)=>`<div class="card" style="margin-bottom:18px"><div class="card-header"><div class="card-title"><div class="card-icon">${ic}</div>${tt}</div></div><div class="table-wrap" style="overflow-x:auto">${body}</div>${extra||''}</div>`;
+  el.innerHTML=`<div class="page-header"><div class="page-title">🎯 Điều hành 6 Bưu Cục</div><div class="page-meta">
+    <span style="background:var(--orange-light);color:var(--orange-dark);padding:3px 10px;border-radius:20px;font-size:12px;font-weight:700">Cô Tô 1 · Vân Đồn 1 · Quảng Yên · Hạ Long · Hữu Lũng · Hồng Gai</span>
+    <span style="background:#EFF6FF;color:#1D4ED8;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:700">🕒 Realtime: ${esc(updStr)}</span>
+    <button style="background:#16A34A;color:#fff;border:1px solid #16A34A;border-radius:8px;padding:5px 12px;font-size:12px;font-weight:700;cursor:pointer" onclick="buildDieuHanhPage()">🔄 Tải lại</button></div></div>
+   <div class="analysis-box" style="margin-bottom:16px;line-height:1.8">${L.join('<br>')}</div>${note}
+   ${card('📊','① Chỉ số vận hành ngày N-1 — 6 Bưu Cục so Vùng',tbl1)}
+   ${card('🔁','② Backlog LC giao / LC trả / Trả Shop + Aging — 6 Bưu Cục',tbl2)}
+   ${card('⏱️','③ Realtime hôm nay — 6 Bưu Cục',tbl3)}
+   ${card('🚨','④ Bưu Cục NGOÀI 6 BC đang kéo Vùng xấu — cần xử lý với AM',tblO,`<div class="analysis-box" style="margin-top:12px;font-size:12px;line-height:1.7">Cách chọn: %GTC Total / FD Total / ODR — kéo Vùng = |mục tiêu − tỉ lệ BC| × tỉ trọng của BC (như trang Phân tích kéo vùng), lấy BC kéo ≥ ${DH_KEO_MIN.toString().replace('.',',')} điểm % (tối đa ${DH_KEO_MAX} BC mỗi chỉ số). Backlog LC giao / LC trả / Trả Shop — BC chiếm ≥ ${DH_BL_SHARE}% tổng Vùng và ≥ ${DH_BL_MIN} đơn.</div>`)}
+`;
+  window._DH={bcs:DH_BCS,flagged,oList,keoAll:KM.map(M=>({k:M.k,top:others.map(bc=>({bc,k:keoOf(M,bc)})).filter(x=>x.k!=null).sort((a,b)=>b.k-a.k).slice(0,8)}))};
+ }catch(e){
+  if(seq!==window._dhSeq)return;
+  el.innerHTML=HEAD+'<div class="analysis-box">Không tải được dữ liệu: '+esc(e&&e.message||e)+'</div>';
+ }
+}
+
 const BATTHUONG_AGING_NGUONG=20;   // p44 ③: BC có Aging > 5 ngày vượt ngưỡng này (đơn) bị liệt kê — đại nhân đặt 20 đơn (09/11)
 async function buildBatThuongPage(){
  const el=document.getElementById('p44'); if(!el)return;
@@ -6928,6 +7090,8 @@ async function init(){
  // p50 — Phân tích kéo vùng GTC/FD/ODR/OPR (cần _D/_FD + _CC_BCAM)
  buildKeoVungPage().catch(e=>console.warn('Kéo vùng:',e&&e.message||e));
  // p44 — Bưu Cục làm kém bất thường (cần _D/_FD + _agingRows)
+ // p56 — Điều hành 6 Bưu Cục (cần _D/_FD + _agingRows + _CC_BCAM + gtc_live.json)
+ buildDieuHanhPage().catch(e=>console.warn('Điều hành 6 BC:',e&&e.message||e));
  buildBatThuongPage().catch(e=>console.warn('BC bất thường:',e&&e.message||e));
  // p45 — Bưu Cục Bất Ổn (Vùng tự set %GTC Total<60%) (cần _D/_FD + _agingRows + _CC_BCAM)
  buildBatOnVungPage().catch(e=>console.warn('BC bất ổn Vùng:',e&&e.message||e));
