@@ -474,7 +474,14 @@ async function _sheetViaApi(url){
   const job=(async()=>{
     let raw=null;
     if(_proxyOk!==false){
-      try{ raw=await _sheetViaProxy(id,name,gid); _proxyOk=true; }
+      try{
+        // 429 (vượt quota Google) → chờ 2/4/6/8s rồi thử lại thay vì báo lỗi ngay
+        for(let t=0;;t++){
+          try{ raw=await _sheetViaProxy(id,name,gid); break; }
+          catch(e){ if(t<4 && e && (e.message==='sheets_429'||e._status===429)){ await new Promise(z=>setTimeout(z,2000*(t+1))); continue; } throw e; }
+        }
+        _proxyOk=true;
+      }
       catch(e){ // 500 not_configured ⇒ chưa set env ⇒ fallback; lỗi khác sau khi proxy đã OK ⇒ ném ra
         if(_proxyOk===true) throw e;
         if(e&&e._status&&e._status!==500) throw e; // vd 403 (không phải @ghn) thì không fallback vô ích

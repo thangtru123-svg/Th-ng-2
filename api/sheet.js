@@ -103,8 +103,21 @@ export default async function handler(req, res) {
     }
 
     const range = encodeURIComponent("'" + name.replace(/'/g, "''") + "'");
-    const r = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${id}/values/${range}?valueRenderOption=FORMATTED_VALUE&dateTimeRenderOption=FORMATTED_STRING`, { headers: { Authorization: 'Bearer ' + tok } });
-    if (!r.ok) { const t = await r.text(); res.status(502).json({ error: 'sheets_' + r.status, detail: t.slice(0, 200) }); return; }
+    const apiUrl = `https://sheets.googleapis.com/v4/spreadsheets/${id}/values/${range}?valueRenderOption=FORMATTED_VALUE&dateTimeRenderOption=FORMATTED_STRING`;
+    let r = null;
+    for (let t = 0; t < 4; t++) { // 429 (vượt quota/phút) → chờ rồi thử lại, tối đa 4 lượt
+      r = await fetch(apiUrl, { headers: { Authorization: 'Bearer ' + tok } });
+      if (r.status !== 429) break;
+      await new Promise(z => setTimeout(z, 1500 * (t + 1)));
+    }
+    if (!r.ok) {
+      if (r.status === 429 && cached) { // vẫn 429 → trả bản cache cũ còn hơn báo lỗi
+        res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+        res.setHeader('Cache-Control', 'no-store');
+        res.status(200).send(cached.csv); return;
+      }
+      const t = await r.text(); res.status(502).json({ error: 'sheets_' + r.status, detail: t.slice(0, 200) }); return;
+    }
     const j = await r.json();
     const vals = j.values || [];
     const w = vals.reduce((m, rw) => Math.max(m, (rw || []).length), 0);
