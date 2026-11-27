@@ -87,7 +87,8 @@ svg text{fill:var(--muted);font-size:11px}
     <div><b>1️⃣ Số chuyến</b>Tất cả chuyến kết thúc trong kỳ. Trừ "kết thúc ảo" (bấm kết thúc cho xong) ra mới là chuyến thực chạy.</div>
     <div><b>2️⃣ Lấp đầy chuẩn</b>Chỉ tính chuyến loại 2–4 (có hàng, có đi đủ điểm). Chuyến 0 kg, thiếu km, kết thúc ảo không được đưa vào để khỏi kéo số xuống oan.</div>
     <div><b>3️⃣ Xe nội bộ / 3PL</b>Mã NCC = "GHN" là xe nội bộ, còn lại là xe thuê ngoài (3PL) — đọc riêng từng khối. Sheet hiện tại chỉ có xe 3PL.</div>
-    <div><b>4️⃣ Màu sắc</b><span class="up"><b style="display:inline">Xanh</b></span> = tốt lên so kỳ trước · <span class="dn"><b style="display:inline">Đỏ</b></span> = xấu đi. Riêng "% chuyến thấp" giảm mới là tốt.</div>
+    <div><b>4️⃣ Chi phí</b>Có cho tháng 10/2026 (xe 3PL, chi phí chính thức). Chọn kỳ 01/10–31/10 để xem cost/kg, chi phí/chuyến.</div>
+    <div><b>5️⃣ Màu sắc</b><span class="up"><b style="display:inline">Xanh</b></span> = tốt lên so kỳ trước · <span class="dn"><b style="display:inline">Đỏ</b></span> = xấu đi. Riêng "% chuyến thấp" giảm mới là tốt.</div>
   </div>
 
   <div class="sec"><h2><span class="no">1</span>Bức tranh nhanh</h2><div class="why" id="why1"></div></div>
@@ -103,23 +104,24 @@ svg text{fill:var(--muted);font-size:11px}
   <div class="sec"><h2><span class="no">4</span>Lấp đầy theo khối xe</h2><div class="why">Xe nội bộ (GHN) và từng nhà xe 3PL — lấp đầy tính trên chuyến loại 2–4.</div></div>
   <div class="card tw" id="blocks"></div>
 
-  <div class="sec"><h2><span class="no">5</span>Phân bố theo mốc lấp đầy</h2><div class="why">Chuyến loại 2–4 chia theo mức lấp đầy. Mốc đỏ/cam (dưới 30%) là chuyến chạy xe nhiều mà chở ít — lãng phí chi phí.</div></div>
+  <div class="sec"><h2><span class="no">5</span>💰 Chi phí vận tải</h2><div class="why" id="why5"></div></div>
+  <div id="cost"></div>
+
+  <div class="sec"><h2><span class="no">6</span>Phân bố theo mốc lấp đầy</h2><div class="why">Chuyến loại 2–4 chia theo mức lấp đầy. Mốc đỏ/cam (dưới 30%) là chuyến chạy xe nhiều mà chở ít — lãng phí chi phí.</div></div>
   <div class="card" id="bands"></div>
 
-  <div class="sec"><h2><span class="no">6</span>Xu hướng theo ngày</h2><div class="why">Cột = số chuyến thực chạy mỗi ngày, đường cam = lấp đầy chuẩn của ngày đó.</div></div>
+  <div class="sec"><h2><span class="no">7</span>Xu hướng theo ngày</h2><div class="why">Cột = số chuyến thực chạy mỗi ngày, đường cam = lấp đầy chuẩn của ngày đó.</div></div>
   <div class="card" id="daily"></div>
 
-  <div class="sec"><h2><span class="no">7</span>Theo tỉnh xuất phát</h2></div>
+  <div class="sec"><h2><span class="no">8</span>Theo tỉnh xuất phát</h2></div>
   <div class="card tw" id="provs"></div>
 
-  <div class="sec"><h2><span class="no">8</span>Tuyến cần chú ý</h2><div class="why">Tuyến có từ 5 chuyến (loại 2–4) trong kỳ, xếp lấp đầy thấp nhất lên đầu. Gõ mã tuyến để lọc.</div></div>
+  <div class="sec"><h2><span class="no">9</span>Tuyến cần chú ý</h2><div class="why">Tuyến có từ 5 chuyến (loại 2–4) trong kỳ, xếp lấp đầy thấp nhất lên đầu. Gõ mã tuyến để lọc.</div></div>
   <div class="card"><div style="margin-bottom:10px"><input class="search" id="rq" placeholder="🔎 Gõ mã tuyến…"> <span class="small" id="rcount"></span></div><div class="tw" id="routes"></div></div>
 
-  <div class="sec"><h2><span class="no">9</span>Cờ cần rà soát</h2><div class="why">Chỉ gắn cờ để theo dõi, không loại chuyến khỏi số đếm.</div></div>
+  <div class="sec"><h2><span class="no">10</span>Cờ cần rà soát</h2><div class="why">Chỉ gắn cờ để theo dõi, không loại chuyến khỏi số đếm.</div></div>
   <div class="card tw" id="flags"></div>
 
-  <div class="sec"><h2><span class="no">10</span>Chi phí vận tải</h2></div>
-  <div class="note"><b>Chưa có dữ liệu chi phí.</b> Sheet nguồn chỉ có dữ liệu vận hành (không có cột chi phí chính thức, giá NCC, lương, nhiên liệu…). Vì vậy trang này <b>chưa tính cost/kg và chi phí/chuyến</b>, không ước đoán. Muốn có, cần thêm file chi phí vận tải theo bước 5–6 của logic.</div>
 
   <details><summary>📘 Logic tóm tắt (bấm để mở)</summary>
     <div style="margin-top:8px;font-size:13px;line-height:1.7">
@@ -276,16 +278,22 @@ function render(){
       .filter(o=>o.cA.fn>=5).sort((a,b)=>a.cA.fill-b.cA.fill);
   })();
   renderRoutes();
+  renderCost(pa,pb);
   /* nhận định nhanh — mỗi ý một dòng */
   (function(){
     const rd=window.__routeData,L=[];
     const dir=(a,b,goodUp)=>a==null||b==null?'':(Math.abs(a-b)<0.05?'đi ngang':((a>b)===goodUp?'🟢 ':'🔴 ')+(a>b?'tăng ':'giảm ')+nf(Math.abs(a-b),1)+'%');
     L.push('<b>📌 Nhận định nhanh</b>');
     L.push('• Tổng thể: kỳ '+ddmm(st.from)+'–'+ddmm(st.to)+' có <b>'+nf(cur.n)+' chuyến</b> ('+nf(cur.real)+' chuyến thực chạy), lấp đầy chuẩn <b>'+pc(cur.fill)+'</b>, '+nf(cur.tan)+' tấn luân chuyển.');
-    L.push('• So kỳ trước ('+ddmm(pa)+'–'+ddmm(pb)+'): số chuyến '+nf(cur.n)+' so '+nf(prv.n)+'; lấp đầy chuẩn '+pc(prv.fill)+' → '+pc(cur.fill)+' ('+dir(cur.fill,prv.fill,true)+'); chuyến dưới 30% '+pc(prv.lowPct)+' → '+pc(cur.lowPct)+' ('+dir(cur.lowPct,prv.lowPct,false)+').');
+    L.push('• So kỳ trước ('+ddmm(pa)+'–'+ddmm(pb)+(pa<0?', ⚠ kỳ trước thiếu dữ liệu, số so sánh chưa đáng tin':'')+'): số chuyến '+nf(cur.n)+' so '+nf(prv.n)+'; lấp đầy chuẩn '+pc(prv.fill)+' → '+pc(cur.fill)+' ('+dir(cur.fill,prv.fill,true)+'); chuyến dưới 30% '+pc(prv.lowPct)+' → '+pc(cur.lowPct)+' ('+dir(cur.lowPct,prv.lowPct,false)+').');
     const qd=cur.bands[5],qp=prv.bands[5];
     L.push('• Chuyến quá tải (lấp đầy trên 100%): '+nf(qd)+' chuyến ('+pc(cur.fn?qd/cur.fn*100:null)+') — kỳ trước '+nf(qp)+' chuyến.');
     if(cur.ty[3]||prv.ty[3])L.push('• Chuyến có chặng rỗng (loại 3): '+nf(cur.ty[3])+' chuyến, kỳ trước '+nf(prv.ty[3])+' chuyến.');
+    const cc=cagg(inRows(st.from,st.to));
+    if(cc.elig){let lc=0,ln=0;inRows(st.from,st.to).forEach(r=>{if(r[1]>=2&&r[1]<=4&&r[2]>=0&&r[2]<300&&r[11]>=0&&r[5]/10>0.05){lc+=r[11];ln++;}});
+      L.push('• 💰 Chi phí: tổng <b>'+mil(cc.cost)+'</b> trên '+nf(cc.elig)+' chuyến có chi phí — cost/kg <b>'+nf(cc.ckg,0)+' đ/kg</b>, <b>'+dong(cc.perTrip)+'</b>/chuyến.');
+      L.push('• 🔴 '+nf(ln)+' chuyến lấp đầy dưới 30% tốn '+mil(lc)+' ('+pc(cc.cost?lc/cc.cost*100:null)+' tổng chi phí).');
+      if(cc.noCost)L.push('• ⚠ '+nf(cc.noCost)+' chuyến chưa có tổng chi phí trong sheet, chưa tính vào số trên.');}
     if(rd.length>=2){const best=rd.slice(-3).reverse(),worst=rd.slice(0,3);
       L.push('• 🟢 Tuyến lấp đầy cao nhất: '+best.map(o=>esc(o.route)+' ('+pc(o.cA.fill)+(o.cA.fill>100?' — quá tải':'')+')').join(' · '));
       L.push('• 🔴 Tuyến lấp đầy thấp nhất: '+worst.map(o=>esc(o.route)+' ('+pc(o.cA.fill)+')').join(' · '));
@@ -301,10 +309,10 @@ function render(){
    '<tr><td class="l"><b>Vượt 200% tải trọng</b></td><td class="wrap">Khối lượng lớn nhất khi rời một điểm &gt; 2 × tải trọng tối đa đang ghi</td><td>'+nf(overP)+'</td><td><b>'+nf(over)+'</b></td><td class="wrap">Gửi nhà xe / đội xe cập nhật lại tải trọng; không định giá lại. '+(over?'Tuyến: '+esc(Object.keys(overRoutes).map(k=>k+' ('+overRoutes[k]+')').join(', ')):'Kỳ này không có chuyến nào.')+'</td></tr>'+
    '<tr><td class="l"><b>Thiếu mã tuyến</b></td><td class="wrap">Chuyến không có "Mã tuyến" (chủ yếu chuyến Tăng cường)</td><td>'+nf(prv.noRoute)+'</td><td><b>'+nf(cur.noRoute)+'</b></td><td class="wrap">Không gom được với chuyến khác khi tính phòng tối ưu.</td></tr>'+
    '<tr><td class="l"><b>B2B / KHL</b></td><td class="wrap">Nhóm tỷ lệ lấp đầy = "Thuần / Ghép B2B / KHL"</td><td colspan="2"><span class="fl">Không có dữ liệu</span></td><td class="wrap">Sheet nguồn không có nhóm B2B/KHL nên chưa gắn cờ được.</td></tr>'+
-   '<tr><td class="l"><b>P2 / P98 (đ/kg)</b></td><td class="wrap">So giá đ/kg với phân vị 2% / 98% của chuyến chính thức tháng trước</td><td colspan="2"><span class="fl">Không có dữ liệu</span></td><td class="wrap">Cần dữ liệu chi phí.</td></tr>'+
+   '<tr><td class="l"><b>P2 / P98 (đ/kg)</b></td><td class="wrap">So giá đ/kg với phân vị 2% / 98% của chuyến chính thức tháng trước</td><td colspan="2"><span class="fl">Chưa tính</span></td><td class="wrap">Cần chi phí chính thức tháng trước cùng tuyến × tải trọng; sheet chi phí mới có tháng 10.</td></tr>'+
    '</tbody></table>';
 
-  $('foot').innerHTML='Nguồn: Sheet Data chuyến chi tiết (gid 496626750) · snapshot trích lúc '+new Date(D.gen).toLocaleString('vi-VN')+' · '+nf(ROWS.length)+' chuyến, '+ddmm(0)+'–'+ddmm(maxDay)+'/2026. Đây là bản chụp, không tự cập nhật: muốn số mới báo con trích lại.';
+  $('foot').innerHTML='Nguồn: Sheet Data chuyến chi tiết (gid 496626750) + sheet Chi phí vận tải (gid 540639858, theo Mã chuyến) · snapshot trích lúc '+new Date(D.gen).toLocaleString('vi-VN')+' · '+nf(ROWS.length)+' chuyến, '+ddmm(0)+'–'+ddmm(maxDay)+'/2026. Đây là bản chụp, không tự cập nhật: muốn số mới báo con trích lại.';
 }
 function renderRoutes(){
   const q=($('rq').value||'').trim().toLowerCase();
@@ -315,6 +323,72 @@ function renderRoutes(){
    data.map(o=>{const nb=o.nccs.some(i=>i===GHN),tp=o.nccs.some(i=>i!==GHN);const blk=nb&&tp?'Hỗn hợp':nb?'Nội bộ':'3PL';
      const f=o.cA.fill;const col=f<30?'var(--b0)':f<50?'var(--b2)':'var(--b4)';
      return '<tr><td class="l"><b>'+esc(o.route)+'</b></td><td class="l">'+PROVS[o.prov]+'</td><td>'+blk+'</td><td>'+nf(o.cA.fn)+'</td><td><b style="color:'+col+'">'+pc(f)+'</b></td><td>'+pc(o.pA.fill)+'</td><td>'+delta(f,o.pA.fill,'good-up',true)+'</td><td>'+pc(o.cA.lowPct)+'</td><td>'+(o.over?'<span class="tag t-warn">'+o.over+' vượt 200%</span>':'')+'</td></tr>'}).join('')+'</tbody></table>':'<div class="small">Không có tuyến phù hợp.</div>';
+}
+
+
+/* ---------------- chi phí ---------------- */
+const mil=n=>n==null||isNaN(n)?'—':nf(n/1e6,1)+' triệu đ';
+const dong=n=>n==null||isNaN(n)?'—':nf(n)+' đ';
+function cagg(rs){
+  const o={n:0,real:0,tiny:0,noCost:0,elig:0,cost:0,kg:0,km:0,fs:0,fn:0,refN:0,refCost:0,noRec:0};
+  rs.forEach(r=>{o.n++;if(r[1]===7)return;o.real++;const tan=r[5]/10;
+    if(tan<=0.05){o.tiny++;return;}
+    if(r[11]<0){o.noCost++;if(!r[10])o.noRec++;if(r[10]&&r[12]>=0){o.refN++;o.refCost+=r[12]*tan*1000;}return;}
+    o.elig++;o.cost+=r[11];o.kg+=tan*1000;o.km+=r[8]/10;
+    if(r[1]>=2&&r[1]<=4&&r[2]>=0){o.fs+=r[2]/10;o.fn++;}});
+  o.ckg=o.kg?o.cost/o.kg:null;o.perTrip=o.elig?o.cost/o.elig:null;o.perKm=o.km?o.cost/o.km:null;o.fill=o.fn?o.fs/o.fn:null;
+  return o;
+}
+function renderCost(pa,pb){
+  const rs=inRows(st.from,st.to),c=cagg(rs),p=cagg(inRows(pa,pb));
+  const cd=ROWS.filter(r=>r[11]>=0).map(r=>r[0]);const cMin=Math.min.apply(null,cd),cMax=Math.max.apply(null,cd);
+  $('why5').innerHTML='Chi phí từng chuyến lấy từ sheet Chi phí vận tải (xe 3PL, "Chi phí chính thức"), ghép với dữ liệu vận hành theo Mã chuyến. Hiện sheet có từ <b>'+ddmm(cMin)+' đến '+ddmm(cMax)+'</b>.';
+  if(!c.elig){
+    $('cost').innerHTML='<div class="note"><b>Kỳ đang chọn ('+ddmm(st.from)+' → '+ddmm(st.to)+') chưa có dữ liệu chi phí.</b> Sheet chi phí mới có '+ddmm(cMin)+' → '+ddmm(cMax)+'/2026 nên không tính được cost/kg cho kỳ này. <button class="btn" id="goCost">➜ Xem kỳ có chi phí ('+ddmm(cMin)+' → '+ddmm(cMax)+')</button></div>';
+    $('goCost').onclick=()=>{st.from=cMin;st.to=cMax;$('dFrom').value=iso(st.from);$('dTo').value=iso(st.to);render();$('cost').scrollIntoView({behavior:'smooth'});};
+    return;
+  }
+  const hasPrev=p.elig>0;
+  const k=(t,v,d,f,col)=>'<div class="kpi" style="border-top-color:'+col+'"><div class="t">'+t+'</div><div class="v" style="font-size:25px">'+v+'</div><div class="d">'+d+(hasPrev?' <span class="small">so kỳ trước</span>':'')+'</div><div class="f">'+f+'</div></div>';
+  const dl=(a,b,kind)=>hasPrev?delta(a,b,kind):'';
+  let h='<div class="grid kpis">'+
+   k('Tổng chi phí',mil(c.cost),dl(c.cost,p.cost,'neutral'),'Trên '+nf(c.elig)+' chuyến có chi phí','var(--navy)')+
+   k('Chi phí / chuyến',dong(c.perTrip),dl(c.perTrip,p.perTrip,'good-dn'),'Trung bình mỗi chuyến','var(--blue)')+
+   k('Cost / kg',nf(c.ckg,0)+' <span class="small">đ/kg</span>',dl(c.ckg,p.ckg,'good-dn'),'Tổng chi phí ÷ tổng khối lượng ('+nf(c.kg/1000)+' tấn)','var(--orange)')+
+   k('Chi phí / km',nf(c.perKm,0)+' <span class="small">đ/km</span>',dl(c.perKm,p.perKm,'good-dn'),'Tổng chi phí ÷ tổng km ('+nf(c.km)+' km)','var(--green)')+
+  '</div>'+(hasPrev?'':'<div class="small" style="margin-top:6px">Kỳ trước chưa có dữ liệu chi phí nên chưa so sánh được.</div>');
+  /* cầu nối chi phí */
+  const br=[['C','Chuyến thực chạy (không gồm kết thúc ảo)',c.real,'navy'],['−','Khối lượng ≤ 0,05 tấn (chi phí báo riêng)',c.tiny,'o'],['−','Chưa có tổng chi phí trong sheet',c.noCost,'r'],['D','= Nền cost/kg (có chi phí, khối lượng > 0,05 tấn)',c.elig,'g']];
+  const mx=Math.max(c.real,1);
+  h+='<div class="card tw" style="margin-top:12px"><b>Cầu nối số chuyến → nền cost/kg</b><table style="margin-top:8px"><thead><tr><th>Bước</th><th class="l">Nội dung</th><th>Số chuyến</th><th class="l" style="min-width:200px">Độ lớn</th></tr></thead><tbody>'+
+    br.map(r=>'<tr'+(r[0]==='−'?' class="sub"':' class="tot"')+'><td>'+r[0]+'</td><td class="l">'+r[1]+'</td><td>'+nf(r[2])+'</td><td class="l"><div class="bar '+(r[3]==='navy'?'':r[3])+'" style="width:'+Math.max(2,r[2]/mx*200)+'px"></div></td></tr>').join('')+'</tbody></table>';
+  if(c.noCost){
+    h+='<div class="note" style="margin-top:10px"><b>'+nf(c.noCost)+' chuyến chưa có "Tổng chi phí"</b> trong sheet'+(c.noRec?' ('+nf(c.noRec)+' chuyến không có dòng chi phí)':'')+', nên <b>không được cộng vào các số trên</b> (không ước đoán).'+
+     (c.refN?' Riêng '+nf(c.refN)+' chuyến vẫn có cột "Cost/kg" trong sheet; nếu lấy Cost/kg × khối lượng thì ≈ <b>'+mil(c.refCost)+'</b> — chỉ để tham khảo, cần đại nhân xác nhận nguồn trước khi dùng.':'')+'</div>';
+  }
+  h+='</div>';
+  /* theo NCC */
+  const keep=st.block;st.block='all';const rAll=inRows(st.from,st.to),pAll=inRows(pa,pb);st.block=keep;
+  const ncc=NCC.map((n,i)=>({n,c:cagg(rAll.filter(r=>r[3]===i)),p:cagg(pAll.filter(r=>r[3]===i))})).filter(x=>x.c.real);
+  h+='<div class="sec" style="margin-top:18px"><h3 style="margin:0 0 6px;font-size:15px">Chi phí theo nhà xe</h3></div><div class="card tw"><table><thead><tr><th class="l">Nhà xe</th><th>Chuyến thực chạy</th><th>Chuyến có chi phí</th><th>Tổng chi phí</th><th>% tổng</th><th>Chi phí / chuyến</th><th>Cost / kg</th><th>Kỳ trước</th><th>Thay đổi</th><th>Lấp đầy TB</th></tr></thead><tbody>'+
+   ncc.map(x=>'<tr><td class="l"><b>'+esc(x.n)+'</b></td><td>'+nf(x.c.real)+'</td><td>'+nf(x.c.elig)+(x.c.noCost?' <span class="small fl">('+nf(x.c.noCost)+' chưa có)</span>':'')+'</td><td>'+(x.c.elig?mil(x.c.cost):'<span class="fl">chưa có</span>')+'</td><td>'+(x.c.elig&&c.cost?pc(x.c.cost/c.cost*100):'—')+'</td><td>'+(x.c.elig?dong(x.c.perTrip):'—')+'</td><td><b>'+(x.c.elig?nf(x.c.ckg,0):'—')+'</b></td><td>'+(x.p.elig?nf(x.p.ckg,0):'—')+'</td><td>'+(x.c.elig&&x.p.elig?delta(x.c.ckg,x.p.ckg,'good-dn'):'—')+'</td><td>'+pc(x.c.fill)+'</td></tr>').join('')+
+   '<tr class="tot"><td class="l">Tổng</td><td>'+nf(c.real)+'</td><td>'+nf(c.elig)+'</td><td>'+mil(c.cost)+'</td><td>100%</td><td>'+dong(c.perTrip)+'</td><td>'+nf(c.ckg,0)+'</td><td>'+(p.elig?nf(p.ckg,0):'—')+'</td><td>'+(p.elig?delta(c.ckg,p.ckg,'good-dn'):'—')+'</td><td>'+pc(c.fill)+'</td></tr></tbody></table>'+
+   '<div class="small" style="margin-top:8px">Bảng này luôn hiện đủ các nhà xe (không bị bộ lọc "Khối xe" cắt). Cost/kg đơn vị đ/kg.</div></div>';
+  /* theo mốc lấp đầy */
+  const bd=BANDS.map(()=>({cost:0,n:0,kg:0}));const nb={cost:0,n:0,kg:0};
+  rs.forEach(r=>{if(r[1]===7||r[5]/10<=0.05||r[11]<0)return;const o=(r[1]>=2&&r[1]<=4&&r[2]>=0)?bd[BANDS.findIndex(b=>r[2]>=b.lo&&r[2]<b.hi)]:nb;o.cost+=r[11];o.n++;o.kg+=r[5]*100;});
+  const lowCost=bd[0].cost+bd[1].cost+bd[2].cost,lowN=bd[0].n+bd[1].n+bd[2].n;
+  h+='<div class="sec" style="margin-top:18px"><h3 style="margin:0 0 6px;font-size:15px">Chi phí theo mốc lấp đầy — chuyến chở ít tốn bao nhiêu?</h3></div><div class="card tw"><table><thead><tr><th class="l">Mốc lấp đầy</th><th>Chuyến</th><th>Tổng chi phí</th><th>% tổng chi phí</th><th>Cost / kg</th></tr></thead><tbody>'+
+   BANDS.map((b,i)=>bd[i].n?'<tr><td class="l"><span class="tag" style="background:'+b.c+'">'+b.n+'</span></td><td>'+nf(bd[i].n)+'</td><td>'+mil(bd[i].cost)+'</td><td>'+pc(c.cost?bd[i].cost/c.cost*100:null)+'</td><td><b>'+(bd[i].kg?nf(bd[i].cost/bd[i].kg,0):'—')+'</b></td></tr>':'').join('')+
+   (nb.n?'<tr class="sub"><td class="l">Không có % lấp đầy / ngoài loại 2–4</td><td>'+nf(nb.n)+'</td><td>'+mil(nb.cost)+'</td><td>'+pc(c.cost?nb.cost/c.cost*100:null)+'</td><td>'+(nb.kg?nf(nb.cost/nb.kg,0):'—')+'</td></tr>':'')+'</tbody></table>'+
+   '<div class="small" style="margin-top:8px"><b>Đọc:</b> chuyến lấp đầy dưới 30% là '+nf(lowN)+' chuyến ('+pc(c.elig?lowN/c.elig*100:null)+' số chuyến) nhưng tốn '+mil(lowCost)+' ('+pc(c.cost?lowCost/c.cost*100:null)+' tổng chi phí).</div></div>';
+  /* theo tuyến */
+  const rm={};rs.forEach(r=>{(rm[r[4]]=rm[r[4]]||[]).push(r);});
+  const rr=Object.keys(rm).map(k=>({route:ROUTES[k],a:cagg(rm[k])})).filter(x=>x.a.elig>=5).sort((a,b)=>b.a.ckg-a.a.ckg);
+  h+='<div class="sec" style="margin-top:18px"><h3 style="margin:0 0 6px;font-size:15px">Tuyến có cost/kg cao nhất <span class="small">(từ 5 chuyến có chi phí, top 15)</span></h3></div><div class="card tw"><table><thead><tr><th class="l">Tuyến</th><th>Chuyến</th><th>Tổng chi phí</th><th>Chi phí / chuyến</th><th>Cost / kg</th><th>Lấp đầy TB</th></tr></thead><tbody>'+
+   rr.slice(0,15).map(x=>'<tr><td class="l"><b>'+esc(x.route)+'</b></td><td>'+nf(x.a.elig)+'</td><td>'+mil(x.a.cost)+'</td><td>'+dong(x.a.perTrip)+'</td><td><b>'+nf(x.a.ckg,0)+'</b></td><td>'+pc(x.a.fill)+'</td></tr>').join('')+'</tbody></table>'+
+   '<div class="small" style="margin-top:8px">Chỉ gồm các tuyến có dữ liệu chi phí trong kỳ. Cost/kg cao thường do chuyến chở ít (lấp đầy thấp) hoặc tuyến dài.</div></div>';
+  $('cost').innerHTML=h;
 }
 
 /* ---------------- controls ---------------- */
