@@ -63,6 +63,9 @@ summary{cursor:pointer;font-weight:700}
 .two{display:grid;grid-template-columns:repeat(auto-fit,minmax(420px,1fr));gap:14px;align-items:start}
 input.search{border:1px solid var(--line);background:var(--panel2);color:var(--ink);border-radius:8px;padding:6px 10px;font-size:13px;min-width:230px}
 svg text{fill:var(--muted);font-size:11px}
+svg text.pv{fill:var(--ink);font-weight:700}
+svg text.pg{fill:var(--green);font-weight:700}
+svg text.pr{fill:var(--red);font-weight:700}
 .small{font-size:12px;color:var(--muted)}
 @media(min-width:1100px){.ctrl{position:sticky;top:0}}
 @media(max-width:700px){.two{grid-template-columns:1fr}.kpi .v{font-size:25px}}
@@ -113,6 +116,7 @@ svg text{fill:var(--muted);font-size:11px}
 
   <div class="sec"><h2><span class="no">7</span>Xu hướng theo ngày</h2><div class="why">Cột = số chuyến thực chạy mỗi ngày, đường cam = lấp đầy chuẩn của ngày đó.</div></div>
   <div class="card" id="daily"></div>
+  <div class="card" id="period" style="margin-top:14px"></div>
 
   <div class="sec"><h2><span class="no">8</span>Theo tỉnh xuất phát</h2></div>
   <div class="card tw" id="provs"></div>
@@ -280,6 +284,7 @@ function render(){
   })();
   renderRoutes();
   renderCost(pa,pb);
+  renderPeriod(pa,pb);
   /* nhận định nhanh — mỗi ý một dòng */
   (function(){
     const rd=window.__routeData,L=[];
@@ -396,6 +401,53 @@ function renderCost(pa,pb){
    '<div class="small" style="margin-top:8px">Cost/kg cao thường do chuyến chở ít (lấp đầy thấp) hoặc tuyến dài.</div></div>';
   $('cost').innerHTML=h;
 }
+
+/* ---------------- diễn biến theo kỳ (tuần) trong tháng ---------------- */
+function renderPeriod(pa,pb){
+  const off=st.costOff,all=inRows(0,maxDay);
+  const bins=[];const bm={};
+  for(let d=0;d<=maxDay;d++){const dt=new Date(BASE+d*864e5),y=dt.getUTCFullYear(),m=dt.getUTCMonth(),dom=dt.getUTCDate();
+    const bk=Math.min(3,Math.floor((dom-1)/7)),key=y*100+m+'-'+bk;
+    let b=bm[key];if(!b){const last=new Date(Date.UTC(y,m+1,0)).getUTCDate();b=bm[key]={key,y,m,bk,d0:d,d1:d,lo:bk*7+1,hi:bk===3?last:bk*7+7,days:0,rows:[]};bins.push(b);}
+    b.d1=d;b.days++;}
+  all.forEach(r=>{const dt=new Date(BASE+r[0]*864e5);const bk=Math.min(3,Math.floor((dt.getUTCDate()-1)/7));bm[dt.getUTCFullYear()*100+dt.getUTCMonth()+'-'+bk].rows.push(r);});
+  bins.forEach(b=>{const dtA=new Date(BASE+b.d0*864e5),dtB=new Date(BASE+b.d1*864e5);const a=dtA.getUTCDate(),z=dtB.getUTCDate();
+    b.label=a+'–'+z+'/'+(b.m+1);b.partial=(a!==b.lo||z!==b.hi);
+    const c=cagg(b.rows,off);b.n=b.rows.length/b.days;b.sl=b.rows.reduce((x,r)=>x+r[5]/10,0)/b.days;b.ck=c.ckg;b.est=c.nEst>0;b.cn=c.elig;});
+  bins.forEach((b,i)=>{const q=bins[i-1];b.dC=q&&q.ck&&b.ck?(b.ck/q.ck-1)*100:null;b.dS=q&&q.sl?(b.sl/q.sl-1)*100:null;b.dN=q&&q.n?(b.n/q.n-1)*100:null;});
+  const cur=cagg(inRows(st.from,st.to),off),prv=cagg(inRows(pa,pb),off);
+  const sub=(cur.ckg&&prv.ckg&&pa>=0)?'Cost/kg '+ddmm(pa)+'–'+ddmm(pb)+': <b>'+nf(prv.ckg,0)+'</b> → '+ddmm(st.from)+'–'+ddmm(st.to)+': <b>'+nf(cur.ckg,0)+' đ/kg</b> ('+(cur.ckg<prv.ckg?'<span class="up">':'<span class="dn">')+(cur.ckg>=prv.ckg?'+':'−')+nf(Math.abs((cur.ckg/prv.ckg-1)*100),1)+'%</span>)':(cur.ckg?'Cost/kg '+ddmm(st.from)+'–'+ddmm(st.to)+': <b>'+nf(cur.ckg,0)+' đ/kg</b>':'Chưa tính được cost/kg cho kỳ đang chọn');
+  const nm=bins.filter(b=>b.est).length;
+  const W=Math.max(900,bins.length*96),H=420,L=54,Rr=64,T=26,B=118,iw=W-L-Rr,ih=H-T-B,bw=iw/bins.length;
+  const maxL=Math.max.apply(null,bins.map(b=>Math.max(b.n,b.sl)).concat([1]))*2.2;
+  const cks=bins.map(b=>b.ck).filter(x=>x!=null);const cMax=cks.length?Math.max.apply(null,cks):1,cMin=cks.length?Math.min.apply(null,cks):0;const rg=Math.max(cMax-cMin,40);
+  const rHi=cMax+rg*.2,rLo=cMin-rg*1.7;
+  const yL=v=>T+ih-v/maxL*ih,yR=v=>T+ih-(v-rLo)/(rHi-rLo)*ih;
+  const ov=(b,a,z)=>b.d1>=a&&b.d0<=z;
+  let g='<svg viewBox="0 0 '+W+' '+H+'" width="100%" style="max-width:'+W+'px;min-width:760px" role="img" aria-label="Diễn biến theo kỳ trong tháng">';
+  bins.forEach((b,i)=>{const x=L+i*bw;
+    if(pa>=0&&ov(b,pa,pb))g+='<rect x="'+x+'" y="'+T+'" width="'+bw+'" height="'+ih+'" fill="var(--grey)" opacity=".18"/>';
+    if(ov(b,st.from,st.to))g+='<rect x="'+x+'" y="'+T+'" width="'+bw+'" height="'+ih+'" fill="var(--orange)" opacity=".13"/>';});
+  for(let t=0;t<=4;t++){const y=T+ih-ih*t/4;g+='<line x1="'+L+'" x2="'+(W-Rr)+'" y1="'+y+'" y2="'+y+'" stroke="var(--line)"/><text x="'+(L-6)+'" y="'+(y+4)+'" text-anchor="end">'+nf(maxL*t/4)+'</text><text x="'+(W-Rr+6)+'" y="'+(y+4)+'">'+nf(rLo+(rHi-rLo)*t/4)+'</text>';}
+  g+='<text x="'+(L-6)+'" y="'+(T-10)+'" text-anchor="end">chuyến · tấn /ngày</text><text x="'+(W-Rr+6)+'" y="'+(T-10)+'">đ/kg</text>';
+  bins.forEach((b,i)=>{const cx=L+i*bw+bw/2,h=b.n/maxL*ih;
+    g+='<rect x="'+(cx-bw*.2)+'" y="'+(T+ih-h)+'" width="'+(bw*.4)+'" height="'+h+'" rx="3" fill="#a9b9dd"><title>'+b.label+': '+nf(b.n,1)+' chuyến/ngày</title></rect><text class="pv" x="'+cx+'" y="'+(T+ih-h-4)+'" text-anchor="middle">'+nf(b.n,0)+'</text>';});
+  const line=(vals,col,yf)=>{let d='',pen=false;vals.forEach((v,i)=>{if(v==null){pen=false;return}const x=L+i*bw+bw/2;d+=(pen?'L':'M')+x+','+yf(v);pen=true;});return '<path d="'+d+'" fill="none" stroke="'+col+'" stroke-width="2.6"/>';};
+  g+=line(bins.map(b=>b.sl),'#3b6fd8',yL)+line(bins.map(b=>b.ck),'var(--navy)',yR);
+  bins.forEach((b,i)=>{const cx=L+i*bw+bw/2;
+    g+='<circle cx="'+cx+'" cy="'+yL(b.sl)+'" r="4" fill="#3b6fd8"><title>'+b.label+': '+nf(b.sl,0)+' tấn/ngày</title></circle><text x="'+cx+'" y="'+(yL(b.sl)+16)+'" text-anchor="middle" style="fill:#3b6fd8;font-weight:700">'+nf(b.sl,0)+'</text>';
+    if(b.ck!=null)g+='<circle cx="'+cx+'" cy="'+yR(b.ck)+'" r="5" fill="'+(b.est?'var(--panel)':'var(--navy)')+'" stroke="var(--navy)" stroke-width="2.4"><title>'+b.label+': cost/kg '+nf(b.ck,0)+' đ/kg'+(b.est?' (gồm tạm tính)':'')+'</title></circle><text class="pv" x="'+cx+'" y="'+(yR(b.ck)-11)+'" text-anchor="middle">'+nf(b.ck,0)+'</text>';
+    const y0=T+ih+18;g+='<text class="pv" x="'+cx+'" y="'+y0+'" text-anchor="middle">'+b.label+(b.partial?'*':'')+'</text>';
+    const sg=v=>v==null?'—':(v>=0?'+':'−')+nf(Math.abs(v),1)+'%';
+    g+='<text class="'+(b.dC==null?'':b.dC<=0?'pg':'pr')+'" x="'+cx+'" y="'+(y0+18)+'" text-anchor="middle">C/kg '+sg(b.dC)+'</text>'+
+       '<text class="'+(b.dS==null?'':b.dS>=0?'pg':'pr')+'" x="'+cx+'" y="'+(y0+34)+'" text-anchor="middle">SL '+sg(b.dS)+'</text>'+
+       '<text x="'+cx+'" y="'+(y0+50)+'" text-anchor="middle">Ch '+sg(b.dN)+'</text>';});
+  g+='</svg>';
+  $('period').innerHTML='<h3 style="margin:0 0 3px;font-size:16px">📈 Diễn biến theo kỳ trong tháng</h3><div class="small" style="margin-bottom:10px">'+sub+' · từng tuần trong tháng (1–7, 8–14, 15–21, 22–cuối tháng)'+(nm?' · <b>vòng rỗng = tuần có chi phí tạm tính</b>':'')+'.</div><div class="tw">'+g+'</div>'+
+   '<div class="legend"><span><i style="background:#a9b9dd"></i>Số chuyến / ngày (cột)</span><span><i style="background:#3b6fd8"></i>Sản lượng / ngày (tấn)</span><span><i style="background:var(--navy)"></i>Cost/kg (đ/kg, trục phải)</span>'+(pa>=0?'<span><i style="background:var(--grey);opacity:.4"></i>Cùng kỳ '+ddmm(pa)+'–'+ddmm(pb)+'</span>':'')+'<span><i style="background:var(--orange);opacity:.4"></i>Kỳ này '+ddmm(st.from)+'–'+ddmm(st.to)+'</span></div>'+
+   '<div class="small" style="margin-top:6px">Dòng dưới mỗi tuần: so với tuần liền trước — <b>C/kg</b> (cost/kg, giảm là xanh), <b>SL</b> (sản lượng/ngày, tăng là xanh), <b>Ch</b> (số chuyến/ngày). Dấu * = tuần chưa đủ ngày dữ liệu. Chỉ có dữ liệu từ '+ddmm(0)+'/2026.</div>';
+}
+
 /* ---------------- controls ---------------- */
 function chips(id,items,get,set){
   $(id).innerHTML=items.map((it,i)=>'<span class="chip'+(get(it)?' on':'')+'" data-i="'+i+'">'+it.label+'</span>').join('');
