@@ -169,7 +169,7 @@ function prevRange(){
   const a=new Date(BASE+st.from*864e5),b=new Date(BASE+st.to*864e5);
   const pa=Date.UTC(a.getUTCFullYear(),a.getUTCMonth()-1,a.getUTCDate());
   const pb=Date.UTC(b.getUTCFullYear(),b.getUTCMonth()-1,b.getUTCDate());
-  return [Math.round((pa-BASE)/864e5),Math.round((pb-BASE)/864e5)];
+  return [Math.round((pa-BASE)/864e5),Math.min(Math.round((pb-BASE)/864e5),st.from-1)];
 }
 const inRows=(a,b)=>ROWS.filter(r=>r[0]>=a&&r[0]<=b&&(st.prov<0||r[9]===st.prov)&&(st.block==='all'||(st.block==='nb'?r[3]===GHN:r[3]!==GHN)));
 function agg(rs){
@@ -195,7 +195,7 @@ function render(){
   const [pa,pb]=prevRange();
   const cur=agg(inRows(st.from,st.to)),prv=agg(inRows(pa,pb));
   const provLbl=st.prov<0?'tất cả tỉnh':PROVS[st.prov];
-  $('pbadge').innerHTML='Đang xem: <b>'+ddmm(st.from)+' → '+ddmm(st.to)+'</b> ('+(st.to-st.from+1)+' ngày) so với <b>'+ddmm(pa)+' → '+ddmm(pb)+'</b> · '+esc(provLbl)+' · khối xe: <b>'+({all:'tất cả',nb:'nội bộ GHN','3pl':'3PL'}[st.block])+'</b>';
+  $('pbadge').innerHTML='Đang xem: <b>'+ddmm(st.from)+' → '+ddmm(st.to)+'</b> ('+(st.to-st.from+1)+' ngày) so với <b>'+ddmm(pa)+' → '+ddmm(pb)+'</b> · '+esc(provLbl)+' · khối xe: <b>'+({all:'tất cả',nb:'nội bộ GHN','3pl':'3PL'}[st.block])+'</b>'+(pa<0?'<br><span style="color:var(--red);font-weight:700">⚠ Kỳ trước chưa đủ dữ liệu (sheet chỉ bắt đầu từ '+ddmm(0)+') nên số so sánh bị thiếu.</span>':'');
   $('why1').textContent='Số chuyến lấy theo nền dashboard (mọi chuyến), lấp đầy lấy theo nền chuẩn (loại 2–4). Dữ liệu từ '+ddmm(0)+' đến '+ddmm(maxDay)+'/2026.';
 
   /* 1. KPI */
