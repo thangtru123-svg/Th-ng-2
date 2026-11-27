@@ -6661,17 +6661,21 @@ async function buildTonLCPage(){
   if(bad.length)L.push(`<span style="color:#B45309">⚠️ ${bad.length} Bưu Cục quét lỗi, chưa có số (không tính vào tổng): ${bad.map(x=>esc(x.bc)).join(', ')}.</span>`);
   const legend=`<div style="font-size:11.5px;color:var(--text-sub);margin:0 2px 14px;line-height:1.6">Luân chuyển giao + trả: các đơn đang tồn từ mốc 36-48h trở lên (trang Tồn đọng luân chuyển, cộng cả 3 kiểu đóng kiện: chưa đóng / đã đóng / không cần đóng kiện). Tồn trả Shop: đơn Trả (trả về Shop) từ mốc 48-72h trở lên (trang Tồn đọng lấy-giao-trả, cộng cả 3 trạng thái chuyến). Đơn vị: đơn. Bảng AM và Bưu Cục xếp từ cao xuống thấp theo TỔNG CỘNG.</div>`;
   // ---- CHỐT 22H HÀNG NGÀY: so sánh tăng/giảm giữa các ngày (gtc_live.json.tonLCCut22, ghi bởi scripts/pull_gtc.js lúc ≥22h VN) ----
-  const CUT=(live&&live.tonLCCut22)||{}; const cutKeys=Object.keys(CUT).sort();   // tăng dần theo ngày
+  let cutSeed={}; try{const rs=await fetch('tonlc_cut22_seed.json?t='+Date.now());if(rs.ok)cutSeed=await rs.json();}catch(_){}   // mốc nhập tay/lấy lại từ lịch sử (vd 26/11 20h31)
+  if(seq!==window._tlSeq)return;
+  const CUT=Object.assign({},cutSeed,(live&&live.tonLCCut22)||{}); const cutKeys=Object.keys(CUT).sort();   // tăng dần theo ngày
   const dmy=k=>k.slice(8,10)+'/'+k.slice(5,7);
   const dArr=(cur,prev)=>{ if(cur==null||prev==null)return '<span style="color:var(--text-sub)">—</span>'; const d=cur-prev; if(d===0)return '<span style="color:#6B7280">= 0</span>'; return d>0?`<span style="color:#DC2626;font-weight:700">▲ ${nf(d)}</span>`:`<span style="color:#16A34A;font-weight:700">▼ ${nf(-d)}</span>`; };
   const cutSum=k=>{const hs=Object.values((CUT[k]||{}).hubs||{});let g=0,t=0,s2=0;hs.forEach(h=>{g+=h.g;t+=h.t;s2+=h.s;});return {n:hs.length,g,t,s:s2,tot:g+t+s2};};
   let cutHtml='', cutNote=null;
+  const cutEarly=Object.keys(CUT).filter(k=>(CUT[k].hourVN||22)<22).sort().map(dmy);
   if(!cutKeys.length){
    cutHtml='<div class="analysis-box">Chưa có bản chốt 22h nào. Mốc đầu tiên sẽ tự ghi ở lần quét đầu tiên từ 22h (giờ VN) — thường khoảng 22h13 — rồi giữ lại hằng ngày. Không có dữ liệu thì không hiển thị số.</div>';
   } else {
    const show=cutKeys.slice(-14).reverse();   // mới → cũ
    const vrows=show.map(k=>{const cur=cutSum(k);const pk=cutKeys[cutKeys.indexOf(k)-1];const pv=pk?cutSum(pk):null;return {k,cur,pv,pk};});
-   cutHtml=`<table style="border-collapse:collapse;display:inline-block"><thead><tr><th ${TH}>Ngày chốt</th><th ${TH}>Giờ chụp</th><th ${TH}>Số BC<br>có số</th><th ${TH}>LC giao ≥36h</th><th ${TH}>So bản<br>trước</th><th ${TH}>LC trả ≥36h</th><th ${TH}>So bản<br>trước</th><th ${TH}>Trả Shop ≥48h</th><th ${TH}>So bản<br>trước</th><th ${THO}>TỔNG</th><th ${THO}>So bản<br>trước</th></tr></thead><tbody>`
+   if(cutEarly.length)cutHtml+=`<div style="font-size:11.5px;color:#B45309;margin:0 2px 8px">⚠️ Bản ${cutEarly.join(', ')} chụp lúc ${cutEarly.map(k=>{const a=CUT[Object.keys(CUT).find(x=>dmy(x)===k)].at;const d=new Date(a);return d.toLocaleTimeString('vi-VN',{hour:'2-digit',minute:'2-digit'});}).join(', ')} (không phải 22h) — các bản sau chụp tự động từ 22h, chênh giờ nên so sánh chỉ mang tính tham khảo.</div>`;
+   cutHtml+=`<table style="border-collapse:collapse;display:inline-block"><thead><tr><th ${TH}>Ngày chốt</th><th ${TH}>Giờ chụp</th><th ${TH}>Số BC<br>có số</th><th ${TH}>LC giao ≥36h</th><th ${TH}>So bản<br>trước</th><th ${TH}>LC trả ≥36h</th><th ${TH}>So bản<br>trước</th><th ${TH}>Trả Shop ≥48h</th><th ${TH}>So bản<br>trước</th><th ${THO}>TỔNG</th><th ${THO}>So bản<br>trước</th></tr></thead><tbody>`
     +vrows.map(({k,cur,pv,pk})=>{const at=CUT[k].at?new Date(CUT[k].at):null;const hm=at&&!isNaN(at)?at.toLocaleTimeString('vi-VN',{hour:'2-digit',minute:'2-digit'}):'—';
       return `<tr><td style="${TDL}">${dmy(k)}</td><td style="${TDN}">${hm}</td><td style="${TDN}">${cur.n}</td>${num(cur.g)}<td style="${TDN}">${pv?dArr(cur.g,pv.g):'—'}</td>${num(cur.t)}<td style="${TDN}">${pv?dArr(cur.t,pv.t):'—'}</td>${num(cur.s)}<td style="${TDN}">${pv?dArr(cur.s,pv.s):'—'}</td>${totCol(cur.tot)}<td style="${TDN}">${pv?dArr(cur.tot,pv.tot):'—'}</td></tr>`;}).join('')+`</tbody></table>`;
    // theo Bưu Cục: ngày chốt mới nhất vs bản chốt liền trước
