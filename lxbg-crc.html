@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="vi"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>LXBG · Số chuyến & Lấp đầy (logic CRC)</title>
+<style>
+:root{--bg:#eef2f7;--panel:#fff;--panel2:#f4f7fb;--ink:#1b2430;--muted:#64748b;--line:#dbe3ee;
+ --navy:#1F3864;--orange:#E8751A;--green:#15803d;--red:#c0392b;--amber:#d98a0b;--blue:#2563eb;--grey:#94a3b8;
+ --b0:#B4232A;--b1:#D65A4A;--b2:#E08A1E;--b3:#7FB069;--b4:#1f7a4d;--b5:#1d4ed8}
+:root[data-theme=dark]{--bg:#0e141c;--panel:#16202c;--panel2:#1b2735;--ink:#e6edf5;--muted:#94a3b8;--line:#263445;--navy:#22406f}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.55 -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif}
+.hero{background:linear-gradient(120deg,#16294a,#1F3864 55%,#2c5282);color:#fff;padding:24px 22px 26px}
+.hero h1{margin:0;font-size:25px;font-weight:800}
+.hero .sub{opacity:.92;margin-top:6px;font-size:13.5px;max-width:980px}
+main{max-width:1380px;margin:0 auto;padding:16px 16px 70px}
+.ctrl{position:relative;z-index:20;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px 14px;margin:-18px 0 16px;display:flex;flex-wrap:wrap;gap:14px 22px;align-items:center;box-shadow:0 4px 14px rgba(15,23,42,.08)}
+.ctrl label{font-size:12px;color:var(--muted);font-weight:700;display:block;margin-bottom:3px}
+.ctrl input[type=date],.ctrl select{border:1px solid var(--line);background:var(--panel2);color:var(--ink);border-radius:8px;padding:6px 8px;font-size:13px}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{padding:5px 11px;border-radius:999px;border:1px solid var(--line);background:var(--panel2);cursor:pointer;font-size:12.5px;font-weight:600;user-select:none}
+.chip.on{background:var(--navy);color:#fff;border-color:var(--navy)}
+.pbadge{font-size:12.5px;color:var(--muted)}
+.pbadge b{color:var(--ink)}
+.btn{border:1px solid var(--line);background:var(--panel2);color:var(--ink);padding:6px 11px;border-radius:8px;font-size:12.5px;font-weight:600;cursor:pointer}
+.sec{margin:26px 0 10px}
+.sec h2{margin:0;font-size:18px;display:flex;align-items:center;gap:9px}
+.sec h2 .no{background:var(--orange);color:#fff;border-radius:50%;width:26px;height:26px;display:inline-flex;align-items:center;justify-content:center;font-size:14px}
+.sec .why{color:var(--muted);font-size:13px;margin-top:3px;max-width:1000px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px 18px}
+.grid{display:grid;gap:12px}
+.kpis{grid-template-columns:repeat(auto-fit,minmax(210px,1fr))}
+.kpi{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px 16px;border-top:4px solid var(--grey)}
+.kpi .t{color:var(--muted);font-size:12.5px;font-weight:700}
+.kpi .v{font-size:30px;font-weight:800;margin:4px 0 2px}
+.kpi .d{font-size:12.5px;font-weight:700}
+.kpi .f{color:var(--muted);font-size:12px;margin-top:3px}
+.up{color:var(--green)}.dn{color:var(--red)}.fl{color:var(--muted)}
+.tw{overflow-x:auto}
+table{border-collapse:collapse;font-size:13px;display:inline-table}
+th,td{padding:7px 10px;border-bottom:1px solid var(--line);text-align:center;white-space:nowrap}
+th{background:var(--navy);color:#fff;font-weight:700;font-size:12.5px}
+td.l,th.l{text-align:left}
+td.wrap{white-space:normal;min-width:220px;max-width:420px;text-align:left}
+tr.tot td{font-weight:800;background:var(--panel2)}
+tr.sub td{color:var(--muted)}
+.tag{display:inline-block;padding:2px 9px;border-radius:999px;font-size:11.5px;font-weight:700;color:#fff}
+.t-ok{background:var(--green)}.t-no{background:var(--grey)}.t-bad{background:var(--red)}.t-warn{background:var(--amber)}
+.bar{height:14px;border-radius:7px;background:var(--navy);min-width:2px}
+.bar.g{background:var(--green)}.bar.r{background:var(--red)}.bar.o{background:var(--orange)}
+.stack{display:flex;height:30px;border-radius:8px;overflow:hidden;background:var(--panel2)}
+.stack div{display:flex;align-items:center;justify-content:center;color:#fff;font-size:11.5px;font-weight:700;overflow:hidden}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12px;margin-top:8px;color:var(--muted)}
+.legend i{display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+.note{background:#FFF7ED;border-left:3px solid var(--amber);color:#7a4a12;padding:10px 13px;border-radius:8px;font-size:13px;margin:10px 0}
+:root[data-theme=dark] .note{background:#2a2113;color:#e7c98f}
+.note.blue{background:#EEF4FF;border-color:var(--blue);color:#1e3a8a}
+:root[data-theme=dark] .note.blue{background:#15233f;color:#bcd0ff}
+.read{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px}
+.read div{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:11px 13px;font-size:13px}
+.read b{display:block;margin-bottom:2px}
+details{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px 14px;margin-top:10px}
+summary{cursor:pointer;font-weight:700}
+.two{display:grid;grid-template-columns:repeat(auto-fit,minmax(420px,1fr));gap:14px;align-items:start}
+input.search{border:1px solid var(--line);background:var(--panel2);color:var(--ink);border-radius:8px;padding:6px 10px;font-size:13px;min-width:230px}
+svg text{fill:var(--muted);font-size:11px}
+.small{font-size:12px;color:var(--muted)}
+@media(min-width:1100px){.ctrl{position:sticky;top:0}}
+@media(max-width:700px){.two{grid-template-columns:1fr}.kpi .v{font-size:25px}}
+</style></head>
+<body>
+<div class="hero">
+  <h1>LXBG · Số chuyến & Lấp đầy (theo logic CRC)</h1>
+  <div class="sub">Đếm chuyến xe luân chuyển Linehaul XBG theo đúng flow đã chốt: tách 7 loại chuyến → chỉ chuyến loại 2–4 mới tính lấp đầy chuẩn → tách xe nội bộ GHN / xe 3PL → so với kỳ trước.</div>
+</div>
+<main>
+  <div class="ctrl">
+    <div><label>Kỳ báo cáo (theo ngày kết thúc chuyến)</label><input type="date" id="dFrom"> → <input type="date" id="dTo"></div>
+    <div><label>Kỳ so sánh</label><select id="cmpMode"><option value="month">Cùng ngày tháng trước</option><option value="prev">Liền trước, cùng độ dài</option></select></div>
+    <div><label>Tỉnh xuất phát</label><div class="chips" id="chipProv"></div></div>
+    <div><label>Khối xe</label><div class="chips" id="chipBlock"></div></div>
+    <div class="pbadge" id="pbadge" style="flex:1;min-width:230px"></div>
+    <button class="btn" id="themeBtn">🌙 Tối</button>
+  </div>
+
+  <div class="sec"><h2><span class="no">★</span>Đọc nhanh trong 30 giây</h2></div>
+  <div class="read">
+    <div><b>1️⃣ Số chuyến</b>Tất cả chuyến kết thúc trong kỳ. Trừ "kết thúc ảo" (bấm kết thúc cho xong) ra mới là chuyến thực chạy.</div>
+    <div><b>2️⃣ Lấp đầy chuẩn</b>Chỉ tính chuyến loại 2–4 (có hàng, có đi đủ điểm). Chuyến 0 kg, thiếu km, kết thúc ảo không được đưa vào để khỏi kéo số xuống oan.</div>
+    <div><b>3️⃣ Xe nội bộ / 3PL</b>Mã NCC = "GHN" là xe nội bộ, còn lại là xe thuê ngoài (3PL) — đọc riêng từng khối. Sheet hiện tại chỉ có xe 3PL.</div>
+    <div><b>4️⃣ Màu sắc</b><span class="up"><b style="display:inline">Xanh</b></span> = tốt lên so kỳ trước · <span class="dn"><b style="display:inline">Đỏ</b></span> = xấu đi. Riêng "% chuyến thấp" giảm mới là tốt.</div>
+  </div>
+
+  <div class="sec"><h2><span class="no">1</span>Bức tranh nhanh</h2><div class="why" id="why1"></div></div>
+  <div class="grid kpis" id="kpis"></div>
+  <div class="note blue" id="ana" style="line-height:1.85;margin-top:12px"></div>
+
+  <div class="sec"><h2><span class="no">2</span>Số chuyến đi từ đâu ra? (cầu nối)</h2><div class="why">Từ tổng chuyến trong sheet, bóc dần từng lớp để ra "nền" dùng tính lấp đầy. Mỗi dòng có thanh cho dễ so độ lớn.</div></div>
+  <div class="card tw" id="bridge"></div>
+
+  <div class="sec"><h2><span class="no">3</span>7 loại chuyến — loại nào được tính, loại nào không?</h2><div class="why">Mỗi chuyến rơi vào đúng 1 trong 7 loại, xét từ trên xuống. Chỉ loại 2, 3, 4 (nền xanh) được dùng để tính tỷ lệ lấp đầy chuẩn.</div></div>
+  <div class="card tw" id="types"></div>
+
+  <div class="sec"><h2><span class="no">4</span>Lấp đầy theo khối xe</h2><div class="why">Xe nội bộ (GHN) và từng nhà xe 3PL — lấp đầy tính trên chuyến loại 2–4.</div></div>
+  <div class="card tw" id="blocks"></div>
+
+  <div class="sec"><h2><span class="no">5</span>Phân bố theo mốc lấp đầy</h2><div class="why">Chuyến loại 2–4 chia theo mức lấp đầy. Mốc đỏ/cam (dưới 30%) là chuyến chạy xe nhiều mà chở ít — lãng phí chi phí.</div></div>
+  <div class="card" id="bands"></div>
+
+  <div class="sec"><h2><span class="no">6</span>Xu hướng theo ngày</h2><div class="why">Cột = số chuyến thực chạy mỗi ngày, đường cam = lấp đầy chuẩn của ngày đó.</div></div>
+  <div class="card" id="daily"></div>
+
+  <div class="sec"><h2><span class="no">7</span>Theo tỉnh xuất phát</h2></div>
+  <div class="card tw" id="provs"></div>
+
+  <div class="sec"><h2><span class="no">8</span>Tuyến cần chú ý</h2><div class="why">Tuyến có từ 5 chuyến (loại 2–4) trong kỳ, xếp lấp đầy thấp nhất lên đầu. Gõ mã tuyến để lọc.</div></div>
+  <div class="card"><div style="margin-bottom:10px"><input class="search" id="rq" placeholder="🔎 Gõ mã tuyến…"> <span class="small" id="rcount"></span></div><div class="tw" id="routes"></div></div>
+
+  <div class="sec"><h2><span class="no">9</span>Cờ cần rà soát</h2><div class="why">Chỉ gắn cờ để theo dõi, không loại chuyến khỏi số đếm.</div></div>
+  <div class="card tw" id="flags"></div>
+
+  <div class="sec"><h2><span class="no">10</span>Chi phí vận tải</h2></div>
+  <div class="note"><b>Chưa có dữ liệu chi phí.</b> Sheet nguồn chỉ có dữ liệu vận hành (không có cột chi phí chính thức, giá NCC, lương, nhiên liệu…). Vì vậy trang này <b>chưa tính cost/kg và chi phí/chuyến</b>, không ước đoán. Muốn có, cần thêm file chi phí vận tải theo bước 5–6 của logic.</div>
+
+  <details><summary>📘 Logic tóm tắt (bấm để mở)</summary>
+    <div style="margin-top:8px;font-size:13px;line-height:1.7">
+      <b>Flow 6 bước:</b> ① Tách nhóm theo Khu vực (KA HCM/KA HN báo riêng, còn lại là KTC–vùng; sheet này chỉ có Linehaul XBG) → ② Phân 7 loại chuyến → ③ Gắn cờ B2B/KHL → ④ Lấp đầy = trung bình "Tỷ lệ lấp đầy" theo chuyến loại 2–4 → ⑤ Chi phí chính thức → ⑥ Chi phí chưa chính thức.<br>
+      <b>7 loại:</b> 1 thiếu km (km = 0) · 2 tiêu chuẩn · 3 có chặng rỗng · 4 checkin thiếu/bỏ điểm · 5 chạy nhưng không ghi hàng · 6 chỉ chạy 1 phần lộ trình · 7 kết thúc ảo.<br>
+      <b>Hai nền số chuyến:</b> nền dashboard (mọi chuyến) dùng cho số chuyến; nền lấp đầy chuẩn (loại 2–4) dùng cho lấp đầy.<br>
+      <b>Kỳ so sánh:</b> ngày 1..N tháng này so ngày 1..N tháng trước. <b>Khối xe:</b> Mã NCC "GHN" = nội bộ, khác = 3PL. <b>Cờ</b> chỉ gắn, không loại chuyến.
+    </div>
+  </details>
+  <div class="small" id="foot" style="margin-top:16px"></div>
+</main>
+<script src="lxbg_crc_data.js"></script>
+<script>
+(function(){
+const D=window.LXBG_CRC, ROWS=D.rows, NCC=D.nccs, ROUTES=D.routes, PROVS=D.provs;
+const GHN=NCC.indexOf('GHN');
+const BASE=Date.UTC(2026,8,28);
+const $=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const iso=d=>new Date(BASE+d*864e5).toISOString().slice(0,10);
+const dayOf=s=>Math.round((Date.parse(s+'T00:00:00Z')-BASE)/864e5);
+const ddmm=d=>{const x=iso(d);return x.slice(8)+'/'+x.slice(5,7)};
+const nf=(n,dp)=>{if(n==null||isNaN(n))return '—';const s=Math.abs(n).toLocaleString('vi-VN',{minimumFractionDigits:dp||0,maximumFractionDigits:dp||0});return (n<0?'-':'')+s};
+const pc=(n,dp)=>n==null||isNaN(n)?'—':nf(n,dp==null?1:dp)+'%';
+const TYPES=[
+ {t:1,name:'Thiếu km',means:'Hệ thống ghi quãng đường = 0 nên không đo được. Lỗi dữ liệu km.',base:false,cls:'t-no'},
+ {t:2,name:'Tiêu chuẩn',means:'Có hàng, checkin đủ mọi điểm, không chặng nào rời điểm với 0 kg.',base:true,cls:'t-ok'},
+ {t:3,name:'Có chặng rỗng',means:'Có hàng, checkin đủ, nhưng có điểm rời đi với 0 kg (chạy 1 chặng không chở gì).',base:true,cls:'t-ok'},
+ {t:4,name:'Checkin thiếu / bỏ điểm',means:'Có hàng nhưng số điểm checkin ít hơn số điểm dừng.',base:true,cls:'t-ok'},
+ {t:5,name:'Chạy nhưng không ghi hàng',means:'Chạy đủ điểm nhưng khối lượng = 0 — lỗi không ghi nhận hàng.',base:false,cls:'t-no'},
+ {t:6,name:'Chỉ chạy 1 phần lộ trình',means:'Khối lượng = 0, checkin được 2 điểm trở lên nhưng chưa đủ điểm dừng.',base:false,cls:'t-no'},
+ {t:7,name:'Kết thúc ảo',means:'Khối lượng = 0, checkin ≤ 1 điểm — bấm kết thúc/khai "Không có hàng". Không phải chuyến thực chạy.',base:false,cls:'t-bad'}
+];
+const BANDS=[
+ {n:'Dưới 10%',lo:0,hi:100,c:'var(--b0)'},{n:'10–20%',lo:100,hi:200,c:'var(--b1)'},{n:'20–30%',lo:200,hi:300,c:'var(--b2)'},
+ {n:'30–50%',lo:300,hi:500,c:'var(--b3)'},{n:'50–100%',lo:500,hi:1000,c:'var(--b4)'},{n:'Trên 100% (quá tải)',lo:1000,hi:1e9,c:'var(--b5)'}
+];
+const maxDay=Math.max.apply(null,ROWS.map(r=>r[0]));
+const st={from:0,to:maxDay,cmp:'month',prov:-1,block:'all'};
+
+/* ---- kỳ mặc định: ngày 1..N của tháng mới nhất ---- */
+(function(){const e=new Date(BASE+maxDay*864e5);const f=Date.UTC(e.getUTCFullYear(),e.getUTCMonth(),1);st.from=Math.round((f-BASE)/864e5);})();
+
+function prevRange(){
+  const len=st.to-st.from+1;
+  if(st.cmp==='prev')return [st.from-len,st.from-1];
+  const a=new Date(BASE+st.from*864e5),b=new Date(BASE+st.to*864e5);
+  const pa=Date.UTC(a.getUTCFullYear(),a.getUTCMonth()-1,a.getUTCDate());
+  const pb=Date.UTC(b.getUTCFullYear(),b.getUTCMonth()-1,b.getUTCDate());
+  return [Math.round((pa-BASE)/864e5),Math.round((pb-BASE)/864e5)];
+}
+const inRows=(a,b)=>ROWS.filter(r=>r[0]>=a&&r[0]<=b&&(st.prov<0||r[9]===st.prov)&&(st.block==='all'||(st.block==='nb'?r[3]===GHN:r[3]!==GHN)));
+function agg(rs){
+  const o={n:0,ty:[0,0,0,0,0,0,0,0],fs:0,fn:0,low:0,tan:0,bands:BANDS.map(()=>0),over:0,noRoute:0,tc:0};
+  rs.forEach(r=>{o.n++;o.ty[r[1]]++;o.tan+=r[5]/10;if(r[6]&4)o.over++;if(r[6]&8)o.noRoute++;if(r[6]&1)o.tc++;
+    if(r[1]>=2&&r[1]<=4&&r[2]>=0){o.fs+=r[2]/10;o.fn++;if(r[2]<300)o.low++;BANDS.forEach((b,i)=>{if(r[2]>=b.lo&&r[2]<b.hi)o.bands[i]++;});}});
+  o.real=o.n-o.ty[7];o.base=o.ty[2]+o.ty[3]+o.ty[4];o.skip=o.ty[1]+o.ty[5]+o.ty[6];
+  o.fill=o.fn?o.fs/o.fn:null;o.lowPct=o.fn?o.low/o.fn*100:null;
+  return o;
+}
+/* Δ: kind 'good-up' (tăng là tốt) | 'good-dn' (giảm là tốt) | 'neutral' */
+function delta(cur,prev,kind,isPct){
+  if(cur==null||prev==null||isNaN(cur)||isNaN(prev))return '<span class="fl">—</span>';
+  const d=cur-prev;if(Math.abs(d)<(isPct?0.05:0.5))return '<span class="fl">▬ 0</span>';
+  const sign=d>0?'+':'-';const up=d>0;
+  let cls='fl';if(kind==='good-up')cls=up?'up':'dn';else if(kind==='good-dn')cls=up?'dn':'up';
+  const txt=isPct?sign+nf(Math.abs(d),1)+'%':sign+nf(Math.abs(d))+(prev?' ('+sign+nf(Math.abs(d/prev*100),1)+'%)':'');
+  return '<span class="'+cls+'">'+(up?'▲ ':'▼ ')+txt+'</span>';
+}
+
+/* ---------------- render ---------------- */
+function render(){
+  const [pa,pb]=prevRange();
+  const cur=agg(inRows(st.from,st.to)),prv=agg(inRows(pa,pb));
+  const provLbl=st.prov<0?'tất cả tỉnh':PROVS[st.prov];
+  $('pbadge').innerHTML='Đang xem: <b>'+ddmm(st.from)+' → '+ddmm(st.to)+'</b> ('+(st.to-st.from+1)+' ngày) so với <b>'+ddmm(pa)+' → '+ddmm(pb)+'</b> · '+esc(provLbl)+' · khối xe: <b>'+({all:'tất cả',nb:'nội bộ GHN','3pl':'3PL'}[st.block])+'</b>';
+  $('why1').textContent='Số chuyến lấy theo nền dashboard (mọi chuyến), lấp đầy lấy theo nền chuẩn (loại 2–4). Dữ liệu từ '+ddmm(0)+' đến '+ddmm(maxDay)+'/2026.';
+
+  /* 1. KPI */
+  const k=(t,v,d,f,col)=>'<div class="kpi" style="border-top-color:'+col+'"><div class="t">'+t+'</div><div class="v">'+v+'</div><div class="d">'+d+' <span class="small">so kỳ trước</span></div><div class="f">'+f+'</div></div>';
+  $('kpis').innerHTML=
+   k('Số chuyến (nền dashboard)',nf(cur.n)+' <span class="small">chuyến</span>',delta(cur.n,prv.n,'neutral'),'Mọi chuyến kết thúc trong kỳ, kể cả kết thúc ảo','var(--navy)')+
+   k('Chuyến thực chạy',nf(cur.real)+' <span class="small">chuyến</span>',delta(cur.real,prv.real,'neutral'),'Đã trừ '+nf(cur.ty[7])+' chuyến kết thúc ảo (loại 7)','var(--blue)')+
+   k('Lấp đầy chuẩn (loại 2–4)',pc(cur.fill),delta(cur.fill,prv.fill,'good-up',true),'Trung bình trên '+nf(cur.fn)+' chuyến · kỳ trước '+pc(prv.fill),'var(--green)')+
+   k('Chuyến lấp đầy dưới 30%',pc(cur.lowPct),delta(cur.lowPct,prv.lowPct,'good-dn',true),nf(cur.low)+' chuyến · kỳ trước '+pc(prv.lowPct),'var(--red)')+
+   k('Khối lượng luân chuyển',nf(cur.tan)+' <span class="small">tấn</span>',delta(cur.tan,prv.tan,'neutral'),'Tổng hàng đã xếp trên các chuyến','var(--orange)');
+
+  /* 2. bridge */
+  const rowsB=[
+   ['A','Tổng chuyến trong sheet (kết thúc trong kỳ)',cur.n,prv.n,'navy','Đã bỏ trùng mã chuyến'],
+   ['−','Kết thúc ảo (loại 7)',cur.ty[7],prv.ty[7],'r','Bấm kết thúc cho xong, không có hàng — đếm riêng'],
+   ['C','= Chuyến thực chạy',cur.real,prv.real,'navy','Số chuyến xe thật sự chạy'],
+   ['−','Chưa đủ điều kiện tính lấp đầy (loại 1, 5, 6)',cur.skip,prv.skip,'o','Thiếu km / không ghi hàng / chỉ chạy 1 phần'],
+   ['E','= Nền lấp đầy chuẩn (loại 2–4)',cur.base,prv.base,'g','Dùng để tính tỷ lệ lấp đầy chuẩn']
+  ];
+  const mx=Math.max(cur.n,prv.n,1);
+  $('bridge').innerHTML='<table><thead><tr><th>Bước</th><th class="l">Nội dung</th><th>Kỳ trước</th><th>Kỳ này</th><th>Thay đổi</th><th class="l" style="min-width:220px">Độ lớn kỳ này</th><th class="l">Ghi chú</th></tr></thead><tbody>'+
+   rowsB.map(r=>{const strong=r[0]!=='−';return '<tr'+(strong?' class="tot"':' class="sub"')+'><td>'+r[0]+'</td><td class="l">'+r[1]+'</td><td>'+nf(r[3])+'</td><td>'+nf(r[2])+'</td><td>'+delta(r[2],r[3],'neutral')+'</td><td class="l"><div class="bar '+(r[4]==='navy'?'':r[4])+'" style="width:'+Math.max(2,r[2]/mx*200)+'px"></div></td><td class="l small" style="white-space:normal">'+r[5]+'</td></tr>'}).join('')+
+   '</tbody></table>'+
+   '<div class="small" style="margin-top:8px">Kiểm: nền lấp đầy = loại 2 + 3 + 4 = '+nf(cur.ty[2])+' + '+nf(cur.ty[3])+' + '+nf(cur.ty[4])+' = '+nf(cur.base)+' chuyến ✔ · '+nf(cur.fn)+' chuyến trong đó có ghi tỷ lệ lấp đầy.</div>';
+
+  /* 3. types */
+  $('types').innerHTML='<table><thead><tr><th>Loại</th><th class="l">Tên</th><th class="l">Nghĩa là gì?</th><th>Tính lấp đầy?</th><th>Kỳ trước</th><th>Kỳ này</th><th>Thay đổi</th><th>Tỷ trọng kỳ này</th></tr></thead><tbody>'+
+   TYPES.map(T=>'<tr'+(T.base?' style="background:rgba(21,128,61,.07)"':'')+'><td><span class="tag '+T.cls+'">'+T.t+'</span></td><td class="l"><b>'+T.name+'</b></td><td class="wrap">'+T.means+'</td><td>'+(T.base?'<span class="up"><b>✔ Có</b></span>':'<span class="fl">✘ Không</span>')+'</td><td>'+nf(prv.ty[T.t])+'</td><td><b>'+nf(cur.ty[T.t])+'</b></td><td>'+delta(cur.ty[T.t],prv.ty[T.t],T.t===2||T.t===3||T.t===4?'neutral':'good-dn')+'</td><td>'+pc(cur.n?cur.ty[T.t]/cur.n*100:null)+'</td></tr>').join('')+
+   '<tr class="tot"><td></td><td class="l">Tổng</td><td></td><td></td><td>'+nf(prv.n)+'</td><td>'+nf(cur.n)+'</td><td>'+delta(cur.n,prv.n,'neutral')+'</td><td>100%</td></tr></tbody></table>';
+
+  /* 4. khối xe — lọc khối bị bỏ qua ở bảng này để luôn thấy đủ */
+  const keep=st.block;st.block='all';
+  const cAll=inRows(st.from,st.to),pAll=inRows(pa,pb);st.block=keep;
+  const grp=[['Xe nội bộ (GHN)',r=>r[3]===GHN,true],['Xe 3PL (tổng)',r=>r[3]!==GHN,true]];
+  NCC.forEach((n,i)=>{if(i!==GHN)grp.push(['   · '+n,r=>r[3]===i,false]);});
+  const bl=grp.map(g=>{const c=agg(cAll.filter(g[1])),p=agg(pAll.filter(g[1]));return {name:g[0],bold:g[2],c,p};}).filter(x=>x.c.n||x.p.n);
+  $('blocks').innerHTML='<table><thead><tr><th class="l">Khối / nhà xe</th><th>Số chuyến</th><th>Thực chạy</th><th>Nền lấp đầy</th><th>Lấp đầy kỳ này</th><th>Kỳ trước</th><th>Thay đổi</th><th>% chuyến dưới 30%</th><th>Tăng cường</th></tr></thead><tbody>'+
+   bl.map(x=>'<tr'+(x.bold?' class="tot"':'')+'><td class="l">'+esc(x.name).replace(/ /g,'&nbsp;')+'</td><td>'+nf(x.c.n)+'</td><td>'+nf(x.c.real)+'</td><td>'+nf(x.c.base)+'</td><td><b>'+pc(x.c.fill)+'</b></td><td>'+pc(x.p.fill)+'</td><td>'+delta(x.c.fill,x.p.fill,'good-up',true)+'</td><td>'+pc(x.c.lowPct)+'</td><td>'+nf(x.c.tc)+'</td></tr>').join('')+'</tbody></table>'+
+   '<div class="small" style="margin-top:8px">Bảng này luôn hiện đủ các khối (không bị bộ lọc "Khối xe" cắt). Cột "Tăng cường" = số chuyến gắn nhãn Tăng cường trong sheet.'+(GHN<0?' <b>Sheet hiện không có chuyến xe nội bộ (Mã NCC = GHN)</b> nên chỉ có khối 3PL.':'')+'</div>';
+
+  /* 5. bands */
+  const tot=cur.fn||1,totp=prv.fn||1;
+  const stack=(o,t)=>'<div class="stack">'+BANDS.map((b,i)=>{const w=o.bands[i]/t*100;return w>0?'<div style="width:'+w+'%;background:'+b.c+'" title="'+b.n+': '+nf(o.bands[i])+' chuyến">'+(w>=5?nf(w,0)+'%':'')+'</div>':''}).join('')+'</div>';
+  $('bands').innerHTML='<div style="font-weight:700;margin-bottom:4px">Kỳ này <span class="small">('+nf(cur.fn)+' chuyến)</span></div>'+stack(cur,tot)+
+   '<div style="font-weight:700;margin:12px 0 4px">Kỳ trước <span class="small">('+nf(prv.fn)+' chuyến)</span></div>'+stack(prv,totp)+
+   '<div class="legend">'+BANDS.map(b=>'<span><i style="background:'+b.c+'"></i>'+b.n+'</span>').join('')+'</div>'+
+   '<div class="tw" style="margin-top:12px"><table><thead><tr><th class="l">Mốc lấp đầy</th><th>Kỳ trước</th><th>Kỳ này</th><th>Tỷ trọng kỳ này</th><th>Thay đổi</th></tr></thead><tbody>'+
+   BANDS.map((b,i)=>'<tr><td class="l"><span class="tag" style="background:'+b.c+'">'+b.n+'</span></td><td>'+nf(prv.bands[i])+'</td><td><b>'+nf(cur.bands[i])+'</b></td><td>'+pc(cur.bands[i]/tot*100)+'</td><td>'+delta(cur.bands[i],prv.bands[i],'neutral')+'</td></tr>').join('')+'</tbody></table></div>';
+
+  /* 6. daily chart */
+  const days=[];for(let d=st.from;d<=st.to;d++)days.push(d);
+  const rsD=inRows(st.from,st.to);const byD={};days.forEach(d=>byD[d]=[]);rsD.forEach(r=>byD[r[0]].push(r));
+  const dd=days.map(d=>{const a=agg(byD[d]);return {d,real:a.real,fill:a.fill,n:a.n};});
+  const W=Math.max(640,days.length*30),H=230,L=40,Rr=44,T=14,B=26,iw=W-L-Rr,ih=H-T-B;
+  const maxR=Math.max.apply(null,dd.map(x=>x.real).concat([1]));
+  const bw=iw/dd.length;
+  let svg='<svg viewBox="0 0 '+W+' '+H+'" width="100%" style="max-width:'+W+'px;min-width:520px" role="img" aria-label="Số chuyến và lấp đầy theo ngày">';
+  for(let g=0;g<=4;g++){const y=T+ih-ih*g/4;svg+='<line x1="'+L+'" x2="'+(W-Rr)+'" y1="'+y+'" y2="'+y+'" stroke="var(--line)"/><text x="'+(L-5)+'" y="'+(y+4)+'" text-anchor="end">'+nf(maxR*g/4)+'</text><text x="'+(W-Rr+5)+'" y="'+(y+4)+'">'+(g*25)+'%</text>';}
+  dd.forEach((x,i)=>{const h=x.real/maxR*ih;svg+='<rect x="'+(L+i*bw+bw*.15)+'" y="'+(T+ih-h)+'" width="'+(bw*.7)+'" height="'+h+'" rx="3" fill="var(--navy)" opacity=".85"><title>'+ddmm(x.d)+': '+x.real+' chuyến thực chạy · lấp đầy '+pc(x.fill)+'</title></rect>';
+    if(dd.length<=31||i%2===0)svg+='<text x="'+(L+i*bw+bw/2)+'" y="'+(H-8)+'" text-anchor="middle">'+ddmm(x.d).slice(0,2)+'</text>';});
+  const pts=dd.map((x,i)=>x.fill==null?null:[L+i*bw+bw/2,T+ih-Math.min(x.fill,100)/100*ih]).filter(Boolean);
+  if(pts.length){svg+='<polyline fill="none" stroke="var(--orange)" stroke-width="2.5" points="'+pts.map(p=>p.join(',')).join(' ')+'"/>'+pts.map(p=>'<circle cx="'+p[0]+'" cy="'+p[1]+'" r="3" fill="var(--orange)"/>').join('');}
+  svg+='</svg>';
+  $('daily').innerHTML='<div class="tw">'+svg+'</div><div class="legend"><span><i style="background:var(--navy)"></i>Chuyến thực chạy (trục trái)</span><span><i style="background:var(--orange)"></i>Lấp đầy chuẩn % (trục phải, tối đa 100%)</span></div>';
+
+  /* 7. tỉnh — bỏ bộ lọc tỉnh để thấy đủ */
+  const kp=st.prov;st.prov=-1;const cP=inRows(st.from,st.to),pP=inRows(pa,pb);st.prov=kp;
+  $('provs').innerHTML='<table><thead><tr><th class="l">Tỉnh xuất phát</th><th>Số chuyến</th><th>Thay đổi</th><th>Thực chạy</th><th>Nền lấp đầy</th><th>Lấp đầy kỳ này</th><th>Kỳ trước</th><th>Thay đổi</th><th>% chuyến dưới 30%</th></tr></thead><tbody>'+
+   PROVS.map((p,i)=>{const c=agg(cP.filter(r=>r[9]===i)),q=agg(pP.filter(r=>r[9]===i));if(!c.n&&!q.n)return '';return '<tr><td class="l"><b>'+p+'</b></td><td>'+nf(c.n)+'</td><td>'+delta(c.n,q.n,'neutral')+'</td><td>'+nf(c.real)+'</td><td>'+nf(c.base)+'</td><td><b>'+pc(c.fill)+'</b></td><td>'+pc(q.fill)+'</td><td>'+delta(c.fill,q.fill,'good-up',true)+'</td><td>'+pc(c.lowPct)+'</td></tr>'}).join('')+'</tbody></table>'+
+   '<div class="small" style="margin-top:8px">Tỉnh xuất phát suy từ tiền tố mã tuyến; chuyến Tăng cường/tuyến HN suy từ điểm đầu của lộ trình. Số chuyến đổi mạnh giữa hai kỳ có thể do phạm vi tuyến thay đổi, cần đối chiếu trước khi kết luận.</div>';
+
+  /* 8. tuyến */
+  window.__routeData=(function(){
+    const cr=inRows(st.from,st.to),pr=inRows(pa,pb);const m={};
+    const add=(rs,key)=>rs.forEach(r=>{const o=m[r[4]]||(m[r[4]]={route:r[4],prov:r[9],c:[],p:[],ncc:{},over:0,cap:0});if(key==='c'){o.c.push(r);o.ncc[r[3]]=1;if(r[6]&4)o.over++;o.cap=Math.max(o.cap,r[7]);}else o.p.push(r);});
+    add(cr,'c');add(pr,'p');
+    return Object.values(m).map(o=>({route:ROUTES[o.route],prov:o.prov,cA:agg(o.c),pA:agg(o.p),nccs:Object.keys(o.ncc).map(Number),over:o.over,cap:o.cap}))
+      .filter(o=>o.cA.fn>=5).sort((a,b)=>a.cA.fill-b.cA.fill);
+  })();
+  renderRoutes();
+  /* nhận định nhanh — mỗi ý một dòng */
+  (function(){
+    const rd=window.__routeData,L=[];
+    const dir=(a,b,goodUp)=>a==null||b==null?'':(Math.abs(a-b)<0.05?'đi ngang':((a>b)===goodUp?'🟢 ':'🔴 ')+(a>b?'tăng ':'giảm ')+nf(Math.abs(a-b),1)+'%');
+    L.push('<b>📌 Nhận định nhanh</b>');
+    L.push('• Tổng thể: kỳ '+ddmm(st.from)+'–'+ddmm(st.to)+' có <b>'+nf(cur.n)+' chuyến</b> ('+nf(cur.real)+' chuyến thực chạy), lấp đầy chuẩn <b>'+pc(cur.fill)+'</b>, '+nf(cur.tan)+' tấn luân chuyển.');
+    L.push('• So kỳ trước ('+ddmm(pa)+'–'+ddmm(pb)+'): số chuyến '+nf(cur.n)+' so '+nf(prv.n)+'; lấp đầy chuẩn '+pc(prv.fill)+' → '+pc(cur.fill)+' ('+dir(cur.fill,prv.fill,true)+'); chuyến dưới 30% '+pc(prv.lowPct)+' → '+pc(cur.lowPct)+' ('+dir(cur.lowPct,prv.lowPct,false)+').');
+    const qd=cur.bands[5],qp=prv.bands[5];
+    L.push('• Chuyến quá tải (lấp đầy trên 100%): '+nf(qd)+' chuyến ('+pc(cur.fn?qd/cur.fn*100:null)+') — kỳ trước '+nf(qp)+' chuyến.');
+    if(cur.ty[3]||prv.ty[3])L.push('• Chuyến có chặng rỗng (loại 3): '+nf(cur.ty[3])+' chuyến, kỳ trước '+nf(prv.ty[3])+' chuyến.');
+    if(rd.length>=2){const best=rd.slice(-3).reverse(),worst=rd.slice(0,3);
+      L.push('• 🟢 Tuyến lấp đầy cao nhất: '+best.map(o=>esc(o.route)+' ('+pc(o.cA.fill)+(o.cA.fill>100?' — quá tải':'')+')').join(' · '));
+      L.push('• 🔴 Tuyến lấp đầy thấp nhất: '+worst.map(o=>esc(o.route)+' ('+pc(o.cA.fill)+')').join(' · '));
+      const drop=rd.filter(o=>o.pA.fill!=null).sort((a,b)=>(a.cA.fill-a.pA.fill)-(b.cA.fill-b.pA.fill))[0];
+      if(drop&&drop.cA.fill<drop.pA.fill)L.push('• 🔴 Tuyến giảm mạnh nhất so kỳ trước: '+esc(drop.route)+' ('+pc(drop.pA.fill)+' → '+pc(drop.cA.fill)+').');}
+    $('ana').innerHTML=L.join('<br>');
+  })();
+
+  /* 9. cờ */
+  const over=cur.over,overP=prv.over;
+  const overRoutes={};inRows(st.from,st.to).filter(r=>r[6]&4).forEach(r=>{const k=ROUTES[r[4]];overRoutes[k]=(overRoutes[k]||0)+1;});
+  $('flags').innerHTML='<table><thead><tr><th class="l">Cờ</th><th class="l">Điều kiện</th><th>Kỳ trước</th><th>Kỳ này</th><th class="l">Việc cần làm</th></tr></thead><tbody>'+
+   '<tr><td class="l"><b>Vượt 200% tải trọng</b></td><td class="wrap">Khối lượng lớn nhất khi rời một điểm &gt; 2 × tải trọng tối đa đang ghi</td><td>'+nf(overP)+'</td><td><b>'+nf(over)+'</b></td><td class="wrap">Gửi nhà xe / đội xe cập nhật lại tải trọng; không định giá lại. '+(over?'Tuyến: '+esc(Object.keys(overRoutes).map(k=>k+' ('+overRoutes[k]+')').join(', ')):'Kỳ này không có chuyến nào.')+'</td></tr>'+
+   '<tr><td class="l"><b>Thiếu mã tuyến</b></td><td class="wrap">Chuyến không có "Mã tuyến" (chủ yếu chuyến Tăng cường)</td><td>'+nf(prv.noRoute)+'</td><td><b>'+nf(cur.noRoute)+'</b></td><td class="wrap">Không gom được với chuyến khác khi tính phòng tối ưu.</td></tr>'+
+   '<tr><td class="l"><b>B2B / KHL</b></td><td class="wrap">Nhóm tỷ lệ lấp đầy = "Thuần / Ghép B2B / KHL"</td><td colspan="2"><span class="fl">Không có dữ liệu</span></td><td class="wrap">Sheet nguồn không có nhóm B2B/KHL nên chưa gắn cờ được.</td></tr>'+
+   '<tr><td class="l"><b>P2 / P98 (đ/kg)</b></td><td class="wrap">So giá đ/kg với phân vị 2% / 98% của chuyến chính thức tháng trước</td><td colspan="2"><span class="fl">Không có dữ liệu</span></td><td class="wrap">Cần dữ liệu chi phí.</td></tr>'+
+   '</tbody></table>';
+
+  $('foot').innerHTML='Nguồn: Sheet Data chuyến chi tiết (gid 496626750) · snapshot trích lúc '+new Date(D.gen).toLocaleString('vi-VN')+' · '+nf(ROWS.length)+' chuyến, '+ddmm(0)+'–'+ddmm(maxDay)+'/2026. Đây là bản chụp, không tự cập nhật: muốn số mới báo con trích lại.';
+}
+function renderRoutes(){
+  const q=($('rq').value||'').trim().toLowerCase();
+  let data=window.__routeData.filter(o=>!q||o.route.toLowerCase().includes(q));
+  $('rcount').textContent='Hiện '+Math.min(data.length,q?data.length:20)+' / '+window.__routeData.length+' tuyến';
+  if(!q)data=data.slice(0,20);
+  $('routes').innerHTML=data.length?'<table><thead><tr><th class="l">Tuyến</th><th class="l">Tỉnh</th><th>Khối xe</th><th>Chuyến (2–4)</th><th>Lấp đầy kỳ này</th><th>Kỳ trước</th><th>Thay đổi</th><th>% chuyến dưới 30%</th><th>Cờ</th></tr></thead><tbody>'+
+   data.map(o=>{const nb=o.nccs.some(i=>i===GHN),tp=o.nccs.some(i=>i!==GHN);const blk=nb&&tp?'Hỗn hợp':nb?'Nội bộ':'3PL';
+     const f=o.cA.fill;const col=f<30?'var(--b0)':f<50?'var(--b2)':'var(--b4)';
+     return '<tr><td class="l"><b>'+esc(o.route)+'</b></td><td class="l">'+PROVS[o.prov]+'</td><td>'+blk+'</td><td>'+nf(o.cA.fn)+'</td><td><b style="color:'+col+'">'+pc(f)+'</b></td><td>'+pc(o.pA.fill)+'</td><td>'+delta(f,o.pA.fill,'good-up',true)+'</td><td>'+pc(o.cA.lowPct)+'</td><td>'+(o.over?'<span class="tag t-warn">'+o.over+' vượt 200%</span>':'')+'</td></tr>'}).join('')+'</tbody></table>':'<div class="small">Không có tuyến phù hợp.</div>';
+}
+
+/* ---------------- controls ---------------- */
+function chips(id,items,get,set){
+  $(id).innerHTML=items.map((it,i)=>'<span class="chip'+(get(it)?' on':'')+'" data-i="'+i+'">'+it.label+'</span>').join('');
+  $(id).onclick=e=>{const c=e.target.closest('.chip');if(!c)return;set(items[+c.dataset.i]);chips(id,items,get,set);render();};
+}
+function initControls(){
+  $('dFrom').value=iso(st.from);$('dTo').value=iso(st.to);$('dFrom').min=$('dTo').min=iso(0);$('dFrom').max=$('dTo').max=iso(maxDay);
+  const chg=()=>{const a=dayOf($('dFrom').value),b=dayOf($('dTo').value);if(isNaN(a)||isNaN(b))return;st.from=Math.min(a,b);st.to=Math.max(a,b);render();};
+  $('dFrom').onchange=$('dTo').onchange=chg;
+  $('cmpMode').onchange=()=>{st.cmp=$('cmpMode').value;render();};
+  const pi=[{label:'Tất cả',v:-1}].concat(PROVS.map((p,i)=>({label:p,v:i})).filter(x=>ROWS.some(r=>r[9]===x.v)));
+  chips('chipProv',pi,it=>st.prov===it.v,it=>{st.prov=it.v;});
+  const hasNB=ROWS.some(r=>r[3]===GHN),has3=ROWS.some(r=>r[3]!==GHN);
+  const bi=[{label:'Tất cả',v:'all'}].concat(hasNB?[{label:'Nội bộ GHN',v:'nb'}]:[],has3?[{label:'3PL',v:'3pl'}]:[]);
+  chips('chipBlock',bi,it=>st.block===it.v,it=>{st.block=it.v;});
+  $('rq').oninput=renderRoutes;
+  const th=$('themeBtn');const ap=t=>{document.documentElement.setAttribute('data-theme',t);th.textContent=t==='dark'?'☀️ Sáng':'🌙 Tối';try{localStorage.setItem('lxbgcrc_theme',t)}catch(e){}};
+  let t0='light';try{t0=localStorage.getItem('lxbgcrc_theme')||'light'}catch(e){}ap(t0);
+  th.onclick=()=>ap(document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark');
+}
+initControls();render();
+})();
+</script>
+</body></html>
