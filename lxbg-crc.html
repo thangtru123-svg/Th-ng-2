@@ -73,7 +73,7 @@ svg text.pr{fill:var(--red);font-weight:700}
 <body>
 <div class="hero">
   <h1>LXBG · Số chuyến & Lấp đầy (theo logic CRC)</h1>
-  <div class="sub">Đếm chuyến xe luân chuyển Linehaul XBG theo đúng flow đã chốt: tách 7 loại chuyến → chỉ chuyến loại 2–4 mới tính lấp đầy chuẩn → tách xe nội bộ GHN / xe 3PL → so với kỳ trước.</div>
+  <div class="sub">Đếm chuyến xe luân chuyển Linehaul XBG theo đúng flow đã chốt: tách 7 loại chuyến → chỉ chuyến loại 2–4 mới tính lấp đầy chuẩn → tách xe nội bộ GHN / xe 3PL → so với kỳ trước.<br><b>📌 Số liệu chốt đến 21/11/2026</b> — data vận tải chưa khớp chuẩn nên lấy lùi ít nhất 5 ngày so với ngày hiện tại.</div>
 </div>
 <main>
   <div class="ctrl">
@@ -141,9 +141,13 @@ svg text.pr{fill:var(--red);font-weight:700}
 <script src="lxbg_crc_data.js"></script>
 <script>
 (function(){
-const D=window.LXBG_CRC, ROWS=D.rows, NCC=D.nccs, ROUTES=D.routes, PROVS=D.provs;
+const D=window.LXBG_CRC, NCC=D.nccs, ROUTES=D.routes, PROVS=D.provs;
 const GHN=NCC.indexOf('GHN');
 const BASE=Date.UTC(2026,8,28);
+/* Công ty báo (27/11): data vận tải chưa khớp chuẩn → lấy lùi ít nhất 5 ngày. CHỐT SỐ LIỆU ĐẾN NGÀY NÀY, dữ liệu sau ngày chốt bị bỏ qua. */
+const CUTOFF='2026-11-21';
+const CUTD=Math.round((Date.parse(CUTOFF+'T00:00:00Z')-BASE)/864e5);
+const ROWS=D.rows.filter(r=>r[0]<=CUTD);
 const $=id=>document.getElementById(id);
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const iso=d=>new Date(BASE+d*864e5).toISOString().slice(0,10);
@@ -318,7 +322,7 @@ function render(){
    '<tr><td class="l"><b>P2 / P98 (đ/kg)</b></td><td class="wrap">So giá đ/kg với phân vị 2% / 98% của chuyến chính thức tháng trước</td><td colspan="2"><span class="fl">Chưa tính</span></td><td class="wrap">Cần chi phí chính thức tháng trước cùng tuyến × tải trọng; sheet chi phí mới có tháng 10.</td></tr>'+
    '</tbody></table>';
 
-  $('foot').innerHTML='Nguồn: Sheet Data chuyến chi tiết (gid 496626750) + Chi phí vận tải (gid 540639858, ghép theo Mã chuyến) + Giá khung cước (gid 60570938) · snapshot trích lúc '+new Date(D.gen).toLocaleString('vi-VN')+' · '+nf(ROWS.length)+' chuyến, '+ddmm(0)+'–'+ddmm(maxDay)+'/2026. Đây là bản chụp, không tự cập nhật: muốn số mới báo con trích lại.';
+  $('foot').innerHTML='<b>Số liệu chốt đến '+ddmm(maxDay)+'/2026</b> (lấy lùi ≥5 ngày vì data vận tải chưa khớp chuẩn). Nguồn: Sheet Data chuyến chi tiết (gid 496626750) + Chi phí vận tải (gid 540639858, ghép theo Mã chuyến) + Giá khung cước (gid 60570938) · snapshot trích lúc '+new Date(D.gen).toLocaleString('vi-VN')+' · '+nf(ROWS.length)+' chuyến trong khoảng '+ddmm(0)+'–'+ddmm(maxDay)+'/2026. Đây là bản chụp, không tự cập nhật: muốn số mới báo con trích lại.';
 }
 function renderRoutes(){
   const q=($('rq').value||'').trim().toLowerCase();
