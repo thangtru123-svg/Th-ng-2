@@ -1,11 +1,9 @@
-// Telegram webhook — tag @AM cho group XBG, topic "Vận hành chung" (thread 5)
-// Chỉ @anhthuvu123 / @thangquada gõ /AM mới tag 26 thành viên (trừ @HelloHieu, @hoangban)
+// Telegram webhook của bot dashboard XBG.
+// Lệnh /AM (tag 26 AM ở topic "Vận hành chung") ĐÃ TẮT 28/11/2026 theo đại nhân — BOT của Sếp đã nhắc chung các AM.
+// Muốn bật lại: xem lịch sử git (commit trước "chore(tg): tắt lệnh /AM") để lấy TRIGGER_USERS + TAGS + nhánh tag.
+// Webhook vẫn giữ để nhận DM đăng ký của @anhthuvu123 (báo chat_id cho dashboard p51).
 const TOKEN = "7471088067:AAGje2KrjUTzlkIiU05h1bm21IUkB0J2J0s";
-const GROUP = -1003802272887;
-const THREAD = 5;                                   // topic "Vận hành chung"
 const SECRET = "xbg-tagall-7k9m2p";                 // khớp secret_token khi setWebhook
-const TRIGGER_USERS = ["anhthuvu123", "thangquada"];
-const TAGS = ["@VuVinh_200619","@NenTN_1877611","@DungHT_3006148","@CaoXuanMinh","@trinhvv","@DUNG_AM","@thai4568","@DUNGNHP_AM","@levinhtb","@Dat_BN","@NguyenphuHuongz3sz3","@DUYBG","@Quangnv_3002416","@longlucngan","@MinhGiang90","@DuyenDP","@ThuBaTheMoon","@nhunghoang1990","@NamKv_97","@QuangBX_3098460","@Duc_QN","@TuanNB0","@lailalamday","@mslananh8x","@SUBG92","@thangquada"];
 
 export default async function handler(req, res) {
   if (req.method !== "POST") { res.status(200).send("ok"); return; }
@@ -15,9 +13,6 @@ export default async function handler(req, res) {
     let u = req.body;
     if (typeof u === "string") { try { u = JSON.parse(u); } catch (e) { u = {}; } }
     const m = (u && u.message) || {};
-    const txt = (m.text || "").trim().toLowerCase();
-    const w0 = txt.split(/\s+/)[0] || "";
-    const isCmd = w0 === "/am" || w0.startsWith("/am@");
     const frm = ((m.from || {}).username || "").toLowerCase();
     // DM riêng với bot từ @anhthuvu123: báo chat_id về @thangquada để gắn vào dashboard (p51 "Tình hình BC N-1")
     if (m.chat && m.chat.type === "private" && frm === "anhthuvu123") {
@@ -26,14 +21,6 @@ export default async function handler(req, res) {
       });
       await send(m.chat.id, "Đã đăng ký nhận báo cáo Tình hình Bưu Cục từ dashboard XBG.");
       await send(1747498029, "@anhthuvu123 vừa nhắn bot. chat_id = " + m.chat.id + " (điền vào TG_ANHTHU_ID trong index.html)");
-    }
-    if (m.chat && m.chat.id === GROUP && m.message_thread_id === THREAD &&
-        TRIGGER_USERS.map(x => x.toLowerCase()).includes(frm) && isCmd) {
-      await fetch(`https://api.telegram.org/bot${TOKEN}/sendMessage`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ chat_id: GROUP, message_thread_id: THREAD, reply_to_message_id: m.message_id, text: "📢 " + TAGS.join(" ") })
-      });
     }
   } catch (e) { /* luôn trả 200 để Telegram không retry dồn */ }
   res.status(200).send("ok");
